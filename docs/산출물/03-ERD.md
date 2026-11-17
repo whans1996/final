@@ -1,6 +1,6 @@
 # ER Diagram — 바이브노트
 
-> 작성 상태: 🟡 초안 · 설계 정본은 `docs/기획서.md` 3절 "ERD 초안"(mermaid)이다.
+> 작성 상태: 🟡 초안 · 설계 정본은 `docs/기획서.md` 3절 "ERD 초안"(mermaid)이고, **DDL 정본은 `backend/src/main/resources/db/migration/V1__init.sql`**(이후 V2+)이다.
 > **최종본**은 구현이 끝난 뒤 실제 DB(Flyway 적용 후)에서 MySQL Workbench Reverse Engineer로 만든 이미지(`diagrams/erd.png`)와 아래 테이블 정의로 대체한다 (W5).
 
 <!-- 최종: ![ERD](diagrams/erd.png) -->
