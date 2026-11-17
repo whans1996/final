@@ -41,8 +41,8 @@ jobs:
       be: ${{ steps.filter.outputs.be }}
       fe: ${{ steps.filter.outputs.fe }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: dorny/paths-filter@v3
+      - uses: actions/checkout@v7
+      - uses: dorny/paths-filter@v4
         id: filter
         with:
           filters: |
@@ -62,15 +62,16 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
-      - uses: actions/setup-java@v4
+          package-manager-cache: false
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: 17
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6
       - name: gradlew 실행 권한
         run: if [ -f backend/gradlew ]; then chmod +x backend/gradlew; fi
       - name: verify be (Spotless + 테스트, Testcontainers MySQL)
@@ -87,7 +88,7 @@ jobs:
           fi
       - name: 실패 로그 업로드
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: backend-verify-logs
           path: .harness/logs
@@ -101,19 +102,20 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: ${{ hashFiles('frontend/package-lock.json') != '' && 'npm' || '' }}
           cache-dependency-path: frontend/package-lock.json
+          package-manager-cache: false
       - name: 의존성 설치
         run: if [ -f frontend/package-lock.json ]; then cd frontend && npm ci; fi
       - name: verify fe (lint + 단위 테스트 + 빌드)
         run: node scripts/verify.mjs fe
       - name: 실패 로그 업로드
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: frontend-verify-logs
           path: .harness/logs

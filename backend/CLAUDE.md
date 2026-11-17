@@ -99,3 +99,6 @@ com.vibenote
 | 실행 | `gradlew.bat bootRun --args="--spring.profiles.active=local"` |
 
 루트에서 `node scripts/verify.mjs be`를 쓰면 포맷 검사와 테스트를 돌리고 실패만 요약해 준다.
+
+- 빌드는 **`JAVA_HOME`(JDK 17)** 기준이다. PATH의 `java`가 8이어도 Gradle wrapper는 `JAVA_HOME`을 쓴다. 설정 방법은 `docs/환경설정.md`.
+- STS에서는 Installed JREs에 JDK 17을 추가하고 프로젝트 JRE로 지정한다.

@@ -23,6 +23,8 @@ SSAFY 관통 프로젝트(2026-11-17 시작, 12-24 발표). Spring Boot 3 + MyBa
 | 제출 산출물 (요구사항 정의서, 유스케이스, ERD, WBS, 간트, 화면 설계서, API 명세, AI 활용, 데이터 셋, 보고서) | `docs/산출물/` (제출 허브는 루트 `README.md`) |
 | 백엔드 규칙 | `backend/CLAUDE.md` |
 | 프론트엔드 규칙 | `frontend/CLAUDE.md` |
+| 외부 데이터 목록·라이선스·분할(dev/eval/demo) | `data/datasets.json`, `docs/산출물/09-데이터셋.md` |
+| 개발 환경 설치 (JDK 17, WSL·Docker) | `docs/환경설정.md` |
 
 ## 작업 흐름
 
@@ -49,6 +51,7 @@ SSAFY 관통 프로젝트(2026-11-17 시작, 12-24 발표). Spring Boot 3 + MyBa
 8. 기획이 바뀌면 `docs/기획서.md` 결정 로그에 한 줄 추가한다.
 9. **API를 바꾸면 `docs/api/openapi.json`도 함께 커밋한다.** CI가 코드와 다르면 실패시킨다. Controller·DTO에는 Swagger 어노테이션을 단다 (`backend/CLAUDE.md`).
 10. **GitLab(`gitlab` 원격, lab.ssafy.com)에는 push하지 않는다.** 제출은 사람이 한다.
+11. **평가(eval) 데이터는 프롬프트, few-shot 예시, Mock fixture, 시드 카드 작성에 쓰지 않는다.** 데이터를 쓰기 전에 `data/datasets.json`의 `split`을 확인한다 (데이터 누수 방지, `docs/산출물/09-데이터셋.md` 5절). 새 외부 데이터는 라이선스를 확인하고 이 목록과 계획서에 먼저 등록한다.
 
 ## 체크포인트 규칙
 

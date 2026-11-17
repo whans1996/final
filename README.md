@@ -50,7 +50,7 @@ SSAFY Final Project (Java Track, 자율 주제) · 2026-11-17 ~ 2026-12-24
 > 프로젝트 뼈대 생성 후 채운다.
 
 ### 사전 준비
-- JDK 17+, Node 24, MySQL 8, Docker Desktop(테스트용 Testcontainers)
+- JDK 17+(`JAVA_HOME`), Node 24, MySQL 8, Docker Desktop(WSL2, 테스트용 Testcontainers) — 설치 절차: [docs/환경설정.md](docs/환경설정.md)
 - 최초 1회: `node scripts/setup.mjs` (git hook 연결, 환경 점검)
 
 ### Back-End

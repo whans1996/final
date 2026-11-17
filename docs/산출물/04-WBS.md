@@ -24,6 +24,7 @@
 | 1.6 | REST API 설계 (기능별 spec) | `docs/specs/F-xx-*.md` | 공동 | 11/18~11/21 | ⬜ |
 | 1.7 | WBS·간트 차트 | `04-WBS.md`, `05-간트차트.md` | 공동 | 11/17~11/18 | ✅ |
 | 1.8 | 화면 설계서 초안 | `06-화면설계서.md` | B | 11/24~11/28 | ⬜ |
+| 1.9 | 데이터 출처 조사·데이터 활용 계획서 | `09-데이터셋.md`, `data/datasets.json` | 공동 | 11/17~11/19 | 🟡 |
 
 ## 2. 환경 구축
 
@@ -33,7 +34,7 @@
 | 2.2 | BE 뼈대: Spring Boot, Security·JWT 기본, Swagger, Flyway, Testcontainers, 공통 예외·JSON 매핑 | `backend/` | B | 11/18~11/20 | ⬜ |
 | 2.3 | FE 뼈대: Vue 3, Pinia, Router, Axios 인터셉터, Vitest, ESLint·Prettier, Playwright | `frontend/` | A | 11/18~11/20 | ⬜ |
 | 2.4 | LlmClient (Mock·Gemini·Ollama) 연결 검증 | `backend/.../llm` | A | 11/19~11/22 | ⬜ |
-| 2.5 | 시드 개념 카드 30~50개 | `R__seed_concepts.sql`, `09-데이터셋.md` | B | 11/20~11/23 | ⬜ |
+| 2.5 | 시드 개념 카드 30~50개 (카드별 출처 `reference_url` 기록) | `R__seed_concepts.sql`, `09-데이터셋.md` | B | 11/20~11/23 | ⬜ |
 
 ## 3. 기능 구현
 

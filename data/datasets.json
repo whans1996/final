@@ -1,0 +1,53 @@
+{
+  "$comment": "바이브노트 외부·내부 데이터 목록. 상세 근거는 docs/산출물/09-데이터셋.md. split: dev(프롬프트·fixture·테스트 개발) | eval(평가 전용, 프롬프트 조정에 사용 금지) | demo(시연) | content(서비스 콘텐츠 참고) | runtime(서비스 실행 중 수집) | reference(조건부·참고). repoSizeKB는 GitHub API 값(git 이력 포함)이며 실제 분석 대상 크기가 아니다. 수정 시 계획서 변경 이력도 남긴다.",
+  "version": 1,
+  "collectedAt": "2026-11-17",
+  "datasets": [
+    {
+      "id": "DS-01",
+      "name": "공식 기술 문서 (개념 카드 참고 자료)",
+      "split": "content",
+      "sources": [
+        { "name": "Spring Framework Reference", "url": "https://docs.spring.io/spring-framework/reference/", "license": "Apache-2.0 (+ 문서 고지: 무료 배포·저작권 고지 조건)", "licenseUrl": "https://github.com/spring-projects/spring-framework/blob/main/LICENSE.txt", "use": "요약·링크·짧은 인용" },
+        { "name": "Spring Boot Reference", "url": "https://docs.spring.io/spring-boot/", "license": "Apache-2.0", "licenseUrl": "https://github.com/spring-projects/spring-boot/blob/main/LICENSE.txt", "use": "요약·링크·짧은 인용" },
+        { "name": "Spring Security Reference", "url": "https://docs.spring.io/spring-security/reference/", "license": "Apache-2.0", "licenseUrl": "https://github.com/spring-projects/spring-security/blob/main/LICENSE.txt", "use": "요약·링크·짧은 인용" },
+        { "name": "MyBatis 3 문서 (한국어 포함)", "url": "https://mybatis.org/mybatis-3/ko/", "license": "Apache-2.0", "licenseUrl": "https://github.com/mybatis/mybatis-3/blob/master/LICENSE", "use": "요약·링크·인용·예제" },
+        { "name": "MyBatis Spring Boot Starter 문서", "url": "https://mybatis.org/spring-boot-starter/", "license": "Apache-2.0", "licenseUrl": "https://github.com/mybatis/spring-boot-starter/blob/master/LICENSE", "use": "요약·링크·인용·예제" },
+        { "name": "Vue.js 문서 (ko.vuejs.org)", "url": "https://ko.vuejs.org/", "license": "CC-BY-4.0 (이미지 제외)", "licenseUrl": "https://github.com/vuejs-translations/docs-ko/blob/main/LICENSE", "use": "출처 표기 후 요약·인용. 이미지 사용 금지" },
+        { "name": "Pinia 문서", "url": "https://pinia.vuejs.org/", "license": "MIT", "licenseUrl": "https://github.com/vuejs/pinia/blob/v4/LICENSE", "use": "요약·링크·인용·예제" },
+        { "name": "Vue Router 문서", "url": "https://router.vuejs.org/", "license": "MIT", "licenseUrl": "https://github.com/vuejs/router/blob/main/LICENSE", "use": "요약·링크·인용·예제" },
+        { "name": "MDN Web Docs", "url": "https://developer.mozilla.org/ko/", "license": "글 CC-BY-SA-2.5 / 코드 예제 CC0(2010-08-20 이후)·MIT", "licenseUrl": "https://github.com/mdn/content/blob/main/LICENSE.md", "use": "링크·직접 작성. 글 각색 금지(ShareAlike). 코드 예제는 자유" },
+        { "name": "springdoc-openapi 문서", "url": "https://springdoc.org/", "license": "Apache-2.0", "licenseUrl": "https://github.com/springdoc/springdoc-openapi/blob/main/LICENSE", "use": "요약·링크·예제" },
+        { "name": "Oracle Java SE 문서·The Java Tutorials", "url": "https://docs.oracle.com/en/java/javase/", "license": "Proprietary (All rights reserved)", "licenseUrl": "https://docs.oracle.com/en/java/javase/21/docs/legal/copyright.html", "use": "링크만. 복사·번역·각색 금지" },
+        { "name": "Swagger 문서", "url": "https://swagger.io/docs/", "license": "SmartBear Website Terms of Use (Proprietary)", "licenseUrl": "https://smartbear.com/website-terms-of-use/", "use": "링크만" }
+      ]
+    },
+    {
+      "id": "DS-02",
+      "name": "공개 오픈소스 샘플 저장소",
+      "repos": [
+        { "id": "DS-02-01", "repo": "gothinkster/spring-boot-realworld-example-app", "url": "https://github.com/gothinkster/spring-boot-realworld-example-app", "license": "MIT", "commit": "ee17e31aafe733d98c4853c8b9a74d7f2f6c924a", "split": "dev", "paths": ["/"], "files": 142, "repoSizeKB": 759, "stack": "Spring Boot 2.6, MyBatis XML 매퍼 11, Java 11", "contamination": "high" },
+        { "id": "DS-02-02", "repo": "gothinkster/vue-realworld-example-app", "url": "https://github.com/gothinkster/vue-realworld-example-app", "license": "MIT", "commit": "db749e3bb1a45755e0a3f4065abaf7346f004f36", "split": "dev", "paths": ["/"], "files": 68, "repoSizeKB": 2950, "stack": "Vue 3.5, Pinia, Vite, JavaScript", "contamination": "high" },
+        { "id": "DS-02-03", "repo": "mybatis/spring-boot-starter (samples: annotation, web)", "url": "https://github.com/mybatis/spring-boot-starter", "license": "Apache-2.0 (+NOTICE)", "commit": "d50a965cfbcd2a284039b896c7c492fa331f9708", "split": "dev", "paths": ["mybatis-spring-boot-samples/mybatis-spring-boot-sample-annotation", "mybatis-spring-boot-samples/mybatis-spring-boot-sample-web"], "files": 28, "stack": "Spring Boot 4.1, MyBatis 3.5 annotation 매퍼, Java 17", "contamination": "medium" },
+        { "id": "DS-02-04", "repo": "mybatis/spring-boot-starter (sample: xml)", "url": "https://github.com/mybatis/spring-boot-starter", "license": "Apache-2.0 (+NOTICE)", "commit": "d50a965cfbcd2a284039b896c7c492fa331f9708", "split": "demo", "paths": ["mybatis-spring-boot-samples/mybatis-spring-boot-sample-xml"], "files": 22, "stack": "Spring Boot 4.1, MyBatis XML 매퍼, H2", "contamination": "medium" },
+        { "id": "DS-02-05", "repo": "PKUcoldkeyboard/database-final", "url": "https://github.com/PKUcoldkeyboard/database-final", "license": "MIT", "commit": "6c4f6e27ed2de9c03c00732861eaee17f485e3f1", "split": "eval", "paths": ["/"], "files": 181, "repoSizeKB": 841, "stack": "Spring Boot 2.3, MyBatis XML 매퍼 16, Java 8, Vue 2.6", "contamination": "low" },
+        { "id": "DS-02-06", "repo": "ch060619/online-shop-platform", "url": "https://github.com/ch060619/online-shop-platform", "license": "MIT", "commit": "1a3926dc43484c968895f0d9cf7b89cfdf900eeb", "split": "eval", "paths": ["/"], "files": 163, "repoSizeKB": 431, "stack": "Spring Boot 3.2, MyBatis-Plus, Java 17, Vue 3.4 + Pinia (AI 도구 사용 흔적)", "contamination": "low" },
+        { "id": "DS-02-07", "repo": "spring-projects/spring-petclinic", "url": "https://github.com/spring-projects/spring-petclinic", "license": "Apache-2.0", "commit": "500158f732419217507c7656904b8e6aa1bcc0d6", "split": "eval", "paths": ["/"], "files": 132, "repoSizeKB": 11003, "stack": "Spring Boot 4.1, JPA, Thymeleaf (MyBatis 없음 대조군)", "contamination": "high", "note": "유명 저장소라 결과는 오염 가능 그룹으로 분리 보고" },
+        { "id": "DS-02-08", "repo": "mybatis/jpetstore-6", "url": "https://github.com/mybatis/jpetstore-6", "license": "Apache-2.0", "commit": "c3dbf6f56f6bb0730478b0f38e16ec6dfd204b23", "split": "eval", "paths": ["/"], "files": 163, "repoSizeKB": 7603, "stack": "Spring 5.3(Boot 아님) + MyBatis + Stripes JSP", "contamination": "high", "note": "경계 사례(Boot 아님, JSP)" }
+      ]
+    },
+    { "id": "DS-03", "name": "팀 생성 평가 저장소 (AI 바이브 코딩 재현)", "split": "eval", "status": "예정 (W2, 담당 B)", "license": "팀 소유", "contamination": "none" },
+    { "id": "DS-04", "name": "평가 정답 라벨", "split": "eval", "status": "예정 (W2~W3, 담당 B, 블라인드 작성)", "path": "backend/src/test/resources/prompt-eval/" },
+    { "id": "DS-05", "name": "시드 개념 카드", "split": "content", "status": "예정 (W1, 담당 B)", "path": "backend/src/main/resources/db/migration/R__seed_concepts.sql", "derivedFrom": ["DS-01"] },
+    { "id": "DS-06", "name": "LLM Mock fixture", "split": "dev", "status": "예정 (W1~W2, 담당 A)", "path": "backend/src/main/resources/llm-fixtures/", "derivedFrom": ["DS-02-01", "DS-02-02", "DS-02-03"] },
+    { "id": "DS-07", "name": "공개 저장소 아카이브 API (GitHub·GitLab)", "split": "runtime", "sources": [
+        { "name": "GitHub REST API (zipball) / codeload", "url": "https://docs.github.com/en/rest/repos/contents#download-a-repository-archive-zip", "terms": "GitHub Terms of Service, Acceptable Use Policies", "rateLimit": "비인증 60회/시, 토큰 5,000회/시" },
+        { "name": "GitLab REST API (repository archive)", "url": "https://docs.gitlab.com/api/repositories/", "terms": "GitLab 이용 약관(세부 미확인)", "rateLimit": "비인증 IP당 500회/분 (변경 예고 있음)" }
+      ] },
+    { "id": "DS-08", "name": "정적 분석 규칙 문서 (SpotBugs·PMD)", "split": "reference", "status": "조건부 (P2 F-22 착수 시)", "sources": [
+        { "name": "SpotBugs bug descriptions", "url": "https://spotbugs.readthedocs.io/en/latest/bugDescriptions.html", "license": "LGPL-2.1 (저장소), 문서 별도 표기 미확인" },
+        { "name": "PMD Java rules", "url": "https://docs.pmd-code.org/latest/pmd_rules_java.html", "license": "BSD-style + Apache-2.0 (저장소), 문서 별도 표기 미확인" }
+      ] },
+    { "id": "DS-09", "name": "데모 회원·활동 데이터 (가상)", "split": "demo", "status": "예정 (W5)", "license": "팀 작성" }
+  ]
+}

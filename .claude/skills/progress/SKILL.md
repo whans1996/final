@@ -47,7 +47,7 @@ description: 기능 spec 상태, 관통 필수 요구사항 13개와 명세서 �
 | 구현 | Back-End 소스 | backend/ | | 버퍼 |
 | 구현 | Front-End 소스 | frontend/ | | 버퍼 |
 | 구현 | DB Schema.sql | (제출 단계 생성) | | W5 |
-| 구현 | 활용 데이터 셋 | docs/산출물/09-데이터셋.md | | W5 |
+| 구현 | 활용 데이터 셋 + 데이터 활용 계획서 | docs/산출물/09-데이터셋.md, data/datasets.json | | W1(계획)·W5(정리) |
 | 결과 | 최종 보고서 | docs/산출물/10-최종보고서.md | | 버퍼 |
 | 결과 | 발표 자료 | (PPT/PDF) | | 버퍼 |
 | 결과 | 외부 API·생성형 AI 활용 | docs/산출물/08-외부API-생성형AI-활용.md | | W5 |
