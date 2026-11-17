@@ -32,7 +32,8 @@ if (!isGitRepo()) {
 }
 
 // GitHub CLI (PR 생성·CI 확인)
-const gh = cmd('gh auth status');
+// --active: 만료된 다른 계정이 남아 있어도 현재 계정만 확인한다
+const gh = cmd('gh auth status --active');
 add(gh.ok || 'warn', 'GitHub CLI', gh.ok ? '로그인됨' : 'gh 설치 후 gh auth login (PR 생성·CI 확인에 사용)');
 
 // 2. Node

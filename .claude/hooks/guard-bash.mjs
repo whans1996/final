@@ -30,7 +30,11 @@ const rules = [
   [/\bgit\s+clean\b[^;&|]*\s-[a-zA-Z]*f/, 'git clean -f는 금지입니다. 추적되지 않은 파일이 영구 삭제됩니다.'],
   [/\bgit\s+(checkout|restore)\s+(--\s+)?\.(\s|$)/, '작업 트리 전체 되돌리기는 금지입니다. 파일을 지정하거나 사용자에게 확인하세요.'],
   [/\bgit\s+add\b[^;&|]*\s(-f|--force)\b/, 'git add --force는 금지입니다. .gitignore된 비밀 파일이 커밋될 수 있습니다.'],
-  [/\bcore\.hooksPath\b(?!\s+\.githooks\b)/, 'git hook 경로 변경은 금지입니다.'],
+  // 값 설정(`core.hooksPath x`, `-c core.hooksPath=x`)과 해제만 막고, 조회(`git config core.hooksPath`)는 허용한다
+  [
+    /--unset(-all)?\s+core\.hooksPath\b|\bcore\.hooksPath(\s*=\s*|\s+)(?!\.githooks\b)[^\s;&|)]/,
+    'git hook 경로 변경은 금지입니다.',
+  ],
   [/\bbranch\s+-D\s+(main|develop)\b/, '보호 브랜치 삭제는 금지입니다.'],
   // 최종 제출 저장소(lab.ssafy.com GitLab)는 사람이 직접 push한다
   [

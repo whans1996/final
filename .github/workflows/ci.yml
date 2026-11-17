@@ -72,8 +72,6 @@ jobs:
           distribution: temurin
           java-version: 17
       - uses: gradle/actions/setup-gradle@v6
-      - name: gradlew 실행 권한
-        run: if [ -f backend/gradlew ]; then chmod +x backend/gradlew; fi
       - name: verify be (Spotless + 테스트, Testcontainers MySQL)
         run: node scripts/verify.mjs be
       - name: openapi.json이 코드와 일치하는지 확인
