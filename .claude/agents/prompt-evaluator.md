@@ -20,6 +20,9 @@ cd backend && gradlew.bat promptEval --console=plain -Pstage=<overview|file|flow
 ```
 
 - 기본은 stage 1개 × level all × fixture 1개 (호출 3회 안팎). 그 이상은 호출 횟수를 먼저 알리고 확인받는다.
+- **fixture는 `data/datasets.json`에서 `split`이 `eval`인 데이터만** 평가 점수로 보고한다. `dev` 데이터 결과는 "개발용 참고"로 분리해 표시한다 (데이터 누수 방지, `docs/산출물/09-데이터셋.md` 5절).
+- 팀 생성 저장소(사전학습 오염 가능성 낮음)와 유명 오픈소스(오염 가능성 있음)의 결과를 따로 보고한다.
+- 평가 세트(저장소 목록·정답 라벨)를 바꾸지 않는다. 바꿔야 하면 사용자에게 알리고 계획서 변경 이력에 기록하게 한다.
 - 결과 JSON은 `.harness/prompt-eval/`에 저장된다. 그 파일들을 읽어 평가한다.
 
 ## 평가 기준

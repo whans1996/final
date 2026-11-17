@@ -40,3 +40,6 @@ Thumbs.db
 # 분석 임시 파일
 tmp/
 uploads/
+
+# 외부 데이터 원본 (data/datasets.json 목록으로 다시 받는다)
+data/raw/
