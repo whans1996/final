@@ -3,22 +3,22 @@
 > 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
 > "바로 다음 할 일"은 다른 사람이 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 
-갱신: 2026-11-18 00:10 · 작업자: whans1996@naver.com (Claude) · 브랜치: feature/F-00-scaffold (push 완료, PR 미생성)
+갱신: 2026-11-18 00:10 · 작업자: whans1996@naver.com (Claude) · 브랜치: feature/F-00-scaffold (PR #2 → develop, CI 초록)
 
 ## 현재 기능
 
-F-00 프로젝트 뼈대 (spec 없음, 기획서 "다음 액션 2"의 인프라 작업). 구현·리뷰 반영 완료 → PR 생성 대기.
+F-00 프로젝트 뼈대 (spec 없음, 기획서 "다음 액션 2"의 인프라 작업). 구현·리뷰 반영 완료 → PR #2 머지 대기.
 
 ## 진행
 
 - ✅ 백엔드 Boot 3.5.16 뼈대 + `V1__init.sql`(ERD P0 22개) + `V2__analysis_soft_delete_and_constraints.sql`, 테스트 38개 green
 - ✅ 프론트엔드 Vue 3 뼈대 (`api/http.js`, `stores/auth.js`, `authGuard`), 테스트 14개 green, ui-check 통과
 - ✅ /pr-review: verifier 전체 통과, reviewer "반드시 수정" 2건 반영 (4xx 예외 → 공통 코드, 분석 soft delete V2)
-- ⬜ PR 생성: 설명은 `.harness/pr-F-00.md`에 있지만 gitignore된 폴더라 상대 PC에는 없음 → 없으면 `/pr-review`로 다시 생성
+- ✅ PR #2 생성 (https://github.com/whans1996/final/pull/2), CI 수동 실행 초록 (run 44112186601: Backend·Frontend 검증 성공)
 
 ## 바로 다음 할 일
 
-1. PR 생성: `gh pr create --base develop --title "feat(common): 프로젝트 뼈대 (Spring Boot 3.5 + Vue 3, V1·V2 스키마)" --body-file .harness/pr-F-00.md` → `gh workflow run CI --ref feature/F-00-scaffold` → 초록이면 머지 (사람)
+1. PR #2를 GitHub에서 머지 (사람, wip 없음 → 일반 머지). 이 커밋 이후 CI를 다시 돌리려면 `gh workflow run CI --ref feature/F-00-scaffold` (docs만 바뀌어 재실행 필수는 아님)
 2. 각 PC: 로컬 DB 생성(`docs/환경설정.md` 3절) + `.env` 작성 → `cd backend && ./gradlew bootRun --args='--spring.profiles.active=local'` → http://localhost:8080/swagger-ui/index.html 확인 (아직 아무도 안 해 봄)
 3. `/spec F-01`(회원가입), `/spec F-02`(로그인·JWT: Refresh 전달 방식, `/api/auth/**` 공개 범위 명시 나열) → 승인 후 `/implement`
 4. W1 산출물: `02-유스케이스.md` 확정, 시드 카드 `R__seed_concepts.sql`(`09-데이터셋.md` DS-01 규칙)
