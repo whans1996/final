@@ -56,7 +56,15 @@ function run(area, step, cmd, cwd) {
     encoding: 'utf8',
     maxBuffer: 256 * 1024 * 1024,
     windowsHide: true,
-    env: { ...process.env, FORCE_COLOR: '0', CI: 'true' },
+    // GRADLE_OPTS: Gradle 클라이언트 출력도 UTF-8로 (Windows 기본 cp949면 한글 테스트 이름이 깨진다)
+    env: {
+      ...process.env,
+      FORCE_COLOR: '0',
+      CI: 'true',
+      GRADLE_OPTS: [process.env.GRADLE_OPTS, '-Dfile.encoding=UTF-8 -Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8']
+        .filter(Boolean)
+        .join(' '),
+    },
   });
   const out = (r.stdout || '') + (r.stderr || '') + (r.error ? String(r.error) : '');
   fullLog += `\n===== [${area}] ${step}: ${cmd} (cwd=${relative(ROOT, cwd) || '.'}) exit=${r.status} =====\n${out}\n`;
@@ -73,7 +81,8 @@ function verifyBackend() {
   const dir = join(ROOT, 'backend');
   const buildFile = ['build.gradle', 'build.gradle.kts'].map((f) => join(dir, f)).find(existsSync);
   if (!buildFile) return skip('be', 'backend 프로젝트가 아직 생성되지 않음');
-  const gradlew = isWin ? 'gradlew.bat' : './gradlew';
+  // 경로를 명시한다: NoDefaultCurrentDirectoryInExePath가 켜진 환경(Claude Code 등)에서는 cmd가 현재 폴더를 찾지 않는다
+  const gradlew = isWin ? '.\\gradlew.bat' : './gradlew';
   const base = `${gradlew} --console=plain`;
   const usesSpotless = /spotless/.test(readFileSync(buildFile, 'utf8'));
   if (usesSpotless) {
