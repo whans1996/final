@@ -22,6 +22,7 @@
 
 ## 막힌 점 / 결정 필요
 
+- **CI가 push·PR 이벤트로 자동 실행되지 않음** (2026-11-17, PR #1): check suite 자체가 생성되지 않음. 수동 실행(`gh workflow run CI --ref <브랜치>`)은 정상·초록. 저장소 Settings → Actions → General과 GitHub 상태 확인 필요. 그 전까지 PR마다 수동 실행으로 확인
 - 팀원 GitHub 아이디(collaborator 초대·리뷰어), 제출 zip 이름용 지역·반·이름 (나중에)
 - Refresh 토큰 저장 위치 (F-02 spec에서 확정)
 
