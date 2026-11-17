@@ -68,7 +68,11 @@ const entry = [
   changed.length ? changed.slice(0, 15).map((c) => `  - \`${c.trim()}\``).join('\n') + (changed.length > 15 ? `\n  - … 외 ${changed.length - 15}개` : '') : '',
   `- 다음 할 일 (NOW.md):`,
   indent(next),
-  `- 막힌 점: ${blocked.split(/\r?\n/).filter((l) => l.trim()).join(' / ')}`,
+  `- 막힌 점: ${blocked
+    .split(/\r?\n/)
+    .map((l) => l.replace(/^\s*(?:[-*]|\d+\.)\s*/, '').trim())
+    .filter(Boolean)
+    .join(' / ')}`,
   memo ? `- 메모: ${memo}` : '',
   `- 주의: 자동 기록이다. NOW.md가 오래되었을 수 있으니 이어받는 사람은 git diff로 마지막 변경을 확인할 것`,
   '',

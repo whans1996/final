@@ -1,12 +1,16 @@
 #!/usr/bin/env node
 // PreToolUse(Bash|PowerShell) hook: 되돌리기 어려운 git 조작과 비밀 파일 접근을 막는다.
 // 차단 시 exit 2 + stderr 메시지 → Claude에게 사유가 전달된다.
+import { existsSync } from 'node:fs';
 import { PROTECTED_BRANCHES, currentBranch, hasCommits, isMerging, readStdinJson } from '../../scripts/lib/common.mjs';
 
 const input = readStdinJson();
 const command = String(input?.tool_input?.command || '');
 if (!command) process.exit(0);
-const cwd = input.cwd || process.cwd();
+// "cd <경로> && git commit ..." 이면 그 경로 기준으로 브랜치를 판단한다
+const cdMatch = /^\s*cd\s+(?:"([^"]+)"|'([^']+)'|(\S+))\s*(&&|;)/.exec(command);
+const cdTarget = cdMatch ? cdMatch[1] || cdMatch[2] || cdMatch[3] : null;
+const cwd = cdTarget && existsSync(cdTarget) ? cdTarget : input.cwd || process.cwd();
 
 // 따옴표 안(커밋 메시지 등)의 내용은 검사에서 제외해 오탐을 줄인다
 const bare = command.replace(/"(?:\\.|[^"\\])*"|'[^']*'/g, '""');
