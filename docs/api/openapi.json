@@ -1,0 +1,26 @@
+{
+  "components" : {
+    "securitySchemes" : {
+      "bearerAuth" : {
+        "bearerFormat" : "JWT",
+        "description" : "로그인으로 받은 Access 토큰",
+        "scheme" : "bearer",
+        "type" : "http"
+      }
+    }
+  },
+  "info" : {
+    "description" : "AI가 쓴 코드를 수준별 설명 → 개념 카드 → 퀴즈·복습으로 이해하게 돕는 학습 플랫폼 바이브노트의 REST API",
+    "title" : "VibeNote API",
+    "version" : "v1"
+  },
+  "openapi" : "3.1.0",
+  "paths" : { },
+  "security" : [ {
+    "bearerAuth" : [ ]
+  } ],
+  "servers" : [ {
+    "description" : "Generated server url",
+    "url" : "http://localhost"
+  } ]
+}
