@@ -9,14 +9,19 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
 /** 예외가 {@code {code, message, details}} 형식과 올바른 상태 코드로 바뀌는지 확인한다 (Spring 컨텍스트 없이 실행). */
 class GlobalExceptionHandlerTest {
@@ -80,6 +85,37 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    void 본문_Content_Type이_JSON이_아니면_415() throws Exception {
+        mockMvc.perform(post("/sample/body").contentType(MediaType.TEXT_PLAIN).content("name"))
+                .andExpect(status().isUnsupportedMediaType())
+                .andExpect(jsonPath("$.code").value("COMMON_415"));
+    }
+
+    @Test
+    void 필수_헤더가_없으면_400() throws Exception {
+        mockMvc.perform(get("/sample/header"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON_400"));
+    }
+
+    @Test
+    void ResponseStatusException은_그_상태에_맞는_코드() throws Exception {
+        mockMvc.perform(get("/sample/status"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("COMMON_404"));
+    }
+
+    @Test
+    void multipart가_아닌_업로드_요청은_400() throws Exception {
+        mockMvc.perform(
+                        post("/sample/upload")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON_400"));
+    }
+
+    @Test
     void 예상하지_못한_예외는_500이고_내부_메시지를_노출하지_않는다() throws Exception {
         mockMvc.perform(get("/sample/boom"))
                 .andExpect(status().isInternalServerError())
@@ -109,6 +145,21 @@ class GlobalExceptionHandlerTest {
         @GetMapping("/sample/number")
         int number(@RequestParam int n) {
             return n;
+        }
+
+        @GetMapping("/sample/header")
+        String header(@RequestHeader("X-Sample") String value) {
+            return value;
+        }
+
+        @GetMapping("/sample/status")
+        String responseStatus() {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+
+        @PostMapping("/sample/upload")
+        String upload(@RequestPart("file") MultipartFile file) {
+            return file.getOriginalFilename();
         }
 
         @GetMapping("/sample/boom")

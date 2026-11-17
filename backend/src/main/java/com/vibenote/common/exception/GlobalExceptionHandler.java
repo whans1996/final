@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.MultipartException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
@@ -106,10 +107,37 @@ public class GlobalExceptionHandler {
         return respond(ErrorCode.AUTH_401, null);
     }
 
+    /** 업로드 요청이 multipart가 아니거나 깨진 경우 (크기 초과는 위의 413 핸들러가 먼저 잡는다). */
+    @ExceptionHandler(MultipartException.class)
+    public ResponseEntity<ErrorResponse> handleMultipart(MultipartException e) {
+        return respond(ErrorCode.COMMON_400, null);
+    }
+
+    /**
+     * 나머지 예외. 위에서 따로 다루지 않은 Spring MVC 예외(415 Content-Type, 필수 헤더 누락, ResponseStatusException 등)는
+     * Spring의 {@link org.springframework.web.ErrorResponse}를 구현하므로 그 상태 코드에 맞는 공통 코드로 바꾼다. 4xx가
+     * 500으로 바뀌어 ERROR 로그를 남기지 않게 한다.
+     */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleUnexpected(Exception e) {
-        log.error("처리되지 않은 예외", e);
-        return respond(ErrorCode.COMMON_500, null);
+        ErrorCode code = ErrorCode.COMMON_500;
+        if (e instanceof org.springframework.web.ErrorResponse springError) {
+            int status = springError.getStatusCode().value();
+            code =
+                    switch (status) {
+                        case 401 -> ErrorCode.AUTH_401;
+                        case 403 -> ErrorCode.AUTH_403;
+                        case 404 -> ErrorCode.COMMON_404;
+                        case 405 -> ErrorCode.COMMON_405;
+                        case 413 -> ErrorCode.COMMON_413;
+                        case 415 -> ErrorCode.COMMON_415;
+                        default -> status < 500 ? ErrorCode.COMMON_400 : ErrorCode.COMMON_500;
+                    };
+        }
+        if (code == ErrorCode.COMMON_500) {
+            log.error("처리되지 않은 예외", e);
+        }
+        return respond(code, null);
     }
 
     private ResponseEntity<ErrorResponse> respond(ErrorCode code, Map<String, String> details) {
