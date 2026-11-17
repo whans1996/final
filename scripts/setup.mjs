@@ -81,4 +81,10 @@ add(mysql.ok || 'warn', 'MySQL CLI', mysql.ok ? mysql.out.split('\n')[0] : '없�
 
 console.log(`\n바이브노트 개발 환경 점검 (${ROOT})\n`);
 console.log(rows.join('\n'));
-console.log('\n❌ 항목을 해결한 뒤 다시 실행하세요. 완료되면 Claude Code에서 /pickup 으로 시작합니다.\n');
+const failed = rows.filter((r) => r.startsWith('❌')).length;
+console.log(
+  failed
+    ? `\n❌ 항목 ${failed}개를 해결한 뒤 다시 실행하세요. 완료되면 Claude Code에서 /pickup 으로 시작합니다.\n`
+    : '\n준비 완료. Claude Code에서 /pickup 으로 시작합니다.\n',
+);
+process.exitCode = failed ? 1 : 0;
