@@ -1,0 +1,4 @@
+#!/bin/sh
+# 커밋 메시지 규칙 + 보호 브랜치 + 테스트 게이트. 로직은 commit-msg.mjs에 있다.
+# 활성화: node scripts/setup.mjs (core.hooksPath = .githooks)
+exec node "$(git rev-parse --show-toplevel)/.githooks/commit-msg.mjs" "$1"

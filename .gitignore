@@ -1,0 +1,42 @@
+# 비밀 정보
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# 하네스 산출물 (로그, 스크린샷)
+.harness/
+
+# Claude Code 개인 설정
+.claude/settings.local.json
+
+# Backend
+backend/build/
+backend/.gradle/
+backend/out/
+backend/bin/
+*.class
+
+# Frontend
+node_modules/
+frontend/dist/
+frontend/coverage/
+frontend/test-results/
+frontend/playwright-report/
+
+# IDE / OS
+.idea/
+*.iml
+.vscode/*
+!.vscode/extensions.json
+.settings/
+.project
+.classpath
+.sts4-cache/
+.DS_Store
+Thumbs.db
+
+# 분석 임시 파일
+tmp/
+uploads/

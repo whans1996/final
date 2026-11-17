@@ -1,0 +1,92 @@
+# 공통 컨벤션 (FE·BE 공용)
+
+> FE와 BE가 이 문서를 기준으로 맞춘다. 바꾸려면 두 사람이 합의하고 `docs/기획서.md` 결정 로그에 남긴다.
+> `contract-checker` 에이전트가 이 문서를 기준으로 검사한다.
+
+## 1. URL
+
+- `/api/` 접두어. 리소스는 **복수형 명사, kebab-case**: `/api/review-plans`, `/api/concepts/{id}/reviews`
+- 행위가 리소스로 표현되지 않을 때만 동사 하위 경로를 쓴다: `/api/auth/login`, `/api/users/{id}/follow`
+- 관리자 API는 `/api/admin/**` (ROLE_ADMIN만 접근)
+
+## 2. 요청·응답 본문
+
+- JSON 필드는 **camelCase**. DB 컬럼은 snake_case이고 MyBatis `mapUnderscoreToCamelCase=true`로 변환한다.
+- Enum 값은 **UPPER_SNAKE** 문자열: `"BEGINNER"`, `"DONE"`
+- 날짜·시간은 **ISO-8601 + 오프셋**: `"2026-11-18T14:20:00+09:00"`. 날짜만 필요하면 `"2026-11-18"`
+- ID는 숫자(`long`). 프론트에서 문자열로 바꾸지 않는다.
+
+### 성공 응답
+
+봉투(wrapper) 없이 **데이터를 그대로** 반환한다.
+
+| 상황 | 상태 코드 | 본문 |
+|---|---|---|
+| 조회 | 200 | 객체 또는 목록/페이지 |
+| 생성 | 201 | 생성된 리소스 (최소 `{ "id": 1 }`) |
+| 수정 | 200 | 수정된 리소스 |
+| 삭제, 본문 없는 성공 | 204 | 없음 |
+| 비동기 작업 접수 | 202 | `{ "analysisId": 1, "status": "FETCHING" }` |
+
+### 페이지 응답
+
+요청: `?page=1&size=20` (page는 1부터, size 기본 20, 최대 100)
+
+```json
+{ "items": [ ... ], "page": 1, "size": 20, "total": 134 }
+```
+
+### 실패 응답
+
+```json
+{ "code": "CONCEPT_404", "message": "개념 카드를 찾을 수 없습니다.", "details": null }
+```
+
+- `message`는 **사용자에게 그대로 보여 줄 수 있는 한국어 문장**.
+- `details`는 선택. 검증 실패 시 `{ "필드명": "사유" }`.
+- BE는 `@RestControllerAdvice`의 `GlobalExceptionHandler` 한 곳에서 이 형식으로 변환한다. 스택 트레이스는 응답에 넣지 않는다.
+
+## 3. 에러 코드
+
+형식: `<도메인>_<HTTP 상태 or 3자리 번호>`
+
+| 접두어 | 도메인 |
+|---|---|
+| `COMMON` | 검증 실패(`COMMON_400`), 서버 오류(`COMMON_500`) |
+| `AUTH` | 인증·토큰 (`AUTH_401` 토큰 없음/만료, `AUTH_403` 권한 없음) |
+| `USER` | 회원, 프로필, 팔로우 |
+| `ANALYSIS` | 분석 요청·파이프라인 (`ANALYSIS_413` 크기 초과, `ANALYSIS_415` 지원하지 않는 스택, `ANALYSIS_429` 일일 한도) |
+| `CONCEPT` | 개념 카드, 리뷰, 찜 |
+| `QUIZ` | 퀴즈 |
+| `REVIEW_PLAN` | 복습 계획 |
+| `POST` | 게시글, 댓글 |
+| `LLM` | LLM 호출 실패·한도 |
+
+새 코드는 spec의 "API 계약 > 에러" 표에 먼저 적고 구현한다.
+
+## 4. 인증
+
+- 헤더: `Authorization: Bearer <accessToken>`
+- Access 만료 시 401 + `AUTH_401` → FE 인터셉터가 `/api/auth/refresh` 후 1회 재시도
+- Refresh 토큰 저장 위치(HttpOnly 쿠키 vs 응답 본문)는 **F-02 spec에서 확정**한다. (결정 필요)
+
+## 5. 네이밍
+
+| 대상 | 규칙 | 예 |
+|---|---|---|
+| DB 테이블·컬럼 | snake_case, 테이블 복수형 | `concept_reviews.user_id` |
+| Java 클래스 | PascalCase + 역할 접미어 | `ConceptController`, `ConceptService`, `ConceptMapper`, `ConceptResponse` |
+| Java DTO | `XxxRequest` / `XxxResponse` (record) | `SignupRequest` |
+| Vue 컴포넌트 | PascalCase, 화면은 `XxxView.vue` | `ConceptCard.vue`, `ConceptDetailView.vue` |
+| FE API 함수 | 동사 + 리소스, camelCase | `fetchConcepts`, `createReview` |
+| Pinia store | `useXxxStore`, 파일은 `xxx.js` | `useAuthStore` in `stores/auth.js` |
+| 브랜치 | `feature/F-xx-slug`, `fix/F-xx-slug` | `feature/F-05-analysis-request` |
+
+## 6. 커밋 메시지
+
+`타입(범위): 요약` — git `commit-msg` hook이 검사한다.
+
+- 타입: `feat` `fix` `refactor` `test` `wip` (범위 필수) / `docs` `chore` (범위 생략 가능)
+- 범위: `F-xx` (기능 ID), `common` (여러 기능에 걸친 공통 코드), `harness` (하네스·도구)
+- 예: `feat(F-05): 분석 요청 API 추가`, `wip(F-05): 교대 체크포인트`, `chore(common): Spotless 설정`
+- `wip`가 아닌 커밋은 변경된 영역(backend/frontend)의 테스트가 통과해야 커밋된다.

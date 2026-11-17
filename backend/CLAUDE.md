@@ -1,0 +1,85 @@
+# Backend 규칙
+
+> Java 17, Spring Boot 3, Spring Security + JWT, MyBatis, MySQL 8, Flyway, Gradle.
+> 공통 API 규칙(응답 형식, 에러 코드, 네이밍)은 `../docs/conventions.md`를 따른다.
+> 이 문서는 프로젝트 생성 전에 작성되었다. 뼈대를 만든 뒤 실제 구조와 다른 부분이 있으면 이 문서를 고친다.
+
+## 패키지 구조
+
+루트 패키지는 `com.vibenote`이다. **도메인별로 나누고**, 도메인 안에서 레이어를 나눈다.
+
+```
+com.vibenote
+├─ auth            로그인, JWT, Refresh 토큰 (F-02)
+├─ user            회원가입, 프로필, 통계 (F-01, F-03)
+├─ follow          팔로우 (F-04)
+├─ feed            활동 피드, activities 기록 (F-04, F-19)
+├─ analysis        분석 요청, 파이프라인, 파일, 실행 흐름 (F-05~F-07, F-19)
+├─ concept         개념 카드, 리뷰, 찜, 관리자 (F-08~F-13)
+├─ quiz            퀴즈 생성, 풀이, 채점 (F-14)
+├─ reviewplan      복습 계획 (F-15)
+├─ recommendation  맞춤 추천 (F-16)
+├─ community       게시글, 댓글 (F-17, F-18)
+├─ llm             LlmClient와 구현체(Mock, Gemini, Ollama), 프롬프트 로더, 사용량 로그
+└─ common          예외, GlobalExceptionHandler, 페이지, JsonTypeHandler, 보안 설정, 유틸
+```
+
+도메인 내부: `XxxController` → `XxxService` → `XxxMapper` (+ `dto/`).
+
+## 레이어 규칙
+
+- **Controller**: 요청 검증(`@Valid`), 인증 사용자 추출, Service 호출, 응답 반환만 한다. 비즈니스 로직을 두지 않는다.
+- **Service**: 트랜잭션(`@Transactional`)과 비즈니스 로직. 다른 도메인의 Mapper를 직접 부르지 말고 그 도메인의 Service를 부른다.
+- **Mapper**: MyBatis 인터페이스. SQL은 XML(`src/main/resources/mapper/<도메인>/XxxMapper.xml`)에 둔다. 아주 짧은 쿼리만 어노테이션을 허용한다.
+- **DTO**: Java `record`로 쓰고 `XxxRequest` / `XxxResponse`로 이름 짓는다. DB 행을 담는 객체(`domain/Xxx.java`)를 Controller 응답으로 직접 내보내지 않는다.
+- **예외**: `BusinessException(ErrorCode)`를 던지고 `GlobalExceptionHandler`가 `{code, message, details}`로 변환한다. `ErrorCode` enum에 코드와 HTTP 상태와 메시지를 함께 정의한다.
+
+## MyBatis
+
+- `mybatis.configuration.map-underscore-to-camel-case=true`
+- **SQL에 `${}`를 쓰지 않는다** (SQL 인젝션). 정렬 컬럼처럼 꼭 필요하면 화이트리스트 enum으로 검증한 값만 쓴다.
+- JSON 컬럼(`analyses.overview`, `analysis_flows.steps`, `quiz_questions.choices`)은 `common.mybatis.JsonTypeHandler`로 매핑한다.
+- 목록 조회는 페이지(`LIMIT #{size} OFFSET #{offset}`)와 `COUNT(*)`를 함께 제공한다.
+
+## DB 마이그레이션 (Flyway)
+
+- 위치: `src/main/resources/db/migration/`
+- 스키마 변경: `V{n}__{설명}.sql` (예: `V3__add_quiz_tables.sql`). **커밋된 V 파일은 수정 금지**이다 (hook이 막는다).
+- 시드 데이터: `R__seed_concepts.sql` (반복 실행 마이그레이션. 내용이 바뀌면 다시 적용된다). `INSERT ... ON DUPLICATE KEY UPDATE`로 작성한다.
+- 두 PC에서 버전 번호가 겹치지 않도록 새 V 파일을 만들기 전에 `git pull`로 최신 번호를 확인한다.
+
+## LLM
+
+- 모든 호출은 `llm.LlmClient` 인터페이스로 한다. 구현체는 `MockLlmClient`, `GeminiLlmClient`, `OllamaLlmClient`이다.
+- `llm.provider=mock|gemini|ollama`. **기본값과 테스트는 `mock`**이다. Gemini 실패나 한도 초과 시 Ollama로 폴백한다.
+- 프롬프트: `src/main/resources/prompts/<stage>/<level>.md` (stage = overview, file, flow, concept, quiz, recommend / level = beginner, junior, senior)
+- Mock 응답: `src/main/resources/llm-fixtures/<stage>.json`. 결정적이어야 하므로 랜덤을 쓰지 않는다.
+- LLM 출력은 **JSON으로 받고 파싱 실패를 항상 처리**한다 (재시도 1회 → 실패 시 단계 FAILED).
+- 모든 호출은 `llm_usage_logs`에 기록한다.
+- API 키는 환경변수 `GEMINI_API_KEY`로만 받는다.
+
+## 분석 파이프라인
+
+- `POST /api/analyses`는 202와 `analysisId`를 즉시 반환하고, `@Async` 작업이 `FETCHING → FILTERING → SELECTING → EXPLAINING → EXTRACTING → QUIZ → DONE/FAILED` 순으로 상태를 DB에 기록한다.
+- 업로드 ZIP 처리 시 **Zip Slip 방어**(엔트리 경로 정규화 후 대상 폴더 밖이면 거부), 파일 수(200)·크기(10MB) 제한, `.env`와 키 패턴 제거를 반드시 한다.
+- 원본 ZIP과 압축 해제 폴더는 `finally`에서 삭제한다.
+
+## 테스트
+
+- 통합 테스트는 `common.IntegrationTestBase`를 상속한다: `@SpringBootTest` + Testcontainers MySQL 8 싱글톤 컨테이너 + Flyway 적용 + `llm.provider=mock`.
+- Controller: MockMvc로 상태 코드, 응답 JSON, 에러 코드를 검증한다.
+- Mapper: 실제 DB로 SQL을 검증한다. H2를 쓰지 않는다.
+- Service 단위 테스트는 로직이 복잡할 때만 Mockito로 쓴다 (예: 추천 점수 계산).
+- **테스트 메서드 이름에 spec의 AC 번호를 넣는다**: `AC1_파일이_200개를_넘으면_413을_반환한다()`. `@DisplayName`은 쓰지 않아도 된다.
+- 테스트끼리 데이터가 섞이지 않게 `@Transactional` 롤백 또는 `@Sql` 정리 스크립트를 쓴다.
+
+## 명령어 (backend 폴더에서)
+
+| 목적 | Windows | 
+|---|---|
+| 테스트 | `gradlew.bat test` |
+| 특정 테스트 | `gradlew.bat test --tests "*ConceptControllerTest"` |
+| 포맷 | `gradlew.bat spotlessApply` |
+| 실행 | `gradlew.bat bootRun --args="--spring.profiles.active=local"` |
+
+루트에서 `node scripts/verify.mjs be`를 쓰면 포맷 검사와 테스트를 돌리고 실패만 요약해 준다.
