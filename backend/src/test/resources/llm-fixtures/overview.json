@@ -1,0 +1,8 @@
+{
+  "summary": "테스트 전용 fixture: 회원 가입 요청을 받아 저장하는 작은 Spring Boot 예제입니다.",
+  "layers": [
+    { "name": "controller", "files": ["MemberController.java"] },
+    { "name": "service", "files": ["MemberService.java"] }
+  ],
+  "apis": ["POST /members"]
+}

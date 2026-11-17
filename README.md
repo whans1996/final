@@ -47,25 +47,27 @@ SSAFY Final Project (Java Track, 자율 주제) · 2026-11-17 ~ 2026-12-24
 
 ## 실행 방법
 
-> 프로젝트 뼈대 생성 후 채운다.
-
 ### 사전 준비
 - JDK 17+(`JAVA_HOME`), Node 24, MySQL 8, Docker Desktop(WSL2, 테스트용 Testcontainers) — 설치 절차: [docs/환경설정.md](docs/환경설정.md)
 - 최초 1회: `node scripts/setup.mjs` (git hook 연결, 환경 점검)
+- 로컬 DB `vibenote` 생성과 `.env` 작성 (`.env.example` 복사): [docs/환경설정.md](docs/환경설정.md) 3절
 
 ### Back-End
 ```bash
 cd backend
 ./gradlew bootRun --args='--spring.profiles.active=local'   # LLM은 mock 모드
 ```
+- Spring Boot 3.5 · Gradle 8.14 (wrapper). 시작할 때 Flyway가 스키마를 자동 적용한다.
 - Swagger UI: http://localhost:8080/swagger-ui/index.html
+- 테스트: `./gradlew test` (Docker Desktop 실행 필요, Testcontainers MySQL 8.4)
 
 ### Front-End
 ```bash
 cd frontend
 npm install
-npm run dev   # http://localhost:5173
+npm run dev   # http://localhost:5173 (/api는 8080으로 프록시)
 ```
+- 테스트·린트: `npm run test:unit -- --run`, `npm run lint:check`
 
 ## 개발 방식: Claude Code 하네스
 

@@ -23,7 +23,9 @@ const storage = opt('--storage', null);
 const width = Number(opt('--width', 1280));
 const mobile = args.includes('--mobile');
 const optionValues = new Set(['--base', '--storage', '--width'].map((n) => opt(n, null)).filter(Boolean));
-const routes = args.filter((a) => !a.startsWith('--') && !optionValues.has(a));
+// Git Bash(MSYS)는 '/concepts' 같은 인자를 'C:/Program Files/Git/concepts'로 바꿔 넘긴다 → 되돌린다
+const undoMsysPath = (r) => r.replace(/^[A-Za-z]:[\\/].*?[\\/]Git[\\/]/i, '/');
+const routes = args.filter((a) => !a.startsWith('--') && !optionValues.has(a)).map(undoMsysPath);
 if (routes.length === 0) routes.push('/');
 
 let chromium;

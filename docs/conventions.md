@@ -52,7 +52,7 @@
 
 | 접두어 | 도메인 |
 |---|---|
-| `COMMON` | 검증 실패(`COMMON_400`), 서버 오류(`COMMON_500`) |
+| `COMMON` | 검증 실패(`COMMON_400`), 없는 주소(`COMMON_404`), 허용되지 않은 메서드(`COMMON_405`), 업로드 크기 초과(`COMMON_413`), 지원하지 않는 Content-Type(`COMMON_415`), 서버 오류(`COMMON_500`) |
 | `AUTH` | 인증·토큰 (`AUTH_401` 토큰 없음/만료, `AUTH_403` 권한 없음) |
 | `USER` | 회원, 프로필, 팔로우 |
 | `ANALYSIS` | 분석 요청·파이프라인 (`ANALYSIS_413` 크기 초과, `ANALYSIS_415` 지원하지 않는 스택, `ANALYSIS_429` 일일 한도) |
@@ -61,6 +61,7 @@
 | `REVIEW_PLAN` | 복습 계획 |
 | `POST` | 게시글, 댓글 |
 | `LLM` | LLM 호출 실패·한도 |
+| `CHALLENGE` | 학습 챌린지, 참여 |
 
 새 코드는 spec의 "API 계약 > 에러" 표에 먼저 적고 구현한다.
 

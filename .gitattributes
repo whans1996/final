@@ -1,5 +1,7 @@
 # 두 PC(Windows) 간 줄바꿈 차이로 diff가 오염되지 않도록 정규화
-* text=auto
+# eol=lf: PC의 core.autocrlf 설정과 무관하게 작업 트리도 LF로 받는다
+# (autocrlf=true인 PC에서 CRLF로 체크아웃되면 prettier --check·openapi.json drift 검사가 실패한다)
+* text=auto eol=lf
 
 # 셸에서 실행되는 파일은 반드시 LF (CRLF면 Git Bash/hook 실행 실패)
 *.sh        text eol=lf

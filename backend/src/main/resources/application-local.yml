@@ -1,0 +1,9 @@
+# 로컬 개발용 프로필: ./gradlew bootRun --args='--spring.profiles.active=local'
+app:
+  jwt:
+    # .env의 JWT_SECRET이 없을 때만 쓰는 개발 전용 키. 운영에서는 반드시 환경변수로 지정한다.
+    secret: ${JWT_SECRET:local-dev-only-jwt-secret-do-not-use-in-production}
+
+logging:
+  level:
+    com.vibenote: debug

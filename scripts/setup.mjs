@@ -32,7 +32,8 @@ if (!isGitRepo()) {
 }
 
 // GitHub CLI (PR 생성·CI 확인)
-const gh = cmd('gh auth status');
+// --active: 만료된 다른 계정이 남아 있어도 현재 계정만 확인한다
+const gh = cmd('gh auth status --active');
 add(gh.ok || 'warn', 'GitHub CLI', gh.ok ? '로그인됨' : 'gh 설치 후 gh auth login (PR 생성·CI 확인에 사용)');
 
 // 2. Node
@@ -81,4 +82,10 @@ add(mysql.ok || 'warn', 'MySQL CLI', mysql.ok ? mysql.out.split('\n')[0] : '없�
 
 console.log(`\n바이브노트 개발 환경 점검 (${ROOT})\n`);
 console.log(rows.join('\n'));
-console.log('\n❌ 항목을 해결한 뒤 다시 실행하세요. 완료되면 Claude Code에서 /pickup 으로 시작합니다.\n');
+const failed = rows.filter((r) => r.startsWith('❌')).length;
+console.log(
+  failed
+    ? `\n❌ 항목 ${failed}개를 해결한 뒤 다시 실행하세요. 완료되면 Claude Code에서 /pickup 으로 시작합니다.\n`
+    : '\n준비 완료. Claude Code에서 /pickup 으로 시작합니다.\n',
+);
+process.exitCode = failed ? 1 : 0;

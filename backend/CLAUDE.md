@@ -1,8 +1,8 @@
 # Backend 규칙
 
-> Java 17, Spring Boot 3, Spring Security + JWT, MyBatis, MySQL 8, Flyway, Gradle.
+> Java 17, Spring Boot 3.5, Spring Security + JWT(jjwt), MyBatis, MySQL 8, Flyway, springdoc, Gradle 8.14(wrapper), Spotless(google-java-format AOSP).
 > 공통 API 규칙(응답 형식, 에러 코드, 네이밍)은 `../docs/conventions.md`를 따른다.
-> 이 문서는 프로젝트 생성 전에 작성되었다. 뼈대를 만든 뒤 실제 구조와 다른 부분이 있으면 이 문서를 고친다.
+> Spring Initializr는 Boot 4만 제공하므로 Boot 3.5를 `build.gradle`에 직접 지정했다 (F-00). Boot 4로 올리지 않는다.
 
 ## 패키지 구조
 
@@ -25,6 +25,18 @@ com.vibenote
 └─ common          예외, GlobalExceptionHandler, 페이지, JsonTypeHandler, 보안 설정, 유틸
 ```
 
+뼈대(F-00)에서 만든 공통 코드:
+
+| 위치 | 내용 |
+|---|---|
+| `common.exception` | `ErrorCode`(코드·상태·메시지), `BusinessException`, `ErrorResponse`, `GlobalExceptionHandler` |
+| `common.security` | `JwtTokenProvider`(Access 발급·검증), `JwtAuthenticationFilter`, `AuthUser`(`@AuthenticationPrincipal`), 401·403 JSON 응답 |
+| `common.config` | `SecurityConfig`(`PUBLIC_PATHS`, `/api/admin/**`은 ADMIN), `OpenApiConfig`(`bearerAuth`) |
+| `common.page` | `PageQuery`(page·size 기본값·검증, `offset()`), `PageResponse` |
+| `common.mybatis` | `JsonTypeHandler` |
+| `common.Level` | BEGINNER · JUNIOR · SENIOR |
+| `llm` | `LlmClient`, `LlmRequest`·`LlmResponse`·`LlmStage`, `MockLlmClient` |
+
 도메인 내부: `XxxController` → `XxxService` → `XxxMapper` (+ `dto/`).
 
 ## 레이어 규칙
@@ -39,8 +51,10 @@ com.vibenote
 
 - `mybatis.configuration.map-underscore-to-camel-case=true`
 - **SQL에 `${}`를 쓰지 않는다** (SQL 인젝션). 정렬 컬럼처럼 꼭 필요하면 화이트리스트 enum으로 검증한 값만 쓴다.
-- JSON 컬럼(`analyses.overview`, `analysis_flows.steps`, `quiz_questions.choices`)은 `common.mybatis.JsonTypeHandler`로 매핑한다.
+- JSON 컬럼(`analyses.overview`, `analysis_flows.steps`, `quiz_questions.choices`)은 `common.mybatis.JsonTypeHandler`로 매핑한다. 패키지 스캔으로 등록하지 않으므로 매핑마다 `javaType`과 `typeHandler`를 함께 적는다 (목록은 배열 타입, 예: `FlowStep[]`). 사용 예는 클래스 주석에 있다.
 - 목록 조회는 페이지(`LIMIT #{size} OFFSET #{offset}`)와 `COUNT(*)`를 함께 제공한다.
+- **분석은 soft delete**다 (V2, F-19). 삭제 시 `analysis_files`·`analysis_flows`·`analysis_concepts`를 지우고 `analyses.deleted_at`을 채운다. 목록·상세·피드·게시글 첨부 조회는 `deleted_at IS NULL`로 거르고, 퀴즈 풀이·통계·일일 한도 집계는 거르지 않는다.
+- 회원도 soft delete(`users.status=WITHDRAWN`)이므로 users 행을 DELETE하지 않는다. 작성물(posts·comments·concept_reviews)의 user FK는 RESTRICT라 실패한다.
 
 ## DB 마이그레이션 (Flyway)
 
@@ -82,7 +96,9 @@ com.vibenote
 
 ## 테스트
 
-- 통합 테스트는 `common.IntegrationTestBase`를 상속한다: `@SpringBootTest` + Testcontainers MySQL 8 싱글톤 컨테이너 + Flyway 적용 + `llm.provider=mock`.
+- 통합 테스트는 `common.IntegrationTestBase`를 상속한다: `@SpringBootTest` + `@AutoConfigureMockMvc` + Testcontainers `mysql:8.4` 싱글톤 컨테이너 + Flyway 적용 + `llm.provider=mock` + 테스트용 JWT 키. `mockMvc`, `objectMapper`를 바로 쓸 수 있다.
+- 인증이 필요한 요청은 `JwtTokenProvider.createAccessToken(userId, "USER")`로 만든 토큰을 `Authorization: Bearer`로 보낸다 (`SecurityConfigTest` 참고).
+- 테스트 전용 컨트롤러는 **static이 아닌 내부 클래스**로 둔다. static 중첩 클래스나 최상위 클래스에 `@RestController`를 붙이면 통합 테스트 컨텍스트와 `openapi.json`에 섞인다 (`GlobalExceptionHandlerTest` 참고).
 - Controller: MockMvc로 상태 코드, 응답 JSON, 에러 코드를 검증한다.
 - Mapper: 실제 DB로 SQL을 검증한다. H2를 쓰지 않는다.
 - Service 단위 테스트는 로직이 복잡할 때만 Mockito로 쓴다 (예: 추천 점수 계산).
@@ -91,14 +107,15 @@ com.vibenote
 
 ## 명령어 (backend 폴더에서)
 
-| 목적 | Windows | 
+| 목적 | PowerShell (Git Bash는 `./gradlew`) |
 |---|---|
-| 테스트 | `gradlew.bat test` |
-| 특정 테스트 | `gradlew.bat test --tests "*ConceptControllerTest"` |
-| 포맷 | `gradlew.bat spotlessApply` |
-| 실행 | `gradlew.bat bootRun --args="--spring.profiles.active=local"` |
+| 테스트 | `.\gradlew.bat test` |
+| 특정 테스트 | `.\gradlew.bat test --tests "*ConceptControllerTest"` |
+| 포맷 | `.\gradlew.bat spotlessApply` |
+| 실행 | `.\gradlew.bat bootRun --args="--spring.profiles.active=local"` |
 
 루트에서 `node scripts/verify.mjs be`를 쓰면 포맷 검사와 테스트를 돌리고 실패만 요약해 준다.
 
+- 설정: `application.yml`(공통, 저장소 루트 `.env`를 자동으로 읽음), `application-local.yml`(개발용 JWT 키, debug 로그). 테스트는 `IntegrationTestBase`의 `properties`가 우선한다.
 - 빌드는 **`JAVA_HOME`(JDK 17)** 기준이다. PATH의 `java`가 8이어도 Gradle wrapper는 `JAVA_HOME`을 쓴다. 설정 방법은 `docs/환경설정.md`.
 - STS에서는 Installed JREs에 JDK 17을 추가하고 프로젝트 JRE로 지정한다.
