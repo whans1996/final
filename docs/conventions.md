@@ -90,3 +90,18 @@
 - 범위: `F-xx` (기능 ID), `common` (여러 기능에 걸친 공통 코드), `harness` (하네스·도구)
 - 예: `feat(F-05): 분석 요청 API 추가`, `wip(F-05): 교대 체크포인트`, `chore(common): Spotless 설정`
 - `wip`가 아닌 커밋은 변경된 영역(backend/frontend)의 테스트가 통과해야 커밋된다.
+
+## 7. Pull Request (GitHub)
+
+- 대상: `feature/*` → `develop`. 마일스톤 마감 때 `develop` → `main`.
+- **제목은 커밋 메시지와 같은 형식** `타입(F-xx): 요약` (CI가 검사한다).
+- 본문은 `.github/pull_request_template.md`를 채운다 (`/pr-review`가 생성).
+- **CI가 초록일 때만** 영역 오너가 머지한다. wip 커밋이 섞여 있으면 **Squash and merge**.
+- API를 바꾼 PR은 `docs/api/openapi.json` 변경을 포함해야 한다 (CI가 불일치를 실패 처리).
+- GitLab(lab.ssafy.com)은 최종 제출 전용이다. 개발 중에는 push하지 않는다.
+
+## 8. API 문서 (Swagger)
+
+- 모든 Controller에 `@Tag`, 모든 엔드포인트에 `@Operation(summary)`과 에러 `@ApiResponse`, 모든 요청·응답 DTO 필드에 `@Schema(description, example)`를 단다.
+- Tag 이름은 한국어 도메인 이름으로 통일한다: `인증`, `회원`, `팔로우`, `피드`, `분석`, `개념 카드`, `퀴즈`, `복습 계획`, `추천`, `커뮤니티`, `챌린지`, `관리자`.
+- 정본은 테스트가 추출하는 `docs/api/openapi.json`이다. 제출용 REST API 명세(`docs/산출물/07-REST-API-명세.md`)는 이 파일에서 생성한다.

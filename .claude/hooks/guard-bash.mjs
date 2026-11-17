@@ -32,6 +32,15 @@ const rules = [
   [/\bgit\s+add\b[^;&|]*\s(-f|--force)\b/, 'git add --force는 금지입니다. .gitignore된 비밀 파일이 커밋될 수 있습니다.'],
   [/\bcore\.hooksPath\b(?!\s+\.githooks\b)/, 'git hook 경로 변경은 금지입니다.'],
   [/\bbranch\s+-D\s+(main|develop)\b/, '보호 브랜치 삭제는 금지입니다.'],
+  // 최종 제출 저장소(lab.ssafy.com GitLab)는 사람이 직접 push한다
+  [
+    /\bgit\s+push\b(\s+-\S+)*\s+gitlab(\s|$)|\bgit\s+push\b[^;&|]*lab\.ssafy\.com/i,
+    'GitLab(lab.ssafy.com)은 최종 제출 전용이며 push는 사람이 직접 합니다. 개발 push는 origin(GitHub)으로 하세요.',
+  ],
+  // GitHub: 머지와 저장소 설정 변경은 사람이 CI를 확인하고 한다 (무료 private 플랜은 브랜치 보호가 없음)
+  [/\bgh\s+pr\s+merge\b/, 'PR 머지는 영역 오너가 CI 초록을 확인하고 GitHub에서 직접 합니다.'],
+  [/\bgh\s+repo\s+(delete|edit|rename|archive)\b/, '저장소 설정 변경·삭제는 사람이 직접 합니다.'],
+  [/\bgh\s+(release|secret|variable)\s+(delete|remove|set)\b/, '릴리스·시크릿·변수 변경은 사람이 직접 합니다.'],
 ];
 for (const [re, reason] of rules) if (re.test(bare)) block(reason);
 

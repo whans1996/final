@@ -19,7 +19,8 @@ com.vibenote
 ├─ quiz            퀴즈 생성, 풀이, 채점 (F-14)
 ├─ reviewplan      복습 계획 (F-15)
 ├─ recommendation  맞춤 추천 (F-16)
-├─ community       게시글, 댓글 (F-17, F-18)
+├─ community       게시글(게시판 3종), 댓글 (F-17, F-18)
+├─ challenge       학습 챌린지 관리, 참여·달성도 집계 (F-24, F-25)
 ├─ llm             LlmClient와 구현체(Mock, Gemini, Ollama), 프롬프트 로더, 사용량 로그
 └─ common          예외, GlobalExceptionHandler, 페이지, JsonTypeHandler, 보안 설정, 유틸
 ```
@@ -47,6 +48,21 @@ com.vibenote
 - 스키마 변경: `V{n}__{설명}.sql` (예: `V3__add_quiz_tables.sql`). **커밋된 V 파일은 수정 금지**이다 (hook이 막는다).
 - 시드 데이터: `R__seed_concepts.sql` (반복 실행 마이그레이션. 내용이 바뀌면 다시 적용된다). `INSERT ... ON DUPLICATE KEY UPDATE`로 작성한다.
 - 두 PC에서 버전 번호가 겹치지 않도록 새 V 파일을 만들기 전에 `git pull`로 최신 번호를 확인한다.
+
+## API 문서 (Swagger, springdoc-openapi)
+
+- 의존성: `org.springdoc:springdoc-openapi-starter-webmvc-ui` (Spring Boot 3 호환 버전)
+- 주소: `/swagger-ui/index.html`, `/v3/api-docs`. Security에서 permitAll로 연다.
+- `common.config.OpenApiConfig`: 제목 "VibeNote API", 버전, **JWT Bearer `securityScheme`**(이름 `bearerAuth`)와 전역 보안 요구. 공개 API는 `@SecurityRequirements()`로 해제한다.
+- Controller: 클래스에 `@Tag(name = "개념 카드", description = ...)`, 메서드에 `@Operation(summary = ...)`, 에러마다 `@ApiResponse(responseCode = "404", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))`
+- DTO record 컴포넌트: `@Schema(description = "닉네임", example = "vibecoder")`. Enum은 허용값이 드러나게 한다.
+- **`OpenApiExportTest`** (`IntegrationTestBase` 상속): `/v3/api-docs`를 받아 키를 정렬한 JSON으로 `../docs/api/openapi.json`에 쓴다. API를 바꾸면 이 파일 변경을 같은 커밋에 포함한다. CI가 테스트 후 파일이 달라지면 실패시킨다.
+- Tag 이름 목록은 `docs/conventions.md` 8절.
+
+## 파일 업로드 (챌린지 이미지)
+
+- 저장 경로는 설정값 `app.upload-dir`(기본 `./uploads`, gitignore됨). 정적 경로 `/uploads/**`로 제공한다.
+- jpg·png·webp만 허용(확장자 + MIME + 매직 바이트 확인), 2MB 이하, 파일 이름은 UUID로 바꾼다. 경로 조작(`..`)을 막는다.
 
 ## LLM
 

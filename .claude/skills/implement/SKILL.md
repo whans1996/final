@@ -38,7 +38,9 @@ argument-hint: F-xx
 - API를 만들거나 바꿨으면 `contract-checker` 실행 → 불일치 수정.
 - FE 화면을 바꿨으면 dev 서버와 BE(local 프로필)를 띄우고 `ui-verifier` 실행 → 콘솔 에러·빈 화면 수정. 서버를 띄울 수 없으면 사용자에게 요청한다.
 - AI 기능이면 mock fixture로 파이프라인 테스트가 통과하는지 확인한다. 실제 LLM 품질 확인이 필요하면 사용자에게 `prompt-evaluator` 실행을 제안한다 (직접 실행하지 않는다).
-- 모든 AC가 green이면 `/mr-review`를 제안한다.
+- API를 바꿨으면 `OpenApiExportTest`가 갱신한 `docs/api/openapi.json`을 같은 커밋에 포함한다. 새 Controller·DTO에는 Swagger 어노테이션을 단다.
+- 화면·테이블·API가 추가되었으면 `docs/산출물/`의 화면 설계서·ERD·요구사항 정의서에 반영한다 (짧게라도. 최종 다듬기는 W5).
+- 모든 AC가 green이면 `/pr-review`를 제안한다.
 
 ## 규칙
 

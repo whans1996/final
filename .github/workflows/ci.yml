@@ -1,0 +1,121 @@
+# 바이브노트 CI — PR마다 바뀐 영역만 검증한다 (GitHub 무료 플랜 private: 월 2,000분, Linux 러너 사용)
+# 로컬과 같은 검증 스크립트(scripts/verify.mjs)를 실행해 "로컬 통과 = CI 통과"가 되게 한다.
+name: CI
+
+on:
+  pull_request:
+    branches: [develop, main]
+  push:
+    branches: [develop]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  pr-title:
+    name: PR 제목 형식
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: 타입(범위) 요약 형식 검사
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          if echo "$TITLE" | grep -Eq '^((feat|fix|refactor|test|wip)\((F-[0-9]{2}|common|harness)\)|(docs|chore)(\((F-[0-9]{2}|common|harness)\))?): .+'; then
+            echo "OK: $TITLE"
+          else
+            echo "::error::PR 제목은 '타입(F-xx): 요약' 형식이어야 합니다 (docs/conventions.md 6절). 현재: $TITLE"
+            exit 1
+          fi
+
+  changes:
+    name: 변경 영역 판별
+    runs-on: ubuntu-latest
+    outputs:
+      be: ${{ steps.filter.outputs.be }}
+      fe: ${{ steps.filter.outputs.fe }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            be:
+              - 'backend/**'
+              - 'scripts/**'
+              - '.github/workflows/**'
+            fe:
+              - 'frontend/**'
+              - 'scripts/**'
+              - '.github/workflows/**'
+
+  backend:
+    name: Backend 검증 (+ API 명세 일치)
+    needs: changes
+    if: needs.changes.outputs.be == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+      - name: gradlew 실행 권한
+        run: if [ -f backend/gradlew ]; then chmod +x backend/gradlew; fi
+      - name: verify be (Spotless + 테스트, Testcontainers MySQL)
+        run: node scripts/verify.mjs be
+      - name: openapi.json이 코드와 일치하는지 확인
+        run: |
+          if [ -d backend/src ]; then
+            if [ -n "$(git status --porcelain -- docs/api)" ]; then
+              echo "::error::docs/api/openapi.json이 현재 API와 다릅니다. 로컬에서 테스트를 돌려 갱신된 파일을 커밋하세요."
+              git status --porcelain -- docs/api
+              git diff --stat -- docs/api
+              exit 1
+            fi
+          fi
+      - name: 실패 로그 업로드
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-verify-logs
+          path: .harness/logs
+          include-hidden-files: true
+          retention-days: 7
+
+  frontend:
+    name: Frontend 검증
+    needs: changes
+    if: needs.changes.outputs.fe == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: ${{ hashFiles('frontend/package-lock.json') != '' && 'npm' || '' }}
+          cache-dependency-path: frontend/package-lock.json
+      - name: 의존성 설치
+        run: if [ -f frontend/package-lock.json ]; then cd frontend && npm ci; fi
+      - name: verify fe (lint + 단위 테스트 + 빌드)
+        run: node scripts/verify.mjs fe
+      - name: 실패 로그 업로드
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-verify-logs
+          path: .harness/logs
+          include-hidden-files: true
+          retention-days: 7

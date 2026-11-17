@@ -1,0 +1,99 @@
+@startuml usecase
+' 바이브노트 Use-Case Diagram (소스). 이미지는 제출 단계에서 렌더링한다: docs/산출물/diagrams/usecase.png
+left to right direction
+skinparam packageStyle rectangle
+skinparam actorStyle awesome
+
+actor "비회원" as Guest
+actor "회원" as Member
+actor "관리자" as Admin
+actor "LLM\n(Gemini / Ollama)" as LLM <<system>>
+actor "GitHub·GitLab\n(공개 저장소)" as Repo <<system>>
+
+Member -|> Guest
+Admin -|> Member
+
+rectangle "바이브노트" {
+  package "회원" {
+    usecase "회원가입\n(학습 수준 선택)" as UC01
+    usecase "로그인·로그아웃" as UC02
+    usecase "프로필 조회·수정" as UC03
+    usecase "회원 탈퇴" as UC04
+    usecase "팔로우·언팔로우" as UC05
+    usecase "활동 피드 보기" as UC06
+  }
+
+  package "코드 분석" {
+    usecase "분석 요청\n(URL / ZIP)" as UC10
+    usecase "개요·파일 설명 보기" as UC11
+    usecase "실행 흐름 설명 요청" as UC12
+    usecase "분석 수정·삭제·공개 설정" as UC13
+    usecase "코드 수집" as UC14
+    usecase "AI 설명 생성" as UC15
+  }
+
+  package "개념 카드" {
+    usecase "카드 목록·검색" as UC20
+    usecase "카드 상세 보기" as UC21
+    usecase "리뷰 작성·조회" as UC22
+    usecase "찜하기" as UC23
+    usecase "개념 추출·초안 카드 생성" as UC24
+  }
+
+  package "학습" {
+    usecase "코드 이해 퀴즈 풀기" as UC30
+    usecase "복습 계획 관리" as UC31
+    usecase "맞춤 카드 추천 보기" as UC32
+    usecase "챌린지 참여·달성도 확인" as UC33
+  }
+
+  package "커뮤니티" {
+    usecase "게시글 작성·조회·수정·삭제\n(Q&A·후기·자유)" as UC40
+    usecase "댓글 작성·조회·수정·삭제" as UC41
+    usecase "분석·카드 첨부" as UC42
+  }
+
+  package "관리" {
+    usecase "개념 카드 관리·AI 초안 검수" as UC50
+    usecase "챌린지 등록·수정·삭제" as UC51
+  }
+}
+
+Guest --> UC01
+Guest --> UC02
+Guest --> UC20
+Guest --> UC21
+Guest --> UC40
+
+Member --> UC03
+Member --> UC04
+Member --> UC05
+Member --> UC06
+Member --> UC10
+Member --> UC11
+Member --> UC12
+Member --> UC13
+Member --> UC22
+Member --> UC23
+Member --> UC30
+Member --> UC31
+Member --> UC32
+Member --> UC33
+Member --> UC41
+
+Admin --> UC50
+Admin --> UC51
+
+UC10 ..> UC14 : <<include>>
+UC10 ..> UC15 : <<include>>
+UC10 ..> UC24 : <<include>>
+UC12 ..> UC15 : <<include>>
+UC40 <.. UC42 : <<extend>>
+UC30 ..> UC31 : <<extend>>\n오답 → 복습
+
+UC14 --> Repo
+UC15 --> LLM
+UC24 --> LLM
+UC30 --> LLM
+UC32 --> LLM
+@enduml

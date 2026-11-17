@@ -74,6 +74,7 @@ const entry = [
     .filter(Boolean)
     .join(' / ')}`,
   memo ? `- 메모: ${memo}` : '',
+  `- AI 활용: (있으면 이어받는 사람이 채움)`,
   `- 주의: 자동 기록이다. NOW.md가 오래되었을 수 있으니 이어받는 사람은 git diff로 마지막 변경을 확인할 것`,
   '',
 ]

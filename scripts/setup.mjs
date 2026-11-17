@@ -5,7 +5,7 @@ import { spawnSync } from 'node:child_process';
 import { ROOT, git, isGitRepo } from './lib/common.mjs';
 
 const rows = [];
-const add = (ok, item, detail) => rows.push(`${ok === true ? '✅' : ok === 'warn' ? '⚠️ ' : '❌'} ${item.padEnd(16)} ${detail}`);
+const add = (ok, item, detail) => rows.push(`${ok === true ? '✅' : ok === 'warn' ? '⚠️ ' : '❌'} ${item.padEnd(18)} ${detail}`);
 
 function cmd(command) {
   const r = spawnSync(command, { shell: true, encoding: 'utf8', windowsHide: true, timeout: 20_000 });
@@ -21,9 +21,19 @@ if (!isGitRepo()) {
   const name = git(['config', 'user.name']).out;
   const email = git(['config', 'user.email']).out;
   add(!!(name && email) || 'warn', 'git 사용자', name && email ? `${name} <${email}>` : 'git config user.name / user.email 설정 필요');
-  const remote = git(['remote', '-v']).out;
-  add(remote ? true : 'warn', 'git 원격', remote ? remote.split('\n')[0] : '없음 → git remote add origin <GitLab URL>');
+  const origin = git(['remote', 'get-url', 'origin']);
+  add(
+    origin.ok ? true : 'warn',
+    'origin (GitHub)',
+    origin.ok ? origin.out : '없음 → git remote add origin <GitHub private 저장소 URL> && git push -u origin main develop',
+  );
+  const gitlab = git(['remote', 'get-url', 'gitlab']);
+  add(true, 'gitlab (제출)', gitlab.ok ? `${gitlab.out} (push는 제출 때 사람이 직접)` : '아직 없음 (제출 직전에 추가)');
 }
+
+// GitHub CLI (PR 생성·CI 확인)
+const gh = cmd('gh auth status');
+add(gh.ok || 'warn', 'GitHub CLI', gh.ok ? '로그인됨' : 'gh 설치 후 gh auth login (PR 생성·CI 확인에 사용)');
 
 // 2. Node
 const nodeMajor = Number(process.versions.node.split('.')[0]);

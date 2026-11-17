@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 |---|---|
-| 상태 | DRAFT <!-- DRAFT → APPROVED(사람 승인) → DONE(MR 머지) --> |
+| 상태 | DRAFT <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
 | 기능 ID | F-xx |
 | 우선순위 | P0 |
 | 영역 오너 | 팀원 A (AI·분석) / 팀원 B (학습·소셜) |
@@ -24,6 +24,8 @@
 | AC2 | | | |
 
 ## 3. API 계약
+
+> 구현 후 `docs/api/openapi.json`과 일치해야 한다 (contract-checker, CI가 검사). Swagger Tag: `개념 카드` 등 (`docs/conventions.md` 8절).
 
 ### `METHOD /api/...`
 
@@ -100,7 +102,10 @@
 - [ ] AC별 실패 테스트 작성 (red 확인)
 - [ ] BE 구현 (green)
 - [ ] FE 구현 (green)
+- [ ] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
 - [ ] contract-checker 통과
-- [ ] ui-verifier 통과 (FE 변경 시)
+- [ ] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일)
 - [ ] reviewer 지적 사항 반영
-- [ ] 상태 DONE (MR 머지 후)
+- [ ] 산출물 반영 (화면 설계서·ERD·요구사항 정의서에 영향이 있으면)
+- [ ] PR CI 초록
+- [ ] 상태 DONE (PR 머지 후)

@@ -12,7 +12,8 @@ SessionStart hook이 NOW.md와 git 상태를 이미 주입했으므로 그 내�
 
 1. **최신화**
    - 미커밋 변경이 있으면 먼저 사용자에게 알린다 (내 PC에서 하던 작업일 수 있음). 임의로 stash/삭제하지 않는다.
-   - 원격이 있으면 `git pull --ff-only`. 충돌·실패 시 멈추고 상황을 보고한다.
+   - `origin`(GitHub)이 있으면 `git pull --ff-only`. 충돌·실패 시 멈추고 상황을 보고한다.
+   - `gh pr status`로 내 브랜치의 PR, 리뷰 요청, CI 실패를 확인한다 (gh가 없거나 원격이 없으면 건너뜀). 상대가 리뷰를 요청한 PR이 있으면 보고에 포함한다.
    - 현재 브랜치가 main/develop이면 NOW.md의 브랜치로 `git switch` 한다 (없으면 사용자에게 확인).
 2. **상태 읽기**
    - `docs/handoff/NOW.md` (pull 후 바뀌었을 수 있으니 다시 읽는다)
@@ -30,6 +31,7 @@ SessionStart hook이 NOW.md와 git 상태를 이미 주입했으므로 그 내�
 ✅ 완료: AC1, AC2
 🟡 진행 중: AC3 — 테스트 작성됨(red), AnalysisService.validateZip() 구현 필요
 ⛔ 막힌 점: 없음 / ⚠️ 주의: V3 마이그레이션 새로 추가됨 → 로컬 DB 자동 적용
+🔀 PR: #12 F-04 팔로우 — CI ✅, 내 리뷰 요청됨
 ➡️ 다음: validateZip()에서 200파일 제한 구현 → AC3 테스트 green
 ```
 
