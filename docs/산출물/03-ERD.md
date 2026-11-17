@@ -13,7 +13,7 @@
 | refresh_tokens | Refresh 토큰 | users 1:N | F-02 |
 | follows | 팔로우 (follower, following 복합 PK) | users N:M users | F-04 |
 | activities | 공개 활동 기록(피드) | users 1:N | F-04, F-25 |
-| analyses | 분석 요청과 결과 개요(JSON), 상태, 공개 여부, 제목·메모 | users 1:N | F-05, F-06, F-19 |
+| analyses | 분석 요청과 결과 개요(JSON), 상태, 공개 여부, 제목·메모, 삭제 시각(soft delete) | users 1:N | F-05, F-06, F-19 |
 | analysis_files | 분석에 사용한 주요 파일과 설명 | analyses 1:N | F-06 |
 | analysis_flows | API 실행 흐름(JSON 캐시) | analyses 1:N | F-07 |
 | concepts | 개념 카드 (상태 DRAFT/PUBLISHED/HIDDEN, 출처 SEED/AI) | - | F-08~13 |

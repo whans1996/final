@@ -11,7 +11,9 @@ F-00 프로젝트 뼈대 완료 → PR 단계. spec 없이 진행한 인프라 �
 
 ## 진행
 
-- ✅ 백엔드: Spring Boot 3.5.16, 공통 예외·JWT·Swagger·JsonTypeHandler·MockLlmClient, `V1__init.sql`(ERD P0 22개), 테스트 28개 green
+- ✅ 백엔드: Spring Boot 3.5.16, 공통 예외·JWT·Swagger·JsonTypeHandler·MockLlmClient, `V1__init.sql`(ERD P0 22개), 테스트 38개 green
+- ✅ /pr-review 반영: 4xx Spring 예외 → 공통 코드(COMMON_415 추가), `V2__analysis_soft_delete_and_constraints.sql`(분석 soft delete, 복습 계획·리뷰 UNIQUE, 작성물 FK RESTRICT, 챌린지 활동 JOIN/COMPLETE)
+- 남은 reviewer 권장(spec에서 결정): `/api/auth/**`·`/uploads/**` 공개 범위 좁히기(F-02·F-24), DB 세션 시간대·DTO `OffsetDateTime` 규칙, 업로드 한도 vs `ANALYSIS_413`(F-05), `analysis_concepts` 위치 여러 곳(F-10)
 - ✅ 프론트엔드: Vue 3 + Pinia + Router + axios, `api/http.js`, `stores/auth.js`, `authGuard`, 테스트 11개 green, ui-check 통과
 - ✅ 하네스: setup.mjs 종료 메시지, verify `.\gradlew.bat`·UTF-8, ui-check Git Bash 경로 변환
 - ✅ 문서: README 실행 방법, 환경설정(로컬 DB SQL·playwright), backend/frontend CLAUDE.md, 03-ERD, 결정 로그
@@ -30,6 +32,6 @@ F-00 프로젝트 뼈대 완료 → PR 단계. spec 없이 진행한 인프라 �
 
 ## 주의
 
-- `V1__init.sql`은 커밋됨 → 수정 금지. 컬럼 보강은 V2+ (새 V 파일 전에 `git pull`로 번호 확인)
+- V1·V2 커밋됨 → 수정 금지. 보강은 V3+ (새 V 파일 전에 `git pull`로 번호 확인). 분석·회원은 soft delete (backend/CLAUDE.md MyBatis 절)
 - Boot 4로 올리지 않는다 (springdoc·Testcontainers 등 메이저 변경). PATH의 `java`는 8, 빌드는 JAVA_HOME(17)
 - 평가(eval) 데이터는 프롬프트·fixture·시드 카드에 쓰지 않는다
