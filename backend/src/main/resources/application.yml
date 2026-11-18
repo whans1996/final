@@ -52,6 +52,11 @@ analysis:
   max-total-bytes: 10MB
   max-file-bytes: 1MB
   max-selected-files: 30
+  # EXPLAINING 단계 (docs/specs/F-06-overview-explanation.md 5절): 파일 6개씩 묶어 설명, 프롬프트 입력 길이 상한
+  explain:
+    batch-size: 6
+    max-file-chars: 6000
+    overview-max-chars: 24000
 
 # LlmConfig가 provider별로 LlmClient 하나를 조립한다 (docs/specs/F-00-llm-client.md).
 # gemini는 실패(4xx·5xx·타임아웃·연결 실패·응답 형식 오류)하면 재시도 없이 ollama로 폴백한다.
@@ -67,3 +72,5 @@ llm:
     base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
     model: ${OLLAMA_MODEL:qwen2.5-coder:7b}
     timeout: 120s
+    # Ollama 기본 컨텍스트(약 4K 토큰)로는 개요·묶음 프롬프트가 잘린다 (F-06 AC12)
+    num-ctx: 16384

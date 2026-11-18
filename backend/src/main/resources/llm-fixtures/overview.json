@@ -1,0 +1,16 @@
+{
+  "summary": "블로그 플랫폼(RealWorld 명세)의 백엔드입니다. 회원 가입·로그인 후 글을 쓰고, 댓글을 달고, 다른 사용자를 팔로우하거나 글을 즐겨찾기할 수 있습니다. 요청은 api 패키지의 컨트롤러가 받고, application 패키지의 서비스가 처리한 뒤, MyBatis 매퍼가 SQL로 데이터를 읽고 씁니다. 로그인은 JWT 토큰으로 확인합니다.",
+  "techStack": ["Spring Boot", "Spring Security", "MyBatis", "JWT (jjwt)", "Netflix DGS GraphQL", "SQLite", "Flyway", "Gradle"],
+  "layers": [
+    { "layer": "controller", "role": "ArticlesApi·UsersApi 같은 REST 컨트롤러가 HTTP 요청을 받아 입력을 검사하고 서비스를 부릅니다." },
+    { "layer": "service", "role": "ArticleCommandService·ArticleQueryService가 글 작성·조회 같은 업무 규칙을 처리합니다. 쓰기와 읽기를 나눠 둔 구조입니다." },
+    { "layer": "mapper", "role": "ArticleMapper 인터페이스와 XML이 articles 테이블을 SQL로 읽고 씁니다." },
+    { "layer": "domain", "role": "Article·User 같은 핵심 객체와 저장소 인터페이스가 있습니다." },
+    { "layer": "config", "role": "application.properties와 WebSecurityConfig가 DB 연결과 JWT 인증 필터를 설정합니다." }
+  ],
+  "readingOrder": [
+    { "path": "src/main/java/io/spring/api/ArticlesApi.java", "reason": "글 목록·작성 API가 어떤 주소로 열려 있는지 먼저 봅니다." },
+    { "path": "src/main/java/io/spring/application/article/ArticleCommandService.java", "reason": "글 작성 요청이 실제로 어떻게 처리되는지 봅니다." },
+    { "path": "src/main/java/io/spring/infrastructure/mybatis/mapper/ArticleMapper.java", "reason": "서비스가 부른 저장이 어떤 SQL로 이어지는지 봅니다." }
+  ]
+}

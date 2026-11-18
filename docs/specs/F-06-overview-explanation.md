@@ -269,7 +269,7 @@ LLM은 테스트에서 실제로 부르지 않는다. 파이프라인 통합 테
 `/implement`가 진행하며 체크한다.
 
 - [x] 브랜치 `feature/F-06-overview-explanation`
-- [ ] Flyway `V4__analysis_file_role.sql`
+- [x] Flyway `V4__analysis_file_role.sql`
 - [ ] AC별 실패 테스트 작성 (red 확인)
 - [ ] BE 구현 (green) — 프롬프트 6개, fixture 2개
 - [ ] FE 구현 (green)
