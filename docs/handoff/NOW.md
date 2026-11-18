@@ -7,27 +7,25 @@
 
 ## 현재 기능
 
-F-05a 분석 요청(ZIP 업로드 + 수집·필터·선별 파이프라인 + 상태·목록 + FE) — spec APPROVED(whans1996 11-18), 구현 전. PR #12·#13(환경 최신화)은 11-18 develop 머지 완료.
+F-05a 분석 요청(ZIP) — spec APPROVED, `/implement` 진행 중. 이번 세션 목표: V3 + BE API AC1~AC4·AC12·AC13 (파이프라인 AC5~11·FE AC14~16은 다음 세션)
 
 ## 진행
 
-- ✅ 사용자 결정: F-05를 F-05a(ZIP)·F-05b(URL)로 분할, 일일 한도 5회(오늘 KST, FAILED 제외, soft delete 포함)
-- ✅ `docs/specs/F-05a-analysis-request-zip.md` DRAFT 작성 (AC 16개, V3 `analyses.error_code`, 새 에러 코드 ANALYSIS_400/404/413/415/429/500)
-- ✅ `docs/기획서.md` 결정 로그 1줄 추가
-- ✅ spec 승인, `docs(F-05a): spec 승인` 커밋
-- ✅ 하네스: commit-msg hook·CI PR 제목·`featureIdFrom`이 `F-05a` 범위를 거부해 소문자 접미사 1자 허용 (dc9dcde). 커밋·PR 제목은 `feat(F-05a): ...`
+- ✅ V3 `analyses.error_code`, `AnalysisControllerTest` 12개 작성, red 확인(404, AC3만 통과)
+- ✅ BE API 구현·커밋: `analysis/` Controller·Service·Mapper(XML)·dto 4종·`AnalysisPipelineLauncher`(AFTER_COMMIT→`analysisExecutor`, 거절 시 FAILED, 롤백 시 임시 파일 삭제)·`AnalysisTempFiles`·`AnalysisProperties`·`AnalysisPipeline.run` 빈 껍데기. `ErrorCode` ANALYSIS_*, `BusinessException` 메시지 지정 생성자, `UserService.lockActiveMember`(FOR UPDATE), `common.config.ClockConfig`(Asia/Seoul). ERD 산출물 1줄 반영
+- ✅ verify be 전체 green, openapi.json 갱신(분석 3개 엔드포인트)
 
 ## 바로 다음 할 일
 
-1. `/clear` → `/implement F-05a`: V3 마이그레이션 → `AnalysisControllerTest#AC1_ZIP을_올리면_202와_analysisId를_받는다` red부터
-2. F-05a 머지 후 `/spec F-05b`(URL 수집), 그다음 F-09·F-10 `/spec`(B, category 필터 6종)
+1. 파이프라인: `analysis/pipeline/ZipArchiveReaderTest`·`SecretRedactorTest`·`FileSelectorTest`(단위) → `AnalysisPipelineTest`(AC5~AC10, `run(id)` 직접 호출) → `AnalysisRecoveryTest`(AC11)
+2. FE AC14~16 (`src/api/analyses.js`, 3개 View, `AnalysisStatusBadge.vue`)
 
 ## 막힌 점 / 결정 필요
 
-- 없음
+- 없음. 413(10MB 초과)은 MockMvc가 multipart 한도를 재현하지 못해 기존 GlobalExceptionHandler 매핑으로 갈음(테스트 주석)
 
 ## 주의
 
-- 파이프라인 테스트는 `run(analysisId)` 직접 호출로 동기 검증(커밋 후 시작이라 `@Transactional` 테스트에서는 afterCommit이 안 탐). 테스트 ZIP은 코드로 생성(eval 데이터 금지)
-- 후속(PR #13 본문): 시드 카드 Boot 3 테스트 API·`JsonProcessingException`·"빌드는 17" 문구 갱신, Lombok 제거 검토
-- verify(Gradle)를 bootRun·다른 Gradle과 동시에 돌리지 않는다 (Windows 파일 잠금). V1·V2 수정 금지
+- `AnalysisTestSupport`는 트랜잭션 롤백을 안 쓰고 `@f05a.test` 회원 DELETE로 정리(커밋 후 파이프라인 시작 검증 때문). `AnalysisControllerTest`는 `@MockitoBean AnalysisPipeline`
+- `@EnableAsync` 대신 실행기 직접 호출(거절 처리 위해). AFTER_COMMIT 콜백 안 DB 쓰기는 `REQUIRES_NEW`(`AnalysisService.markFailed`)
+- verify(Gradle)를 bootRun·다른 Gradle과 동시에 돌리지 않는다. V1·V2·V3(커밋 후) 수정 금지

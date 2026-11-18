@@ -243,10 +243,10 @@ F-05a에서는 SELECTING 다음이 곧 `DONE`이다. 이후 spec은 단계를 �
 
 `/implement`가 진행하며 체크한다.
 
-- [ ] 브랜치 `feature/F-05a-analysis-zip`
-- [ ] Flyway `V3__analysis_error_code.sql`
-- [ ] AC별 실패 테스트 작성 (red 확인)
-- [ ] BE 구현 (green)
+- [x] 브랜치 `feature/F-05a-analysis-zip`
+- [x] Flyway `V3__analysis_error_code.sql`
+- [ ] AC별 실패 테스트 작성 (red 확인) — AC1~4·12·13 ✅
+- [ ] BE 구현 (green) — AC1~4·12·13 ✅, 파이프라인 AC5~11 남음
 - [ ] FE 구현 (green)
 - [ ] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
 - [ ] contract-checker 통과

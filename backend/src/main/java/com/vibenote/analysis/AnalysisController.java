@@ -1,0 +1,124 @@
+package com.vibenote.analysis;
+
+import com.vibenote.analysis.dto.AnalysisStatusResponse;
+import com.vibenote.analysis.dto.AnalysisSummaryResponse;
+import com.vibenote.analysis.dto.CreateAnalysisRequest;
+import com.vibenote.analysis.dto.CreateAnalysisResponse;
+import com.vibenote.common.exception.ErrorResponse;
+import com.vibenote.common.page.PageQuery;
+import com.vibenote.common.page.PageResponse;
+import com.vibenote.common.security.AuthUser;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
+/** 분석 요청(ZIP), 내 분석 목록, 진행 상태 (F-05a). 결과 조회는 F-06, 수정·삭제·공개는 F-19. */
+@Tag(name = "분석", description = "프로젝트 분석 요청, 내 분석 목록, 진행 상태")
+@RestController
+@RequestMapping("/api/analyses")
+public class AnalysisController {
+
+    private final AnalysisService analysisService;
+
+    public AnalysisController(AnalysisService analysisService) {
+        this.analysisService = analysisService;
+    }
+
+    @Operation(
+            summary = "분석 요청 (ZIP)",
+            description =
+                    "ZIP을 접수하고 바로 202를 준다. 코드 수집·필터·선별은 백그라운드에서 진행되며 상태는 /api/analyses/{id}/status로"
+                            + " 확인한다. 하루(Asia/Seoul) 5회까지이며 FAILED는 세지 않는다.")
+    @ApiResponse(responseCode = "202", description = "접수됨")
+    @ApiResponse(
+            responseCode = "400",
+            description = "검증 실패 (COMMON_400, details.file·consent·level)",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(
+            responseCode = "401",
+            description = "토큰 없음·만료 (AUTH_401)",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(
+            responseCode = "413",
+            description = "업로드 10MB 초과 (COMMON_413)",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(
+            responseCode = "429",
+            description = "오늘 분석 요청 횟수를 다 씀 (ANALYSIS_429)",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public CreateAnalysisResponse create(
+            @AuthenticationPrincipal AuthUser user,
+            @Parameter(description = "프로젝트 ZIP (.zip, 10MB 이하)")
+                    @RequestPart(value = "file", required = false)
+                    MultipartFile file,
+            @Parameter(
+                            description = "분석 수준. 생략하면 내 프로필 수준",
+                            schema =
+                                    @Schema(
+                                            type = "string",
+                                            allowableValues = {"BEGINNER", "JUNIOR", "SENIOR"}))
+                    @RequestPart(value = "level", required = false)
+                    String level,
+            @Parameter(
+                            description = "Google Gemini 전송 고지 동의. true여야 한다",
+                            required = true,
+                            schema =
+                                    @Schema(
+                                            type = "string",
+                                            allowableValues = {"true"}))
+                    @RequestPart(value = "consent", required = false)
+                    String consent) {
+        return analysisService.requestZip(
+                user.id(), CreateAnalysisRequest.of(file, level, consent));
+    }
+
+    @Operation(summary = "내 분석 목록", description = "삭제하지 않은 내 분석을 요청 시각 최신순으로 준다.")
+    @ApiResponse(responseCode = "200", description = "조회 성공")
+    @ApiResponse(
+            responseCode = "400",
+            description = "page·size 범위 밖 (COMMON_400)",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(
+            responseCode = "401",
+            description = "토큰 없음·만료 (AUTH_401)",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @GetMapping
+    public PageResponse<AnalysisSummaryResponse> list(
+            @AuthenticationPrincipal AuthUser user, @Valid @ParameterObject PageQuery query) {
+        return analysisService.listMine(user.id(), query);
+    }
+
+    @Operation(summary = "분석 진행 상태", description = "내 분석의 단계·진행률·실패 사유. 진행 화면이 2초마다 폴링한다.")
+    @ApiResponse(responseCode = "200", description = "조회 성공")
+    @ApiResponse(
+            responseCode = "401",
+            description = "토큰 없음·만료 (AUTH_401)",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(
+            responseCode = "404",
+            description = "없는 분석, 다른 회원의 분석, 삭제된 분석 (ANALYSIS_404)",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @GetMapping("/{id:\\d+}/status")
+    public AnalysisStatusResponse getStatus(
+            @AuthenticationPrincipal AuthUser user, @PathVariable long id) {
+        return analysisService.getStatus(user.id(), id);
+    }
+}

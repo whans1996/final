@@ -34,6 +34,10 @@
         SELECT <include refid="columns"/> FROM users WHERE id = #{id} FOR SHARE
     </select>
 
+    <select id="findByIdForUpdate" resultType="com.vibenote.user.domain.User">
+        SELECT <include refid="columns"/> FROM users WHERE id = #{id} FOR UPDATE
+    </select>
+
     <!-- 보낸 필드만 쓴다 (null은 그대로). 읽은 값으로 전부 덮어쓰면 동시에 온 다른 필드 수정이 사라진다 (Codex 리뷰). bio ''는 지움 -->
     <update id="updateProfile">
         UPDATE users

@@ -27,6 +27,9 @@ public interface UserMapper {
     /** findById와 같지만 공유 잠금(FOR SHARE)으로 커밋된 최신 행을 읽는다. 잠금 순서를 users 먼저로 맞출 때 쓴다 (F-03). */
     Optional<User> findByIdForShare(long id);
 
+    /** findById와 같지만 배타 잠금(FOR UPDATE)을 건다. 같은 회원의 요청을 줄 세울 때 쓴다 (F-05a 일일 한도). */
+    Optional<User> findByIdForUpdate(long id);
+
     /**
      * null이 아닌 필드만 바꾼다 (bio ''는 NULL로 지움). 모두 null이면 호출하지 않는다(SET 절이 빈다). 활성 회원만 바꾸며 바뀐 행 수를 돌려준다
      * (탈퇴 직후의 수정이 마스킹을 덮어쓰지 않게).
