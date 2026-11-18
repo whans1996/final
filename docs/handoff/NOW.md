@@ -14,11 +14,12 @@
 - ✅ build.gradle·settings.gradle(foojay)·wrapper, Jackson 3 전환(JsonTypeHandler·JsonAuthenticationEntryPoint·Gemini/OllamaLlmClient·테스트), Boot 4 import, deprecation 0건 컴파일
 - ✅ OpenApiExportTest: Jackson 3 + `"key" : value` 구분자 고정 → openapi.json 변화 없음
 - ✅ verify be 통과, bootRun(8081) 기동·Swagger·에러 응답 정상, reviewer 반드시 수정 0건 (권장: asInt(0), JsonTypeHandler javadoc 반영)
-- ⏳ PR ① push·생성 → CI·Codex 확인
+- ✅ PR #12 생성. CI 초록 (1차 Spotless 실패: 로컬 JDK 17·CI 21이 google-java-format 기본 버전을 다르게 골라 생김 → 1.28.0 고정, 10c251a). Codex ✅ 10c251a
+- ⏳ PR #12 머지 대기 (영역 오너가 GitHub에서)
 
 ## 바로 다음 할 일
 
-1. PR ① (`chore(common): Spring Boot 4.1·Java 21·Gradle 9로 백엔드 업그레이드`, 설명 `.harness/pr-common-boot4.md`) CI·Codex COMPLETE 확인
+1. (사람) PR #12 머지 → `/clear` → 새 세션 `/pickup`
 2. PR ② `feature/common-fe-tooling-upgrade`(develop에서): vitest 5·jsdom 31·oxlint 1.94·eslint-plugin-vue 10.12·prettier 3.10.1, `scripts/setup.mjs` JDK 문구, CLAUDE.md·backend/CLAUDE.md:3,5,72,126(Boot 4 금지 규칙 변경 + Jackson 규칙: `com.fasterxml.jackson.databind/core` import 금지(annotation은 허용), JSON 컬럼 타입은 null 가능하면 래퍼)·README·환경설정.md·기획서 202행 + 결정 로그, 작업로그 AI 활용 줄
 
 ## 막힌 점 / 결정 필요
