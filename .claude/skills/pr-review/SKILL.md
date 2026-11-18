@@ -35,7 +35,7 @@ description: develop에 합치기 전 현재 feature 브랜치를 verifier·revi
    3. `FINDINGS`이면 출력된 지적(`[P1/P2] path:line 제목`과 링크)을 읽고 하나씩 판단한다.
       - 타당하면 실패하는 테스트부터 써서 `fix(F-xx): ... (Codex 리뷰)`로 커밋하고 push한 뒤 1로 돌아간다.
       - 타당하지 않거나 spec 범위·설계 판단이 필요하면 **루프를 멈추고** 이유를 사용자에게 보고한다. 같은 지적이 되풀이되지 않게 하기 위해서다.
-   4. 재리뷰가 **3회**를 넘거나 `TIMEOUT`이면 멈추고 현재 상태를 보고한다.
+   4. 재리뷰가 **3회**를 넘거나 `TIMEOUT`이면 멈추고 현재 상태를 보고한다. `ERROR Codex 환경 없음`이면 사람에게 출력된 링크에서 Codex 환경을 만들어 달라고 요청하고, 준비되면 1을 다시 실행한다 (11-18 PR #7에서 발생).
 9. **머지는 하지 않는다.** `gh pr merge`는 하네스가 차단한다. CI가 초록이면 영역 오너가 GitHub에서 머지한다 (wip 커밋이 있으면 Squash and merge).
 10. spec 상태는 DONE으로 바꾸지 않는다 (머지 후 `/progress`에서 확인).
 11. PR 생성과 CI·Codex 확인 결과를 NOW.md에 남기고 사용자에게 `/clear`를 권한다. Codex 지적 반영이나 머지 후 정리는 새 세션에서 `/pickup`으로 시작한다 (CLAUDE.md "세션 운영").

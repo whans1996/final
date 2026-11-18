@@ -19,7 +19,7 @@
 //   RUNNING  3  head 커밋 리뷰 중
 //   STALE    4  리뷰 상태가 없거나 이전 커밋 기준
 //   TIMEOUT  5  --wait 시간 초과
-//   ERROR    1
+//   ERROR    1  gh 실패, 또는 Codex가 "create an environment" 안내만 남김 (환경을 만든 뒤 --request로 다시)
 
 import { spawnSync } from 'node:child_process';
 import { git } from './lib/common.mjs';
@@ -28,6 +28,7 @@ const CODE = { COMPLETE: 0, ERROR: 1, FINDINGS: 2, RUNNING: 3, STALE: 4, TIMEOUT
 const BOT = 'chatgpt-codex-connector';
 const STATE_RE = /<!--\s*codex-review-state:v1\s*(\{.*?\})\s*-->/s;
 const REQUEST_RE = /<!--\s*codex-review-request:\s*([0-9a-f]{40})\s*-->/;
+const ENV_RE = /create an environment for this repo\]\((https?:[^)\s]+)\)/;
 const CLEAN_RECEIPT_RE = /codex-review-receipt[\s\S]*Didn't find any major issues[\s\S]*?Reviewed commit:\*{0,2}\s*`([0-9a-f]{7,40})`/;
 
 function fail(msg) {
@@ -145,6 +146,13 @@ function judge() {
         return { verdict: 'COMPLETE', h, comments, msg: `head ${short} 문서만 변경 (Codex ✅ ${base.slice(0, 7)} 이후)` };
       }
     }
+    // 환경 안내가 이 head에 대한 요청보다 늦으면(요청 없이 보기만 할 때는 마지막 봇 활동이면) 기다려도 리뷰가 오지 않는다.
+    // --request이고 아직 요청이 없으면 환경을 고친 뒤일 수 있으므로 요청을 단다
+    const env = envNotice(comments);
+    const reqAt = requestAt(comments, h.sha);
+    if (env && (reqAt ? env.at > reqAt : !request)) {
+      return { verdict: 'ERROR', h, comments, msg: `Codex 환경 없음 (${env.at}): ${env.url} 에서 만든 뒤 --request로 다시 요청` };
+    }
     const seen = st?.commit_sha ? `${st.commit_sha.slice(0, 7)} 기준` : '상태 댓글 없음';
     return { verdict: 'STALE', h, comments, msg: `head ${short}, Codex ${seen}` };
   }
@@ -152,11 +160,29 @@ function judge() {
   return { verdict: 'FINDINGS', h, comments, msg: `head ${short}` };
 }
 
-/** 이 head sha에 대한 재리뷰 요청이 이미 있는가.
+/** 이 head sha에 대한 재리뷰 요청 중 가장 늦은 시각 (없으면 null).
  *  커밋 시각과 비교하면 "먼저 커밋하고 나중에 push"한 경우 옛 요청을 새 head 것으로 오판하므로 sha 마커로 묶는다 (Codex 리뷰).
  *  봇의 안내문에도 "@codex review"가 들어 있으므로 사람 댓글만 본다. */
-function alreadyRequested(comments, sha) {
-  return comments.some((c) => !c.user?.login?.startsWith(BOT) && REQUEST_RE.exec(c.body || '')?.[1] === sha);
+function requestAt(comments, sha) {
+  const at = comments
+    .filter((c) => !c.user?.login?.startsWith(BOT) && REQUEST_RE.exec(c.body || '')?.[1] === sha)
+    .map((c) => c.created_at);
+  return at.length ? at.sort().at(-1) : null;
+}
+
+/** 마지막 봇 활동이 "create an environment" 안내이면 { url, at }. 그 뒤 리뷰 댓글이 갱신됐으면 null */
+function envNotice(comments) {
+  const bot = comments.filter((c) => c.user?.login?.startsWith(BOT));
+  const notices = bot.filter((c) => ENV_RE.test(c.body || ''));
+  if (!notices.length) return null;
+  const last = notices.at(-1);
+  const otherAt = bot
+    .filter((c) => !ENV_RE.test(c.body || ''))
+    .map((c) => c.updated_at || c.created_at)
+    .sort()
+    .at(-1);
+  if (otherAt && otherAt >= last.created_at) return null;
+  return { url: ENV_RE.exec(last.body)[1], at: last.created_at };
 }
 
 function report(r) {
@@ -172,7 +198,7 @@ let r = judge();
 if (r.h.state !== 'OPEN' && (request || wait)) fail(`PR #${pr}이 ${r.h.state} 상태입니다`);
 
 if (request && r.verdict === 'STALE') {
-  if (alreadyRequested(r.comments, r.h.sha)) {
+  if (requestAt(r.comments, r.h.sha)) {
     console.error(`(head ${r.h.sha.slice(0, 7)}에 대한 @codex review 요청이 이미 있어 생략)`);
   } else {
     gh(['pr', 'comment', pr, '--body', `@codex review\n\n<!-- codex-review-request: ${r.h.sha} -->`]);
@@ -180,13 +206,14 @@ if (request && r.verdict === 'STALE') {
   }
 }
 
-if (!wait || r.verdict === 'COMPLETE' || r.verdict === 'FINDINGS') report(r);
+const done = (v) => v === 'COMPLETE' || v === 'FINDINGS' || v === 'ERROR';
+if (!wait || done(r.verdict)) report(r);
 
 const deadline = Date.now() + timeoutMin * 60_000;
 while (Date.now() < deadline) {
   await new Promise((res) => setTimeout(res, 30_000));
   r = judge();
-  if (r.verdict === 'COMPLETE' || r.verdict === 'FINDINGS') report(r);
+  if (done(r.verdict)) report(r);
 }
 console.log(`TIMEOUT ${timeoutMin}분 대기, 마지막 상태 ${r.verdict} (${r.msg})`);
 process.exit(CODE.TIMEOUT);
