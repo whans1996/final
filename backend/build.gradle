@@ -89,7 +89,9 @@ tasks.register('liveTest', Test) {
 spotless {
     java {
         target 'src/**/*.java'
-        googleJavaFormat().aosp().reflowLongStrings()
+        // 버전을 고정한다. 기본 버전은 Gradle을 실행하는 JVM(로컬 JAVA_HOME 17, CI 21)에 따라 달라져 CI에서만 포맷 위반이 난다.
+        // 1.29+는 실행 JVM 21이 필요하므로 JAVA_HOME 17인 PC에서도 도는 1.28.0을 쓴다.
+        googleJavaFormat('1.28.0').aosp().reflowLongStrings()
         removeUnusedImports()
         trimTrailingWhitespace()
         endWithNewline()
