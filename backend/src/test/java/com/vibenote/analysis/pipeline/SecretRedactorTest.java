@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
 import java.time.Duration;
+import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -264,6 +265,78 @@ class SecretRedactorTest {
                                 "    [REDACTED]",
                                 "jwt.secret=[REDACTED]",
                                 "server.port=8080"));
+    }
+
+    @Test
+    void AC6_yml_다음_줄에_오는_값과_비밀_키_아래_하위_값을_가린다() {
+        String yml =
+                String.join(
+                        "\n",
+                        "password:",
+                        "  hunter2",
+                        "jwt-secret:",
+                        "  key: s3cr3t-value",
+                        "  ttl: 3600",
+                        "token-enabled: true",
+                        "flag: true",
+                        "ttl: 3600",
+                        "url: jdbc:mysql://localhost/app");
+
+        String redacted = SecretRedactor.redact("application.yml", yml);
+
+        assertThat(redacted)
+                .doesNotContain("hunter2", "s3cr3t-value")
+                .isEqualTo(
+                        String.join(
+                                "\n",
+                                "password:",
+                                "  [REDACTED]",
+                                "jwt-secret:",
+                                "  key: [REDACTED]",
+                                "  ttl: 3600",
+                                "token-enabled: [REDACTED]",
+                                "flag: true",
+                                "ttl: 3600",
+                                "url: jdbc:mysql://localhost/app"));
+    }
+
+    @Test
+    void AC6_properties_공백으로_구분한_비밀_항목을_가린다() {
+        String props = "spring.datasource.password hunter2\nserver.port 8080\napp.name hunter";
+
+        assertThat(SecretRedactor.redact("application.properties", props))
+                .isEqualTo(
+                        "spring.datasource.password [REDACTED]\nserver.port 8080\napp.name hunter");
+    }
+
+    @Test
+    void AC6_순환하는_yml_별칭도_끝난다() {
+        String yml = "secret: &a\n  - leaked\n  - *a\nname: x";
+
+        assertThat(SecretRedactor.redact("application.yml", yml))
+                .doesNotContain("leaked")
+                .isEqualTo("secret: [REDACTED]\n  - [REDACTED]\n  - *a\nname: x");
+    }
+
+    @Test
+    void AC6_비밀_토큰이_상한을_넘으면_파일_전체를_가린다() {
+        String yml =
+                "password: |\n  "
+                        + String.join(
+                                " ",
+                                IntStream.rangeClosed(0, SecretRedactor.MAX_SECRET_TOKENS)
+                                        .mapToObj(i -> "w" + i)
+                                        .toList());
+
+        assertThat(SecretRedactor.redact("application.yml", yml)).isEqualTo("[REDACTED]");
+    }
+
+    @Test
+    void AC6_해석할_수_없는_yml도_줄_단위로_가린다() {
+        String yml = "password: hunter2\n  bad: [\n";
+
+        assertThat(SecretRedactor.redact("application.yml", yml))
+                .isEqualTo("password: [REDACTED]\n  bad: [\n");
     }
 
     @Test

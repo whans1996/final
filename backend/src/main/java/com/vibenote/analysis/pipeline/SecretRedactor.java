@@ -1,19 +1,28 @@
 package com.vibenote.analysis.pipeline;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * 저장·LLM 전송 전에 키로 보이는 값을 {@code [REDACTED]}로 바꾼다 (F-05a 5.2절, AC6).
  *
  * <p>모든 파일: 알려진 키 형식. 설정 파일(.yml·.yaml·.properties): 키 이름에 password·secret 등이 들어간 항목의 값. 값이 비어 있거나
  * 기본값 없는 환경변수 참조({@code ${NAME}})면 그대로 두고, {@code ${NAME:기본값}}이면 기본값만 가린다.
+ *
+ * <p>설정 파일은 두 번 가린다. 1차는 줄 단위(형식이 깨져도 동작), 2차는 실제 파서로 비밀 키 아래 값을 모아 본문 전체에서 가린다({@link
+ * ConfigSecretValues}).
  */
 public final class SecretRedactor {
 
     static final String REDACTED = "[REDACTED]";
+
+    /** 2차 마스킹 토큰 상한. 넘으면 비정상 설정으로 보고 파일 전체를 가린다 (토큰 수 × 본문 길이 비용 제한). */
+    static final int MAX_SECRET_TOKENS = 200;
 
     private static final List<Pattern> KEY_PATTERNS =
             List.of(
@@ -71,9 +80,34 @@ public final class SecretRedactor {
         String lower = path.toLowerCase(Locale.ROOT);
         boolean yaml = lower.endsWith(".yml") || lower.endsWith(".yaml");
         if (yaml || lower.endsWith(".properties")) {
-            result = redactConfigValues(result, yaml);
+            Set<String> secrets =
+                    yaml
+                            ? ConfigSecretValues.fromYaml(result)
+                            : ConfigSecretValues.fromProperties(result);
+            result = redactEverywhere(redactConfigValues(result, yaml), secrets);
         }
         return result;
+    }
+
+    /** 파서로 모은 비밀 토큰을 단어 경계 기준으로 본문 전체에서 가린다. 긴 토큰부터 맞춘다. */
+    private static String redactEverywhere(String content, Set<String> secrets) {
+        if (secrets.isEmpty()) {
+            return content;
+        }
+        if (secrets.size() > MAX_SECRET_TOKENS) {
+            return REDACTED;
+        }
+        String alternatives =
+                secrets.stream()
+                        .sorted(
+                                Comparator.comparingInt(String::length)
+                                        .reversed()
+                                        .thenComparing(Comparator.naturalOrder()))
+                        .map(Pattern::quote)
+                        .collect(Collectors.joining("|"));
+        return Pattern.compile("(?<![A-Za-z0-9_])(?:" + alternatives + ")(?![A-Za-z0-9_])")
+                .matcher(content)
+                .replaceAll(Matcher.quoteReplacement(REDACTED));
     }
 
     /**
@@ -157,9 +191,21 @@ public final class SecretRedactor {
         return indent;
     }
 
-    private static boolean isSecretKey(String key) {
+    static boolean isSecretKey(String key) {
         String lower = key.toLowerCase(Locale.ROOT);
         return SECRET_KEYWORDS.stream().anyMatch(lower::contains);
+    }
+
+    /** 값에서 가려야 할 부분. 비었거나 기본값 없는 환경변수 참조면 null, {@code ${NAME:기본값}}이면 기본값(비면 null). */
+    static String secretPartOf(String value) {
+        if (value.isBlank() || PLAIN_ENV_REF.matcher(value).matches()) {
+            return null;
+        }
+        Matcher withDefault = ENV_REF_WITH_DEFAULT.matcher(value);
+        if (withDefault.matches()) {
+            return withDefault.group(2).isEmpty() ? null : withDefault.group(2);
+        }
+        return value;
     }
 
     private static String redactValue(String value) {
