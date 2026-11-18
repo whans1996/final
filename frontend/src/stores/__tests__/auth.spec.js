@@ -109,4 +109,42 @@ describe('useAuthStore 로그인 흐름 (F-02 AC8)', () => {
     expect(authApi.refresh).toHaveBeenCalledTimes(1)
     expect(tokens).toEqual(['access-1', 'access-1'])
   })
+  it('AC8 재발급 중에 로그아웃하면 재발급이 끝난 뒤 서버 로그아웃을 불러 새 토큰까지 폐기하고, 세션을 되살리지 않는다', async () => {
+    vi.mocked(authApi.refresh).mockReset()
+    vi.mocked(authApi.logout).mockReset()
+    let resolveRefresh
+    authApi.refresh.mockReturnValue(new Promise((resolve) => (resolveRefresh = resolve)))
+    authApi.logout.mockResolvedValue()
+    const auth = useAuthStore()
+    auth.setSession(SESSION)
+
+    const pendingRefresh = auth.refresh().catch((error) => error)
+    const loggingOut = auth.logout()
+    await Promise.resolve()
+    expect(authApi.logout).not.toHaveBeenCalled()
+
+    resolveRefresh({ ...SESSION, accessToken: 'access-2' })
+    await loggingOut
+
+    expect(authApi.logout).toHaveBeenCalledTimes(1)
+    expect(auth.isLoggedIn).toBe(false)
+    expect(await pendingRefresh).toBeInstanceOf(Error)
+  })
+
+  it('AC8 로그아웃 중에는 새 재발급을 시작하지 않는다', async () => {
+    vi.mocked(authApi.refresh).mockReset()
+    vi.mocked(authApi.logout).mockReset()
+    let resolveLogout
+    authApi.logout.mockReturnValue(new Promise((resolve) => (resolveLogout = resolve)))
+    const auth = useAuthStore()
+    auth.setSession(SESSION)
+
+    const loggingOut = auth.logout()
+    await expect(auth.refresh()).rejects.toThrow('로그아웃 중입니다.')
+    resolveLogout()
+    await loggingOut
+
+    expect(authApi.refresh).not.toHaveBeenCalled()
+    expect(auth.isLoggedIn).toBe(false)
+  })
 })

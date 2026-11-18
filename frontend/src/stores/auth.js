@@ -32,28 +32,37 @@ export const useAuthStore = defineStore('auth', () => {
     return user.value
   }
 
-  /** 서버 세션(Refresh 토큰)을 폐기한다. 서버 호출이 실패해도 이 기기에서는 로그아웃한다. */
+  let refreshing = null
+  let loggingOut = false
+
+  /**
+   * 서버 세션(Refresh 토큰)을 폐기한다. 서버 호출이 실패해도 이 기기에서는 로그아웃한다.
+   * 진행 중인 재발급이 있으면 그 응답(새 쿠키)을 받은 뒤에 로그아웃해야 새 토큰까지 폐기된다.
+   */
   async function logout() {
+    loggingOut = true
     try {
+      if (refreshing) await refreshing.catch(() => {})
       await authApi.logout()
     } catch {
       // 쿠키가 남아도 서버에서 14일 뒤 만료된다
     } finally {
       clear()
+      loggingOut = false
     }
   }
 
-  let refreshing = null
-
   /**
    * 새 Access 토큰을 받아 돌려준다. 동시에 여러 번 불러도 서버 호출은 한 번이다 (F-02 AC9).
-   * 실패하면 상태를 비우고 에러를 던진다.
+   * 실패하면 상태를 비우고 에러를 던진다. 로그아웃 중이면 시작하지 않고, 도착한 결과도 버린다.
    */
   function refresh() {
+    if (loggingOut && !refreshing) return Promise.reject(new Error('로그아웃 중입니다.'))
     if (!refreshing) {
       refreshing = authApi
         .refresh()
         .then((session) => {
+          if (loggingOut) throw new Error('로그아웃 중입니다.')
           setSession(session)
           return session.accessToken
         })
