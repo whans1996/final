@@ -5,6 +5,8 @@
 // 이 상태가 PR head 커밋 기준인지로 판정한다.
 // 보조 신호: 수동 요청 뒤 다는 영수증 댓글 "Didn't find any major issues … Reviewed commit: `abc1234`"가
 // head 커밋이면 상태 댓글이 늦게 갱신되어도 COMPLETE로 본다. 자동 리뷰 뒤의 👍 반응은 커밋 정보가 없어 쓰지 않는다.
+// 문서만 바뀐 커밋: Codex가 마지막으로 지적 없이 끝낸 커밋 이후 docs/ 아래(openapi.json 제외)만 바뀌었으면
+// 재리뷰를 요청하지 않고 COMPLETE로 본다 (11-18 사용자 지시). 마지막 리뷰에 지적이 있으면 적용하지 않는다.
 //
 // 사용법: node scripts/codex-review.mjs <PR번호> [--request] [--wait] [--timeout 20]
 //   --request  상태가 이전 커밋 기준(STALE)이면 "@codex review" 댓글을 단다.
@@ -33,14 +35,16 @@ function fail(msg) {
   process.exit(CODE.ERROR);
 }
 
-function gh(args) {
+/** soft면 실패해도 종료하지 않고 null을 돌려준다 */
+function gh(args, { soft = false } = {}) {
   // 모든 페이지를 한 번에 받으므로 기본 1MiB 버퍼로는 ENOBUFS가 날 수 있다 (Codex 리뷰)
   const r = spawnSync('gh', args, { encoding: 'utf8', windowsHide: true, maxBuffer: 64 * 1024 * 1024 });
+  if (soft && (r.error || r.status !== 0)) return null;
   if (r.error) fail(`gh 실행 실패: ${r.error.message}`);
   if (r.status !== 0) fail(`gh ${args.slice(0, 2).join(' ')}: ${(r.stderr || '').trim().split('\n')[0]}`);
   return r.stdout;
 }
-const ghJson = (args) => JSON.parse(gh(args) || 'null');
+const ghJson = (args, opts) => JSON.parse(gh(args, opts) || 'null');
 
 const argv = process.argv.slice(2);
 const pr = argv.find((a) => /^\d+$/.test(a));
@@ -97,13 +101,24 @@ function findings(sha) {
     });
 }
 
-/** head 커밋에 대한 "지적 없음" 영수증 댓글이 있는가 */
-function hasCleanReceipt(comments, sha) {
-  return comments.some((c) => {
-    if (!c.user?.login?.startsWith(BOT)) return false;
-    const m = CLEAN_RECEIPT_RE.exec(c.body || '');
-    return !!m && sha.startsWith(m[1]);
-  });
+/** "지적 없음" 영수증 댓글의 커밋 sha 목록 (댓글 순서, 7~40자) */
+function cleanReceiptShas(comments) {
+  return comments
+    .filter((c) => c.user?.login?.startsWith(BOT))
+    .map((c) => CLEAN_RECEIPT_RE.exec(c.body || '')?.[1])
+    .filter(Boolean);
+}
+
+/** 재리뷰 없이 넘어가도 되는 문서 경로. openapi.json은 API 계약이라 제외 */
+const isDocPath = (p) => !!p && p.startsWith('docs/') && p !== 'docs/api/openapi.json';
+
+/** base 이후 head까지 문서만 바뀌었는가. base가 head의 조상이 아니거나(force push) 조회 실패면 false */
+function docsOnlySince(base, headSha) {
+  const cmp = ghJson(['api', `repos/${repo}/compare/${base}...${headSha}`], { soft: true });
+  const files = cmp?.files;
+  // compare API는 파일을 300개까지만 준다. 넘으면 확신할 수 없다
+  if (cmp?.status !== 'ahead' || !Array.isArray(files) || !files.length || files.length >= 300) return false;
+  return files.every((f) => isDocPath(f.filename) && (!f.previous_filename || isDocPath(f.previous_filename)));
 }
 
 function judge() {
@@ -111,14 +126,25 @@ function judge() {
   const comments = issueComments();
   const st = codexState(comments);
   const short = h.sha.slice(0, 7);
-  const clean = hasCleanReceipt(comments, h.sha);
-  if (st?.commit_sha === h.sha && st.status === 'completed' && !st.has_any_findings) {
+  const receipts = cleanReceiptShas(comments);
+  const clean = receipts.some((s) => h.sha.startsWith(s));
+  const stClean = st?.status === 'completed' && !st.has_any_findings;
+  if (st?.commit_sha === h.sha && stClean) {
     return { verdict: 'COMPLETE', h, comments, msg: `head ${short} 지적 없음 (상태 댓글)` };
   }
   if (clean && !(st?.commit_sha === h.sha && st.status === 'completed')) {
     return { verdict: 'COMPLETE', h, comments, msg: `head ${short} 지적 없음 (영수증 댓글)` };
   }
   if (!st || st.commit_sha !== h.sha) {
+    // 마지막 리뷰가 지적 없이 끝났을 때만(상태 댓글이 없으면 영수증으로) 기준 커밋을 잡는다.
+    // 지적이 있거나 리뷰 중이면 영수증으로 건너뛰어 그 결과를 덮지 않는다
+    if (!st || stClean) {
+      const bases = [...new Set([...receipts.slice().reverse(), ...(stClean ? [st.commit_sha] : [])])];
+      const base = bases.find((b) => docsOnlySince(b, h.sha));
+      if (base) {
+        return { verdict: 'COMPLETE', h, comments, msg: `head ${short} 문서만 변경 (Codex ✅ ${base.slice(0, 7)} 이후)` };
+      }
+    }
     const seen = st?.commit_sha ? `${st.commit_sha.slice(0, 7)} 기준` : '상태 댓글 없음';
     return { verdict: 'STALE', h, comments, msg: `head ${short}, Codex ${seen}` };
   }
