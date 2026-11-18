@@ -149,6 +149,33 @@ describe('useAuthStore 로그인 흐름 (F-02 AC8)', () => {
     expect(await pendingRefresh).toBeInstanceOf(Error)
   })
 
+  it('F-03 AC10 clear 뒤에 도착한 재발급 응답은 세션을 되살리지 않는다 (탈퇴, Codex 리뷰)', async () => {
+    vi.mocked(authApi.refresh).mockReset()
+    let resolveRefresh
+    authApi.refresh.mockReturnValue(new Promise((resolve) => (resolveRefresh = resolve)))
+    const auth = useAuthStore()
+    auth.setSession(SESSION)
+
+    // 탈퇴 직전에 시작된 재발급이 탈퇴 성공(clear) 뒤에 응답한다
+    const pendingRefresh = auth.refresh().catch((error) => error)
+    auth.clear()
+    resolveRefresh({ ...SESSION, accessToken: 'access-2' })
+
+    expect(await pendingRefresh).toBeInstanceOf(Error)
+    expect(auth.isLoggedIn).toBe(false)
+    expect(auth.user).toBeNull()
+  })
+
+  it('F-03 AC10 clear 뒤에 새로 시작한 재발급은 정상으로 세션을 받는다', async () => {
+    vi.mocked(authApi.refresh).mockReset()
+    authApi.refresh.mockResolvedValue(SESSION)
+    const auth = useAuthStore()
+    auth.clear()
+
+    await expect(auth.refresh()).resolves.toBe('access-1')
+    expect(auth.isLoggedIn).toBe(true)
+  })
+
   it('AC8 로그아웃 중에는 새 재발급을 시작하지 않는다', async () => {
     vi.mocked(authApi.refresh).mockReset()
     vi.mocked(authApi.logout).mockReset()
