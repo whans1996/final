@@ -7,7 +7,7 @@
 
 ## 현재 기능
 
-WBS 2.4 LlmClient 연결 (Gemini·Ollama·Mock) — spec `docs/specs/F-00-llm-client.md` **DRAFT (사람 승인 대기)**. 하네스 PR #6·#7 머지 완료, F-01~F-03 DONE
+WBS 2.4 LlmClient 연결 (Gemini·Ollama·Mock) — spec `docs/specs/F-00-llm-client.md` **APPROVED (whans1996 11-18)**. 하네스 PR #6·#7 머지 완료, F-01~F-03 DONE
 
 ## 진행
 
@@ -16,7 +16,7 @@ WBS 2.4 LlmClient 연결 (Gemini·Ollama·Mock) — spec `docs/specs/F-00-llm-cl
 
 ## 바로 다음 할 일
 
-1. 사람이 spec을 승인하면: 헤더를 `APPROVED`, `승인 whans1996 2026-11-18`로 바꾸고 `docs(common): WBS 2.4 spec 승인` 커밋 → `/clear` → Opus/high로 `/implement F-00-llm-client`
+1. 새 세션(Opus/high)에서 `/implement F-00-llm-client` — spec 승인 커밋 완료
 2. 구현 순서(spec 6·7절): `LlmProperties` → `GeminiLlmClientTest#AC2`·`OllamaLlmClientTest#AC3` red (MockRestServiceServer) → 클라이언트 구현 → `FallbackLlmClientTest` AC4·5 → `UsageLoggingLlmClientTest` AC6·7 + `LlmUsageLogMapperTest` → `LlmConfigTest` AC1·8 (`ApplicationContextRunner`) → `build.gradle` liveTest(AC9). 기본 모델명은 구현 시 공식 문서로 확인 (spec 9절)
 3. 그다음: 2.5 시드 개념 카드(`R__seed_concepts.sql`), W2 F-05 분석 요청(A), F-09·F-10 카드 목록·상세(B)
 

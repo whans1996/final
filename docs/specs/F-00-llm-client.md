@@ -2,13 +2,13 @@
 
 | 항목 | 값 |
 |---|---|
-| 상태 | DRAFT <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
+| 상태 | APPROVED <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
 | 기능 ID | F-00 (인프라, WBS 2.4. 기능 목록에 없는 공통 기반) |
 | 우선순위 | P0 (F-05·F-06·F-07·F-08·F-14·F-16의 전제) |
 | 영역 오너 | 팀원 A (AI·분석) |
 | 관련 필수 요구사항 | NF-04 LLM 출력 JSON, NF-06 장애·한도 시 Ollama 자동 전환, NF-07 모든 LLM 호출 토큰 기록 (`docs/기획서.md` 비기능 요구사항) |
 | 의존 spec | 없음 (PR #2의 `LlmClient` 인터페이스·`MockLlmClient` 위에 쌓음) |
-| 승인 | (승인한 사람, 날짜) |
+| 승인 | whans1996 2026-11-18 |
 
 ## 1. 목적
 
