@@ -67,6 +67,12 @@ public class AnalysisPipeline {
             log.error("분석 {} 파이프라인 오류", analysisId, e);
             analysisService.markFailed(
                     analysisId, ErrorCode.ANALYSIS_500, ErrorCode.ANALYSIS_500.message());
+        } catch (Error e) {
+            // 진행 중 상태로 남으면 화면이 계속 폴링하므로 FAILED로 바꾸고 스레드에는 그대로 알린다
+            log.error("분석 {} 파이프라인 치명적 오류", analysisId, e);
+            analysisService.markFailed(
+                    analysisId, ErrorCode.ANALYSIS_500, ErrorCode.ANALYSIS_500.message());
+            throw e;
         } finally {
             tempFiles.delete(analysisId);
         }

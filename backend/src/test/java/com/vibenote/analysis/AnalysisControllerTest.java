@@ -12,10 +12,15 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 import org.springframework.mock.web.MockMultipartFile;
@@ -43,6 +48,17 @@ class AnalysisControllerTest extends AnalysisTestSupport {
     private MockMultipartHttpServletRequestBuilder request(long userId) {
         return (MockMultipartHttpServletRequestBuilder)
                 multipart(URL).header(HttpHeaders.AUTHORIZATION, bearer(userId));
+    }
+
+    /** 분석 임시 폴더의 파일 목록 (AC2: 검증 실패 시 임시 파일이 생기지 않는다). */
+    private List<Path> tempFiles() throws IOException {
+        Path dir = Path.of(uploadDir, "analysis-tmp");
+        if (!Files.isDirectory(dir)) {
+            return List.of();
+        }
+        try (Stream<Path> files = Files.list(dir)) {
+            return files.sorted().toList();
+        }
     }
 
     private long countAnalyses(long userId) {
@@ -127,11 +143,13 @@ class AnalysisControllerTest extends AnalysisTestSupport {
     private void expectFieldError(
             long me, MockMultipartHttpServletRequestBuilder builder, String field)
             throws Exception {
+        List<Path> tempFilesBefore = tempFiles();
         mockMvc.perform(builder)
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("COMMON_400"))
                 .andExpect(jsonPath("$.details." + field).isString());
         assertThat(countAnalyses(me)).isZero();
+        assertThat(tempFiles()).isEqualTo(tempFilesBefore);
     }
 
     @Test

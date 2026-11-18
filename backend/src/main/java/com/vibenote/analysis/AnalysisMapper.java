@@ -12,7 +12,7 @@ import org.apache.ibatis.annotations.Param;
 @Mapper
 public interface AnalysisMapper {
 
-    /** 생성된 id를 {@code analysis.id}에 채운다. created_at은 서비스의 Clock 값으로 넣는다. */
+    /** 생성된 id를 {@code analysis.id}에 채운다. created_at·updated_at은 서비스의 Clock 값으로 넣는다. */
     void insert(Analysis analysis);
 
     /** since 이후 만든 분석 중 FAILED가 아닌 것의 수. 일일 한도용이라 soft delete된 분석도 센다 (V2 규칙). */
@@ -31,7 +31,8 @@ public interface AnalysisMapper {
     int markFailed(
             @Param("id") long id,
             @Param("errorCode") String errorCode,
-            @Param("errorMessage") String errorMessage);
+            @Param("errorMessage") String errorMessage,
+            @Param("now") LocalDateTime now);
 
     /** id로 찾는다 (삭제 여부와 상관없음). 파이프라인 내부용. */
     Optional<Analysis> findById(long id);
@@ -40,11 +41,14 @@ public interface AnalysisMapper {
     int updateStage(
             @Param("id") long id,
             @Param("status") AnalysisStatus status,
-            @Param("progress") int progress);
+            @Param("progress") int progress,
+            @Param("now") LocalDateTime now);
 
     void insertFiles(@Param("files") List<AnalysisFile> files);
 
     /** 진행 중인 미삭제 분석을 모두 FAILED로 바꾼다 (progress는 그대로, 재시작 복구). */
     int failInterrupted(
-            @Param("errorCode") String errorCode, @Param("errorMessage") String errorMessage);
+            @Param("errorCode") String errorCode,
+            @Param("errorMessage") String errorMessage,
+            @Param("now") LocalDateTime now);
 }

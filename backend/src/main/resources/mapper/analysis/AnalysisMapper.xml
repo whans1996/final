@@ -7,9 +7,10 @@
         error_code, error_message, created_at, updated_at
     </sql>
 
+    <!-- updated_at은 DB 세션 시간대의 기본값·ON UPDATE 대신 서비스 Clock 값(Asia/Seoul)으로 쓴다 -->
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO analyses (user_id, source_type, source_url, project_name, title, level, status, created_at)
-        VALUES (#{userId}, #{sourceType}, #{sourceUrl}, #{projectName}, #{title}, #{level}, #{status}, #{createdAt})
+        INSERT INTO analyses (user_id, source_type, source_url, project_name, title, level, status, created_at, updated_at)
+        VALUES (#{userId}, #{sourceType}, #{sourceUrl}, #{projectName}, #{title}, #{level}, #{status}, #{createdAt}, #{createdAt})
     </insert>
 
     <!-- idx_analyses_user_created. deleted_at 조건 없음: 삭제해도 한도는 돌아오지 않는다 (V2 주석) -->
@@ -36,7 +37,7 @@
 
     <update id="markFailed">
         UPDATE analyses
-        SET status = 'FAILED', error_code = #{errorCode}, error_message = #{errorMessage}
+        SET status = 'FAILED', error_code = #{errorCode}, error_message = #{errorMessage}, updated_at = #{now}
         WHERE id = #{id} AND status NOT IN ('DONE', 'FAILED')
     </update>
 
@@ -45,7 +46,7 @@
     </select>
 
     <update id="updateStage">
-        UPDATE analyses SET status = #{status}, progress = #{progress}
+        UPDATE analyses SET status = #{status}, progress = #{progress}, updated_at = #{now}
         WHERE id = #{id} AND status NOT IN ('DONE', 'FAILED')
     </update>
 
@@ -59,7 +60,7 @@
     <!-- 삭제된 분석은 그대로 둔다 (AC11) -->
     <update id="failInterrupted">
         UPDATE analyses
-        SET status = 'FAILED', error_code = #{errorCode}, error_message = #{errorMessage}
+        SET status = 'FAILED', error_code = #{errorCode}, error_message = #{errorMessage}, updated_at = #{now}
         WHERE status NOT IN ('DONE', 'FAILED') AND deleted_at IS NULL
     </update>
 </mapper>

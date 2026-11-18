@@ -9,7 +9,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.event.EventListener;
 
 /** 서버 재시작 시 중단된 분석 정리 (docs/specs/F-05a-analysis-request-zip.md AC11). 복구 메서드를 직접 부른다. */
 class AnalysisRecoveryTest extends AnalysisTestSupport {
@@ -63,5 +65,16 @@ class AnalysisRecoveryTest extends AnalysisTestSupport {
         assertThat(analysisRow(deleted).get("status")).isEqualTo("SELECTING");
         assertThat(leftover).doesNotExist();
         assertThat(stray).doesNotExist();
+    }
+
+    /**
+     * ApplicationReadyEvent는 웹 서버가 요청을 받기 시작한 뒤에 오므로, 그 사이에 들어온 새 분석까지 "재시작"으로 FAILED 처리하고 임시 ZIP을
+     * 지울 수 있다. 모든 싱글톤이 만들어진 직후(웹 서버 시작 전)에 실행되어야 한다.
+     */
+    @Test
+    void AC11_웹_서버가_요청을_받기_전에_복구한다() {
+        assertThat(recovery).isInstanceOf(SmartInitializingSingleton.class);
+        assertThat(AnalysisRecovery.class.getMethods())
+                .noneMatch(m -> m.isAnnotationPresent(EventListener.class));
     }
 }

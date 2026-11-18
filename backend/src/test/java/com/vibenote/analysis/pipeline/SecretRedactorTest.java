@@ -181,6 +181,51 @@ class SecretRedactorTest {
     }
 
     @Test
+    void AC6_yml_블록_스칼라_값은_이어지는_줄까지_가린다() {
+        String yml =
+                String.join(
+                        "\n",
+                        "app:",
+                        "  jwt-secret: |",
+                        "    line-one",
+                        "",
+                        "    line-two",
+                        "  private-token: >-",
+                        "    folded",
+                        "  name: vibenote",
+                        "password: |",
+                        "  top",
+                        "url: x");
+
+        String redacted = SecretRedactor.redact("application.yaml", yml);
+
+        assertThat(redacted)
+                .doesNotContain("line-one", "line-two", "folded", "top")
+                .isEqualTo(
+                        String.join(
+                                "\n",
+                                "app:",
+                                "  jwt-secret: |",
+                                "    [REDACTED]",
+                                "",
+                                "    [REDACTED]",
+                                "  private-token: >-",
+                                "    [REDACTED]",
+                                "  name: vibenote",
+                                "password: |",
+                                "  [REDACTED]",
+                                "url: x"));
+    }
+
+    @Test
+    void AC6_CRLF_줄바꿈을_유지한다() {
+        String yml = "password: hunter2\r\nsecret: |\r\n  abc\r\nname: x\r\n";
+
+        assertThat(SecretRedactor.redact("application.yml", yml))
+                .isEqualTo("password: [REDACTED]\r\nsecret: |\r\n  [REDACTED]\r\nname: x\r\n");
+    }
+
+    @Test
     void AC6_구분자_없는_긴_줄도_선형_시간에_처리한다() {
         String line = "token".repeat(200_000);
 

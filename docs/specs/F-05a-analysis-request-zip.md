@@ -168,13 +168,13 @@ F-05a에서는 SELECTING 다음이 곧 `DONE`이다. 이후 spec은 단계를 �
 
 | 구분 | 규칙 |
 |---|---|
-| 경로 | `\`를 `/`로 바꾸고 정규화. 절대 경로(`/`, `C:` 등)나 `..`로 루트를 벗어나면 즉시 `ANALYSIS_400`. `__MACOSX/` 엔트리와 디렉터리 엔트리는 무시. 모든 파일이 최상위 폴더 하나 아래에 있으면 그 폴더를 경로에서 뗀다 |
+| 경로 | `\`를 `/`로 바꾸고 정규화. 절대 경로(`/`, `C:` 등)나 `..`로 루트를 벗어나면 즉시 `ANALYSIS_400`. `__MACOSX/` 엔트리와 디렉터리 엔트리는 무시. 모든 파일이 최상위 폴더 하나 아래에 있으면 그 폴더를 경로에서 뗀다. 파일명을 UTF-8로 읽을 수 없으면 MS949(Windows 기본 압축 도구)로 다시 읽는다. 최상위 폴더를 뗀 경로가 500자(`analysis_files.path`)를 넘으면 건너뛴다 (리뷰 반영 11-18) |
 | 제외 폴더 (읽지 않음) | 경로 조각 중 하나가 `node_modules`, `build`, `dist`, `target`, `out`, `bin`, `.git`, `.gradle`, `.idea`, `.vscode`, `.mvn`, `coverage`, 또는 `.`으로 시작하는 폴더 |
 | 비밀 파일 (읽지 않음) | 파일명이 `.env` 또는 `.env.*`, 확장자 `.pem`·`.key`·`.p12`·`.pfx`·`.jks`·`.keystore`, 파일명이 `id_rsa`·`id_ed25519`로 시작 |
 | 지원 파일 | 확장자 `.java`, `.xml`, `.js`, `.mjs`, `.vue`, `.yml`, `.yaml`, `.properties`, `.sql`, 그리고 파일명 `build.gradle`·`build.gradle.kts`·`package.json`. 그 외(이미지, `.ts`, `.py`, `.class`, `.jar` 등)는 무시 |
 | 크기 | 단일 파일 1MB 초과는 건너뜀. 지원 파일 수 > 200 또는 읽은 합계 > 10MB면 `ANALYSIS_413` |
 | 스택 확인 | 지원 파일 중 `.java`·`.js`·`.mjs`·`.vue`가 0개면 `ANALYSIS_415` |
-| 키 패턴 마스킹 | 정규식으로 `AIza[0-9A-Za-z_-]{35}`, `sk-[A-Za-z0-9_-]{20,}`, `gh[pousr]_[A-Za-z0-9]{36,}`, `github_pat_[A-Za-z0-9_]{22,}`, `AKIA[0-9A-Z]{16}`, `-----BEGIN [A-Z ]*PRIVATE KEY-----` ~ `-----END ... -----` 블록 → `[REDACTED]`. `.yml`·`.yaml`·`.properties`에서 키 이름에 `password`·`secret`·`api-key`·`apikey`·`api_key`·`token`·`credential`이 들어간 항목의 값 → `[REDACTED]` (값이 비어 있거나 기본값 없는 `${NAME}`이면 그대로, `${NAME:기본값}`이면 기본값만 가림. 리뷰 반영 11-18) |
+| 키 패턴 마스킹 | 정규식으로 `AIza[0-9A-Za-z_-]{35}`, `sk-[A-Za-z0-9_-]{20,}`, `gh[pousr]_[A-Za-z0-9]{36,}`, `github_pat_[A-Za-z0-9_]{22,}`, `AKIA[0-9A-Z]{16}`, `-----BEGIN [A-Z ]*PRIVATE KEY-----` ~ `-----END ... -----` 블록 → `[REDACTED]`. `.yml`·`.yaml`·`.properties`에서 키 이름에 `password`·`secret`·`api-key`·`apikey`·`api_key`·`token`·`credential`이 들어간 항목의 값 → `[REDACTED]` (값이 비어 있거나 기본값 없는 `${NAME}`이면 그대로, `${NAME:기본값}`이면 기본값만 가림. YAML 블록 스칼라(`|`·`>`)는 지시자를 남기고 이어지는 더 깊은 줄을 가림. 리뷰 반영 11-18) |
 | layer 판정 | `controller`(파일명 `*Controller.java`), `service`(`*Service.java`·`*ServiceImpl.java`), `mapper`(`*Mapper.java`·`*Mapper.xml`·`*Dao.java`·`mapper/` 아래 xml), `vue`(`.vue`), `js`(`router/`·`store`·`stores/`·`api/` 아래 js 및 기타 js), `config`(`*Config.java`·`application*.yml|properties`·`build.gradle*`·`package.json`·`pom.xml`), `domain`(`domain/`·`entity/`·`dto/`·`model/` 아래 java), `other`(나머지) |
 | 선별 우선순위 | controller → service → mapper → vue → js → config → domain → other, 같은 layer 안에서는 경로 오름차순. 상위 30개(`analysis.max-selected-files`)를 저장 |
 
@@ -238,6 +238,7 @@ F-05a에서는 SELECTING 다음이 곧 `DONE`이다. 이후 spec은 단계를 �
 ## 10. 결정 필요
 
 - 없음 (11-18 사용자 결정: F-05 a·b 분할, 일일 한도 5회 · FAILED 제외 · soft delete 포함)
+- (후속, 미결) 설정 키 키워드 확장: `private-key`·`access-key`처럼 `key`로 끝나는 키를 가릴지. `key`만으로 넓히면 `cache-key` 같은 일반 설정도 가려진다. 지금은 5.2절 7개 키워드만 (11-18 reviewer 지적)
 
 ## 11. 구현 체크리스트
 

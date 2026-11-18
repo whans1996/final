@@ -69,7 +69,7 @@ public class AnalysisService {
     @Transactional
     public CreateAnalysisResponse requestZip(long userId, CreateAnalysisRequest request) {
         User user = userService.lockActiveMember(userId);
-        LocalDateTime now = LocalDateTime.now(clock).truncatedTo(ChronoUnit.SECONDS);
+        LocalDateTime now = now();
         int limit = properties.dailyLimit();
         if (analysisMapper.countRequestedSince(userId, now.toLocalDate().atStartOfDay()) >= limit) {
             throw new BusinessException(
@@ -108,13 +108,13 @@ public class AnalysisService {
     /** 진행 중인 분석을 FAILED로 바꾼다. 커밋 이후 콜백(AFTER_COMMIT)에서도 불리므로 끝난 트랜잭션에 참여하지 않게 새 트랜잭션으로 쓴다. */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void markFailed(long analysisId, ErrorCode code, String message) {
-        analysisMapper.markFailed(analysisId, code.name(), message);
+        analysisMapper.markFailed(analysisId, code.name(), message, now());
     }
 
     /** 파이프라인이 다음 단계로 넘어간다. 분석이 없거나 이미 끝났으면(DONE·FAILED, 재시작 복구 등) false. */
     @Transactional
     public boolean advance(long analysisId, AnalysisStatus status, int progress) {
-        return analysisMapper.updateStage(analysisId, status, progress) == 1;
+        return analysisMapper.updateStage(analysisId, status, progress, now()) == 1;
     }
 
     /** 선별·마스킹이 끝난 파일을 저장한다 (SELECTING). */
@@ -129,7 +129,8 @@ public class AnalysisService {
     /** DONE으로 바꾸고 피드 활동(ANALYSIS)을 남긴다. 그 사이에 이미 끝난 분석이면 아무것도 하지 않는다. */
     @Transactional
     public void complete(long analysisId) {
-        if (analysisMapper.updateStage(analysisId, AnalysisStatus.DONE, DONE_PROGRESS) != 1) {
+        if (analysisMapper.updateStage(analysisId, AnalysisStatus.DONE, DONE_PROGRESS, now())
+                != 1) {
             return;
         }
         long userId =
@@ -143,7 +144,15 @@ public class AnalysisService {
     /** 진행 중이던 미삭제 분석을 모두 FAILED·ANALYSIS_500으로 바꾼다 (서버 재시작, AC11). 바꾼 수를 돌려준다. */
     @Transactional
     public int failInterrupted(String message) {
-        return analysisMapper.failInterrupted(ErrorCode.ANALYSIS_500.name(), message);
+        return analysisMapper.failInterrupted(ErrorCode.ANALYSIS_500.name(), message, now());
+    }
+
+    /**
+     * 서비스 시계(Asia/Seoul)의 현재 시각. created_at·updated_at을 DB 기본값(세션 시간대) 대신 이 값으로 써서, 응답에 붙이는 +09:00과
+     * 어긋나지 않게 한다.
+     */
+    private LocalDateTime now() {
+        return LocalDateTime.now(clock).truncatedTo(ChronoUnit.SECONDS);
     }
 
     /** 업로드 파일명에서 경로와 .zip을 뗀 이름. 비면 "project". */

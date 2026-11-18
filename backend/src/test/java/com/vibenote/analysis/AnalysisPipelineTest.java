@@ -1,6 +1,7 @@
 package com.vibenote.analysis;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
@@ -10,12 +11,15 @@ import static org.mockito.Mockito.inOrder;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Clock;
+import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.bean.override.convention.TestBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 /**
@@ -30,6 +34,15 @@ class AnalysisPipelineTest extends AnalysisTestSupport {
 
     /** 단계 순서 확인과 예기치 못한 예외 주입용. */
     @MockitoSpyBean AnalysisService analysisService;
+
+    /** DB 세션 시간대와 상관없이 상태 시각이 서비스 시계로 기록되는지 보려고 고정한다. */
+    private static final LocalDateTime FIXED_NOW = LocalDateTime.of(2030, 1, 2, 3, 4, 5);
+
+    @TestBean Clock clock;
+
+    static Clock clock() {
+        return Clock.fixed(FIXED_NOW.atZone(KST).toInstant(), KST);
+    }
 
     private long prepare(long userId, byte[] zipBytes) throws IOException {
         long id = insertAnalysis(userId, "FETCHING", null, false, "todo-app");
@@ -284,5 +297,36 @@ class AnalysisPipelineTest extends AnalysisTestSupport {
                                 Long.class,
                                 id))
                 .isZero();
+    }
+
+    @Test
+    void AC10_Error가_나도_FAILED_ANALYSIS_500으로_바꾸고_다시_던진다() throws IOException {
+        long id = prepare(createUser("ac10fatal", "JUNIOR"), zip(springProject()));
+        doThrow(new StackOverflowError()).when(analysisService).saveFiles(anyLong(), anyList());
+
+        assertThatThrownBy(() -> pipeline.run(id)).isInstanceOf(StackOverflowError.class);
+
+        Map<String, Object> row = analysisRow(id);
+        assertThat(row.get("status")).isEqualTo("FAILED");
+        assertThat(row.get("error_code")).isEqualTo("ANALYSIS_500");
+        assertThat(tempZip(id)).doesNotExist();
+    }
+
+    @Test
+    void AC13_상태_변경_시각은_서비스_시계로_기록한다() throws IOException {
+        long userId = createUser("ac13clock", "JUNIOR");
+        long done = prepare(userId, zip(springProject()));
+        long failed = prepare(userId, zip(Map.of("p/app.py", "print(1)")));
+        long interrupted = insertAnalysis(userId, "FILTERING", null, false, "interrupted");
+
+        pipeline.run(done);
+        pipeline.run(failed);
+        analysisService.failInterrupted("restart");
+
+        for (long id : List.of(done, failed, interrupted)) {
+            assertThat(analysisRow(id).get("updated_at"))
+                    .as("analysis %d", id)
+                    .isEqualTo(FIXED_NOW);
+        }
     }
 }

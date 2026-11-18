@@ -16,6 +16,7 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
+import java.util.zip.ZipException;
 import java.util.zip.ZipFile;
 import org.springframework.stereotype.Component;
 
@@ -31,8 +32,14 @@ public class ZipArchiveReader {
     static final String TOO_MANY_FILES = "지원하는 코드 파일이 %d개입니다. %d개 이하로 줄여서 다시 올려 주세요.";
     static final String TOO_LARGE = "코드 파일 합계가 %dMB를 넘습니다. 크기를 줄여서 다시 올려 주세요.";
 
-    /** Windows 기본 압축 도구는 파일명을 UTF-8 표시 없이 MS949로 쓴다. UTF-8로 못 읽으면 이것으로 다시 읽는다. */
+    /**
+     * Windows 기본 압축 도구는 파일명을 UTF-8 표시 없이 MS949로 쓴다. UTF-8로 못 읽으면 이것으로 다시 읽는다. JDK는 UTF-8로 풀 수 없는
+     * 이름을 ZIP을 열 때 {@code ZipException("invalid CEN header (bad entry name)")}으로 알린다.
+     */
     private static final Charset FALLBACK_CHARSET = Charset.forName("MS949");
+
+    /** {@code analysis_files.path VARCHAR(500)}. 더 긴 경로는 저장할 수 없으므로 건너뛴다. */
+    static final int MAX_PATH_LENGTH = 500;
 
     private static final Pattern DRIVE = Pattern.compile("^[A-Za-z]:");
     private static final String MAC_METADATA = "__MACOSX";
@@ -73,16 +80,19 @@ public class ZipArchiveReader {
     public List<SourceFile> read(Path zip) {
         try {
             return read(zip, StandardCharsets.UTF_8);
-        } catch (IllegalArgumentException utf8Failed) {
+        } catch (ZipException | IllegalArgumentException utf8Failed) {
             try {
                 return read(zip, FALLBACK_CHARSET);
-            } catch (IllegalArgumentException e) {
+            } catch (IOException | IllegalArgumentException e) {
                 throw new AnalysisFailedException(ErrorCode.ANALYSIS_400);
             }
+        } catch (IOException e) {
+            throw new AnalysisFailedException(ErrorCode.ANALYSIS_400);
         }
     }
 
-    private List<SourceFile> read(Path zip, Charset charset) {
+    /** ZipException(손상·형식 오류·읽을 수 없는 이름)은 그대로 던진다. */
+    private List<SourceFile> read(Path zip, Charset charset) throws IOException {
         try (ZipFile zipFile = new ZipFile(zip.toFile(), charset)) {
             List<Candidate> candidates = supportedEntries(zipFile);
             if (candidates.size() > properties.maxFiles()) {
@@ -115,9 +125,6 @@ public class ZipArchiveReader {
                 throw new AnalysisFailedException(ErrorCode.ANALYSIS_415);
             }
             return files;
-        } catch (IOException e) {
-            // ZipException(손상·형식 오류)도 여기로 온다
-            throw new AnalysisFailedException(ErrorCode.ANALYSIS_400);
         }
     }
 
@@ -142,7 +149,7 @@ public class ZipArchiveReader {
         List<Candidate> supported = new ArrayList<>();
         for (Candidate candidate : all) {
             String path = candidate.path().substring(prefix.length());
-            if (isSupported(path)) {
+            if (path.length() <= MAX_PATH_LENGTH && isSupported(path)) {
                 supported.add(new Candidate(candidate.entry(), path));
             }
         }

@@ -29,13 +29,15 @@ public final class SecretRedactor {
                     Pattern.compile("AKIA[0-9A-Z]{16}"));
 
     /**
-     * group 1: 들여쓰기·키·구분자, group 2: 키, group 3: 값. 키에 '#'이 올 수 없으므로 주석 줄은 걸리지 않는다. 키를 소유 수량자로 읽어
-     * 구분자 없는 긴 줄에서도 백트래킹하지 않는다 (ReDoS 방지). 비밀 키워드가 들어 있는지는 매칭 뒤에 검사한다.
+     * 한 줄 전체. group 1: 들여쓰기·키·구분자, group 2: 키, group 3: 값. 키에 '#'이 올 수 없으므로 주석 줄은 걸리지 않는다. 키를 소유
+     * 수량자로 읽어 구분자 없는 긴 줄에서도 백트래킹하지 않는다 (ReDoS 방지). 비밀 키워드가 들어 있는지는 매칭 뒤에 검사한다.
      */
     private static final Pattern CONFIG_ENTRY =
-            Pattern.compile(
-                    "^([ \\t]*+(?:-[ \\t]++)?([^\\s:=#]++)[ \\t]*+[:=][ \\t]*+)(.*)$",
-                    Pattern.MULTILINE);
+            Pattern.compile("([ \\t]*+(?:-[ \\t]++)?([^\\s:=#]++)[ \\t]*+[:=][ \\t]*+)(.*)");
+
+    /** YAML 블록 스칼라 지시자({@code |}, {@code >-} 등). 값은 다음 줄부터 더 깊은 들여쓰기로 이어진다. */
+    private static final Pattern YAML_BLOCK_SCALAR =
+            Pattern.compile("[|>][-+0-9]{0,2}[ \\t]*(?:#.*)?");
 
     private static final List<String> SECRET_KEYWORDS =
             List.of("password", "secret", "api-key", "apikey", "api_key", "token", "credential");
@@ -55,26 +57,54 @@ public final class SecretRedactor {
         for (Pattern pattern : KEY_PATTERNS) {
             result = pattern.matcher(result).replaceAll(Matcher.quoteReplacement(REDACTED));
         }
-        if (isConfigFile(path)) {
-            result = redactConfigValues(result);
+        String lower = path.toLowerCase(Locale.ROOT);
+        boolean yaml = lower.endsWith(".yml") || lower.endsWith(".yaml");
+        if (yaml || lower.endsWith(".properties")) {
+            result = redactConfigValues(result, yaml);
         }
         return result;
     }
 
-    private static boolean isConfigFile(String path) {
-        String lower = path.toLowerCase(Locale.ROOT);
-        return lower.endsWith(".yml") || lower.endsWith(".yaml") || lower.endsWith(".properties");
+    /** 줄 단위로 비밀 항목의 값을 가린다. YAML 블록 스칼라는 지시자를 남기고 이어지는 더 깊은 줄을 모두 가린다. 줄 수와 CRLF는 유지한다. */
+    private static String redactConfigValues(String content, boolean yaml) {
+        String[] lines = content.split("\n", -1);
+        // 가리는 중인 블록 스칼라 키의 들여쓰기. 블록 밖이면 -1
+        int blockIndent = -1;
+        for (int i = 0; i < lines.length; i++) {
+            boolean crlf = lines[i].endsWith("\r");
+            String line = crlf ? lines[i].substring(0, lines[i].length() - 1) : lines[i];
+            String eol = crlf ? "\r" : "";
+            if (blockIndent >= 0) {
+                if (line.isBlank()) {
+                    continue;
+                }
+                int indent = indentOf(line);
+                if (indent > blockIndent) {
+                    lines[i] = line.substring(0, indent) + REDACTED + eol;
+                    continue;
+                }
+                blockIndent = -1;
+            }
+            Matcher m = CONFIG_ENTRY.matcher(line);
+            if (!m.matches() || !isSecretKey(m.group(2))) {
+                continue;
+            }
+            if (yaml && YAML_BLOCK_SCALAR.matcher(m.group(3)).matches()) {
+                blockIndent = m.start(2);
+                continue;
+            }
+            lines[i] = m.group(1) + redactValue(m.group(3)) + eol;
+        }
+        return String.join("\n", lines);
     }
 
-    private static String redactConfigValues(String content) {
-        return CONFIG_ENTRY
-                .matcher(content)
-                .replaceAll(
-                        m ->
-                                Matcher.quoteReplacement(
-                                        isSecretKey(m.group(2))
-                                                ? m.group(1) + redactValue(m.group(3))
-                                                : m.group()));
+    private static int indentOf(String line) {
+        int indent = 0;
+        while (indent < line.length()
+                && (line.charAt(indent) == ' ' || line.charAt(indent) == '\t')) {
+            indent++;
+        }
+        return indent;
     }
 
     private static boolean isSecretKey(String key) {

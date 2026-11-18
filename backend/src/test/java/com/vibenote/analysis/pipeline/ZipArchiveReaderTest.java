@@ -7,6 +7,7 @@ import com.vibenote.analysis.AnalysisProperties;
 import com.vibenote.common.exception.ErrorCode;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -260,5 +261,30 @@ class ZipArchiveReaderTest {
         Files.write(broken, new byte[] {'P', 'K', 3, 4, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13});
 
         assertFails(broken, ErrorCode.ANALYSIS_400, "ZIP 파일을 읽을 수 없습니다");
+    }
+
+    @Test
+    void AC5_Windows_압축_도구가_MS949로_쓴_한글_파일명을_읽는다() throws IOException {
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+        try (ZipOutputStream out = new ZipOutputStream(bytes, Charset.forName("MS949"))) {
+            out.putNextEntry(new ZipEntry("할일앱/소스/A.java"));
+            out.write("class A {}".getBytes(StandardCharsets.UTF_8));
+            out.closeEntry();
+        }
+        Path zip = dir.resolve("ms949.zip");
+        Files.write(zip, bytes.toByteArray());
+
+        List<SourceFile> files = reader.read(zip);
+
+        assertThat(paths(files)).containsExactly("소스/A.java");
+        assertThat(files.get(0).content()).isEqualTo("class A {}");
+    }
+
+    @Test
+    void AC5_DB_경로_컬럼보다_긴_경로는_건너뛴다() throws IOException {
+        String longPath = "p/" + "d/".repeat(250) + "Long.java";
+        Path zip = zip(entries("p/A.java", "a", longPath, "b"));
+
+        assertThat(paths(reader.read(zip))).containsExactly("A.java");
     }
 }

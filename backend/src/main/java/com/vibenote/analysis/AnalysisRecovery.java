@@ -2,16 +2,18 @@ package com.vibenote.analysis;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.context.event.EventListener;
+import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.stereotype.Component;
 
 /**
  * 서버가 꺼질 때 진행 중이던 분석은 이어서 실행할 스레드가 없으므로 시작할 때 FAILED로 정리하고 남은 임시 ZIP을 지운다 (F-05a AC11). 서버는 한 대라고
  * 가정한다.
+ *
+ * <p>ApplicationReadyEvent는 웹 서버가 요청을 받기 시작한 뒤라 그 사이에 들어온 새 분석까지 정리할 수 있다. 그래서 모든 싱글톤을 만든 직후, 웹 서버가
+ * 시작되기 전에 실행한다.
  */
 @Component
-public class AnalysisRecovery {
+public class AnalysisRecovery implements SmartInitializingSingleton {
 
     static final String RESTART_MESSAGE = "서버가 다시 시작되어 분석이 중단되었습니다. 다시 요청해 주세요.";
 
@@ -25,7 +27,11 @@ public class AnalysisRecovery {
         this.tempFiles = tempFiles;
     }
 
-    @EventListener(ApplicationReadyEvent.class)
+    @Override
+    public void afterSingletonsInstantiated() {
+        recover();
+    }
+
     public void recover() {
         int failed = analysisService.failInterrupted(RESTART_MESSAGE);
         if (failed > 0) {
