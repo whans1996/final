@@ -252,7 +252,7 @@ F-05a에서는 SELECTING 다음이 곧 `DONE`이다. 이후 spec은 단계를 �
 - [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
 - [x] contract-checker 통과
 - [x] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일)
-- [ ] reviewer 지적 사항 반영 (보안: Zip Slip·zip bomb·키 마스킹 중점)
+- [x] reviewer 지적 사항 반영 (반드시 2·권장 7, Codex P2 6건)
 - [x] 산출물 반영: `03-ERD.md`(error_code), `06-화면설계서.md` SC-05·06·07 스크린샷, `04-WBS.md` 3.2를 3.2a(F-05a)·3.2b(F-05b)로 분리, `01-요구사항정의서`의 F-05 행 확인
-- [ ] PR CI 초록
+- [ ] PR CI 초록 (PR #14: 819dc96 초록, head 1bad898 실행 중)
 - [ ] 상태 DONE (PR 머지 후)
