@@ -5,6 +5,7 @@
       "Bash(node scripts/verify.mjs:*)",
       "Bash(node scripts/ui-check.mjs:*)",
       "Bash(node scripts/setup.mjs:*)",
+      "Bash(node scripts/codex-review.mjs:*)",
       "Bash(./gradlew:*)",
       "Bash(gradlew.bat:*)",
       "Bash(npm run:*)",

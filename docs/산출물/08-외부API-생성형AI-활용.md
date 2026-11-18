@@ -77,13 +77,28 @@
 | 2. 워크플로 스킬 | 반복 작업을 정해진 절차로 | `/pickup`(이어받기), `/spec`(기능 명세), `/implement`(TDD 구현), `/pr-review`(PR 전 리뷰), `/handoff`(인수인계), `/progress`(진척·산출물 점검) |
 | 3. 가드레일 | 위험한 행동을 기계적으로 차단 | Claude Code hooks: main 직접 커밋·강제 push·`--no-verify`·`.env` 접근·커밋된 DB 마이그레이션 수정·API 키 작성 차단. git `commit-msg` hook: 커밋 규칙·테스트 게이트 |
 | 4. 피드백 루프 | AI가 스스로 결과를 확인 | `verify.mjs`(테스트·빌드 실패만 요약), `ui-check.mjs`(실제 화면 점검), Testcontainers MySQL, LLM Mock, GitHub Actions CI, Swagger openapi.json 일치 검사 |
-| 5. 서브에이전트 | 역할 분리와 토큰 절약 | verifier(검증), reviewer(spec·보안 리뷰), contract-checker(FE·BE API 계약), ui-verifier(화면), prompt-evaluator(프롬프트 품질) |
+| 5. 서브에이전트 | 역할 분리와 토큰 절약 | verifier(검증, Haiku·low), reviewer(spec·보안 리뷰, Opus·high), contract-checker(FE·BE API 계약, Sonnet·medium), ui-verifier(화면, Sonnet·medium), prompt-evaluator(프롬프트 품질, Sonnet·medium) |
 
 ### 3.3 릴레이 체크포인트 설계
 
 - 세션 시작 시 hook이 브랜치·git 상태·`NOW.md`·마지막 작업로그를 AI에게 자동 주입한다.
 - AI가 코드를 바꾸고 `NOW.md`를 갱신하지 않은 채 턴을 끝내려 하면 Stop hook이 한 번 막는다.
 - 토큰이 떨어져 AI가 멈추면 사람이 `node scripts/handoff.mjs` 한 줄로 작업로그 기록·wip 커밋·push를 한다.
+
+### 3.3.1 토큰·컨텍스트 관리 (11-18 실측 후 도입)
+
+AI는 턴마다 대화 전체를 다시 읽으므로 비용은 대화 길이에 비례한다. 세션 하나(이어받기 → F-03 spec → 구현 → 리뷰 반영 → 정리, 273턴)를 `scripts/token-report.mjs`로 집계했다.
+
+| 주체 | 모델 | 평균 컨텍스트 | 최대 | 가중 비용 비중 |
+|---|---|---|---|---|
+| 메인 에이전트 | Opus | 264k | 463k | 90% |
+| reviewer ×1 | Opus | 80k | 128k | 4% |
+| verifier ×16 | Haiku | 14k | 23k | 4% |
+| contract-checker·ui-verifier | Sonnet | 17~27k | 36k | 2% |
+
+- **발견**: 서브에이전트 모델 분리는 잘 되어 있었지만, 비용의 대부분은 한 세션에 여러 단계를 몰아 하며 커진 메인 컨텍스트였다. 1M 컨텍스트 모델이라 자동 압축이 늦고, 상태줄의 %가 작게 보여 경고도 없었다.
+- **조치**: 단계(spec 승인, PR 생성, 머지 후 정리)마다 `/clear`로 새 세션을 시작한다. NOW.md가 상태를 들고 있어 이어받기 비용이 작다. 모델·effort는 세션 시작 때 작업 종류로 고른다(모델을 중간에 바꾸면 캐시를 다시 쓰므로). 서브에이전트 effort를 역할별로 고정하고, Stop hook이 200k를 넘으면 `/clear`를 안내한다.
+- **효과 측정**: 다음 기능부터 `token-report.mjs --list`로 세션별 평균 컨텍스트를 비교한다 (W5에 3.6절로 정리).
 
 ### 3.4 spec 주도 + TDD
 
