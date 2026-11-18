@@ -15,6 +15,7 @@ F-05a 분석 요청(ZIP 업로드 + 수집·필터·선별 파이프라인 + 상
 - ✅ `docs/specs/F-05a-analysis-request-zip.md` DRAFT 작성 (AC 16개, V3 `analyses.error_code`, 새 에러 코드 ANALYSIS_400/404/413/415/429/500)
 - ✅ `docs/기획서.md` 결정 로그 1줄 추가
 - ✅ spec 승인, `docs(F-05a): spec 승인` 커밋
+- ✅ 하네스: commit-msg hook·CI PR 제목·`featureIdFrom`이 `F-05a` 범위를 거부해 소문자 접미사 1자 허용 (dc9dcde). 커밋·PR 제목은 `feat(F-05a): ...`
 
 ## 바로 다음 할 일
 
