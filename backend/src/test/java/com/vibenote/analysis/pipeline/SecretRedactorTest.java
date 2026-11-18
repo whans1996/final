@@ -218,6 +218,55 @@ class SecretRedactorTest {
     }
 
     @Test
+    void AC6_yml_흐름_매핑_안의_비밀_항목을_가린다() {
+        String yml =
+                String.join(
+                        "\n",
+                        "datasource: {username: app, password: hunter2}",
+                        "jwt: {\"secret\": \"a,b\", ttl: 3600, nested: {api-key: xyz}}",
+                        "- {token: ${TOKEN:t0k}, name: n}",
+                        "env: {db-password: ${DB_PASSWORD}}");
+
+        String redacted = SecretRedactor.redact("application.yml", yml);
+
+        assertThat(redacted)
+                .doesNotContain("hunter2", "a,b", "xyz", "t0k")
+                .isEqualTo(
+                        String.join(
+                                "\n",
+                                "datasource: {username: app, password: [REDACTED]}",
+                                "jwt: {\"secret\": [REDACTED], ttl: 3600, nested: {api-key:"
+                                        + " [REDACTED]}}",
+                                "- {token: ${TOKEN:[REDACTED]}, name: n}",
+                                "env: {db-password: ${DB_PASSWORD}}"));
+    }
+
+    @Test
+    void AC6_properties_줄_이음으로_이어진_비밀_값을_끝까지_가린다() {
+        String props =
+                String.join(
+                        "\n",
+                        "spring.datasource.password=\\",
+                        "    hunter2\\",
+                        "    more",
+                        "jwt.secret=ab\\\\",
+                        "server.port=8080");
+
+        String redacted = SecretRedactor.redact("application.properties", props);
+
+        assertThat(redacted)
+                .doesNotContain("hunter2", "more", "ab")
+                .isEqualTo(
+                        String.join(
+                                "\n",
+                                "spring.datasource.password=[REDACTED]",
+                                "    [REDACTED]",
+                                "    [REDACTED]",
+                                "jwt.secret=[REDACTED]",
+                                "server.port=8080"));
+    }
+
+    @Test
     void AC6_CRLF_줄바꿈을_유지한다() {
         String yml = "password: hunter2\r\nsecret: |\r\n  abc\r\nname: x\r\n";
 
@@ -235,6 +284,10 @@ class SecretRedactorTest {
                         () -> SecretRedactor.redact("application.yml", line + "\npassword: x"));
 
         assertThat(redacted).isEqualTo(line + "\npassword: [REDACTED]");
+
+        String flow = "a: {password: " + "${\"".repeat(200_000);
+        assertTimeoutPreemptively(
+                Duration.ofSeconds(2), () -> SecretRedactor.redact("application.yml", flow));
     }
 
     @Test

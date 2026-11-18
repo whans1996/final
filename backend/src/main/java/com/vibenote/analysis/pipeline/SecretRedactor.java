@@ -29,11 +29,22 @@ public final class SecretRedactor {
                     Pattern.compile("AKIA[0-9A-Z]{16}"));
 
     /**
-     * 한 줄 전체. group 1: 들여쓰기·키·구분자, group 2: 키, group 3: 값. 키에 '#'이 올 수 없으므로 주석 줄은 걸리지 않는다. 키를 소유
-     * 수량자로 읽어 구분자 없는 긴 줄에서도 백트래킹하지 않는다 (ReDoS 방지). 비밀 키워드가 들어 있는지는 매칭 뒤에 검사한다.
+     * 한 줄 전체. group 1: 들여쓰기·키·구분자, group 2: 키, group 3: 값. 키에 '#'·'{'가 올 수 없으므로 주석 줄과 흐름 매핑 줄(- {a:
+     * b})은 걸리지 않는다. 키를 소유 수량자로 읽어 구분자 없는 긴 줄에서도 백트래킹하지 않는다 (ReDoS 방지). 비밀 키워드가 들어 있는지는 매칭 뒤에 검사한다.
      */
     private static final Pattern CONFIG_ENTRY =
-            Pattern.compile("([ \\t]*+(?:-[ \\t]++)?([^\\s:=#]++)[ \\t]*+[:=][ \\t]*+)(.*)");
+            Pattern.compile("([ \\t]*+(?:-[ \\t]++)?([^\\s:=#{]++)[ \\t]*+[:=][ \\t]*+)(.*)");
+
+    /**
+     * YAML 흐름 매핑 안의 항목 하나({@code {key: value, ...}}). group 1: 여는 기호·키·구분자, group 2: 키, group 3: 값.
+     * 따옴표 문자열과 {@code ${...}} 안의 쉼표·중괄호는 값에 포함하고, 길이를 제한해 긴 줄에서도 선형 시간에 끝난다. 값에 '{'를 넣지 않아 중첩 매핑은
+     * 다음 매칭에서 따로 검사한다.
+     */
+    private static final Pattern YAML_FLOW_ENTRY =
+            Pattern.compile(
+                    "([{,][ \\t]*+['\"]?([^\\s:,{}\\[\\]'\"]++)['\"]?[ \\t]*+:[ \\t]*+)"
+                            + "((?:\"[^\"\\n]{0,4096}+\"|'[^'\\n]{0,4096}+'"
+                            + "|\\$\\{[^}\\n]{0,256}+}|[^,{}\\n])*+)");
 
     /** YAML 블록 스칼라 지시자({@code |}, {@code >-} 등). 값은 다음 줄부터 더 깊은 들여쓰기로 이어진다. */
     private static final Pattern YAML_BLOCK_SCALAR =
@@ -65,15 +76,30 @@ public final class SecretRedactor {
         return result;
     }
 
-    /** 줄 단위로 비밀 항목의 값을 가린다. YAML 블록 스칼라는 지시자를 남기고 이어지는 더 깊은 줄을 모두 가린다. 줄 수와 CRLF는 유지한다. */
+    /**
+     * 줄 단위로 비밀 항목의 값을 가린다. 줄 수와 CRLF는 유지한다.
+     *
+     * <ul>
+     *   <li>YAML 블록 스칼라: 지시자를 남기고 이어지는 더 깊은 줄을 모두 가린다
+     *   <li>YAML 흐름 매핑({@code {password: x}}): 안쪽 항목도 검사한다
+     *   <li>.properties 줄 이음({@code \}로 끝남): 이어지는 줄까지 가린다
+     * </ul>
+     */
     private static String redactConfigValues(String content, boolean yaml) {
         String[] lines = content.split("\n", -1);
         // 가리는 중인 블록 스칼라 키의 들여쓰기. 블록 밖이면 -1
         int blockIndent = -1;
+        // 비밀 값이 '\'로 다음 줄에 이어지는 중 (.properties)
+        boolean continued = false;
         for (int i = 0; i < lines.length; i++) {
             boolean crlf = lines[i].endsWith("\r");
             String line = crlf ? lines[i].substring(0, lines[i].length() - 1) : lines[i];
             String eol = crlf ? "\r" : "";
+            if (continued) {
+                continued = endsWithContinuation(line);
+                lines[i] = line.substring(0, indentOf(line)) + REDACTED + eol;
+                continue;
+            }
             if (blockIndent >= 0) {
                 if (line.isBlank()) {
                     continue;
@@ -85,17 +111,41 @@ public final class SecretRedactor {
                 }
                 blockIndent = -1;
             }
+            if (yaml && line.indexOf('{') >= 0) {
+                line = redactFlowEntries(line);
+            }
             Matcher m = CONFIG_ENTRY.matcher(line);
-            if (!m.matches() || !isSecretKey(m.group(2))) {
-                continue;
+            if (m.matches() && isSecretKey(m.group(2))) {
+                if (yaml && YAML_BLOCK_SCALAR.matcher(m.group(3)).matches()) {
+                    blockIndent = m.start(2);
+                } else {
+                    continued = !yaml && endsWithContinuation(m.group(3));
+                    line = m.group(1) + redactValue(m.group(3));
+                }
             }
-            if (yaml && YAML_BLOCK_SCALAR.matcher(m.group(3)).matches()) {
-                blockIndent = m.start(2);
-                continue;
-            }
-            lines[i] = m.group(1) + redactValue(m.group(3)) + eol;
+            lines[i] = line + eol;
         }
         return String.join("\n", lines);
+    }
+
+    private static String redactFlowEntries(String line) {
+        return YAML_FLOW_ENTRY
+                .matcher(line)
+                .replaceAll(
+                        m ->
+                                Matcher.quoteReplacement(
+                                        isSecretKey(m.group(2))
+                                                ? m.group(1) + redactValue(m.group(3))
+                                                : m.group()));
+    }
+
+    /** 끝의 '\'가 홀수 개면 다음 줄로 이어진다 ('\\'는 글자 '\'). */
+    private static boolean endsWithContinuation(String line) {
+        int backslashes = 0;
+        for (int i = line.length() - 1; i >= 0 && line.charAt(i) == '\\'; i--) {
+            backslashes++;
+        }
+        return backslashes % 2 == 1;
     }
 
     private static int indentOf(String line) {
