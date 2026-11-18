@@ -5,7 +5,6 @@ import com.vibenote.analysis.pipeline.Layer;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * EXPLAINING 프롬프트의 입력 조각 (F-06 AC3, 5.2절). 파일은 {@code <<<FILE no=.. path=.. layer=..>>>} ~ {@code
@@ -17,6 +16,9 @@ final class ExplainPrompts {
     static final int OVERVIEW_FILE_CHARS = 3000;
 
     static final String NO_APIS = "(탐지된 API 없음)";
+
+    /** 파일 목록·API 목록이 각각 개요 입력 상한에서 차지할 수 있는 몫(1/4). 나머지는 코드에 쓴다. */
+    private static final int META_SHARE = 4;
 
     /** 개요 입력에 코드를 넣는 순서 (5.2절). */
     private static final List<String> OVERVIEW_LAYERS =
@@ -63,30 +65,57 @@ final class ExplainPrompts {
     }
 
     /**
-     * 개요 입력. 파일 목록과 API 목록을 먼저 두고, 남은 자리에 config → controller → service 파일(파일당 3,000자)을 순서대로 넣다가 다음
-     * 파일이 들어가지 않으면 멈춘다. 합계는 {@code maxChars}를 넘지 않는다.
+     * 줄을 앞에서부터 {@code maxChars} 안에 들어가는 만큼 잇는다. 남은 줄이 있으면 생략 줄을 붙이며, 생략 줄을 포함해도 {@code maxChars}를
+     * 넘지 않는다.
+     */
+    static String limitLines(List<String> lines, int maxChars) {
+        StringBuilder out = new StringBuilder();
+        for (int i = 0; i < lines.size(); i++) {
+            String line = (i == 0 ? "" : "\n") + lines.get(i);
+            int rest = lines.size() - i - 1;
+            String marker = rest == 0 ? "" : omitted(false, rest);
+            if (out.length() + line.length() + marker.length() > maxChars) {
+                String tail = omitted(out.isEmpty(), lines.size() - i);
+                return out.length() + tail.length() <= maxChars ? out + tail : out.toString();
+            }
+            out.append(line);
+        }
+        return out.toString();
+    }
+
+    private static String omitted(boolean first, int count) {
+        return (first ? "" : "\n") + "... (이하 " + count + "줄 생략)";
+    }
+
+    /**
+     * 개요 입력. 파일 목록과 API 목록을 먼저 두고(각각 상한의 1/4까지, 넘으면 줄 단위로 자름), 남은 자리에 config → controller → service
+     * 파일(파일당 3,000자)을 순서대로 넣다가 다음 파일이 들어가지 않으면 멈춘다. 합계는 {@code maxChars}를 넘지 않는다.
      */
     static OverviewInput overviewInput(
             List<AnalysisFile> files, List<ApiEndpoint> apis, int maxChars) {
+        int metaChars = maxChars / META_SHARE;
         String fileTree =
-                files.stream()
-                        .map(f -> f.getPath() + " [" + f.getLayer() + "]")
-                        .collect(Collectors.joining("\n"));
+                limitLines(
+                        files.stream().map(f -> f.getPath() + " [" + f.getLayer() + "]").toList(),
+                        metaChars);
         Map<Long, String> paths = new HashMap<>();
         files.forEach(f -> paths.put(f.getId(), f.getPath()));
         String apiLines =
                 apis.isEmpty()
                         ? NO_APIS
-                        : apis.stream()
-                                .map(
-                                        a ->
-                                                a.method()
-                                                        + " "
-                                                        + a.path()
-                                                        + " ("
-                                                        + paths.getOrDefault(a.fileId(), "?")
-                                                        + ")")
-                                .collect(Collectors.joining("\n"));
+                        : limitLines(
+                                apis.stream()
+                                        .map(
+                                                a ->
+                                                        a.method()
+                                                                + " "
+                                                                + a.path()
+                                                                + " ("
+                                                                + paths.getOrDefault(
+                                                                        a.fileId(), "?")
+                                                                + ")")
+                                        .toList(),
+                                metaChars);
 
         int budget = maxChars - fileTree.length() - apiLines.length();
         StringBuilder sources = new StringBuilder();

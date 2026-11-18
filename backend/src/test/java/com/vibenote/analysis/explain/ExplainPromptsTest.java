@@ -95,4 +95,22 @@ class ExplainPromptsTest {
         assertThat(input.apis()).isEqualTo("(탐지된 API 없음)");
         assertThat(input.sources()).isEmpty();
     }
+
+    @Test
+    void AC3_파일_목록과_API_목록도_24000자_상한_안에서_자른다() {
+        List<AnalysisFile> files = new ArrayList<>();
+        for (int i = 1; i <= 30; i++) {
+            files.add(file(i, "src/" + "d".repeat(480) + "/C" + i + ".java", "controller", "x"));
+        }
+        List<ApiEndpoint> apis = new ArrayList<>();
+        for (int i = 1; i <= 50; i++) {
+            apis.add(new ApiEndpoint("GET", "/api/items/" + i, (long) (i % 30 + 1)));
+        }
+
+        ExplainPrompts.OverviewInput input = ExplainPrompts.overviewInput(files, apis, 24000);
+
+        assertThat(input.totalLength()).isLessThanOrEqualTo(24000);
+        assertThat(input.fileTree()).startsWith("src/").contains("줄 생략)");
+        assertThat(input.apis()).startsWith("GET /api/items/1 ").contains("줄 생략)");
+    }
 }

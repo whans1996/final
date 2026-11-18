@@ -170,7 +170,7 @@ LLM 호출은 분석 1건당 약 6회(개요 1 + 파일 6개 묶음 최대 5)로
 
 | 단계 | 입력 (`{{...}}` 자리) |
 |---|---|
-| OVERVIEW | `projectName`, `fileTree`(선별 파일 전체의 `path [layer]` 줄), `apis`(AC7 결과), 이어서 합계 24,000자까지: config layer 파일(파일당 3,000자) → controller → service 파일(파일당 3,000자) 순으로 구분자에 넣어 채운다 |
+| OVERVIEW | `projectName`, `fileTree`(선별 파일 전체의 `path [layer]` 줄), `apis`(AC7 결과) — 두 목록은 각각 6,000자(상한의 1/4)까지 줄 단위로 넣고 넘으면 `... (이하 n줄 생략)`(PR #20 Codex 리뷰), 이어서 합계 24,000자까지: config layer 파일(파일당 3,000자) → controller → service 파일(파일당 3,000자) 순으로 구분자에 넣어 채운다 |
 | FILE | `projectName`, `overviewSummary`(방금 만든 개요 요약), `files`(묶음 6개, AC3 구분자·자르기) |
 
 ### 5.3 출력 JSON 스키마
