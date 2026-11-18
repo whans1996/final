@@ -15,6 +15,10 @@ SessionStart hook이 NOW.md와 git 상태를 이미 주입했으므로 그 내�
    - `origin`(GitHub)이 있으면 `git pull --ff-only`. 충돌·실패 시 멈추고 상황을 보고한다.
    - `gh pr status`로 내 브랜치의 PR, 리뷰 요청, CI 실패를 확인한다 (gh가 없거나 원격이 없으면 건너뜀). 상대가 리뷰를 요청한 PR이 있으면 보고에 포함한다.
    - 현재 브랜치가 main/develop이면 NOW.md의 브랜치로 `git switch` 한다 (없으면 사용자에게 확인).
+   - **NOW.md의 PR이 머지되었으면** (`gh pr view <번호> --json state`가 `MERGED`) 다음 기능을 시작하기 전에 "머지 후 정리"를 한다. `git switch develop && git pull` 후, 다음 기능 브랜치의 첫 커밋 또는 정리 브랜치(`feature/F-xx-wrapup`)에서:
+     - spec 헤더 `DONE (PR #n 머지, 날짜)`, 체크리스트 마지막 칸
+     - `docs/산출물/04-WBS.md` 해당 행의 상태·**실적**(실제 날짜, PR 번호), `05-간트차트.md` 태그(계획과 다르면 `실적` 섹션 막대)
+     - 작업로그 항목, 화면 설계서 스크린샷이 빠졌으면 추가 (`/pr-review` 5단계)
 2. **상태 읽기**
    - `docs/handoff/NOW.md` (pull 후 바뀌었을 수 있으니 다시 읽는다)
    - `docs/작업로그.md`의 **마지막 항목만**

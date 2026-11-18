@@ -71,6 +71,7 @@ SSAFY 관통 프로젝트(2026-11-17 시작, 12-24 발표). Spring Boot 3 + MyBa
 | 검증 (실패만 요약) | `node scripts/verify.mjs [be\|fe\|all] [--fix]` |
 | 화면 점검 | `node scripts/ui-check.mjs / /concepts` (FE dev 서버 실행 중일 때) |
 | AI 없이 교대 | `node scripts/handoff.mjs [-m "메모"] [--no-push]` |
+| PR 스크린샷 Markdown | `node scripts/pr-screens.mjs SC-18 SC-19` (`docs/산출물/screens/` 커밋·push 후) |
 | PR 상태·CI 확인 | `gh pr status`, `gh pr checks` |
 | BE 실행 (mock LLM) | `cd backend && ./gradlew bootRun --args='--spring.profiles.active=local'` |
 | FE 실행 | `cd frontend && npm run dev` |
