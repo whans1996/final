@@ -20,7 +20,8 @@ F-03 프로필·탈퇴 — **/implement 진행 중** (`docs/specs/F-03-profile.m
 
 1. ✅ AC6~8 green·커밋 (BE 110, 72바이트 초과 비밀번호 테스트 추가). 구현한 것: `UserWithdrawalService`(UserMapper·PasswordEncoder·AuthService·FollowService), `AuthService.revokeAll`, `RefreshTokenMapper.deleteByUserId`, `follow/FollowService.removeAllOf`+`FollowMapper.xml`, `dto/WithdrawRequest`, `UserMapper.withdraw`(email `withdrawn:{id}`, nickname `#탈퇴{id}`), DELETE /me(204 + `RefreshTokenCookie.clear()`)
 
-2. 🟡 FE AC9·AC10 테스트 작성(red 예정, 미커밋): `src/api/__tests__/users.spec.js`, `views/__tests__/UserProfileView.spec.js`·`MySettingsView.spec.js`, `stores/__tests__/auth.spec.js`(updateUser), `viewTestUtils.mountAt`에 beforeNavigate 옵션 → 구현: `src/api/users.js`, `stores/auth.js updateUser`, `views/UserProfileView.vue`(/users/:id), `views/MySettingsView.vue`(/me/settings, requiresAuth), `App.vue` 헤더 닉네임 링크(a.nickname)
+2. ✅ FE AC9·AC10 green (FE 70): `src/api/users.js`, `stores/auth.updateUser`, `utils/authValidation.validateProfile`, `views/UserProfileView.vue`(/users/:id), `views/MySettingsView.vue`(/me/settings), App.vue 헤더 닉네임 링크. 산출물 SC-18·SC-19, UC03·UC04 반영
+3. 다음: contract-checker → BE(local)+FE dev 띄워 ui-verifier(/users/1, /me/settings) → /pr-review
 
 ## 막힌 점 / 결정 필요
 

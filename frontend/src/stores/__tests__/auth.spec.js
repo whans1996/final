@@ -41,6 +41,24 @@ describe('useAuthStore', () => {
     expect(auth.isLoggedIn).toBe(false)
     expect(auth.user).toBeNull()
   })
+
+  it('F-03 AC10 updateUser는 로그인 상태를 유지한 채 닉네임·수준만 바꾼다', () => {
+    const auth = useAuthStore()
+    auth.setSession(SESSION)
+
+    auth.updateUser({ nickname: '주니어개발자', level: 'SENIOR' })
+
+    expect(auth.isLoggedIn).toBe(true)
+    expect(auth.accessToken).toBe('access-1')
+    expect(auth.user).toEqual({ id: 1, nickname: '주니어개발자', level: 'SENIOR', role: 'USER' })
+    expect(auth.level).toBe('SENIOR')
+  })
+
+  it('F-03 AC10 비로그인이면 updateUser는 아무것도 하지 않는다', () => {
+    const auth = useAuthStore()
+    auth.updateUser({ nickname: '주니어개발자' })
+    expect(auth.user).toBeNull()
+  })
 })
 
 describe('useAuthStore 로그인 흐름 (F-02 AC8)', () => {

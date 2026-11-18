@@ -27,6 +27,12 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = null
   }
 
+  /** 프로필 수정 후 헤더 등에 바로 반영한다 (F-03). 비로그인이면 아무것도 하지 않는다. */
+  function updateUser(partial) {
+    if (!user.value) return
+    user.value = { ...user.value, ...partial }
+  }
+
   async function login({ email, password }) {
     setSession(await authApi.login({ email, password }))
     return user.value
@@ -94,6 +100,7 @@ export const useAuthStore = defineStore('auth', () => {
     level,
     setSession,
     clear,
+    updateUser,
     login,
     logout,
     refresh,

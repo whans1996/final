@@ -211,16 +211,16 @@
 
 `/implement`가 진행하며 체크한다.
 
-- [ ] 브랜치 `feature/F-03-profile`
-- [ ] Flyway 마이그레이션 (없음)
-- [ ] AC별 실패 테스트 작성 (red 확인)
-- [ ] BE 구현 (green)
-- [ ] FE 구현 (green)
-- [ ] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
-- [ ] `ErrorCode` USER_404·USER_001 + `docs/conventions.md` 3절 USER 줄
+- [x] 브랜치 `feature/F-03-profile`
+- [x] Flyway 마이그레이션 (없음)
+- [x] AC별 실패 테스트 작성 (red 확인)
+- [x] BE 구현 (green)
+- [x] FE 구현 (green)
+- [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
+- [x] `ErrorCode` USER_404·USER_001 + `docs/conventions.md` 3절 USER 줄
 - [ ] contract-checker 통과
 - [ ] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일)
 - [ ] reviewer 지적 사항 반영 (PR 전 reviewer + Codex PR 리뷰)
-- [ ] 산출물 반영 (`06-화면설계서.md` SC-18·SC-19 상세, `02-유스케이스.md` UC03·UC04 흐름)
+- [x] 산출물 반영 (`06-화면설계서.md` SC-18·SC-19 상세, `02-유스케이스.md` UC03·UC04 흐름)
 - [ ] PR CI 초록
 - [ ] 상태 DONE (PR 머지 후)
