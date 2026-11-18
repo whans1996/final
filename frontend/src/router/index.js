@@ -17,6 +17,17 @@ export const routes = [
     meta: { guestOnly: true },
   },
   {
+    path: '/users/:id(\\d+)',
+    name: 'user-profile',
+    component: () => import('@/views/UserProfileView.vue'),
+  },
+  {
+    path: '/me/settings',
+    name: 'my-settings',
+    component: () => import('@/views/MySettingsView.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
     path: '/:pathMatch(.*)*',
     name: 'not-found',
     component: () => import('@/views/NotFoundView.vue'),

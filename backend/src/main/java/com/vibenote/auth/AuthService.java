@@ -15,6 +15,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.Base64;
 import java.util.HexFormat;
+import java.util.Optional;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -71,7 +72,7 @@ public class AuthService {
                                         passwordEncoder.matches(
                                                 request.password(), u.getPasswordHash()))
                         .orElseThrow(() -> new BusinessException(ErrorCode.AUTH_001));
-        return issue(user);
+        return issue(user, ErrorCode.AUTH_001);
     }
 
     /**
@@ -90,19 +91,19 @@ public class AuthService {
         String hash = sha256(refreshToken);
         RefreshTokenMapper.StoredRefreshToken stored =
                 refreshTokenMapper.findByHash(hash).orElseThrow(UnknownRefreshTokenException::new);
+        // 잠금 순서를 users → refresh_tokens로 맞춘다. 탈퇴도 users(X)를 먼저 잠그므로 순서가 엇갈려 데드락이 나지 않는다.
+        // role·status는 Access 토큰이 아니라 DB에서 다시 읽는다 (탈퇴·권한 변경 반영)
+        Optional<User> user = userService.findByIdForShare(stored.userId());
         if (refreshTokenMapper.deleteByHash(hash) == 0) {
             throw new UnknownRefreshTokenException();
         }
         if (stored.expired()) {
             throw new BusinessException(ErrorCode.AUTH_002);
         }
-        // role·status는 Access 토큰이 아니라 DB에서 다시 읽는다 (탈퇴·권한 변경 반영)
-        User user =
-                userService
-                        .findById(stored.userId())
-                        .filter(User::isActive)
+        User member =
+                user.filter(User::isActive)
                         .orElseThrow(() -> new BusinessException(ErrorCode.AUTH_002));
-        return issue(user);
+        return issue(member, ErrorCode.AUTH_002);
     }
 
     /** 그 토큰의 행만 지운다 (다른 기기 세션은 유지). 토큰이 없거나 모르는 값이어도 조용히 끝낸다. */
@@ -113,12 +114,26 @@ public class AuthService {
         }
     }
 
-    private IssuedTokens issue(User user) {
+    /** 그 회원의 모든 기기 세션(Refresh 토큰)을 폐기한다 (탈퇴, F-03). */
+    @Transactional
+    public void revokeAll(long userId) {
+        refreshTokenMapper.deleteByUserId(userId);
+    }
+
+    /**
+     * Refresh 행을 만들고 토큰을 준다. 회원을 읽은 뒤 탈퇴가 커밋되어 행을 만들지 못하면 토큰 없이 {@code failure}로 끝낸다 (F-03: 탈퇴 직후
+     * refresh 행이 남지 않게).
+     */
+    private IssuedTokens issue(User user, ErrorCode failure) {
         String refreshToken = newRefreshToken();
-        refreshTokenMapper.insert(
-                user.getId(),
-                sha256(refreshToken),
-                jwtProperties.refreshTokenValidity().toSeconds());
+        int inserted =
+                refreshTokenMapper.insert(
+                        user.getId(),
+                        sha256(refreshToken),
+                        jwtProperties.refreshTokenValidity().toSeconds());
+        if (inserted == 0) {
+            throw new BusinessException(failure);
+        }
         LoginResponse body =
                 new LoginResponse(
                         tokenProvider.createAccessToken(user.getId(), user.getRole()),

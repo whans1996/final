@@ -22,9 +22,19 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = session.user ?? null
   }
 
+  // clear할 때마다 올린다. 진행 중이던 재발급은 시작할 때의 값과 다르면 결과를 버린다 (탈퇴 직후 세션이 되살아나지 않게, F-03)
+  let sessionEpoch = 0
+
   function clear() {
+    sessionEpoch += 1
     accessToken.value = null
     user.value = null
+  }
+
+  /** 프로필 수정 후 헤더 등에 바로 반영한다 (F-03). 비로그인이면 아무것도 하지 않는다. */
+  function updateUser(partial) {
+    if (!user.value) return
+    user.value = { ...user.value, ...partial }
   }
 
   async function login({ email, password }) {
@@ -55,14 +65,17 @@ export const useAuthStore = defineStore('auth', () => {
   /**
    * 새 Access 토큰을 받아 돌려준다. 동시에 여러 번 불러도 서버 호출은 한 번이다 (F-02 AC9).
    * 실패하면 상태를 비우고 에러를 던진다. 로그아웃 중이면 시작하지 않고, 도착한 결과도 버린다.
+   * 기다리는 동안 clear(탈퇴 등)되었으면 도착한 결과를 버린다.
    */
   function refresh() {
     if (loggingOut && !refreshing) return Promise.reject(new Error('로그아웃 중입니다.'))
     if (!refreshing) {
+      const epoch = sessionEpoch
       refreshing = authApi
         .refresh()
         .then((session) => {
           if (loggingOut) throw new Error('로그아웃 중입니다.')
+          if (epoch !== sessionEpoch) throw new Error('세션이 종료되었습니다.')
           setSession(session)
           return session.accessToken
         })
@@ -94,6 +107,7 @@ export const useAuthStore = defineStore('auth', () => {
     level,
     setSession,
     clear,
+    updateUser,
     login,
     logout,
     refresh,

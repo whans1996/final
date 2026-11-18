@@ -16,7 +16,13 @@ async function onLogout() {
     <RouterLink to="/" class="brand">바이브노트</RouterLink>
     <nav class="account">
       <template v-if="auth.isLoggedIn">
-        <span class="nickname">{{ auth.user?.nickname }}</span>
+        <RouterLink
+          v-if="auth.user"
+          :to="{ name: 'user-profile', params: { id: auth.user.id } }"
+          class="nickname"
+        >
+          {{ auth.user.nickname }}
+        </RouterLink>
         <button type="button" class="link-button" @click="onLogout">로그아웃</button>
       </template>
       <template v-else>

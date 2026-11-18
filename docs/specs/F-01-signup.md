@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 |---|---|
-| 상태 | APPROVED <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
+| 상태 | DONE (PR #3 머지, 2026-11-18) <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
 | 기능 ID | F-01 |
 | 우선순위 | P0 |
 | 영역 오너 | 팀원 B (학습·소셜) |
@@ -131,7 +131,7 @@ AI로 코딩하는 입문자·주니어가 이메일·비밀번호·닉네임과
 - [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
 - [x] contract-checker 통과
 - [x] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일)
-- [ ] reviewer 지적 사항 반영
+- [x] reviewer 지적 사항 반영 (PR 전 reviewer + Codex PR 리뷰)
 - [x] 산출물 반영 (`06-화면설계서.md` SC-03, `02-유스케이스.md` UC01 흐름)
-- [ ] PR CI 초록
-- [ ] 상태 DONE (PR 머지 후)
+- [x] PR CI 초록
+- [x] 상태 DONE (PR 머지 후)

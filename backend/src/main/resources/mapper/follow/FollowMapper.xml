@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.vibenote.follow.FollowMapper">
+
+    <delete id="deleteAllOf">
+        DELETE FROM follows WHERE follower_id = #{userId} OR following_id = #{userId}
+    </delete>
+</mapper>

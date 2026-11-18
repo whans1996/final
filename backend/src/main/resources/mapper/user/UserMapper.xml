@@ -2,7 +2,7 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.vibenote.user.UserMapper">
 
-    <sql id="columns">id, email, password_hash, nickname, bio, level, role, status</sql>
+    <sql id="columns">id, email, password_hash, nickname, bio, level, role, status, created_at</sql>
 
     <!-- collation utf8mb4_0900_ai_ci라 대소문자를 구분하지 않는다 (UNIQUE 키와 같은 기준) -->
     <select id="existsByEmail" resultType="boolean">
@@ -11,6 +11,10 @@
 
     <select id="existsByNickname" resultType="boolean">
         SELECT EXISTS (SELECT 1 FROM users WHERE nickname = #{nickname})
+    </select>
+
+    <select id="existsByNicknameExceptId" resultType="boolean">
+        SELECT EXISTS (SELECT 1 FROM users WHERE nickname = #{nickname} AND id &lt;&gt; #{id})
     </select>
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
@@ -25,4 +29,34 @@
     <select id="findById" resultType="com.vibenote.user.domain.User">
         SELECT <include refid="columns"/> FROM users WHERE id = #{id}
     </select>
+
+    <select id="findByIdForShare" resultType="com.vibenote.user.domain.User">
+        SELECT <include refid="columns"/> FROM users WHERE id = #{id} FOR SHARE
+    </select>
+
+    <!-- 보낸 필드만 쓴다 (null은 그대로). 읽은 값으로 전부 덮어쓰면 동시에 온 다른 필드 수정이 사라진다 (Codex 리뷰). bio ''는 지움 -->
+    <update id="updateProfile">
+        UPDATE users
+        <set>
+            <if test="nickname != null">nickname = #{nickname},</if>
+            <if test="bio != null">bio = NULLIF(#{bio}, ''),</if>
+            <if test="level != null">level = #{level},</if>
+        </set>
+        WHERE id = #{id} AND status = 'ACTIVE'
+    </update>
+
+    <!--
+      탈퇴 마스킹 (F-03). email에는 @가 없고 nickname의 #은 가입 패턴 밖이라 새 가입과 UNIQUE가 겹치지 않는다(재가입 허용).
+      password_hash는 BCrypt 형식이 아니므로 어떤 비밀번호와도 맞지 않는다. 화면 표시는 status로 "탈퇴한 사용자"를 쓴다.
+    -->
+    <update id="withdraw">
+        UPDATE users
+        SET status = 'WITHDRAWN',
+            withdrawn_at = NOW(),
+            email = CONCAT('withdrawn:', id),
+            nickname = CONCAT('#탈퇴', id),
+            bio = NULL,
+            password_hash = '!WITHDRAWN'
+        WHERE id = #{id} AND status = 'ACTIVE'
+    </update>
 </mapper>

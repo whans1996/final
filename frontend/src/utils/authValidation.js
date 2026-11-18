@@ -1,4 +1,5 @@
-// 회원가입·로그인 입력 검증. 규칙과 메시지는 백엔드(SignupRequest, LoginRequest)와 같다 (docs/specs/F-01-signup.md 2절).
+// 회원가입·로그인·프로필 수정 입력 검증. 규칙과 메시지는 백엔드(SignupRequest, LoginRequest, UpdateProfileRequest)와 같다
+// (docs/specs/F-01-signup.md, F-03-profile.md 2절).
 
 export const LEVELS = [
   { value: 'BEGINNER', label: '입문', description: '코딩 용어부터 차근차근 알고 싶어요' },
@@ -21,7 +22,10 @@ export const MESSAGES = {
   level: '학습 수준을 선택하세요.',
   emailRequired: '이메일을 입력하세요.',
   passwordRequired: '비밀번호를 입력하세요.',
+  bio: '소개는 300자 이하로 입력하세요.',
 }
+
+export const BIO_MAX = 300
 
 /** @returns {Record<string, string>} 필드별 사유. 비어 있으면 통과 */
 export function validateSignup({ email, password, nickname, level }) {
@@ -38,5 +42,14 @@ export function validateLogin({ email, password }) {
   const errors = {}
   if (!email.trim()) errors.email = MESSAGES.emailRequired
   if (!password) errors.password = MESSAGES.passwordRequired
+  return errors
+}
+
+/** 프로필 수정 (F-03). 소개는 앞뒤 공백을 빼고 센다 (서버도 trim 후 검증). */
+export function validateProfile({ nickname, bio, level }) {
+  const errors = {}
+  if (!NICKNAME.test(nickname.trim())) errors.nickname = MESSAGES.nickname
+  if (bio.trim().length > BIO_MAX) errors.bio = MESSAGES.bio
+  if (!LEVELS.some((l) => l.value === level)) errors.level = MESSAGES.level
   return errors
 }

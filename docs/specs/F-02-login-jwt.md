@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 |---|---|
-| 상태 | APPROVED <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
+| 상태 | DONE (PR #3 머지, 2026-11-18) <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
 | 기능 ID | F-02 |
 | 우선순위 | P0 |
 | 영역 오너 | 팀원 B (학습·소셜) |
@@ -163,7 +163,7 @@ CSRF: Refresh 쿠키는 `SameSite=Strict` + `Path=/api/auth`라 다른 사이트
 - [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
 - [x] contract-checker 통과
 - [x] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일)
-- [ ] reviewer 지적 사항 반영
+- [x] reviewer 지적 사항 반영 (PR 전 reviewer + Codex PR 리뷰)
 - [x] 산출물 반영 (`06-화면설계서.md` SC-02, `02-유스케이스.md` UC02 흐름, `07-REST-API-명세.md`)
-- [ ] PR CI 초록
-- [ ] 상태 DONE (PR 머지 후)
+- [x] PR CI 초록
+- [x] 상태 DONE (PR 머지 후)
