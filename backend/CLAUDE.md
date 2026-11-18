@@ -86,6 +86,7 @@ com.vibenote
 - Mock 응답: `src/main/resources/llm-fixtures/<stage>.json`. 결정적이어야 하므로 랜덤을 쓰지 않는다.
 - LLM 출력은 **JSON으로 받고 파싱 실패를 항상 처리**한다 (재시도 1회 → 실패 시 단계 FAILED).
 - 모든 호출은 `llm_usage_logs`에 기록한다.
+- **`LlmClient`는 트랜잭션 밖에서 부른다.** 사용량 기록이 호출자의 `@Transactional`에 참여하므로 롤백되면 기록이 사라지고, LLM 응답을 기다리는 동안(최대 180초) DB 커넥션을 잡는다. LLM 호출 → 결과 저장만 짧은 트랜잭션으로 나눈다.
 - API 키는 환경변수 `GEMINI_API_KEY`로만 받는다.
 
 ## 분석 파이프라인

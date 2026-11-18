@@ -27,9 +27,9 @@
 ```
 호출부 ─▶ FallbackLlmClient
             ├─ 1) UsageLoggingLlmClient ─▶ GeminiLlmClient ─▶ POST /v1beta/models/{model}:generateContent
-            │      (429·5xx·타임아웃·연결 실패 → LlmUnavailableException, llm_usage_logs 실패 1행)
+            │      (4xx·5xx·타임아웃·연결 실패·응답 형식 오류 → LlmUnavailableException, llm_usage_logs 실패 1행)
             └─ 2) UsageLoggingLlmClient ─▶ OllamaLlmClient ─▶ POST /api/generate (format=json)
-                   (성공 1행 / 실패 시 BusinessException(LLM_503))
+                   (성공·실패 모두 1행, 실패면 BusinessException(LLM_503))
 ```
 
 | provider | 조립 |
@@ -98,10 +98,10 @@ llm:
 |---|---|---|---|
 | GitHub 저장소 아카이브 | 공개 저장소 코드 수집 | `https://codeload.github.com/...` ZIP 다운로드 | 허용 호스트만(SSRF 방어), 크기·파일 수 제한 |
 | GitLab 저장소 아카이브 | 공개 저장소 코드 수집 | `/-/archive/` ZIP 다운로드 | 동일 |
-| Gemini API | 생성형 AI | REST(JSON), `POST /v1beta/models/{model}:generateContent` | 키는 환경변수·`x-goog-api-key` 헤더, 사용량 기록, 429·5xx·타임아웃 시 Ollama 폴백 |
+| Gemini API | 생성형 AI | REST(JSON), `POST /v1beta/models/{model}:generateContent` | 키는 환경변수·`x-goog-api-key` 헤더, 사용량 기록, 4xx·5xx·타임아웃 시 Ollama 폴백 |
 
 - Gemini 연결은 `LlmLiveTest`(`@Tag("live")`, 일반 `test`·CI에서 제외)로 확인한다. 실측은 §1.5.
-- 오류 처리: 429·5xx·타임아웃·연결 실패 → `LlmUnavailableException` → 폴백, 모두 실패하면 `LLM_503` (§1.1)
+- 오류 처리: 4xx(키 오류 400·403, 모델 없음 404, 한도 429)·5xx·타임아웃·연결 실패·응답 형식 오류(안전 필터 차단 등) → `LlmUnavailableException` → 폴백, 모두 실패하면 `LLM_503` (§1.1). 키가 틀려도 조용히 Ollama로 넘어가므로 `llm_usage_logs`의 `error_message`(`Gemini 400` 등)로 확인한다
 
 (구현 후: 저장소 아카이브 요청·응답 예시)
 

@@ -28,7 +28,15 @@ public record LlmProperties(
             String apiKey,
             String model,
             @DefaultValue("https://generativelanguage.googleapis.com") String baseUrl,
-            @DefaultValue("60s") Duration timeout) {}
+            @DefaultValue("60s") Duration timeout) {
+
+        /** 설정을 로그로 찍어도 키가 남지 않게 가린다. */
+        @Override
+        public String toString() {
+            return "Gemini[apiKey=***, model=%s, baseUrl=%s, timeout=%s]"
+                    .formatted(model, baseUrl, timeout);
+        }
+    }
 
     /**
      * @param baseUrl Ollama 서버 주소 (예: {@code http://localhost:11434})

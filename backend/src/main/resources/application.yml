@@ -44,7 +44,7 @@ app:
   upload-dir: ./uploads
 
 # LlmConfig가 provider별로 LlmClient 하나를 조립한다 (docs/specs/F-00-llm-client.md).
-# gemini는 실패(429·5xx·타임아웃)하면 재시도 없이 ollama로 폴백한다.
+# gemini는 실패(4xx·5xx·타임아웃·연결 실패·응답 형식 오류)하면 재시도 없이 ollama로 폴백한다.
 llm:
   provider: ${LLM_PROVIDER:mock}
   gemini:
