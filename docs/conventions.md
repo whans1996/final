@@ -88,7 +88,7 @@
 `타입(범위): 요약` — git `commit-msg` hook이 검사한다.
 
 - 타입: `feat` `fix` `refactor` `test` `wip` (범위 필수) / `docs` `chore` (범위 생략 가능)
-- 범위: `F-xx` (기능 ID), `common` (여러 기능에 걸친 공통 코드), `harness` (하네스·도구)
+- 범위: `F-xx` (기능 ID. 분할 spec은 `F-05a`·`F-05b`처럼 소문자 접미사), `common` (여러 기능에 걸친 공통 코드), `harness` (하네스·도구)
 - 예: `feat(F-05): 분석 요청 API 추가`, `wip(F-05): 교대 체크포인트`, `chore(common): Spotless 설정`
 - `wip`가 아닌 커밋은 변경된 영역(backend/frontend)의 테스트가 통과해야 커밋된다.
 

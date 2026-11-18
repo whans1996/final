@@ -30,7 +30,7 @@ if (branch && PROTECTED_BRANCHES.includes(branch) && hasCommits() && !isMerging(
 }
 
 // 1) 형식
-const SCOPE = '(F-\\d{2}|common|harness)';
+const SCOPE = '(F-\\d{2}[a-z]?|common|harness)';
 const scoped = new RegExp(`^(feat|fix|refactor|test|wip)\\(${SCOPE}\\): \\S.*$`);
 const optional = new RegExp(`^(docs|chore)(\\(${SCOPE}\\))?: \\S.*$`);
 if (!scoped.test(subject) && !optional.test(subject)) {
@@ -38,7 +38,7 @@ if (!scoped.test(subject) && !optional.test(subject)) {
     `커밋 메시지 형식이 맞지 않습니다: "${subject}"`,
     `형식: 타입(범위): 요약`,
     `  타입: feat fix refactor test wip (범위 필수) / docs chore (범위 생략 가능)`,
-    `  범위: F-xx | common | harness`,
+    `  범위: F-xx(분할 spec은 F-05a) | common | harness`,
     `예: feat(F-05): 분석 요청 API 추가 / wip(F-05): 중간 저장 / docs: README 수정`,
   ]);
 }
