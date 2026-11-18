@@ -16,7 +16,14 @@ public enum ErrorCode {
     COMMON_500(HttpStatus.INTERNAL_SERVER_ERROR, "서버에서 오류가 발생했습니다. 잠시 후 다시 시도해 주세요."),
 
     AUTH_401(HttpStatus.UNAUTHORIZED, "로그인이 필요합니다."),
-    AUTH_403(HttpStatus.FORBIDDEN, "접근 권한이 없습니다.");
+    AUTH_403(HttpStatus.FORBIDDEN, "접근 권한이 없습니다."),
+    /** 로그인 실패. 이메일 없음·비밀번호 불일치·탈퇴 회원을 구분하지 않는다 (F-02). */
+    AUTH_001(HttpStatus.UNAUTHORIZED, "이메일 또는 비밀번호가 올바르지 않습니다."),
+    /** Refresh 토큰 없음·무효·만료·회전됨. FE는 재시도하지 않고 로그인 화면으로 보낸다 (F-02). */
+    AUTH_002(HttpStatus.UNAUTHORIZED, "로그인이 만료되었습니다. 다시 로그인하세요."),
+
+    /** 이메일·닉네임 중복. details에 해당 필드를 담는다 (F-01). */
+    USER_409(HttpStatus.CONFLICT, "이미 사용 중인 정보가 있습니다.");
 
     private final HttpStatus status;
     private final String message;

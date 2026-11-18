@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.vibenote.user.UserMapper">
+
+    <sql id="columns">id, email, password_hash, nickname, bio, level, role, status</sql>
+
+    <!-- collation utf8mb4_0900_ai_ci라 대소문자를 구분하지 않는다 (UNIQUE 키와 같은 기준) -->
+    <select id="existsByEmail" resultType="boolean">
+        SELECT EXISTS (SELECT 1 FROM users WHERE email = #{email})
+    </select>
+
+    <select id="existsByNickname" resultType="boolean">
+        SELECT EXISTS (SELECT 1 FROM users WHERE nickname = #{nickname})
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO users (email, password_hash, nickname, level, role, status)
+        VALUES (#{email}, #{passwordHash}, #{nickname}, #{level}, #{role}, #{status})
+    </insert>
+
+    <select id="findByEmail" resultType="com.vibenote.user.domain.User">
+        SELECT <include refid="columns"/> FROM users WHERE email = #{email}
+    </select>
+
+    <select id="findById" resultType="com.vibenote.user.domain.User">
+        SELECT <include refid="columns"/> FROM users WHERE id = #{id}
+    </select>
+</mapper>
