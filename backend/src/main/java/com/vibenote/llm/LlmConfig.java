@@ -81,7 +81,7 @@ public class LlmConfig {
     }
 
     /** 공급자마다 빌더를 복제해 타임아웃이 서로 섞이지 않게 한다. */
-    private static RestClient.Builder withTimeout(RestClient.Builder builder, Duration timeout) {
+    static RestClient.Builder withTimeout(RestClient.Builder builder, Duration timeout) {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(CONNECT_TIMEOUT);
         factory.setReadTimeout(timeout);

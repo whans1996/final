@@ -56,10 +56,30 @@ dependencies {
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
+// @Tag("live")는 실제 Gemini·Ollama를 부르므로 test(CI·git hook·verify)에서 뺀다 (F-00 AC9)
 tasks.named('test') {
-    useJUnitPlatform()
+    useJUnitPlatform {
+        excludeTags 'live'
+    }
     testLogging {
         events 'failed'
+        exceptionFormat 'full'
+    }
+}
+
+// 사람이 키를 넣고 수동으로만 실행한다: ./gradlew liveTest (Gemini 무료 한도를 쓴다)
+tasks.register('liveTest', Test) {
+    description = '실제 LLM 연결 확인 (@Tag("live")). 키·서버가 없으면 건너뛴다.'
+    group = 'verification'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform {
+        includeTags 'live'
+    }
+    outputs.upToDateWhen { false }
+    testLogging {
+        events 'passed', 'skipped', 'failed'
+        showStandardStreams = true
         exceptionFormat 'full'
     }
 }
