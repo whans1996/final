@@ -134,6 +134,9 @@ class SignupApiTest extends IntegrationTestBase {
                 Arguments.of(p64 + "a", "경계닉", false), // 65자
                 Arguments.of("abcdefgh", "경계닉", false), // 영문만
                 Arguments.of("12345678", "경계닉", false), // 숫자만
+                Arguments.of("가".repeat(30) + "a1", "경계닉", false), // 한글: 32자지만 92바이트
+                Arguments.of("vibe1234😀", "경계닉", false), // 이모지
+                Arguments.of("vibe 1234!@#", "경계닉", true), // 공백·특수문자 허용
                 Arguments.of("vibe1234", "ab", true), // 닉네임 2자
                 Arguments.of("vibe1234", n20, true), // 닉네임 20자
                 Arguments.of("vibe1234", "a", false), // 1자

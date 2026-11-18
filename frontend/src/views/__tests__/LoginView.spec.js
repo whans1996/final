@@ -63,6 +63,11 @@ describe('LoginView (F-02 AC8)', () => {
     expect(wrapper.find('[data-error="password"]').text()).toBe('비밀번호를 입력하세요.')
   })
 
+  it('AC8 가입 직후(joined)로 오면 가입 완료 안내를 보여 준다', async () => {
+    const { wrapper } = await mountAt(LoginView, '/login?joined=1')
+    expect(wrapper.find('[role="status"]').text()).toBe('가입되었습니다. 로그인해 주세요.')
+  })
+
   it('AC8 회원가입 화면 링크가 있다', async () => {
     const { wrapper } = await mountAt(LoginView, '/login')
     expect(wrapper.find('a[href="/signup"]').exists()).toBe(true)

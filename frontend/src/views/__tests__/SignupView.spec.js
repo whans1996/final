@@ -37,7 +37,7 @@ describe('SignupView (F-01 AC7)', () => {
     expect(authApi.signup).not.toHaveBeenCalled()
     expect(wrapper.find('[data-error="email"]').text()).toBe('올바른 이메일 형식이 아닙니다.')
     expect(wrapper.find('[data-error="password"]').text()).toBe(
-      '비밀번호는 8~64자이며 영문과 숫자를 모두 포함해야 합니다.',
+      '비밀번호는 8~64자의 영문·숫자·특수문자이며 영문과 숫자를 모두 포함해야 합니다.',
     )
     expect(wrapper.find('[data-error="nickname"]').text()).toBe(
       '닉네임은 2~20자의 한글·영문·숫자·_만 사용할 수 있습니다.',
@@ -90,6 +90,21 @@ describe('SignupView (F-01 AC7)', () => {
     expect(wrapper.find('[role="alert"]').text()).toBe(
       '서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.',
     )
+  })
+
+  it('AC7 가입 후 자동 로그인만 실패하면 로그인 화면으로 보내 가입 완료를 알린다', async () => {
+    authApi.signup.mockResolvedValue({ id: 1 })
+    authApi.login.mockRejectedValue(new Error('Network Error'))
+    const { wrapper, router } = await mountAt(SignupView, '/signup?redirect=/analyses/new')
+
+    await fill(wrapper, VALID)
+    await chooseLevel(wrapper, 'JUNIOR')
+    await submit(wrapper)
+
+    await vi.waitFor(() =>
+      expect(router.currentRoute.value.fullPath).toBe('/login?redirect=/analyses/new&joined=1'),
+    )
+    expect(useAuthStore().isLoggedIn).toBe(false)
   })
 
   it('AC7 로그인 화면 링크가 있다', async () => {

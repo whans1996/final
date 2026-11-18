@@ -25,11 +25,18 @@ async function onSubmit() {
   submitting.value = true
   try {
     await signup({ ...form })
-    await auth.login({ email: form.email, password: form.password })
-    await router.push(redirectTarget(route.query))
   } catch (error) {
     fieldErrors.value = errorDetails(error)
     if (Object.keys(fieldErrors.value).length === 0) formError.value = errorMessage(error)
+    submitting.value = false
+    return
+  }
+  try {
+    await auth.login({ email: form.email, password: form.password })
+    await router.push(redirectTarget(route.query))
+  } catch {
+    // 가입은 끝났으므로 다시 제출하게 두지 않고(409) 로그인 화면에서 이어 가게 한다
+    await router.push({ name: 'login', query: { ...route.query, joined: '1' } })
   } finally {
     submitting.value = false
   }
@@ -68,7 +75,7 @@ async function onSubmit() {
         <small v-if="fieldErrors.password" class="field-error" data-error="password">
           {{ fieldErrors.password }}
         </small>
-        <small v-else class="hint">8~64자, 영문과 숫자를 모두 포함</small>
+        <small v-else class="hint">8~64자 영문·숫자·특수문자, 영문과 숫자 모두 포함</small>
       </label>
 
       <label class="field">

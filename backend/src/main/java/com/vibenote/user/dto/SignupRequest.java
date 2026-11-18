@@ -21,7 +21,9 @@ public record SignupRequest(
                 @Email(message = EMAIL_MESSAGE)
                 @Size(max = 255, message = EMAIL_MESSAGE)
                 String email,
-        @Schema(description = "비밀번호. 8~64자, 영문과 숫자를 각각 1자 이상", example = "vibe1234")
+        @Schema(
+                        description = "비밀번호. 8~64자의 ASCII 영문·숫자·특수문자(공백 포함), 영문과 숫자를 각각 1자 이상",
+                        example = "vibe1234")
                 @NotNull(message = PASSWORD_MESSAGE)
                 @Pattern(regexp = PASSWORD_PATTERN, message = PASSWORD_MESSAGE)
                 String password,
@@ -38,11 +40,12 @@ public record SignupRequest(
                 String level) {
 
     public static final String EMAIL_MESSAGE = "올바른 이메일 형식이 아닙니다.";
-    public static final String PASSWORD_MESSAGE = "비밀번호는 8~64자이며 영문과 숫자를 모두 포함해야 합니다.";
+    public static final String PASSWORD_MESSAGE = "비밀번호는 8~64자의 영문·숫자·특수문자이며 영문과 숫자를 모두 포함해야 합니다.";
     public static final String NICKNAME_MESSAGE = "닉네임은 2~20자의 한글·영문·숫자·_만 사용할 수 있습니다.";
     public static final String LEVEL_MESSAGE = "학습 수준을 선택하세요.";
 
-    static final String PASSWORD_PATTERN = "^(?=.*[A-Za-z])(?=.*\\d).{8,64}$";
+    // ASCII 출력 문자로 제한한다: BCrypt는 72바이트를 넘으면 해시를 만들지 못한다 (한글은 1자 3바이트)
+    static final String PASSWORD_PATTERN = "^(?=.*[A-Za-z])(?=.*\\d)[\\x20-\\x7E]{8,64}$";
     static final String NICKNAME_PATTERN = "^[가-힣A-Za-z0-9_]{2,20}$";
 
     public SignupRequest {

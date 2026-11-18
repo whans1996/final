@@ -11,12 +11,12 @@ export const LEVELS = [
 ]
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-const PASSWORD = /^(?=.*[A-Za-z])(?=.*\d).{8,64}$/
+const PASSWORD = /^(?=.*[A-Za-z])(?=.*\d)[\x20-\x7E]{8,64}$/
 const NICKNAME = /^[가-힣A-Za-z0-9_]{2,20}$/
 
 export const MESSAGES = {
   email: '올바른 이메일 형식이 아닙니다.',
-  password: '비밀번호는 8~64자이며 영문과 숫자를 모두 포함해야 합니다.',
+  password: '비밀번호는 8~64자의 영문·숫자·특수문자이며 영문과 숫자를 모두 포함해야 합니다.',
   nickname: '닉네임은 2~20자의 한글·영문·숫자·_만 사용할 수 있습니다.',
   level: '학습 수준을 선택하세요.',
   emailRequired: '이메일을 입력하세요.',

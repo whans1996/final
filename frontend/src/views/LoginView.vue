@@ -39,6 +39,9 @@ async function onSubmit() {
     <h1>로그인</h1>
     <form class="auth-form" novalidate @submit.prevent="onSubmit">
       <p v-if="formError" class="form-error" role="alert">{{ formError }}</p>
+      <p v-else-if="route.query.joined" class="form-notice" role="status">
+        가입되었습니다. 로그인해 주세요.
+      </p>
 
       <label class="field">
         <span>이메일</span>
@@ -117,6 +120,10 @@ async function onSubmit() {
 .form-error {
   color: var(--color-danger);
   font-weight: 400;
+}
+
+.form-notice {
+  color: var(--color-primary);
 }
 
 .submit {
