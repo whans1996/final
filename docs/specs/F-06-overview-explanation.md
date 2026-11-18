@@ -270,9 +270,9 @@ LLM은 테스트에서 실제로 부르지 않는다. 파이프라인 통합 테
 
 - [x] 브랜치 `feature/F-06-overview-explanation`
 - [x] Flyway `V4__analysis_file_role.sql`
-- [x] AC별 실패 테스트 작성 (red 확인) — BE AC1~AC12. FE AC13~15는 다음 세션
+- [x] AC별 실패 테스트 작성 (red 확인) — BE AC1~AC12, FE AC13~AC15
 - [x] BE 구현 (green) — 프롬프트 6개, fixture 2개
-- [ ] FE 구현 (green)
+- [x] FE 구현 (green) — AC13~AC15, FE 132개 green
 - [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
 - [ ] contract-checker 통과
 - [ ] ui-verifier 통과 (데스크톱·모바일)

@@ -166,3 +166,172 @@ describe('AnalysisDetailView (F-05a AC15)', () => {
     wrapper.unmount()
   })
 })
+
+function detail(partial) {
+  return {
+    id: 42,
+    title: 'todo-app',
+    projectName: 'todo-app',
+    sourceType: 'ZIP',
+    level: 'JUNIOR',
+    status: 'DONE',
+    progress: 100,
+    isPublic: false,
+    errorCode: null,
+    errorMessage: null,
+    createdAt: '2026-11-24T14:20:00+09:00',
+    fileCount: 2,
+    explainedFileCount: 2,
+    overview: {
+      summary: '할 일을 등록하는 Todo 서비스입니다.',
+      techStack: ['Spring Boot'],
+      layers: [{ layer: 'controller', role: 'HTTP 요청을 받습니다.' }],
+      readingOrder: [{ fileId: 101, path: 'src/TodoController.java', reason: '먼저 봅니다.' }],
+      apis: [{ method: 'GET', path: '/api/todos', fileId: 101 }],
+    },
+    ...partial,
+  }
+}
+
+const files = [
+  {
+    id: 101,
+    path: 'src/TodoController.java',
+    layer: 'controller',
+    role: '컨트롤러',
+    summary: '설명',
+  },
+  { id: 102, path: 'src/TodoService.java', layer: 'service', role: '서비스', summary: '설명' },
+]
+
+describe('AnalysisDetailView 결과 탭 (F-06 AC13~AC15)', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    analysesApi.fetchAnalysisFiles.mockResolvedValue(files)
+    analysesApi.fetchAnalysisFile.mockImplementation(async (_, fileId) => ({
+      ...files.find((f) => f.id === fileId),
+      content: 'class A {}',
+    }))
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('AC13 처음부터 DONE이면 상세를 1회 불러와 제목과 개요 탭(기본)을 보여 준다', async () => {
+    analysesApi.fetchAnalysisStatus.mockResolvedValue(status({ status: 'DONE', progress: 100 }))
+    analysesApi.fetchAnalysis.mockResolvedValue(detail())
+
+    const { wrapper } = await mountDetail()
+
+    expect(analysesApi.fetchAnalysis).toHaveBeenCalledTimes(1)
+    expect(analysesApi.fetchAnalysis).toHaveBeenCalledWith(42)
+    expect(wrapper.find('h1').text()).toBe('todo-app')
+    const tabs = wrapper.findAll('[role="tab"]')
+    expect(tabs.map((t) => t.text())).toEqual(['개요', '파일'])
+    expect(tabs[0].attributes('aria-selected')).toBe('true')
+    expect(wrapper.find('[data-section="summary"]').text()).toContain('Todo 서비스')
+    expect(analysesApi.fetchAnalysisFiles).not.toHaveBeenCalled()
+  })
+
+  it('AC13 폴링 중 DONE으로 바뀌면 그때 상세를 1회 불러온다', async () => {
+    analysesApi.fetchAnalysisStatus
+      .mockResolvedValueOnce(status({ status: 'EXPLAINING', progress: 45 }))
+      .mockResolvedValue(status({ status: 'DONE', progress: 100 }))
+    analysesApi.fetchAnalysis.mockResolvedValue(detail())
+
+    const { wrapper } = await mountDetail()
+    expect(wrapper.text()).toContain('설명 생성 중')
+    expect(analysesApi.fetchAnalysis).not.toHaveBeenCalled()
+    expect(wrapper.find('[role="tab"]').exists()).toBe(false)
+
+    await advance(2000)
+    await advance(10000)
+
+    expect(analysesApi.fetchAnalysis).toHaveBeenCalledTimes(1)
+    expect(wrapper.find('h1').text()).toBe('todo-app')
+    expect(wrapper.findAll('[role="tab"]')).toHaveLength(2)
+  })
+
+  it('AC13 FAILED면 결과 탭 없이 F-05a 실패 화면 그대로다', async () => {
+    analysesApi.fetchAnalysisStatus.mockResolvedValue(
+      status({
+        status: 'FAILED',
+        progress: 40,
+        errorCode: 'LLM_503',
+        errorMessage: 'AI 응답 실패',
+      }),
+    )
+
+    const { wrapper } = await mountDetail()
+
+    expect(analysesApi.fetchAnalysis).not.toHaveBeenCalled()
+    expect(wrapper.find('[data-message="failed"]').text()).toContain('AI 응답 실패')
+    expect(wrapper.find('[role="tab"]').exists()).toBe(false)
+  })
+
+  it('AC15 상세가 실패하면 서버 message와 "다시 시도" 버튼을 보여 주고, 누르면 다시 불러온다', async () => {
+    const message = '서버에서 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.'
+    analysesApi.fetchAnalysisStatus.mockResolvedValue(status({ status: 'DONE', progress: 100 }))
+    analysesApi.fetchAnalysis
+      .mockRejectedValueOnce(apiError(500, { code: 'COMMON_500', message }))
+      .mockResolvedValue(detail())
+
+    const { wrapper } = await mountDetail()
+    expect(wrapper.find('[role="alert"]').text()).toBe(message)
+
+    await wrapper.find('[data-action="retry-detail"]').trigger('click')
+    await flushPromises()
+
+    expect(analysesApi.fetchAnalysis).toHaveBeenCalledTimes(2)
+    expect(wrapper.find('h1').text()).toBe('todo-app')
+  })
+
+  it('AC14 "파일" 탭을 누르면 쿼리에 tab=files가 남고 파일 목록을 보여 준다', async () => {
+    analysesApi.fetchAnalysisStatus.mockResolvedValue(status({ status: 'DONE', progress: 100 }))
+    analysesApi.fetchAnalysis.mockResolvedValue(detail())
+    const { wrapper, router } = await mountDetail()
+
+    await wrapper.findAll('[role="tab"]')[1].trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.query).toEqual({ tab: 'files' })
+    expect(wrapper.findAll('[role="tab"]')[1].attributes('aria-selected')).toBe('true')
+    expect(wrapper.findAll('[data-file-id]')).toHaveLength(2)
+  })
+
+  it('AC14 ?tab=files&file=101로 열면 파일 탭과 선택 파일을 복원하고, 뒤로 가기로 이전 선택으로 돌아간다', async () => {
+    analysesApi.fetchAnalysisStatus.mockResolvedValue(status({ status: 'DONE', progress: 100 }))
+    analysesApi.fetchAnalysis.mockResolvedValue(detail())
+
+    const { wrapper, router } = await mountDetail('/analyses/42?tab=files&file=101')
+
+    expect(analysesApi.fetchAnalysisFile).toHaveBeenCalledWith(42, 101)
+    expect(wrapper.find('[data-file-id="101"]').attributes('aria-current')).toBe('true')
+
+    await wrapper.find('[data-file-id="102"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.query).toEqual({ tab: 'files', file: '102' })
+    expect(analysesApi.fetchAnalysisFile).toHaveBeenLastCalledWith(42, 102)
+
+    router.back()
+    await flushPromises()
+    await advance(0)
+    expect(router.currentRoute.value.query).toEqual({ tab: 'files', file: '101' })
+    expect(analysesApi.fetchAnalysisFile).toHaveBeenLastCalledWith(42, 101)
+    expect(analysesApi.fetchAnalysis).toHaveBeenCalledTimes(1)
+  })
+
+  it('AC13 개요의 읽는 순서를 누르면 파일 탭에서 그 파일을 선택한다', async () => {
+    analysesApi.fetchAnalysisStatus.mockResolvedValue(status({ status: 'DONE', progress: 100 }))
+    analysesApi.fetchAnalysis.mockResolvedValue(detail())
+    const { wrapper, router } = await mountDetail()
+
+    await wrapper.find('[data-section="reading-order"] a').trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.query).toEqual({ tab: 'files', file: '101' })
+    expect(analysesApi.fetchAnalysisFile).toHaveBeenCalledWith(42, 101)
+  })
+})

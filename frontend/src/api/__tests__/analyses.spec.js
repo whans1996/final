@@ -1,7 +1,14 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import http from '@/api/http'
-import { createAnalysis, fetchAnalyses, fetchAnalysisStatus } from '@/api/analyses'
+import {
+  createAnalysis,
+  fetchAnalyses,
+  fetchAnalysis,
+  fetchAnalysisFile,
+  fetchAnalysisFiles,
+  fetchAnalysisStatus,
+} from '@/api/analyses'
 
 // API 계약(docs/specs/F-05a-analysis-request-zip.md 3절)과 URL·메서드·파트 이름이 같은지 확인한다
 function capture(data = {}) {
@@ -65,5 +72,36 @@ describe('api/analyses (F-05a)', () => {
     await expect(fetchAnalysisStatus(42)).resolves.toMatchObject({ status: 'FILTERING' })
 
     expect(`${calls[0].method} ${calls[0].url}`).toBe('get /analyses/42/status')
+  })
+})
+
+describe('api/analyses (F-06)', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
+  it('AC13 fetchAnalysis는 GET /api/analyses/{id}', async () => {
+    const calls = capture({ id: 42, title: 'todo-app', status: 'DONE', overview: null })
+
+    await expect(fetchAnalysis(42)).resolves.toMatchObject({ id: 42, title: 'todo-app' })
+
+    expect(`${calls[0].method} ${calls[0].url}`).toBe('get /analyses/42')
+  })
+
+  it('AC14 fetchAnalysisFiles는 GET /api/analyses/{id}/files', async () => {
+    const files = [{ id: 101, path: 'A.java', layer: 'controller', role: null, summary: null }]
+    const calls = capture(files)
+
+    await expect(fetchAnalysisFiles(42)).resolves.toEqual(files)
+
+    expect(`${calls[0].method} ${calls[0].url}`).toBe('get /analyses/42/files')
+  })
+
+  it('AC14 fetchAnalysisFile은 GET /api/analyses/{id}/files/{fileId}', async () => {
+    const calls = capture({ id: 101, path: 'A.java', content: 'class A {}' })
+
+    await expect(fetchAnalysisFile(42, 101)).resolves.toMatchObject({ content: 'class A {}' })
+
+    expect(`${calls[0].method} ${calls[0].url}`).toBe('get /analyses/42/files/101')
   })
 })
