@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 |---|---|
-| 상태 | APPROVED <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
+| 상태 | DONE (PR #20, 머지 예정 2026-11-18) <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
 | 기능 ID | F-06 |
 | 우선순위 | P0 |
 | 영역 오너 | 팀원 A (AI·분석) |
@@ -277,7 +277,7 @@ LLM은 테스트에서 실제로 부르지 않는다. 파이프라인 통합 테
 - [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
 - [x] contract-checker 통과 (FE 포함 불일치 0)
 - [x] ui-verifier 통과 (데스크톱·모바일, 375px 가로 스크롤 없음)
-- [ ] reviewer 지적 사항 반영
+- [x] reviewer 지적 사항 반영 (반드시 1건·권장 4건, Codex P2 1건 수정·1건 → #21)
 - [x] 산출물 반영: `03-ERD.md`(role·overview), `06-화면설계서.md` SC-07 개요·파일 탭, `04-WBS.md`·`05-간트차트.md` F-06 실적, `09-데이터셋.md`·`datasets.json` DS-06, `08-외부API-생성형AI-활용.md` §1.3 프롬프트 설계
-- [ ] PR CI 초록
-- [ ] 상태 DONE (PR 머지 전 마지막 커밋)
+- [x] PR CI 초록
+- [x] 상태 DONE (PR 머지 전 마지막 커밋)
