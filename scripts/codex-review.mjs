@@ -19,7 +19,8 @@
 //   RUNNING  3  head 커밋 리뷰 중
 //   STALE    4  리뷰 상태가 없거나 이전 커밋 기준
 //   TIMEOUT  5  --wait 시간 초과
-//   ERROR    1  gh 실패, 또는 Codex가 "create an environment" 안내만 남김 (환경을 만든 뒤 --request로 다시)
+//   ERROR    1  gh 실패, 또는 Codex가 마지막 요청 뒤 "create an environment" 안내만 남김
+//               (환경을 만든 뒤 --request로 다시 실행하면 요청을 새로 단다)
 
 import { spawnSync } from 'node:child_process';
 import { git } from './lib/common.mjs';
@@ -158,12 +159,13 @@ function judge() {
         return { verdict: 'COMPLETE', h, comments, msg: `head ${short} 문서만 변경 (Codex ✅ ${base.slice(0, 7)} 이후)` };
       }
     }
-    // 환경 안내가 이 head에 대한 요청보다 늦으면(요청 없이 보기만 할 때는 마지막 봇 활동이면) 기다려도 리뷰가 오지 않는다.
-    // --request이고 아직 요청이 없으면 환경을 고친 뒤일 수 있으므로 요청을 단다
+    // 환경 안내가 이 head에 대한 마지막 요청보다 늦으면 기다려도 리뷰가 오지 않는다.
+    // --request로 시작하면 환경을 만든 뒤의 재시도로 보고 요청을 새로 단다 (아래, Codex 리뷰)
     const env = envNotice(comments);
     const reqAt = requestAt(comments, h.sha);
-    if (env && (reqAt ? env.at > reqAt : !request)) {
-      return { verdict: 'ERROR', h, comments, msg: `Codex 환경 없음 (${env.at}): ${env.url} 에서 만든 뒤 --request로 다시 요청` };
+    if (env && (!reqAt || env.at > reqAt)) {
+      const msg = `Codex 환경 없음 (${env.at}): ${env.url} 에서 만든 뒤 --request로 다시 요청`;
+      return { verdict: 'ERROR', envMissing: true, h, comments, msg };
     }
     const seen = st?.commit_sha ? `${st.commit_sha.slice(0, 7)} 기준` : '상태 댓글 없음';
     return { verdict: 'STALE', h, comments, msg: `head ${short}, Codex ${seen}` };
@@ -209,11 +211,19 @@ function report(r) {
 let r = judge();
 if (r.h.state !== 'OPEN' && (request || wait)) fail(`PR #${pr}이 ${r.h.state} 상태입니다`);
 
-if (request && r.verdict === 'STALE') {
+const postRequest = (sha) => gh(['pr', 'comment', pr, '--body', `@codex review\n\n<!-- codex-review-request: ${sha} -->`]);
+
+if (request && r.envMissing) {
+  // 안내가 마지막 요청보다 늦으므로 기존 요청이 있어도 다시 단다. 환경이 아직 없으면 대기 중 같은 안내가 와서 ERROR로 끝난다
+  postRequest(r.h.sha);
+  console.error(`(Codex 환경 안내 뒤 재시도: @codex review 요청함, head ${r.h.sha.slice(0, 7)})`);
+  // 방금 단 댓글이 목록에 바로 안 보일 수 있어 다시 판정하지 않고 대기 상태로 둔다
+  r = { ...r, verdict: 'STALE', envMissing: false, msg: `head ${r.h.sha.slice(0, 7)}, 환경 안내 뒤 재요청함` };
+} else if (request && r.verdict === 'STALE') {
   if (requestAt(r.comments, r.h.sha)) {
     console.error(`(head ${r.h.sha.slice(0, 7)}에 대한 @codex review 요청이 이미 있어 생략)`);
   } else {
-    gh(['pr', 'comment', pr, '--body', `@codex review\n\n<!-- codex-review-request: ${r.h.sha} -->`]);
+    postRequest(r.h.sha);
     console.error(`(@codex review 요청함: head ${r.h.sha.slice(0, 7)})`);
   }
 }
