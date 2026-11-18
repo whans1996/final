@@ -21,6 +21,8 @@ SSAFY 관통 프로젝트(2026-11-17 시작, 12-24 발표). Spring Boot 4 + MyBa
 | API 응답·에러 코드·네이밍·커밋·PR 규칙 | `docs/conventions.md` |
 | 현재 구현된 API (정본) | `docs/api/openapi.json` (테스트가 생성), 실행 중이면 http://localhost:8080/swagger-ui/index.html |
 | 제출 산출물 (요구사항 정의서, 유스케이스, ERD, WBS, 간트, 화면 설계서, API 명세, AI 활용, 데이터 셋, 보고서) | `docs/산출물/` (제출 허브는 루트 `README.md`) |
+| 후속 작업 (기능 밖으로 미룬 것) | GitHub Issues `follow-up` 라벨 (`gh issue list --label follow-up`) |
+| 팀 대시보드·AI 활용 사례 (노션, 사람용 요약이며 정본 아님) | `docs/notion.md` |
 | 백엔드 규칙 | `backend/CLAUDE.md` |
 | 프론트엔드 규칙 | `frontend/CLAUDE.md` |
 | 외부 데이터 목록·라이선스·분할(dev/eval/demo) | `data/datasets.json`, `docs/산출물/09-데이터셋.md` |

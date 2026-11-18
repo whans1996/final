@@ -16,6 +16,7 @@ description: develop에 합치기 전 현재 feature 브랜치를 verifier·revi
    - `contract-checker`: 이 기능의 API 계약 일치 여부 (API 변경이 없으면 생략)
 3. **분류**: 결과를 `반드시 수정`(spec 미충족, 보안, 테스트 실패, 계약 불일치, openapi.json 미갱신) / `권장` / `무시 가능`으로 나눠 사용자에게 보여 준다.
 4. **수정**: `반드시 수정`은 바로 고치고 커밋 (`fix(F-xx): ...`). `권장`은 사용자에게 할지 묻는다.
+   - 이번 PR에서 하지 않기로 한 지적과 spec 범위 밖 후속 작업은 GitHub 이슈로 남긴다: `gh issue create --label follow-up --title "<F-xx> 요약" --body "<배경, 출처 PR·지적 링크, 제안>"`. PR 설명 "후속 작업"과 NOW.md에는 이슈 번호만 적는다 (`docs/conventions.md` 7절).
 5. **PR 설명 생성**: `.github/pull_request_template.md` 형식으로 채워 `.harness/pr-F-xx.md`에 저장하고 요약을 보여 준다.
    - 수용 기준 표: AC별 테스트 이름과 결과
    - FE 변경이 있으면 스크린샷을 **직접 첨부한다** (사람에게 넘기지 않는다):
@@ -34,8 +35,15 @@ description: develop에 합치기 전 현재 feature 브랜치를 verifier·revi
    2. `COMPLETE`(head 커밋, 지적 없음)이면 루프를 끝낸다. NOW.md에 `Codex ✅ <sha>`를 적는다.
    3. `FINDINGS`이면 출력된 지적(`[P1/P2] path:line 제목`과 링크)을 읽고 하나씩 판단한다.
       - 타당하면 실패하는 테스트부터 써서 `fix(F-xx): ... (Codex 리뷰)`로 커밋하고 push한 뒤 1로 돌아간다.
+      - **같은 PR에서 고치는 것은 spec 수용 기준이나 보안 기준(`docs/conventions.md` 7절)을 깨는 지적만이다.** 그 밖의 P2(형식 변형, 드문 경계 조건, 개선 제안)는 4단계처럼 `follow-up` 이슈로 넘기고 그 지적 스레드에 이슈 번호를 답한다(`gh api repos/{owner}/{repo}/pulls/<번호>/comments/<댓글 id>/replies -f body="#<이슈> 로 이관"`). P1은 이관하지 않는다.
+      - **이관 완료**: head 커밋의 남은 지적이 모두 이렇게 이슈로 넘어갔으면 Codex 상태는 `FINDINGS`로 남지만 루프를 끝내고 COMPLETE와 같게 본다. NOW.md와 PR 설명 "후속 작업"에 `Codex ✅ <sha> (P2 n건 → #이슈)`를 적는다. 이후 `docs/` 아래만 바꾸는 커밋(10단계 완료 표시 등)은 재리뷰를 요청하지 않는다. 코드가 바뀌면 1로 돌아간다.
       - 타당하지 않거나 spec 범위·설계 판단이 필요하면 **루프를 멈추고** 이유를 사용자에게 보고한다. 같은 지적이 되풀이되지 않게 하기 위해서다.
+      - **같은 주제**(예: 설정 마스킹)로 재리뷰를 2회 했는데 또 지적이 나오면 멈추고 사람이 정한다(이슈로 넘길지, 설계를 바꿀지). PR #14에서 형식 변형을 쫓다 한도를 소진한 데서 나온 규칙이다.
    4. 재리뷰가 **3회**를 넘거나 `TIMEOUT`이면 멈추고 현재 상태를 보고한다. `ERROR Codex 환경 없음`이면 사람에게 출력된 링크에서 Codex 환경을 만들어 달라고 요청하고, 준비되면 1을 다시 실행한다 (11-18 PR #7에서 발생).
 9. **머지는 하지 않는다.** `gh pr merge`는 하네스가 차단한다. CI가 초록이면 영역 오너가 GitHub에서 머지한다 (wip 커밋이 있으면 Squash and merge).
-10. spec 상태는 DONE으로 바꾸지 않는다 (머지 후 `/progress`에서 확인).
-11. PR 생성과 CI·Codex 확인 결과를 NOW.md에 남기고 사용자에게 `/clear`를 권한다. Codex 지적 반영이나 머지 후 정리는 새 세션에서 `/pickup`으로 시작한다 (CLAUDE.md "세션 운영").
+10. **완료 표시는 PR 안에서 한다 (정리 PR 없음, 11-18 결정)**: Codex가 COMPLETE(또는 8-3 이관 완료)이고 CI가 초록이 되면, 머지 전 마지막 커밋 `docs(F-xx): 완료 표시 (spec DONE, WBS·간트 실적)`에 다음을 넣는다. `docs/` 아래만 바뀌므로 Codex 재리뷰는 돌지 않는다.
+    - spec 헤더 `DONE (PR #n, 머지 예정 YYYY-MM-DD)`, 구현 체크리스트 마지막 칸
+    - `docs/산출물/04-WBS.md` 해당 행의 상태·실적(날짜, PR 번호), `05-간트차트.md` 태그(계획과 다르면 `실적` 섹션 막대)
+    - `docs/진행현황.md`의 해당 기능 행
+    - 실제 머지가 예정일과 달라지면 다음 `/pickup`·`/progress`가 바로잡는다.
+11. PR 생성과 CI·Codex 확인 결과를 NOW.md에 남기고 사용자에게 `/clear`를 권한다. Codex 지적 반영은 새 세션에서 `/pickup`으로 시작한다 (CLAUDE.md "세션 운영").
