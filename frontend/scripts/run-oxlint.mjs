@@ -35,11 +35,16 @@ function run(command, commandArgs) {
   return result.status ?? 1
 }
 
+const oxlintPkgPath = require.resolve('oxlint/package.json')
+const oxlintPkg = require(oxlintPkgPath)
+
 if (!nativeBlocked()) {
-  process.exit(run(process.execPath, [require.resolve('oxlint/bin/oxlint'), ...args]))
+  // oxlint의 exports에 './bin/oxlint'가 없어 require.resolve로 못 찾는다. package.json의 bin으로 경로를 만든다
+  const bin = resolve(dirname(oxlintPkgPath), oxlintPkg.bin.oxlint)
+  process.exit(run(process.execPath, [bin, ...args]))
 }
 
-const version = require('oxlint/package.json').version
+const version = oxlintPkg.version
 const docker = spawnSync('docker', ['info', '--format', '{{.ServerVersion}}'], {
   encoding: 'utf8',
 })
