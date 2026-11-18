@@ -3,7 +3,7 @@
 > 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
 > "바로 다음 할 일"은 다른 사람이 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 
-갱신: 2026-11-18 12:55 · 작업자: whans1996 (Claude, SSAFY 교육장 PC) · 브랜치: feature/F-00-session-ops
+갱신: 2026-11-18 13:15 · 작업자: whans1996 (Claude, SSAFY 교육장 PC) · 브랜치: feature/F-00-session-ops
 
 ## 현재 기능
 
@@ -13,7 +13,7 @@
 
 - ✅ F-03 spec DONE·작업로그, 화면설계서 스크린샷(`docs/산출물/screens/`), WBS·간트 실적(기준선 유지), 첫 `docs/진행현황.md`(W1 앞섬)
 - ✅ 하네스: 머지 후 정리(`/pickup`), WBS 동기화(`/progress`), 스크린샷 직접 첨부(`scripts/pr-screens.mjs`), CLAUDE.md "세션 운영"·에이전트 effort·Stop hook 200k 안내·`scripts/token-report.mjs`
-- ✅ Codex 재리뷰 루프: `scripts/codex-review.mjs <PR> --request --wait`(COMPLETE까지, `/pr-review` 8단계·`/pickup`)
+- ✅ Codex 재리뷰 루프: `scripts/codex-review.mjs <PR> --request --wait`(COMPLETE까지, `/pr-review` 8단계·`/pickup`). 첫 실전 루프에서 Codex P2(재요청 판정 경쟁 조건) 반영: head sha 마커, "지적 없음" 영수증 인식
 
 ## 바로 다음 할 일
 
@@ -24,7 +24,6 @@
 
 ## 막힌 점 / 결정 필요
 
-- `.claude/settings.json` allow에 `Bash(node scripts/codex-review.mjs:*)` 추가는 auto mode가 막음 → 사람이 직접 추가 여부 결정
 - 팀원 GitHub 아이디(리뷰어 지정), 제출 zip 이름용 지역·반·이름 (사람)
 
 ## 주의

@@ -2,10 +2,13 @@
 // PR의 Codex 리뷰 상태를 판정하고, 필요하면 재리뷰를 요청해 끝날 때까지 기다린다.
 // Codex는 PR마다 요약 댓글 하나를 갱신하며 그 안에 기계용 상태를 넣는다:
 //   <!-- codex-review-state:v1 {"code_review":{"commit_sha":"…","has_any_findings":false,"status":"completed"}, …} -->
-// 이 상태가 PR head 커밋 기준인지로 판정한다 (👍 반응·문구 파싱보다 확실하다).
+// 이 상태가 PR head 커밋 기준인지로 판정한다.
+// 보조 신호: 수동 요청 뒤 다는 영수증 댓글 "Didn't find any major issues … Reviewed commit: `abc1234`"가
+// head 커밋이면 상태 댓글이 늦게 갱신되어도 COMPLETE로 본다. 자동 리뷰 뒤의 👍 반응은 커밋 정보가 없어 쓰지 않는다.
 //
 // 사용법: node scripts/codex-review.mjs <PR번호> [--request] [--wait] [--timeout 20]
-//   --request  상태가 이전 커밋 기준(STALE)이면 "@codex review" 댓글을 단다 (head 커밋 이후 요청이 이미 있으면 생략)
+//   --request  상태가 이전 커밋 기준(STALE)이면 "@codex review" 댓글을 단다.
+//              댓글에 head sha 마커를 넣어, 같은 head에 대한 요청이 이미 있으면 생략한다
 //   --wait     COMPLETE·FINDINGS가 될 때까지 30초 간격으로 확인한다 (기본 20분). Claude는 run_in_background로 실행한다
 //
 // 출력 첫 줄과 종료 코드:
@@ -22,6 +25,8 @@ import { git } from './lib/common.mjs';
 const CODE = { COMPLETE: 0, ERROR: 1, FINDINGS: 2, RUNNING: 3, STALE: 4, TIMEOUT: 5 };
 const BOT = 'chatgpt-codex-connector';
 const STATE_RE = /<!--\s*codex-review-state:v1\s*(\{.*?\})\s*-->/s;
+const REQUEST_RE = /<!--\s*codex-review-request:\s*([0-9a-f]{40})\s*-->/;
+const CLEAN_RECEIPT_RE = /codex-review-receipt[\s\S]*Didn't find any major issues[\s\S]*?Reviewed commit:\*{0,2}\s*`([0-9a-f]{7,40})`/;
 
 function fail(msg) {
   console.log(`ERROR ${msg}`);
@@ -48,11 +53,10 @@ const remote = git(['remote', 'get-url', 'origin']).out;
 const repo = remote.match(/github\.com[:/](.+?)(\.git)?$/)?.[1];
 if (!repo) fail(`origin이 GitHub 저장소가 아닙니다: ${remote || '(없음)'}`);
 
-/** PR head 커밋과 그 커밋 시각 */
+/** PR head 커밋 */
 function head() {
-  const v = ghJson(['pr', 'view', pr, '--json', 'headRefOid,state,commits']);
-  const last = v.commits?.[v.commits.length - 1];
-  return { sha: v.headRefOid, state: v.state, at: last?.committedDate ?? null };
+  const v = ghJson(['pr', 'view', pr, '--json', 'headRefOid,state']);
+  return { sha: v.headRefOid, state: v.state };
 }
 
 const issueComments = () => ghJson(['api', `repos/${repo}/issues/${pr}/comments?per_page=100`]) || [];
@@ -90,30 +94,40 @@ function findings(sha) {
     });
 }
 
+/** head 커밋에 대한 "지적 없음" 영수증 댓글이 있는가 */
+function hasCleanReceipt(comments, sha) {
+  return comments.some((c) => {
+    if (!c.user?.login?.startsWith(BOT)) return false;
+    const m = CLEAN_RECEIPT_RE.exec(c.body || '');
+    return !!m && sha.startsWith(m[1]);
+  });
+}
+
 function judge() {
   const h = head();
   const comments = issueComments();
   const st = codexState(comments);
   const short = h.sha.slice(0, 7);
+  const clean = hasCleanReceipt(comments, h.sha);
+  if (st?.commit_sha === h.sha && st.status === 'completed' && !st.has_any_findings) {
+    return { verdict: 'COMPLETE', h, comments, msg: `head ${short} 지적 없음 (상태 댓글)` };
+  }
+  if (clean && !(st?.commit_sha === h.sha && st.status === 'completed')) {
+    return { verdict: 'COMPLETE', h, comments, msg: `head ${short} 지적 없음 (영수증 댓글)` };
+  }
   if (!st || st.commit_sha !== h.sha) {
     const seen = st?.commit_sha ? `${st.commit_sha.slice(0, 7)} 기준` : '상태 댓글 없음';
     return { verdict: 'STALE', h, comments, msg: `head ${short}, Codex ${seen}` };
   }
   if (st.status !== 'completed') return { verdict: 'RUNNING', h, comments, msg: `head ${short} 리뷰 ${st.status}` };
-  if (st.has_any_findings) return { verdict: 'FINDINGS', h, comments, msg: `head ${short}` };
-  return { verdict: 'COMPLETE', h, comments, msg: `head ${short} 지적 없음` };
+  return { verdict: 'FINDINGS', h, comments, msg: `head ${short}` };
 }
 
-/** head 커밋 이후 이미 "@codex review"를 요청했는가 */
-function alreadyRequested(comments, h) {
-  const since = h.at ? Date.parse(h.at) : 0;
-  // 봇의 요약·영수증 댓글 안내문에도 "@codex review"가 들어 있으므로 사람 댓글이 이 문구로 시작할 때만 센다
-  return comments.some(
-    (c) =>
-      !c.user?.login?.startsWith(BOT) &&
-      /^\s*@codex\s+review\b/i.test(c.body || '') &&
-      Date.parse(c.created_at) >= since,
-  );
+/** 이 head sha에 대한 재리뷰 요청이 이미 있는가.
+ *  커밋 시각과 비교하면 "먼저 커밋하고 나중에 push"한 경우 옛 요청을 새 head 것으로 오판하므로 sha 마커로 묶는다 (Codex 리뷰).
+ *  봇의 안내문에도 "@codex review"가 들어 있으므로 사람 댓글만 본다. */
+function alreadyRequested(comments, sha) {
+  return comments.some((c) => !c.user?.login?.startsWith(BOT) && REQUEST_RE.exec(c.body || '')?.[1] === sha);
 }
 
 function report(r) {
@@ -129,10 +143,10 @@ let r = judge();
 if (r.h.state !== 'OPEN' && (request || wait)) fail(`PR #${pr}이 ${r.h.state} 상태입니다`);
 
 if (request && r.verdict === 'STALE') {
-  if (alreadyRequested(r.comments, r.h)) {
-    console.error(`(head ${r.h.sha.slice(0, 7)} 이후 @codex review 요청이 이미 있어 생략)`);
+  if (alreadyRequested(r.comments, r.h.sha)) {
+    console.error(`(head ${r.h.sha.slice(0, 7)}에 대한 @codex review 요청이 이미 있어 생략)`);
   } else {
-    gh(['pr', 'comment', pr, '--body', '@codex review']);
+    gh(['pr', 'comment', pr, '--body', `@codex review\n\n<!-- codex-review-request: ${r.h.sha} -->`]);
     console.error(`(@codex review 요청함: head ${r.h.sha.slice(0, 7)})`);
   }
 }
