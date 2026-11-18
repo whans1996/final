@@ -22,7 +22,8 @@
 | Access 토큰 | JWT(`sub`=userId, `role`), 30분 (`app.jwt.access-token-validity`). FE는 **메모리(Pinia)에만** 보관 |
 | Refresh 토큰 | 32바이트 랜덤 문자열(base64url, JWT 아님), **14일** (`app.jwt.refresh-token-validity: 14d`). DB `refresh_tokens.token_hash`에 SHA-256 해시만 저장 |
 | Refresh 전달 | **HttpOnly 쿠키** `refresh_token`: `HttpOnly; SameSite=Strict; Path=/api/auth; Max-Age=1209600`, `Secure`는 `app.jwt.refresh-cookie-secure`(기본 true, `local` 프로필 false). 응답 본문에는 넣지 않는다 |
-| 회전 | `/refresh` 성공 시 기존 행을 지우고 새 토큰 행을 만든다 (1회용). 이미 쓴 토큰은 AUTH_002 |
+| 회전 | `/refresh` 성공 시 기존 행을 지우고 새 토큰 행을 만든다 (1회용). 이미 쓴 토큰은 AUTH_002. 같은 토큰으로 동시에 오면 DELETE로 행을 실제로 지운 요청만 성공한다 |
+| 쿠키 삭제 | 실패 응답 중 **쿠키 없음·만료·탈퇴**만 쿠키 삭제 헤더를 보낸다. DB에 없거나 이미 회전된 토큰은 다른 탭이 먼저 회전해 받은 새 쿠키를 지울 수 있어 보내지 않는다 (11-18 PR 리뷰 반영) |
 | 세션 복원 | 앱 시작 시 FE가 `POST /api/auth/refresh`를 1회 호출. 성공하면 로그인 상태, 실패(401)하면 비로그인으로 조용히 시작 |
 | 여러 기기 | 로그인마다 행을 하나씩 만든다 (기기별 세션). 로그아웃은 그 쿠키의 행만 지운다 |
 | role 신뢰 | Access 토큰의 role·status는 만료(최대 30분)까지 다시 확인하지 않는다. `/refresh`가 DB의 role·status를 다시 읽어 새 Access를 만들고, `WITHDRAWN`이면 거부한다 |
@@ -36,7 +37,7 @@ CSRF: Refresh 쿠키는 `SameSite=Strict` + `Path=/api/auth`라 다른 사이트
 | AC1 | ACTIVE 회원이 | 맞는 email(대소문자·공백 무관)·password로 `POST /api/auth/login` 하면 | 200과 `accessToken`·`expiresIn`(초)·`user{id,nickname,level,role}`을 받고, `Set-Cookie: refresh_token=...; HttpOnly; SameSite=Strict; Path=/api/auth; Max-Age=1209600`이 온다. DB `refresh_tokens`에 그 토큰의 SHA-256 해시와 `expires_at`(+14일) 행이 생긴다. 받은 accessToken으로 보호된 API를 호출할 수 있다 |
 | AC2 | | 없는 email, 틀린 password, `WITHDRAWN` 회원으로 로그인하면 | 셋 다 401 `AUTH_001`, 같은 메시지 "이메일 또는 비밀번호가 올바르지 않습니다."를 받고 쿠키·DB 행이 생기지 않는다. 빈 email·password는 400 `COMMON_400` |
 | AC3 | 유효한 refresh 쿠키가 있을 때 | `POST /api/auth/refresh` 하면 | 200과 새 `accessToken`·`expiresIn`·`user`를 받고, 새 `refresh_token` 쿠키가 온다. 옛 토큰의 DB 행은 지워지고 새 행이 생긴다 |
-| AC4 | | 쿠키 없음, DB에 없는 토큰, 만료된 토큰(`expires_at` 지남), 이미 회전된 옛 토큰으로 refresh 하면 | 넷 다 401 `AUTH_002` "로그인이 만료되었습니다. 다시 로그인하세요."를 받고, 응답에 쿠키 삭제(`refresh_token=; Max-Age=0; Path=/api/auth`)가 온다. 만료 토큰의 행은 지운다 |
+| AC4 | | 쿠키 없음, DB에 없는 토큰, 만료된 토큰(`expires_at` 지남), 이미 회전된 옛 토큰으로 refresh 하면 | 넷 다 401 `AUTH_002` "로그인이 만료되었습니다. 다시 로그인하세요."를 받는다. 쿠키 없음·만료는 응답에 쿠키 삭제(`refresh_token=; Max-Age=0; Path=/api/auth`)가 오고, DB에 없는 토큰·이미 회전된 토큰은 쿠키 삭제가 오지 않는다(다른 탭의 새 쿠키 보호). 만료 토큰의 행은 실패 응답이어도 지운다(커밋). 같은 토큰으로 동시에 refresh하면 하나만 성공한다 |
 | AC5 | refresh 쿠키를 가진 회원이 `WITHDRAWN`이 되었을 때 | refresh 하면 | 401 `AUTH_002` + 쿠키 삭제, 해당 행 삭제. role이 바뀐 회원이면 새 accessToken의 role이 DB 값이다 |
 | AC6 | 로그인한 상태에서 | `POST /api/auth/logout` 하면 | 204, 그 쿠키의 DB 행 삭제, 쿠키 삭제 헤더. 이후 그 쿠키로 refresh하면 AUTH_002. 쿠키 없이 logout해도 204 (멱등) |
 | AC7 | 토큰 없이 | `/api/auth/signup`·`/login`·`/refresh`·`/logout`을 호출하면 인증 필터를 통과하고, 그 밖의 `/api/auth/**` 주소(예: `/api/auth/__probe__`)는 | 401 `AUTH_401`을 받는다 (`PUBLIC_PATHS` 와일드카드 → 명시 나열) |
@@ -81,7 +82,7 @@ CSRF: Refresh 쿠키는 `SameSite=Strict` + `Path=/api/auth`라 다른 사이트
 
 | 상태 | 코드 | 언제 |
 |---|---|---|
-| 401 | AUTH_002 | 쿠키 없음, 모르는 토큰, 만료, 이미 회전됨, 탈퇴 회원. 쿠키 삭제 헤더 포함. **신규 코드** |
+| 401 | AUTH_002 | 쿠키 없음, 모르는 토큰, 만료, 이미 회전됨, 탈퇴 회원. 쿠키 없음·만료·탈퇴는 쿠키 삭제 헤더 포함 (모르는·회전된 토큰은 미포함). **신규 코드** |
 
 ### `POST /api/auth/logout`
 
@@ -129,7 +130,7 @@ CSRF: Refresh 쿠키는 `SameSite=Strict` + `Path=/api/auth`라 다른 사이트
 | AC1 | `backend/src/test/java/com/vibenote/auth/LoginApiTest#AC1_...` (쿠키 속성·DB 해시·발급 토큰으로 보호 API 통과) | MockMvc 통합 |
 | AC2 | `LoginApiTest#AC2_...` (`@ParameterizedTest` 3종 + 400) | MockMvc 통합 |
 | AC3 | `RefreshApiTest#AC3_...` | MockMvc 통합 |
-| AC4 | `RefreshApiTest#AC4_...` (4종, 만료는 `expires_at`을 과거로 넣은 행) | MockMvc 통합 |
+| AC4 | `RefreshApiTest#AC4_...` (4종, 만료는 `expires_at`을 과거로 넣은 행, 삭제 커밋은 테스트 트랜잭션 밖에서), `AuthServiceTest#AC4_...` (동시 회전: 삭제 0행이면 실패) | MockMvc 통합, Mockito |
 | AC5 | `RefreshApiTest#AC5_...` | MockMvc 통합 |
 | AC6 | `LogoutApiTest#AC6_...` | MockMvc 통합 |
 | AC7 | `common/SecurityConfigTest` (공개 4개 통과, probe 401) | MockMvc 통합 |
@@ -147,6 +148,7 @@ CSRF: Refresh 쿠키는 `SameSite=Strict` + `Path=/api/auth`라 다른 사이트
 ## 9. 결정 필요
 
 - 없음 (승인 시 확정: `AUTH_001`·`AUTH_002`를 `AUTH_401`과 분리, `/api/auth/logout` 공개)
+- 11-18 PR 리뷰에서 확정 (whans1996): 동시 refresh는 하나만 성공, 모르는·회전된 토큰의 401에는 쿠키 삭제 헤더를 보내지 않음 (여러 탭 동시 세션 복원 시 새 쿠키 보호)
 
 ## 10. 구현 체크리스트
 

@@ -102,7 +102,9 @@ public class AuthController {
             headers = @Header(name = "Set-Cookie", description = SET_COOKIE_ISSUE))
     @ApiResponse(
             responseCode = "401",
-            description = "쿠키 없음·무효·만료·이미 사용·탈퇴 회원 (AUTH_002, 쿠키 삭제)",
+            description =
+                    "쿠키 없음·무효·만료·이미 사용·탈퇴 회원 (AUTH_002). 만료·탈퇴면 쿠키를 지우고, 없거나 이미 회전된 토큰이면 다른 탭이 받은 새"
+                            + " 쿠키를 지키려고 그대로 둔다",
             content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     @PostMapping("/refresh")
     public LoginResponse refresh(
@@ -113,8 +115,11 @@ public class AuthController {
             response.addHeader(
                     HttpHeaders.SET_COOKIE, refreshTokenCookie.issue(tokens.refreshToken()));
             return tokens.body();
+        } catch (AuthService.UnknownRefreshTokenException e) {
+            // 없거나 이미 회전된 토큰: 다른 탭이 먼저 회전해 받은 새 쿠키일 수 있어 지우지 않는다
+            throw e;
         } catch (BusinessException e) {
-            // 쓸 수 없는 쿠키는 브라우저에서도 지운다. 본문은 GlobalExceptionHandler가 만든다
+            // 쓸 수 없는 쿠키(만료·탈퇴)는 브라우저에서도 지운다. 본문은 GlobalExceptionHandler가 만든다
             response.addHeader(HttpHeaders.SET_COOKIE, refreshTokenCookie.clear());
             throw e;
         }

@@ -52,6 +52,13 @@ public class AuthService {
     /** 발급 결과. body는 응답 본문, refreshToken은 쿠키로 보낼 원문. */
     public record IssuedTokens(LoginResponse body, String refreshToken) {}
 
+    /** DB에 없거나 다른 요청이 먼저 회전한 토큰 (AUTH_002). */
+    public static class UnknownRefreshTokenException extends BusinessException {
+        UnknownRefreshTokenException() {
+            super(ErrorCode.AUTH_002);
+        }
+    }
+
     /** 이메일 없음·비밀번호 불일치·탈퇴 회원을 구분하지 않고 AUTH_001. */
     @Transactional
     public IssuedTokens login(LoginRequest request) {
@@ -71,6 +78,9 @@ public class AuthService {
      * 쿠키의 Refresh 토큰을 새 토큰으로 바꾼다. 쓴 토큰은 결과와 상관없이 지운다(만료·탈퇴여도 행이 남지 않게). 실패하면 AUTH_002.
      *
      * <p>실패 시에도 삭제를 남기려고 BusinessException에는 롤백하지 않는다.
+     *
+     * <p>같은 토큰으로 동시에 들어오면 둘 다 조회에 성공할 수 있다. DELETE는 커밋된 최신 행을 보고 잠그므로, 지운 행이 0이면 다른 요청이 먼저 회전한 것이라
+     * 실패시킨다(1회용 보장).
      */
     @Transactional(noRollbackFor = BusinessException.class)
     public IssuedTokens refresh(String refreshToken) {
@@ -79,10 +89,10 @@ public class AuthService {
         }
         String hash = sha256(refreshToken);
         RefreshTokenMapper.StoredRefreshToken stored =
-                refreshTokenMapper
-                        .findByHash(hash)
-                        .orElseThrow(() -> new BusinessException(ErrorCode.AUTH_002));
-        refreshTokenMapper.deleteByHash(hash);
+                refreshTokenMapper.findByHash(hash).orElseThrow(UnknownRefreshTokenException::new);
+        if (refreshTokenMapper.deleteByHash(hash) == 0) {
+            throw new UnknownRefreshTokenException();
+        }
         if (stored.expired()) {
             throw new BusinessException(ErrorCode.AUTH_002);
         }
