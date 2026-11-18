@@ -107,7 +107,13 @@ function judge() {
 /** head 커밋 이후 이미 "@codex review"를 요청했는가 */
 function alreadyRequested(comments, h) {
   const since = h.at ? Date.parse(h.at) : 0;
-  return comments.some((c) => /@codex\s+review/i.test(c.body || '') && Date.parse(c.created_at) >= since);
+  // 봇의 요약·영수증 댓글 안내문에도 "@codex review"가 들어 있으므로 사람 댓글이 이 문구로 시작할 때만 센다
+  return comments.some(
+    (c) =>
+      !c.user?.login?.startsWith(BOT) &&
+      /^\s*@codex\s+review\b/i.test(c.body || '') &&
+      Date.parse(c.created_at) >= since,
+  );
 }
 
 function report(r) {
