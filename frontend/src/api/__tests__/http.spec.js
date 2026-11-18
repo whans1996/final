@@ -151,6 +151,21 @@ describe('http 401 처리 (F-02 AC9)', () => {
     expect(authApi.refresh).not.toHaveBeenCalled()
     expect(onUnauthorized).not.toHaveBeenCalled()
   })
+
+  it.each([
+    ['다른 코드', { code: 'AUTH_002', message: '로그인이 만료되었습니다. 다시 로그인하세요.' }],
+    ['코드 없음', {}],
+  ])('AC9 /auth 밖의 요청이라도 AUTH_401이 아닌 401(%s)은 재시도하지 않는다', async (_, data) => {
+    useAuthStore().setSession(session('token'))
+    const calls = respondWith(() => ({ status: 401, data }))
+
+    await expect(http.get('/users/me')).rejects.toThrow('status 401')
+
+    expect(calls).toHaveLength(1)
+    expect(authApi.refresh).not.toHaveBeenCalled()
+    expect(onUnauthorized).not.toHaveBeenCalled()
+    expect(useAuthStore().isLoggedIn).toBe(true)
+  })
 })
 
 describe('errorMessage / errorCode', () => {

@@ -40,10 +40,13 @@ export function authGuard(to, auth) {
   return true
 }
 
-/** 로그인·가입 후 돌아갈 주소. 다른 사이트로 나가지 않게 앱 내부 경로만 허용한다. */
+/**
+ * 로그인·가입 후 돌아갈 주소. 다른 사이트로 나가지 않게 앱 내부 경로만 허용한다.
+ * 브라우저는 URL의 `\`를 `/`로 읽으므로 `/\evil.com`도 `//evil.com`처럼 막는다.
+ */
 export function redirectTarget(query) {
   const target = query.redirect
-  return typeof target === 'string' && target.startsWith('/') && !target.startsWith('//')
+  return typeof target === 'string' && target.startsWith('/') && !/^\/[/\\]/.test(target)
     ? target
     : '/'
 }
