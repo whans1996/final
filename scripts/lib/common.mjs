@@ -1,6 +1,6 @@
 // 하네스 스크립트와 Claude Code hooks가 함께 쓰는 유틸리티
 import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { closeSync, existsSync, fstatSync, openSync, readFileSync, readSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -83,4 +83,62 @@ export function mdSection(md, title) {
 export function nowStamp(d = new Date()) {
   const p = (n) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+/** assistant 메시지 한 줄의 usage를 { ctx, input, cacheWrite, cacheRead, output, model }로. usage가 없으면 null */
+function usageOf(line) {
+  let o;
+  try {
+    o = JSON.parse(line);
+  } catch {
+    return null;
+  }
+  const u = o.type === 'assistant' ? o.message?.usage : null;
+  if (!u) return null;
+  const input = u.input_tokens || 0;
+  const cacheWrite = u.cache_creation_input_tokens || 0;
+  const cacheRead = u.cache_read_input_tokens || 0;
+  return {
+    id: o.message.id,
+    model: o.message.model || '',
+    input,
+    cacheWrite,
+    cacheRead,
+    output: u.output_tokens || 0,
+    ctx: input + cacheWrite + cacheRead,
+  };
+}
+
+/** Claude Code transcript(JSONL)의 턴별 usage. 스트리밍으로 같은 message.id가 여러 줄 남으므로 마지막 줄만 쓴다 */
+export function transcriptUsage(path) {
+  const byId = new Map();
+  const text = readText(path) || '';
+  for (const line of text.split('\n')) {
+    const u = line && usageOf(line);
+    if (u) byId.set(u.id, u);
+  }
+  return [...byId.values()];
+}
+
+/** 마지막 턴의 컨텍스트 크기(토큰). 큰 transcript도 빠르게 읽도록 끝부분만 본다. 모르면 0 */
+export function lastContextTokens(path, tailBytes = 512 * 1024) {
+  try {
+    const fd = openSync(path, 'r');
+    try {
+      const size = fstatSync(fd).size;
+      const len = Math.min(size, tailBytes);
+      const buf = Buffer.alloc(len);
+      readSync(fd, buf, 0, len, size - len);
+      const lines = buf.toString('utf8').split('\n');
+      for (let i = lines.length - 1; i >= 0; i--) {
+        const u = usageOf(lines[i]);
+        if (u) return u.ctx;
+      }
+    } finally {
+      closeSync(fd);
+    }
+  } catch {
+    // transcript 없음
+  }
+  return 0;
 }

@@ -39,6 +39,21 @@ SSAFY 관통 프로젝트(2026-11-17 시작, 12-24 발표). Spring Boot 3 + MyBa
 - `/progress`로 필수 요구사항 13개, 마일스톤, **제출 산출물 준비 현황**을 점검한다 (매주 일요일, 12/07 판단 기준).
 - 기능을 바꾸면 영향받는 산출물(화면 설계서, ERD, 요구사항 정의서)도 같은 PR에서 고치거나 PR "후속 작업"에 적는다.
 
+## 세션 운영 (컨텍스트·모델·토큰)
+
+턴마다 컨텍스트 전체를 다시 읽으므로 **비용은 대화 길이에 비례한다** (11-18 실측: 한 세션에 단계를 다 몰아 하자 평균 264k·최대 463k, 비용의 90%가 메인). 그래서:
+
+- **단계마다 새 세션**: spec 승인, PR 생성, 머지 후 정리가 끝나면 NOW.md가 최신인지 확인하고 사용자에게 `/clear`를 권한다. `/clear` 후에는 SessionStart hook이 NOW.md를 다시 주입한다. 200k를 넘으면 Stop hook도 알린다.
+- **모델·effort는 세션 시작 때 고르고 중간에 바꾸지 않는다** (모델을 바꾸면 프롬프트 캐시를 처음부터 다시 쓴다).
+
+| 세션 종류 | 메인 모델 / effort |
+|---|---|
+| `/spec`, `/implement`, 리뷰·Codex 지적 반영 | Opus / high |
+| `/pickup`, `/progress`, `/handoff`, 문서·산출물 정리 | Opus / medium 또는 Sonnet |
+
+- 서브에이전트는 frontmatter로 고정한다: verifier Haiku·low, contract-checker·ui-verifier Sonnet·medium, prompt-evaluator Sonnet·medium, reviewer Opus(inherit)·high.
+- 사용량 확인: `node scripts/token-report.mjs [latest|--list]`.
+
 ## 절대 규칙
 
 1. **main·develop에 직접 커밋하지 않는다.** `feature/F-xx-slug` 브랜치에서 작업하고 develop에는 **PR**로 합친다. 머지는 CI가 초록일 때 영역 오너가 GitHub에서 한다 (`gh pr merge`는 차단됨).
@@ -72,6 +87,7 @@ SSAFY 관통 프로젝트(2026-11-17 시작, 12-24 발표). Spring Boot 3 + MyBa
 | 화면 점검 | `node scripts/ui-check.mjs / /concepts` (FE dev 서버 실행 중일 때) |
 | AI 없이 교대 | `node scripts/handoff.mjs [-m "메모"] [--no-push]` |
 | PR 스크린샷 Markdown | `node scripts/pr-screens.mjs SC-18 SC-19` (`docs/산출물/screens/` 커밋·push 후) |
+| 토큰 사용량 (메인·에이전트별) | `node scripts/token-report.mjs [latest|<세션 ID>] [--list]` |
 | PR 상태·CI 확인 | `gh pr status`, `gh pr checks` |
 | BE 실행 (mock LLM) | `cd backend && ./gradlew bootRun --args='--spring.profiles.active=local'` |
 | FE 실행 | `cd frontend && npm run dev` |

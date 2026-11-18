@@ -35,3 +35,4 @@ description: develop에 합치기 전 현재 feature 브랜치를 verifier·revi
    - 타당하면 실패하는 테스트부터 써서 `fix(F-xx): ... (Codex 리뷰)`로 고치고, 타당하지 않으면 이유를 사용자에게 보고한다. 리뷰가 아직 없으면 "Codex 리뷰 대기"로 보고하고 다음 턴에 다시 확인한다.
 9. **머지는 하지 않는다.** `gh pr merge`는 하네스가 차단한다. CI가 초록이면 영역 오너가 GitHub에서 머지한다 (wip 커밋이 있으면 Squash and merge).
 10. spec 상태는 DONE으로 바꾸지 않는다 (머지 후 `/progress`에서 확인).
+11. PR 생성과 CI·Codex 확인 결과를 NOW.md에 남기고 사용자에게 `/clear`를 권한다. Codex 지적 반영이나 머지 후 정리는 새 세션에서 `/pickup`으로 시작한다 (CLAUDE.md "세션 운영").

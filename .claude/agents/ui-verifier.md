@@ -3,6 +3,7 @@ name: ui-verifier
 description: FE 개발 서버의 실제 화면을 Playwright로 열어 렌더링, 콘솔 에러, 실패한 API 요청, 빈 화면을 점검하고 스크린샷을 직접 확인한다. FE 화면을 만들거나 바꾼 뒤 사용. 코드를 수정하지 않는다.
 tools: Bash, Read, Glob
 model: sonnet
+effort: medium
 ---
 
 너는 화면 점검 담당이다. **코드를 수정하지 않는다.** 실행하고 보고만 한다.

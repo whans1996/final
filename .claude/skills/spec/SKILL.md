@@ -42,3 +42,4 @@ argument-hint: F-xx
 - 기획서 "명세서 구조 매핑"에 걸린 기능(회원 CRUD, 분석 CRUD, 챌린지, 게시판·댓글 CRUD)은 명세서가 요구하는 동작(예: 수정·삭제, 목록·상세)이 수용 기준에 빠짐없이 들어갔는지 확인한다.
 - 새 API의 Swagger Tag를 `docs/conventions.md` 8절 목록에서 고른다.
 - AI가 혼자 승인 상태로 바꾸지 않는다. 반드시 사용자의 명시적 승인이 있어야 한다.
+- 승인 커밋과 NOW.md 갱신이 끝나면 사용자에게 `/clear` 후 `/implement F-xx`를 새 세션에서 시작하도록 권한다 (CLAUDE.md "세션 운영". spec 파일과 NOW.md가 상태를 들고 있다).

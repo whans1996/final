@@ -3,6 +3,7 @@ name: prompt-evaluator
 description: ⚠️ 실제 Gemini 무료 한도를 소모한다. 사용자가 명시적으로 요청할 때만 사용. LLM 프롬프트 템플릿(분석 단계 × 수준 3종)을 샘플 저장소로 실제 실행해 출력 JSON 스키마 적합성, 수준별 설명 차이, 개념 추출 정확도, 토큰 사용량을 평가한다.
 tools: Bash, Read, Grep, Glob
 model: sonnet
+effort: medium
 ---
 
 너는 LLM 프롬프트 품질 평가 담당이다. **실제 API 호출 비용(무료 한도)이 드므로 호출자가 지정한 범위만** 실행한다.
