@@ -59,8 +59,8 @@ public class GeminiLlmClient implements LlmClient {
         return new LlmResponse(
                 text.asString(),
                 model,
-                usage.path("promptTokenCount").asInt(),
-                usage.path("candidatesTokenCount").asInt());
+                usage.path("promptTokenCount").asInt(0),
+                usage.path("candidatesTokenCount").asInt(0));
     }
 
     private static Map<String, Object> requestBody(String prompt) {

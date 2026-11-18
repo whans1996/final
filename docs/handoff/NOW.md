@@ -12,18 +12,18 @@
 ## 진행
 
 - ✅ build.gradle·settings.gradle(foojay)·wrapper, Jackson 3 전환(JsonTypeHandler·JsonAuthenticationEntryPoint·Gemini/OllamaLlmClient·테스트), Boot 4 import, deprecation 0건 컴파일
-- ✅ OpenApiExportTest: Jackson 3 + `"key" : value` 구분자 고정
-- ⏳ `node scripts/verify.mjs be` 결과 확인 중 (미커밋)
+- ✅ OpenApiExportTest: Jackson 3 + `"key" : value` 구분자 고정 → openapi.json 변화 없음
+- ✅ verify be 통과, bootRun(8081) 기동·Swagger·에러 응답 정상, reviewer 반드시 수정 0건 (권장: asInt(0), JsonTypeHandler javadoc 반영)
+- ⏳ PR ① push·생성 → CI·Codex 확인
 
 ## 바로 다음 할 일
 
-1. verify be 실패 수정. Jackson 3 기본값(속성 정렬·날짜) 차이는 테스트 대신 설정으로 기존 출력 유지 (`JsonTypeHandlerTest`, API jsonPath 테스트)
-2. `git diff docs/api/openapi.json` 검토(springdoc 3 변화) → 커밋 `chore(common): Spring Boot 4.1·Java 21·Gradle 9로 백엔드 업그레이드` → bootRun 점검 → `/pr-review`
-3. PR ② `feature/common-fe-tooling-upgrade`: vitest 5·jsdom 31·oxlint 1.94·eslint-plugin-vue 10.12·prettier 3.10.1, `scripts/setup.mjs` JDK 문구, CLAUDE.md·backend/CLAUDE.md:5(Boot 4 금지 규칙 변경)·README·환경설정.md·기획서 202행 + 결정 로그
+1. PR ① (`chore(common): Spring Boot 4.1·Java 21·Gradle 9로 백엔드 업그레이드`, 설명 `.harness/pr-common-boot4.md`) CI·Codex COMPLETE 확인
+2. PR ② `feature/common-fe-tooling-upgrade`(develop에서): vitest 5·jsdom 31·oxlint 1.94·eslint-plugin-vue 10.12·prettier 3.10.1, `scripts/setup.mjs` JDK 문구, CLAUDE.md·backend/CLAUDE.md:3,5,72,126(Boot 4 금지 규칙 변경 + Jackson 규칙: `com.fasterxml.jackson.databind/core` import 금지(annotation은 허용), JSON 컬럼 타입은 null 가능하면 래퍼)·README·환경설정.md·기획서 202행 + 결정 로그, 작업로그 AI 활용 줄
 
 ## 막힌 점 / 결정 필요
 
-- 없음. 결정: MySQL 8.4·CI Node 24 유지, 시드 카드 Boot 3 설명은 후속 작업
+- 없음. 결정: MySQL 8.4·CI Node 24 유지, Jackson 3 기본값 따름(use-jackson2-defaults 안 씀), 시드 카드 Boot 3 설명은 후속 작업
 
 ## 주의
 

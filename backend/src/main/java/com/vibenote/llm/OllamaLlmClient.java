@@ -56,7 +56,7 @@ public class OllamaLlmClient implements LlmClient {
         return new LlmResponse(
                 body.path("response").asString(),
                 model,
-                body.path("prompt_eval_count").asInt(),
-                body.path("eval_count").asInt());
+                body.path("prompt_eval_count").asInt(0),
+                body.path("eval_count").asInt(0));
     }
 }
