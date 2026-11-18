@@ -3,27 +3,27 @@
 > 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
 > "바로 다음 할 일"은 다른 사람이 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 
-갱신: 2026-11-18 15:20 · 작업자: whans1996 (Claude, SSAFY 교육장 PC) · 브랜치: feature/F-00-llm-client
+갱신: 2026-11-18 16:10 · 작업자: whans1996 (Claude, SSAFY 교육장 PC) · 브랜치: feature/F-00-llm-client
 
 ## 현재 기능
 
-WBS 2.4 LlmClient 연결 — spec `docs/specs/F-00-llm-client.md` APPROVED. **AC1~AC9 전부 green, 커밋 완료 (PR 전)**
+WBS 2.4 LlmClient 연결 — spec `docs/specs/F-00-llm-client.md`. **PR #8 열림 (→ develop), Codex ✅ 571d0d8, CI 확인 후 머지 대기**
 
 ## 진행
 
-- ✅ AC2·3 3b08d24, AC4·5 24beaab, AC6·7 82991c0, AC1·8 d0c0c87, AC9 48ac60e. BE 전체 테스트 통과
-- ✅ 산출물: 08 §1.1 호출 흐름·설정, §3.5 사례 / WBS 2.4 실적 / 기획서 결정 로그(기본 모델, ollama도 Fallback으로 감쌈) / conventions LLM_503 / backend/CLAUDE.md `@Tag("live")` 규칙
-- 결정: Gemini 기본 `gemini-3.5-flash-lite`(2.5-flash deprecated), Ollama `qwen2.5-coder:7b`. spec AC1 ollama 조립 = `Fallback(Logging(Ollama))`
-- ⚠️ AC9 red 확인 중 `.env` 키로 실제 Gemini 1회 호출됨 (정상 응답: 1576ms, in 52/out 26). 이후 `test`에서 live 제외
+- ✅ AC1~AC9 green. verify all 통과(BE 152, FE 76). liveTest 통과: Gemini 1572ms(52/23), Ollama 7237ms(83/19) → 08 §1.5·§2 기록 15f09f2
+- ✅ reviewer: 반드시 수정 1(산출물 미커밋) 반영. 권장 3 반영 99b3bac — Gemini `toString` 키 가림(`LlmPropertiesTest`), "LlmClient는 `@Transactional` 밖에서 호출" 규칙(javadoc·backend/CLAUDE.md), 폴백 조건 문서를 4xx·5xx·타임아웃·연결 실패·형식 오류로 정정
+- PR 설명: `.harness/pr-F-00.md`. Codex ✅ 571d0d8 (지적 없음). CI: 제목·영역 통과, BE 검증 실행 중
 
 ## 바로 다음 할 일
 
-1. 새 세션에서 `/pr-review` → PR(feature/F-00-llm-client → develop). API 변경 없음(openapi.json 그대로)
-2. 그다음: 2.5 시드 개념 카드(`R__seed_concepts.sql`), W2 F-05 분석 요청(A), F-09·F-10 카드 목록·상세(B)
+1. 새 세션 `/pickup` → `gh pr checks 8`로 BE 검증 초록 확인. 실패면 `gh run view --log-failed` 요약 후 수정
+2. CI 초록 + Codex COMPLETE → 영역 오너(A)가 GitHub에서 머지 → `/progress`에서 spec DONE
+3. 그다음: 2.5 시드 개념 카드(`R__seed_concepts.sql`), W2 F-05 분석 요청(A, LLM 호출과 결과 저장 트랜잭션 분리를 spec에 명시), F-09·F-10 카드 목록·상세(B)
 
 ## 막힌 점 / 결정 필요
 
-- (사람) 이 PC Ollama: 서버는 떠 있으나 `/api/generate`가 404 → 모델 없음. `ollama pull qwen2.5-coder:7b` 후 `cd backend && ./gradlew liveTest` 1회 → 결과를 08 §1.5·§2에 기록 (집 PC도 확인)
+- (사람) 집 PC에서도 `ollama pull qwen2.5-coder:7b` 후 `cd backend && ./gradlew liveTest` 확인
 - (사람) 제출 zip 이름용 지역·반·이름
 
 ## 주의
