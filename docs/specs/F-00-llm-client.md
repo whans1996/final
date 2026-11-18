@@ -129,8 +129,8 @@ HTTP는 `RestClient.Builder` + `MockRestServiceServer`(spring-test, 의존성 �
 
 ## 9. 결정 필요
 
-1. **기본 모델명.** 구현할 때 공식 문서로 현재 무료 등급 모델을 확인해 `application.yml` 기본값으로 정한다. 후보는 Gemini `gemini-2.5-flash`, Ollama `qwen2.5-coder:7b`이다. 환경변수로 바꿀 수 있으므로 구현을 막지는 않는다.
-2. **(사람) Ollama 구동 확인.** 두 PC(집, SSAFY 교육장)에서 Ollama를 설치·구동할 수 있는지 확인한다 (기획서 미결 사항). 안 되면 폴백 대상을 다시 논의한다.
+1. **기본 모델명.** 구현할 때 공식 문서로 현재 무료 등급 모델을 확인해 `application.yml` 기본값으로 정한다. 후보는 Gemini `gemini-2.5-flash`, Ollama `qwen2.5-coder:7b`이다. 환경변수로 바꿀 수 있으므로 구현을 막지는 않는다. → 11-18 Gemini `gemini-3.5-flash-lite`(2.5-flash deprecated), Ollama `qwen2.5-coder:7b`로 결정 (기획서 결정 로그)
+2. **(사람) Ollama 구동 확인.** 두 PC(집, SSAFY 교육장)에서 Ollama를 설치·구동할 수 있는지 확인한다 (기획서 미결 사항). 안 되면 폴백 대상을 다시 논의한다. → 11-18 SSAFY 교육장 PC liveTest 통과(08 §1.5). 집 PC는 미확인
 
 ## 10. 구현 체크리스트
 
@@ -144,6 +144,6 @@ HTTP는 `RestClient.Builder` + `MockRestServiceServer`(spring-test, 의존성 �
 - [x] `ErrorCode.LLM_503` + `docs/conventions.md` 에러 표
 - [ ] reviewer 지적 사항 반영
 - [x] 산출물 반영: `08-외부API-생성형AI-활용.md` §1.1 구성도, WBS 2.4 실적
-- [ ] (사람) `./gradlew liveTest` 1회 → 08 산출물 §1.5·§2에 결과 기록
+- [x] (사람) `./gradlew liveTest` 1회 → 08 산출물 §1.5·§2에 결과 기록
 - [ ] PR CI 초록, Codex COMPLETE
 - [ ] 상태 DONE (PR 머지 후)

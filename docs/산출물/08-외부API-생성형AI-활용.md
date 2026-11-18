@@ -78,6 +78,16 @@ llm:
 
 ### 1.5 비용·한도 관리
 
+연결 실측 (`cd backend && ./gradlew liveTest`, 2026-11-18 SSAFY 교육장 PC, 입력: 두 정수를 더하는 메서드 요약 요청)
+
+| 공급자 | 모델 | 지연 | 입력 토큰 | 출력 토큰 | 응답 |
+|---|---|---|---|---|---|
+| Gemini | `gemini-3.5-flash-lite` | 1,572ms | 52 | 23 | `{"summary": "두 개의 숫자를 더해서 그 결과를 알려주는 메서드입니다."}` |
+| Ollama (로컬) | `qwen2.5-coder:7b` | 7,237ms | 83 | 19 | `{"summary": "두 정수를 더하는 메서드입니다."}` |
+
+- 두 공급자 모두 JSON 출력 강제가 지켜졌다. 로컬 폴백은 Gemini보다 약 4.6배 느리므로 폴백은 장애 대비용으로만 쓰고 기본은 Gemini로 둔다.
+- 같은 프롬프트라도 토크나이저가 달라 입력 토큰 수가 다르다(52 vs 83). 사용량 통계는 공급자별로 나눠 본다.
+
 (구현 후: 일일 분석 횟수 제한, 주요 파일 선별, 결과 캐시, `llm_usage_logs` 기반 사용량 통계 표)
 
 ---
@@ -88,9 +98,12 @@ llm:
 |---|---|---|---|
 | GitHub 저장소 아카이브 | 공개 저장소 코드 수집 | `https://codeload.github.com/...` ZIP 다운로드 | 허용 호스트만(SSRF 방어), 크기·파일 수 제한 |
 | GitLab 저장소 아카이브 | 공개 저장소 코드 수집 | `/-/archive/` ZIP 다운로드 | 동일 |
-| Gemini API | 생성형 AI | REST(JSON) | 키는 환경변수, 사용량 기록 |
+| Gemini API | 생성형 AI | REST(JSON), `POST /v1beta/models/{model}:generateContent` | 키는 환경변수·`x-goog-api-key` 헤더, 사용량 기록, 429·5xx·타임아웃 시 Ollama 폴백 |
 
-(구현 후: 요청·응답 예시, 오류 처리)
+- Gemini 연결은 `LlmLiveTest`(`@Tag("live")`, 일반 `test`·CI에서 제외)로 확인한다. 실측은 §1.5.
+- 오류 처리: 429·5xx·타임아웃·연결 실패 → `LlmUnavailableException` → 폴백, 모두 실패하면 `LLM_503` (§1.1)
+
+(구현 후: 저장소 아카이브 요청·응답 예시)
 
 ---
 
