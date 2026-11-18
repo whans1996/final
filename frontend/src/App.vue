@@ -51,6 +51,8 @@ async function onLogout() {
 }
 
 .brand {
+  flex-shrink: 0;
+  white-space: nowrap;
   font-weight: 700;
   color: var(--color-primary);
   text-decoration: none;

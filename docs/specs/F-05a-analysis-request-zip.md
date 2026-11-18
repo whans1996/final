@@ -248,10 +248,10 @@ F-05a에서는 SELECTING 다음이 곧 `DONE`이다. 이후 spec은 단계를 �
 - [x] AC별 실패 테스트 작성 (red 확인) — BE AC1~13, FE AC14~16
 - [x] BE 구현 (green) — AC1~13
 - [x] FE 구현 (green) — AC14~16
-- [ ] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
-- [ ] contract-checker 통과
-- [ ] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일)
+- [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
+- [x] contract-checker 통과
+- [x] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일)
 - [ ] reviewer 지적 사항 반영 (보안: Zip Slip·zip bomb·키 마스킹 중점)
-- [ ] 산출물 반영: `03-ERD.md`(error_code), `06-화면설계서.md` SC-05·06·07 스크린샷, `04-WBS.md` 3.2를 3.2a(F-05a)·3.2b(F-05b)로 분리, `01-요구사항정의서`의 F-05 행 확인
+- [x] 산출물 반영: `03-ERD.md`(error_code), `06-화면설계서.md` SC-05·06·07 스크린샷, `04-WBS.md` 3.2를 3.2a(F-05a)·3.2b(F-05b)로 분리, `01-요구사항정의서`의 F-05 행 확인
 - [ ] PR CI 초록
 - [ ] 상태 DONE (PR 머지 후)
