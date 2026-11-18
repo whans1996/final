@@ -57,16 +57,19 @@ console.warn(
 // 마운트한 node_modules에는 Windows 바인딩만 있으므로 컨테이너 안 별도 폴더에 Linux용을 설치해 쓴다.
 // npm 캐시는 이름 있는 볼륨에 둬서 두 번째부터는 내려받지 않는다.
 // 저장소 루트를 마운트해야 루트 .gitignore(node_modules·dist 등)가 네이티브 실행과 똑같이 적용된다.
+// 루트에는 .env(키)가 있으므로 노출을 줄인다: 설치 스크립트는 돌리지 않고(--ignore-scripts),
+// --fix가 아니면 읽기 전용으로 마운트한다.
 const repoDir = resolve(frontendDir, '..')
+const writable = args.some((a) => a === '--fix' || a.startsWith('--fix-'))
 const script =
-  `npm install --prefix /opt/oxlint --no-save --no-audit --no-fund --loglevel=error oxlint@${version}` +
+  `npm install --prefix /opt/oxlint --no-save --no-audit --no-fund --ignore-scripts --loglevel=error oxlint@${version}` +
   ` && /opt/oxlint/node_modules/.bin/oxlint "$@"`
 process.exit(
   run('docker', [
     'run',
     '--rm',
     '-v',
-    `${repoDir}:/repo`,
+    `${repoDir}:/repo${writable ? '' : ':ro'}`,
     '-v',
     'vibenote-oxlint-npm:/root/.npm',
     '-w',
