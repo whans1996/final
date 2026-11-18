@@ -4,7 +4,7 @@
 
 - 기능 ID: F-xx
 - spec: `docs/specs/F-xx-slug.md`
-- 영역 오너(리뷰어): 
+- 영역 오너(머지): 
 
 ## 변경 요약
 
