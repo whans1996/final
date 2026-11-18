@@ -83,6 +83,17 @@ public class UserService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.AUTH_401));
     }
 
+    /**
+     * 활성 회원 행을 배타 잠금으로 읽는다. 호출자의 트랜잭션이 끝날 때까지 같은 회원의 다른 요청이 기다리므로 "세고 → 넣기"가 겹치지 않는다 (F-05a 일일 한도).
+     * 탈퇴했으면 AUTH_401.
+     */
+    public User lockActiveMember(long userId) {
+        return userMapper
+                .findByIdForUpdate(userId)
+                .filter(User::isActive)
+                .orElseThrow(() -> new BusinessException(ErrorCode.AUTH_401));
+    }
+
     /** 공개 프로필 대상. 없거나 탈퇴했으면 USER_404. */
     public User getPublicMember(long id) {
         return userMapper

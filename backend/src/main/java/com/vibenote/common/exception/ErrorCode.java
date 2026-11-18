@@ -29,6 +29,23 @@ public enum ErrorCode {
     /** 탈퇴 시 비밀번호 재확인 실패. details.password에 사유를 담는다 (F-03). */
     USER_001(HttpStatus.BAD_REQUEST, "비밀번호가 올바르지 않습니다."),
 
+    /** 없는 분석, 다른 회원의 분석, soft delete된 분석. 존재 여부를 드러내지 않으려고 403 대신 404 (F-05a). */
+    ANALYSIS_404(HttpStatus.NOT_FOUND, "분석을 찾을 수 없습니다."),
+    /** 일일 분석 한도 초과. {limit}은 AnalysisService가 설정값(analysis.daily-limit)으로 바꾼다 (F-05a). */
+    ANALYSIS_429(HttpStatus.TOO_MANY_REQUESTS, "오늘 분석 요청 횟수({limit}회)를 모두 사용했습니다. 내일 다시 시도해 주세요."),
+    // 아래 4개는 응답이 아니라 파이프라인 FAILED 사유(analyses.error_code)다. 화면 문구는 analyses.error_message에 따로 저장한다
+    // (F-05a 5.3절).
+    /** 깨진 ZIP, 루트 밖·절대 경로 엔트리. */
+    ANALYSIS_400(HttpStatus.BAD_REQUEST, "ZIP 파일을 읽을 수 없습니다. 손상되었거나 허용되지 않는 경로가 들어 있습니다."),
+    /** 지원 파일 200개 초과 또는 합계 10MB 초과. */
+    ANALYSIS_413(HttpStatus.CONTENT_TOO_LARGE, "코드 파일이 너무 많거나 큽니다. 줄여서 다시 올려 주세요."),
+    /** 지원 스택 코드(.java·.js·.mjs·.vue)가 없음. */
+    ANALYSIS_415(
+            HttpStatus.UNSUPPORTED_MEDIA_TYPE,
+            "분석할 수 있는 코드가 없습니다. Java·Spring·MyBatis·JavaScript·Vue 프로젝트만 지원합니다."),
+    /** 예기치 못한 오류, 실행기 거절, 서버 재시작. */
+    ANALYSIS_500(HttpStatus.INTERNAL_SERVER_ERROR, "분석 중 오류가 발생했습니다. 다시 요청해 주세요."),
+
     /** 설정된 LLM이 폴백까지 모두 응답하지 못함. 호출자는 파이프라인 단계를 FAILED로 표시한다 (F-00). */
     LLM_503(HttpStatus.SERVICE_UNAVAILABLE, "AI 응답을 받지 못했습니다. 잠시 후 다시 시도해 주세요.");
 

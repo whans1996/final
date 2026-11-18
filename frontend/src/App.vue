@@ -16,6 +16,8 @@ async function onLogout() {
     <RouterLink to="/" class="brand">바이브노트</RouterLink>
     <nav class="account">
       <template v-if="auth.isLoggedIn">
+        <RouterLink :to="{ name: 'analysis-new' }">분석 요청</RouterLink>
+        <RouterLink :to="{ name: 'analyses' }">내 분석</RouterLink>
         <RouterLink
           v-if="auth.user"
           :to="{ name: 'user-profile', params: { id: auth.user.id } }"
@@ -41,13 +43,16 @@ async function onLogout() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 56px;
-  padding: 0 var(--space-4);
+  gap: var(--space-4);
+  min-height: 56px;
+  padding: var(--space-2) var(--space-4);
   border-bottom: 1px solid var(--color-border);
   background: var(--color-surface);
 }
 
 .brand {
+  flex-shrink: 0;
+  white-space: nowrap;
   font-weight: 700;
   color: var(--color-primary);
   text-decoration: none;
@@ -55,8 +60,11 @@ async function onLogout() {
 
 .account {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-4);
+  justify-content: flex-end;
+  column-gap: var(--space-4);
+  row-gap: var(--space-1);
 }
 
 .nickname {

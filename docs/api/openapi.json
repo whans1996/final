@@ -1,6 +1,125 @@
 {
   "components" : {
     "schemas" : {
+      "AnalysisStatusResponse" : {
+        "description" : "분석 진행 상태",
+        "properties" : {
+          "analysisId" : {
+            "description" : "분석 ID",
+            "example" : 42,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "errorCode" : {
+            "description" : "실패 사유 코드. FAILED가 아니면 null",
+            "enum" : [ "ANALYSIS_400", "ANALYSIS_413", "ANALYSIS_415", "ANALYSIS_500" ],
+            "example" : "ANALYSIS_413",
+            "type" : [ "string", "null" ]
+          },
+          "errorMessage" : {
+            "description" : "사용자에게 보여 줄 실패 사유. FAILED가 아니면 null",
+            "example" : "지원하는 코드 파일이 312개입니다. 200개 이하로 줄여서 다시 올려 주세요.",
+            "type" : [ "string", "null" ]
+          },
+          "progress" : {
+            "description" : "진행률 (0~100). FAILED면 실패 직전 값",
+            "example" : 15,
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "status" : {
+            "description" : "진행 상태",
+            "enum" : [ "FETCHING", "FILTERING", "SELECTING", "EXPLAINING", "EXTRACTING", "QUIZ", "DONE", "FAILED" ],
+            "example" : "FILTERING",
+            "type" : "string"
+          },
+          "updatedAt" : {
+            "description" : "마지막 상태 변경 시각",
+            "example" : "2026-11-24T14:20:01+09:00",
+            "format" : "date-time",
+            "type" : "string"
+          }
+        },
+        "required" : [ "analysisId", "progress", "status", "updatedAt" ],
+        "type" : "object"
+      },
+      "AnalysisSummaryResponse" : {
+        "description" : "분석 목록 항목",
+        "properties" : {
+          "createdAt" : {
+            "description" : "요청 시각",
+            "example" : "2026-11-24T14:20:00+09:00",
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "id" : {
+            "description" : "분석 ID",
+            "example" : 42,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "isPublic" : {
+            "description" : "공개 여부",
+            "example" : false,
+            "type" : "boolean"
+          },
+          "level" : {
+            "description" : "분석 수준",
+            "enum" : [ "BEGINNER", "JUNIOR", "SENIOR" ],
+            "example" : "JUNIOR",
+            "type" : "string"
+          },
+          "progress" : {
+            "description" : "진행률 (0~100)",
+            "example" : 25,
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "projectName" : {
+            "description" : "프로젝트 이름 (ZIP 파일명에서 .zip을 뺀 이름)",
+            "example" : "todo-app",
+            "type" : [ "string", "null" ]
+          },
+          "sourceType" : {
+            "description" : "입력 종류",
+            "enum" : [ "URL", "ZIP" ],
+            "example" : "ZIP",
+            "type" : "string"
+          },
+          "status" : {
+            "description" : "진행 상태",
+            "enum" : [ "FETCHING", "FILTERING", "SELECTING", "EXPLAINING", "EXTRACTING", "QUIZ", "DONE", "FAILED" ],
+            "example" : "SELECTING",
+            "type" : "string"
+          },
+          "title" : {
+            "description" : "제목 (처음에는 프로젝트 이름)",
+            "example" : "todo-app",
+            "type" : [ "string", "null" ]
+          }
+        },
+        "required" : [ "createdAt", "id", "isPublic", "level", "progress", "sourceType", "status" ],
+        "type" : "object"
+      },
+      "CreateAnalysisResponse" : {
+        "description" : "분석 요청 접수 결과",
+        "properties" : {
+          "analysisId" : {
+            "description" : "분석 ID",
+            "example" : 42,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "status" : {
+            "description" : "현재 상태 (접수 직후 FETCHING)",
+            "enum" : [ "FETCHING", "FILTERING", "SELECTING", "EXPLAINING", "EXTRACTING", "QUIZ", "DONE", "FAILED" ],
+            "example" : "FETCHING",
+            "type" : "string"
+          }
+        },
+        "required" : [ "analysisId", "status" ],
+        "type" : "object"
+      },
       "ErrorResponse" : {
         "description" : "실패 응답 (docs/conventions.md 2절)",
         "properties" : {
@@ -142,6 +261,37 @@
           }
         },
         "required" : [ "createdAt", "email", "id", "level", "nickname", "role" ],
+        "type" : "object"
+      },
+      "PageResponseAnalysisSummaryResponse" : {
+        "description" : "페이지 응답",
+        "properties" : {
+          "items" : {
+            "description" : "현재 페이지 항목",
+            "items" : {
+              "$ref" : "#/components/schemas/AnalysisSummaryResponse"
+            },
+            "type" : "array"
+          },
+          "page" : {
+            "description" : "페이지 번호 (1부터)",
+            "example" : 1,
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "size" : {
+            "description" : "페이지 크기",
+            "example" : 20,
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "total" : {
+            "description" : "전체 항목 수",
+            "example" : 134,
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
         "type" : "object"
       },
       "SignupRequest" : {
@@ -307,6 +457,209 @@
   },
   "openapi" : "3.1.0",
   "paths" : {
+    "/api/analyses" : {
+      "get" : {
+        "description" : "삭제하지 않은 내 분석을 요청 시각 최신순으로 준다.",
+        "operationId" : "list",
+        "parameters" : [ {
+          "description" : "페이지 번호 (1부터)",
+          "example" : 1,
+          "in" : "query",
+          "name" : "page",
+          "required" : false,
+          "schema" : {
+            "default" : 1,
+            "description" : "페이지 번호 (1부터)",
+            "example" : 1,
+            "format" : "int32",
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        }, {
+          "description" : "페이지 크기 (최대 100)",
+          "example" : 20,
+          "in" : "query",
+          "name" : "size",
+          "required" : false,
+          "schema" : {
+            "default" : 20,
+            "description" : "페이지 크기 (최대 100)",
+            "example" : 20,
+            "format" : "int32",
+            "maximum" : 100,
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PageResponseAnalysisSummaryResponse"
+                }
+              }
+            },
+            "description" : "조회 성공"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "page·size 범위 밖 (COMMON_400)"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "토큰 없음·만료 (AUTH_401)"
+          }
+        },
+        "summary" : "내 분석 목록",
+        "tags" : [ "분석" ]
+      },
+      "post" : {
+        "description" : "ZIP을 접수하고 바로 202를 준다. 코드 수집·필터·선별은 백그라운드에서 진행되며 상태는 /api/analyses/{id}/status로 확인한다. 하루(Asia/Seoul) 5회까지이며 FAILED는 세지 않는다.",
+        "operationId" : "create",
+        "requestBody" : {
+          "content" : {
+            "multipart/form-data" : {
+              "schema" : {
+                "properties" : {
+                  "consent" : {
+                    "description" : "Google Gemini 전송 고지 동의. true여야 한다",
+                    "enum" : [ "true" ],
+                    "type" : "string"
+                  },
+                  "file" : {
+                    "description" : "프로젝트 ZIP (.zip, 10MB 이하)",
+                    "format" : "binary",
+                    "type" : "string"
+                  },
+                  "level" : {
+                    "description" : "분석 수준. 생략하면 내 프로필 수준",
+                    "enum" : [ "BEGINNER", "JUNIOR", "SENIOR" ],
+                    "type" : "string"
+                  }
+                },
+                "type" : "object"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "202" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CreateAnalysisResponse"
+                }
+              }
+            },
+            "description" : "접수됨"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "검증 실패 (COMMON_400, details.file·consent·level)"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "토큰 없음·만료 (AUTH_401)"
+          },
+          "413" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "업로드 10MB 초과 (COMMON_413)"
+          },
+          "429" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "오늘 분석 요청 횟수를 다 씀 (ANALYSIS_429)"
+          }
+        },
+        "summary" : "분석 요청 (ZIP)",
+        "tags" : [ "분석" ]
+      }
+    },
+    "/api/analyses/{id}/status" : {
+      "get" : {
+        "description" : "내 분석의 단계·진행률·실패 사유. 진행 화면이 2초마다 폴링한다.",
+        "operationId" : "getStatus",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AnalysisStatusResponse"
+                }
+              }
+            },
+            "description" : "조회 성공"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "토큰 없음·만료 (AUTH_401)"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "없는 분석, 다른 회원의 분석, 삭제된 분석 (ANALYSIS_404)"
+          }
+        },
+        "summary" : "분석 진행 상태",
+        "tags" : [ "분석" ]
+      }
+    },
     "/api/auth/login" : {
       "post" : {
         "description" : "Access 토큰과 회원 정보를 본문으로, Refresh 토큰을 HttpOnly 쿠키 refresh_token(Path=/api/auth, 14일)으로 준다.",
@@ -714,6 +1067,9 @@
   "tags" : [ {
     "description" : "프로필 조회·수정, 학습 통계, 회원 탈퇴",
     "name" : "회원"
+  }, {
+    "description" : "프로젝트 분석 요청, 내 분석 목록, 진행 상태",
+    "name" : "분석"
   }, {
     "description" : "회원가입, 로그인, 토큰 재발급, 로그아웃",
     "name" : "인증"

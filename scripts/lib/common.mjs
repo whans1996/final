@@ -41,9 +41,9 @@ export function isMerging(cwd = ROOT) {
   return r.ok && existsSync(resolve(cwd, r.out));
 }
 
-/** 기능 ID 추출: feature/F-05-analysis → F-05 */
+/** 기능 ID 추출: feature/F-05-analysis → F-05, feature/F-05a-analysis-zip → F-05a */
 export function featureIdFrom(text) {
-  const m = /F-\d{2}/.exec(text || '');
+  const m = /F-\d{2}(?:[a-z](?![a-z]))?/.exec(text || '');
   return m ? m[0] : null;
 }
 

@@ -13,7 +13,12 @@ public class BusinessException extends RuntimeException {
     }
 
     public BusinessException(ErrorCode errorCode, Map<String, String> details) {
-        super(errorCode.message());
+        this(errorCode, errorCode.message(), details);
+    }
+
+    /** 메시지에 설정값 같은 변수가 들어갈 때 (예: ANALYSIS_429의 일일 한도). */
+    public BusinessException(ErrorCode errorCode, String message, Map<String, String> details) {
+        super(message);
         this.errorCode = errorCode;
         this.details = details;
     }

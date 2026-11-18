@@ -8,7 +8,7 @@
 // 사용법: node scripts/ui-check.mjs [route ...] [--base http://localhost:5173] [--storage .harness/auth.json] [--width 1280]
 //   --storage  로그인 상태(storageState JSON). 로그인 필요한 화면을 볼 때 사용
 //   --mobile   375px 폭으로도 한 번 더 확인
-import { mkdirSync, existsSync } from 'node:fs';
+import { mkdirSync, existsSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { join, relative } from 'node:path';
 import { ROOT } from './lib/common.mjs';
@@ -52,10 +52,13 @@ if (mobile) viewports.push({ name: 'mobile', width: 375, height: 812 });
 
 let problems = 0;
 const report = [];
+// Refresh 토큰은 1회용(재발급마다 회전)이다. 앞 viewport가 쿠키를 쓰고 나면 파일의 쿠키는 무효가 되므로
+// context가 끝날 때의 쿠키를 다음 viewport에 넘기고 파일에도 다시 저장한다 (다음 실행도 로그인 유지).
+let state = storage && existsSync(storage) ? storage : undefined;
 for (const vp of viewports) {
   const context = await browser.newContext({
     viewport: { width: vp.width, height: vp.height },
-    storageState: storage && existsSync(storage) ? storage : undefined,
+    storageState: state,
   });
   for (const route of routes) {
     const page = await context.newPage();
@@ -69,6 +72,9 @@ for (const vp of viewports) {
     try {
       await page.goto(base + route, { waitUntil: 'networkidle', timeout: 20_000 });
       finalUrl = page.url().replace(base, '');
+      if (state && finalUrl.startsWith('/login') && !route.startsWith('/login')) {
+        issues.push(`로그인 화면으로 이동됨: --storage의 세션이 만료되었거나 이미 사용된 refresh 쿠키입니다`);
+      }
       const text = (await page.locator('body').innerText()).trim();
       if (text.length < 20) issues.push(`빈 화면 의심 (본문 텍스트 ${text.length}자)`);
     } catch (e) {
@@ -85,6 +91,10 @@ for (const vp of viewports) {
       shot: relative(ROOT, file).replace(/\\/g, '/'),
     });
     await page.close();
+  }
+  if (state) {
+    state = await context.storageState();
+    writeFileSync(storage, JSON.stringify(state, null, 2));
   }
   await context.close();
 }
