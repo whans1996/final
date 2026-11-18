@@ -1,7 +1,15 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
-import http, { NETWORK_ERROR_MESSAGE, errorCode, errorMessage } from '@/api/http'
+import http, {
+  NETWORK_ERROR_MESSAGE,
+  errorCode,
+  errorMessage,
+  setUnauthorizedHandler,
+} from '@/api/http'
+import * as authApi from '@/api/auth'
 import { useAuthStore } from '@/stores/auth'
+
+vi.mock('@/api/auth')
 
 // 실제 요청을 보내지 않도록 adapter를 바꿔 요청 설정만 확인한다
 function captureRequest() {
@@ -11,15 +19,6 @@ function captureRequest() {
     return { data: {}, status: 200, statusText: 'OK', headers: {}, config }
   }
   return () => captured
-}
-
-function rejectWith(status, data) {
-  http.defaults.adapter = async (config) => {
-    const error = new Error(`status ${status}`)
-    error.config = config
-    error.response = { status, data, headers: {}, config }
-    throw error
-  }
 }
 
 describe('http', () => {
@@ -45,14 +44,112 @@ describe('http', () => {
     await http.get('/concepts')
     expect(lastRequest().headers.Authorization).toBeUndefined()
   })
+})
 
-  it('401을 받으면 로그인 상태를 지운다', async () => {
-    const auth = useAuthStore()
-    auth.setSession({ accessToken: 'expired', user: null })
-    rejectWith(401, { code: 'AUTH_401', message: '로그인이 필요합니다.', details: null })
+// F-02 AC9: Access 만료(AUTH_401) → refresh 1회 → 원 요청 재시도
+describe('http 401 처리 (F-02 AC9)', () => {
+  let onUnauthorized
+
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.mocked(authApi.refresh).mockReset()
+    onUnauthorized = vi.fn()
+    setUnauthorizedHandler(onUnauthorized)
+  })
+
+  /** 요청마다 응답을 정한다. handler(config, n)이 { status, data }를 돌려준다. */
+  function respondWith(handler) {
+    const calls = []
+    http.defaults.adapter = async (config) => {
+      calls.push(config)
+      const { status, data } = handler(config, calls.length)
+      if (status >= 400) {
+        const error = new Error(`status ${status}`)
+        error.config = config
+        error.response = { status, data, headers: {}, config }
+        throw error
+      }
+      return { data, status, statusText: 'OK', headers: {}, config }
+    }
+    return calls
+  }
+
+  const AUTH_401 = { code: 'AUTH_401', message: '로그인이 필요합니다.', details: null }
+  const session = (token) => ({
+    accessToken: token,
+    expiresIn: 1800,
+    user: { id: 1, nickname: '코딩초보', level: 'BEGINNER', role: 'USER' },
+  })
+
+  it('AC9 AUTH_401이면 refresh 후 새 토큰으로 1회 재시도한다', async () => {
+    useAuthStore().setSession(session('expired'))
+    authApi.refresh.mockResolvedValue(session('fresh'))
+    const calls = respondWith((config) =>
+      config.headers.Authorization === 'Bearer fresh'
+        ? { status: 200, data: { ok: true } }
+        : { status: 401, data: AUTH_401 },
+    )
+
+    const response = await http.get('/users/me')
+
+    expect(response.data).toEqual({ ok: true })
+    expect(authApi.refresh).toHaveBeenCalledTimes(1)
+    expect(calls).toHaveLength(2)
+    expect(useAuthStore().accessToken).toBe('fresh')
+    expect(onUnauthorized).not.toHaveBeenCalled()
+  })
+
+  it('AC9 동시에 여러 요청이 401이어도 refresh는 한 번만 부른다', async () => {
+    useAuthStore().setSession(session('expired'))
+    authApi.refresh.mockResolvedValue(session('fresh'))
+    respondWith((config) =>
+      config.headers.Authorization === 'Bearer fresh'
+        ? { status: 200, data: {} }
+        : { status: 401, data: AUTH_401 },
+    )
+
+    await Promise.all([http.get('/a'), http.get('/b'), http.get('/c')])
+
+    expect(authApi.refresh).toHaveBeenCalledTimes(1)
+  })
+
+  it('AC9 refresh가 실패하면 로그인 상태를 지우고 로그인 화면으로 보낸다', async () => {
+    useAuthStore().setSession(session('expired'))
+    authApi.refresh.mockRejectedValue(new Error('AUTH_002'))
+    respondWith(() => ({ status: 401, data: AUTH_401 }))
 
     await expect(http.get('/users/me')).rejects.toThrow('status 401')
-    expect(auth.isLoggedIn).toBe(false)
+
+    expect(useAuthStore().isLoggedIn).toBe(false)
+    expect(onUnauthorized).toHaveBeenCalledTimes(1)
+  })
+
+  it('AC9 재시도한 요청도 401이면 더 재시도하지 않고 로그인 화면으로 보낸다', async () => {
+    useAuthStore().setSession(session('expired'))
+    authApi.refresh.mockResolvedValue(session('fresh'))
+    const calls = respondWith(() => ({ status: 401, data: AUTH_401 }))
+
+    await expect(http.get('/users/me')).rejects.toThrow('status 401')
+
+    expect(calls).toHaveLength(2)
+    expect(authApi.refresh).toHaveBeenCalledTimes(1)
+    expect(useAuthStore().isLoggedIn).toBe(false)
+    expect(onUnauthorized).toHaveBeenCalledTimes(1)
+  })
+
+  it('AC9 AUTH_401이 아닌 401과 /auth 요청의 401은 재시도하지 않는다', async () => {
+    useAuthStore().setSession(session('token'))
+    respondWith(() => ({
+      status: 401,
+      data: { code: 'AUTH_001', message: '이메일 또는 비밀번호가 올바르지 않습니다.' },
+    }))
+    await expect(http.post('/auth/login', {})).rejects.toThrow('status 401')
+
+    respondWith(() => ({ status: 401, data: AUTH_401 }))
+    await expect(http.post('/auth/logout')).rejects.toThrow('status 401')
+
+    expect(authApi.refresh).not.toHaveBeenCalled()
+    expect(onUnauthorized).not.toHaveBeenCalled()
   })
 })
 

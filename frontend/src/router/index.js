@@ -5,6 +5,18 @@ import HomeView from '@/views/HomeView.vue'
 export const routes = [
   { path: '/', name: 'home', component: HomeView },
   {
+    path: '/login',
+    name: 'login',
+    component: () => import('@/views/LoginView.vue'),
+    meta: { guestOnly: true },
+  },
+  {
+    path: '/signup',
+    name: 'signup',
+    component: () => import('@/views/SignupView.vue'),
+    meta: { guestOnly: true },
+  },
+  {
     path: '/:pathMatch(.*)*',
     name: 'not-found',
     component: () => import('@/views/NotFoundView.vue'),
@@ -12,17 +24,28 @@ export const routes = [
 ]
 
 /**
- * 인증 가드. 라우트에 meta.requiresAuth / meta.requiresAdmin을 붙여 쓴다.
- * 로그인 화면(F-02)이 생기면 비로그인 이동 대상을 { name: 'login' }으로 바꾼다.
+ * 인증 가드. 라우트에 meta.requiresAuth / meta.requiresAdmin / meta.guestOnly를 붙여 쓴다.
+ * 비로그인으로 보호된 화면에 오면 로그인 화면으로 보내고, 로그인 후 원래 주소(redirect)로 돌아온다.
  */
 export function authGuard(to, auth) {
   if (to.meta.requiresAuth && !auth.isLoggedIn) {
-    return { name: 'home', query: { redirect: to.fullPath } }
+    return { name: 'login', query: { redirect: to.fullPath } }
   }
   if (to.meta.requiresAdmin && !auth.isAdmin) {
     return { name: 'home' }
   }
+  if (to.meta.guestOnly && auth.isLoggedIn) {
+    return { name: 'home' }
+  }
   return true
+}
+
+/** 로그인·가입 후 돌아갈 주소. 다른 사이트로 나가지 않게 앱 내부 경로만 허용한다. */
+export function redirectTarget(query) {
+  const target = query.redirect
+  return typeof target === 'string' && target.startsWith('/') && !target.startsWith('//')
+    ? target
+    : '/'
 }
 
 const router = createRouter({
