@@ -2,13 +2,13 @@
 
 | 항목 | 값 |
 |---|---|
-| 상태 | DRAFT <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
+| 상태 | APPROVED <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
 | 기능 ID | F-02 |
 | 우선순위 | P0 |
 | 영역 오너 | 팀원 B (학습·소셜) |
 | 관련 필수 요구사항 | ① (명세서 F1306~F1310 로그인/로그아웃) |
 | 의존 spec | F-01 (가입한 회원). **F-01과 같은 브랜치·PR `feature/F-01-auth`** |
-| 승인 | (승인한 사람, 날짜) |
+| 승인 | whans1996 2026-11-18 |
 
 ## 1. 목적
 
@@ -146,8 +146,7 @@ CSRF: Refresh 쿠키는 `SameSite=Strict` + `Path=/api/auth`라 다른 사이트
 
 ## 9. 결정 필요
 
-- 에러 코드 `AUTH_001`(로그인 실패)·`AUTH_002`(Refresh 무효)를 AUTH_401과 나누는 기본안. FE가 `AUTH_401`일 때만 refresh를 시도하므로 무한 재시도를 막는다
-- `/api/auth/logout`을 공개로 두는 기본안 (Access가 만료된 상태에서도 로그아웃이 되어야 하므로 쿠키 기준)
+- 없음 (승인 시 확정: `AUTH_001`·`AUTH_002`를 `AUTH_401`과 분리, `/api/auth/logout` 공개)
 
 ## 10. 구현 체크리스트
 
