@@ -28,6 +28,24 @@ export const routes = [
     meta: { requiresAuth: true },
   },
   {
+    path: '/analyses',
+    name: 'analyses',
+    component: () => import('@/views/AnalysisListView.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/analyses/new',
+    name: 'analysis-new',
+    component: () => import('@/views/AnalysisRequestView.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/analyses/:id(\\d+)',
+    name: 'analysis-detail',
+    component: () => import('@/views/AnalysisDetailView.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
     path: '/:pathMatch(.*)*',
     name: 'not-found',
     component: () => import('@/views/NotFoundView.vue'),

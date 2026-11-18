@@ -245,9 +245,9 @@ F-05a에서는 SELECTING 다음이 곧 `DONE`이다. 이후 spec은 단계를 �
 
 - [x] 브랜치 `feature/F-05a-analysis-zip`
 - [x] Flyway `V3__analysis_error_code.sql`
-- [ ] AC별 실패 테스트 작성 (red 확인) — BE AC1~13 ✅, FE AC14~16 남음
+- [x] AC별 실패 테스트 작성 (red 확인) — BE AC1~13, FE AC14~16
 - [x] BE 구현 (green) — AC1~13
-- [ ] FE 구현 (green)
+- [x] FE 구현 (green) — AC14~16
 - [ ] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
 - [ ] contract-checker 통과
 - [ ] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일)
