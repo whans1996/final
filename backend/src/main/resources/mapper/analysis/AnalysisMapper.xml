@@ -39,4 +39,27 @@
         SET status = 'FAILED', error_code = #{errorCode}, error_message = #{errorMessage}
         WHERE id = #{id} AND status NOT IN ('DONE', 'FAILED')
     </update>
+
+    <select id="findById" resultType="com.vibenote.analysis.domain.Analysis">
+        SELECT <include refid="columns"/> FROM analyses WHERE id = #{id}
+    </select>
+
+    <update id="updateStage">
+        UPDATE analyses SET status = #{status}, progress = #{progress}
+        WHERE id = #{id} AND status NOT IN ('DONE', 'FAILED')
+    </update>
+
+    <insert id="insertFiles">
+        INSERT INTO analysis_files (analysis_id, path, layer, content) VALUES
+        <foreach collection="files" item="f" separator=",">
+            (#{f.analysisId}, #{f.path}, #{f.layer}, #{f.content})
+        </foreach>
+    </insert>
+
+    <!-- 삭제된 분석은 그대로 둔다 (AC11) -->
+    <update id="failInterrupted">
+        UPDATE analyses
+        SET status = 'FAILED', error_code = #{errorCode}, error_message = #{errorMessage}
+        WHERE status NOT IN ('DONE', 'FAILED') AND deleted_at IS NULL
+    </update>
 </mapper>

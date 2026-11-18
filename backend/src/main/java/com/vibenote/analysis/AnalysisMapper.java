@@ -1,6 +1,7 @@
 package com.vibenote.analysis;
 
 import com.vibenote.analysis.domain.Analysis;
+import com.vibenote.analysis.domain.AnalysisFile;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -31,4 +32,19 @@ public interface AnalysisMapper {
             @Param("id") long id,
             @Param("errorCode") String errorCode,
             @Param("errorMessage") String errorMessage);
+
+    /** id로 찾는다 (삭제 여부와 상관없음). 파이프라인 내부용. */
+    Optional<Analysis> findById(long id);
+
+    /** 단계 진입. 이미 DONE·FAILED면 바꾸지 않는다 (0 반환). */
+    int updateStage(
+            @Param("id") long id,
+            @Param("status") AnalysisStatus status,
+            @Param("progress") int progress);
+
+    void insertFiles(@Param("files") List<AnalysisFile> files);
+
+    /** 진행 중인 미삭제 분석을 모두 FAILED로 바꾼다 (progress는 그대로, 재시작 복구). */
+    int failInterrupted(
+            @Param("errorCode") String errorCode, @Param("errorMessage") String errorMessage);
 }

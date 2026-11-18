@@ -3,6 +3,7 @@ package com.vibenote.analysis;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
+import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -40,6 +41,20 @@ public class AnalysisTempFiles {
         } catch (IOException e) {
             delete(analysisId);
             throw new UncheckedIOException("분석 임시 파일 저장 실패: " + analysisId, e);
+        }
+    }
+
+    /** 남은 임시 ZIP을 모두 지운다 (재시작 복구, AC11). */
+    public void deleteAll() {
+        if (!Files.isDirectory(dir)) {
+            return;
+        }
+        try (DirectoryStream<Path> files = Files.newDirectoryStream(dir, "*.zip")) {
+            for (Path file : files) {
+                Files.deleteIfExists(file);
+            }
+        } catch (IOException e) {
+            log.warn("분석 임시 폴더 정리 실패: {}", dir, e);
         }
     }
 
