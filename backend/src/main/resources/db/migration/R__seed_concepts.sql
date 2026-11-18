@@ -1711,14 +1711,20 @@ public ProfileResponse getMyProfile(long userId) { ... }',
 - 단, Refresh 토큰처럼 **쿠키로 받는 엔드포인트가 있으면** 그 경로는 SameSite=Strict, 경로 제한(Path) 등으로 따로 지킨다.
 
 ## 주의
-AI 예제는 습관처럼 `csrf.disable()`을 넣는다. 세션·쿠키 인증을 쓰는 서버에서 끄면 바로 취약해진다.',
+- AI 예제는 습관처럼 `csrf.disable()`을 넣는다. 세션·쿠키 인증을 쓰는 서버에서 끄면 바로 취약해진다.
+- 시큐리티 6부터 CSRF 토큰은 요청마다 값을 가려서(XOR) 내보내고, 실제로 쓰일 때까지 만들지 않는다(지연 로딩). 그래서 Boot 2 시절 예제처럼 `CookieCsrfTokenRepository.withHttpOnlyFalse()` 한 줄만 넣으면 SPA에서 403이 난다. 공식 문서의 "Single-Page Applications" 절 구성을 따른다.',
 '// JWT를 헤더로만 받는 API 서버
 http.csrf(csrf -> csrf.disable())
     .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
-// 세션·쿠키 인증 + SPA: 쿠키로 CSRF 토큰을 주고 헤더로 돌려받는다
-http.csrf(csrf -> csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()));
-// 프론트: 요청마다 X-XSRF-TOKEN 헤더에 XSRF-TOKEN 쿠키 값을 담는다',
+// 세션·쿠키 인증 + SPA (시큐리티 6): 쿠키로 CSRF 토큰을 주고 헤더로 돌려받는다
+http.csrf(csrf -> csrf
+        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+        // 6의 기본 핸들러(XOR)는 쿠키 원문 값을 거부한다. 원문 값을 받는 핸들러로 바꾼다
+        .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler()));
+// 토큰은 지연 로딩이라 첫 요청에 쿠키가 없을 수 있다.
+// 토큰을 한 번 읽어 주는 필터를 추가한다 (공식 문서 Single-Page Applications 절)
+// 프론트: 상태를 바꾸는 요청마다 X-XSRF-TOKEN 헤더에 XSRF-TOKEN 쿠키 값을 담는다',
  'PUBLISHED', 'SEED', 'https://docs.spring.io/spring-security/reference/servlet/exploits/csrf.html'),
 
 ('OAuth2 소셜 로그인', 'security', 'SENIOR',
