@@ -27,7 +27,10 @@ public enum ErrorCode {
     /** 없는 회원 또는 탈퇴 회원의 공개 프로필·통계 (F-03). */
     USER_404(HttpStatus.NOT_FOUND, "존재하지 않거나 탈퇴한 사용자입니다."),
     /** 탈퇴 시 비밀번호 재확인 실패. details.password에 사유를 담는다 (F-03). */
-    USER_001(HttpStatus.BAD_REQUEST, "비밀번호가 올바르지 않습니다.");
+    USER_001(HttpStatus.BAD_REQUEST, "비밀번호가 올바르지 않습니다."),
+
+    /** 설정된 LLM이 폴백까지 모두 응답하지 못함. 호출자는 파이프라인 단계를 FAILED로 표시한다 (F-00). */
+    LLM_503(HttpStatus.SERVICE_UNAVAILABLE, "AI 응답을 받지 못했습니다. 잠시 후 다시 시도해 주세요.");
 
     private final HttpStatus status;
     private final String message;

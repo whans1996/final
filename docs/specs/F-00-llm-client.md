@@ -22,7 +22,7 @@ Gemini 무료 등급이 한도 초과·장애로 실패하면 재시도 없이 �
 
 | ID | Given | When | Then |
 |---|---|---|---|
-| AC1 | `llm.provider`가 없음·`mock`·`ollama`·`gemini` | 애플리케이션 컨텍스트가 뜨면 | `LlmClient` 빈이 **하나만** 있고 조립이 각각 `Logging(Mock)` · `Logging(Mock)` · `Logging(Ollama)` · `Fallback(Logging(Gemini), Logging(Ollama))`이다 |
+| AC1 | `llm.provider`가 없음·`mock`·`ollama`·`gemini` | 애플리케이션 컨텍스트가 뜨면 | `LlmClient` 빈이 **하나만** 있고 조립이 각각 `Logging(Mock)` · `Logging(Mock)` · `Fallback(Logging(Ollama))` · `Fallback(Logging(Gemini), Logging(Ollama))`이다 (ollama 단독도 실패를 `LLM_503`으로 바꾸려고 공급자 1개짜리 Fallback으로 감싼다, 11-18 구현 시 조정) |
 | AC2 | provider=gemini, Gemini가 정상 응답 | `complete(req)` | `POST {gemini.base-url}/v1beta/models/{model}:generateContent`를 `x-goog-api-key` 헤더(쿼리 파라미터 아님)와 `generationConfig.responseMimeType=application/json`으로 호출하고, `candidates[0].content.parts[0].text` → `content`, `usageMetadata.promptTokenCount`·`candidatesTokenCount` → 토큰 수, 설정 모델명 → `model`로 반환한다 |
 | AC3 | provider=ollama, Ollama가 정상 응답 | `complete(req)` | `POST {ollama.base-url}/api/generate`를 `{"model", "prompt", "format":"json", "stream":false}`로 호출하고 `response` → `content`, `prompt_eval_count`·`eval_count` → 토큰 수, 설정 모델명 → `model`로 반환한다 |
 | AC4 | provider=gemini, Gemini가 429·500·타임아웃·연결 실패 중 하나 | `complete(req)` | Gemini를 **다시 부르지 않고** Ollama 응답을 반환하며 `model`은 Ollama 모델명이다 |
@@ -68,9 +68,9 @@ Gemini 무료 등급이 한도 초과·장애로 실패하면 재시도 없이 �
 | `OllamaLlmClient` (새) | `RestClient`로 Ollama REST 호출 (AC3). 빈이 아님 |
 | `MockLlmClient` (변경) | 동작은 그대로(`llm-fixtures/<stage>.json`). `@Component`·`@ConditionalOnProperty`를 떼고 `LlmConfig`가 생성 |
 | `LlmUnavailableException` (새) | 개별 공급자 실패(HTTP 4xx·5xx, 타임아웃, 연결 실패, 응답 형식 이상). 메시지는 `"<공급자> <상태 또는 예외 종류>"`만 |
-| `FallbackLlmClient` (새) | primary가 `LlmUnavailableException`이면 재시도 없이 fallback 호출. fallback도 실패하면 `BusinessException(LLM_503)` |
+| `FallbackLlmClient` (새) | 공급자 목록을 순서대로 시도. 앞 공급자가 `LlmUnavailableException`이면 재시도 없이 다음 공급자 호출. 모두 실패하면 `BusinessException(LLM_503)` |
 | `UsageLoggingLlmClient` (새) | 데코레이터. 위임 호출의 지연·결과를 `LlmUsageLogMapper`로 1행 기록. 기록 예외는 삼키고 warn. 위임 예외는 기록 후 다시 던짐 |
-| `LlmConfig` (새) | provider별로 `LlmClient` **빈 하나**만 조립 (AC1). provider=ollama 단독일 때 Ollama 실패도 `LLM_503`으로 바꿈 |
+| `LlmConfig` (새) | provider별로 `LlmClient` **빈 하나**만 조립 (AC1). provider=ollama 단독일 때 `Fallback(Ollama)`로 감싸 Ollama 실패도 `LLM_503`으로 바꿈 |
 | `LlmUsageLogMapper` (새) | `insert(LlmUsageLog)` (MyBatis XML 또는 어노테이션, 기존 매퍼 관례를 따름) |
 
 ### 설정 (`application.yml`, `.env.example`)
@@ -138,10 +138,10 @@ HTTP는 `RestClient.Builder` + `MockRestServiceServer`(spring-test, 의존성 �
 
 - [x] 브랜치 `feature/F-00-llm-client`
 - [ ] Flyway 마이그레이션 (없음)
-- [ ] AC별 실패 테스트 작성 (red 확인)
+- [ ] AC별 실패 테스트 작성 (red 확인) — AC2·3·4·5 완료
 - [ ] BE 구현 (green)
 - [ ] `application.yml`·`.env.example`·`build.gradle`(liveTest) 갱신
-- [ ] `ErrorCode.LLM_503` + `docs/conventions.md` 에러 표
+- [x] `ErrorCode.LLM_503` + `docs/conventions.md` 에러 표
 - [ ] reviewer 지적 사항 반영
 - [ ] 산출물 반영: `08-외부API-생성형AI-활용.md` §1.1 구성도, WBS 2.4 실적
 - [ ] (사람) `./gradlew liveTest` 1회 → 08 산출물 §1.5·§2에 결과 기록
