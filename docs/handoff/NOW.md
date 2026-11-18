@@ -3,24 +3,23 @@
 > 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
 > "바로 다음 할 일"은 다른 사람이 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 
-갱신: 2026-11-18 · 작업자: whans1996 (Claude, SSAFY 교육장 PC) · 브랜치: feature/common-fe-tooling-upgrade
+갱신: 2026-11-18 · 작업자: whans1996 (Claude, SSAFY 교육장 PC) · 브랜치: feature/F-05a-analysis-zip
 
 ## 현재 기능
 
-환경 최신화 PR ② (FE 도구·하네스·문서). PR ① #12(BE Boot 4.1·Java 21)는 11-18 develop 머지 완료.
+F-05a 분석 요청(ZIP 업로드 + 수집·필터·선별 파이프라인 + 상태·목록 + FE) — spec APPROVED(whans1996 11-18), 구현 전. PR #12·#13(환경 최신화)은 11-18 develop 머지 완료.
 
 ## 진행
 
-- ✅ FE: vitest 5.1·jsdom 31·oxlint/eslint-plugin-oxlint 1.94·eslint-plugin-vue 10.12·prettier 3.10.1 고정. verify fe 통과(76 테스트), 설정 변경 불필요
-- ✅ setup.mjs JDK 안내, CLAUDE.md·backend/CLAUDE.md(Boot 4 채택, Jackson 3 import 규칙, JSON 컬럼 null 필드 래퍼)·README·환경설정.md 1절·5절·기획서 202행 + 결정 로그, 작업로그
-- ✅ reviewer: 반드시 수정 1건(환경설정.md 경로 백슬래시 손상, c1959e0), 권장 2건(Node 하한 24.15·JacksonException 패키지, e4d9a58) 반영. ui-check `/`·`/concepts` 통과
-- ✅ PR #13 생성. CI 초록 4/4, Codex ✅ e4d9a58
-- ⏳ PR #13 머지 대기 (영역 오너가 GitHub에서)
+- ✅ 사용자 결정: F-05를 F-05a(ZIP)·F-05b(URL)로 분할, 일일 한도 5회(오늘 KST, FAILED 제외, soft delete 포함)
+- ✅ `docs/specs/F-05a-analysis-request-zip.md` DRAFT 작성 (AC 16개, V3 `analyses.error_code`, 새 에러 코드 ANALYSIS_400/404/413/415/429/500)
+- ✅ `docs/기획서.md` 결정 로그 1줄 추가
+- ✅ spec 승인, `docs(F-05a): spec 승인` 커밋
 
 ## 바로 다음 할 일
 
-1. (사람) PR #13 머지 → `/clear` → `/pickup` → F-05 분석 요청 `/spec`(A), F-09·F-10 `/spec`(B, category 필터 6종)
-2. 후속(PR #13 본문): 시드 카드 Boot 3 테스트 API·`JsonProcessingException`·"빌드는 17" 문구 갱신, Lombok 제거 검토. npm audit 19건은 업그레이드 전과 동일(picomatch 수정 버전 없음)
+1. `/clear` → `/implement F-05a`: V3 마이그레이션 → `AnalysisControllerTest#AC1_ZIP을_올리면_202와_analysisId를_받는다` red부터
+2. F-05a 머지 후 `/spec F-05b`(URL 수집), 그다음 F-09·F-10 `/spec`(B, category 필터 6종)
 
 ## 막힌 점 / 결정 필요
 
@@ -28,5 +27,6 @@
 
 ## 주의
 
-- 집 PC: `git pull` → `node -v`가 24.15 미만이면 Node 24 최신 설치 → `node scripts/setup.mjs` → `cd frontend && npm install` → 첫 BE 빌드에서 JDK 21 자동 다운로드(몇 분). STS는 JDK 21 설치 필요
+- 파이프라인 테스트는 `run(analysisId)` 직접 호출로 동기 검증(커밋 후 시작이라 `@Transactional` 테스트에서는 afterCommit이 안 탐). 테스트 ZIP은 코드로 생성(eval 데이터 금지)
+- 후속(PR #13 본문): 시드 카드 Boot 3 테스트 API·`JsonProcessingException`·"빌드는 17" 문구 갱신, Lombok 제거 검토
 - verify(Gradle)를 bootRun·다른 Gradle과 동시에 돌리지 않는다 (Windows 파일 잠금). V1·V2 수정 금지
