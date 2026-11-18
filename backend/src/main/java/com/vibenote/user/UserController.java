@@ -1,27 +1,35 @@
 package com.vibenote.user;
 
+import com.vibenote.auth.RefreshTokenCookie;
 import com.vibenote.common.exception.ErrorResponse;
 import com.vibenote.common.security.AuthUser;
 import com.vibenote.user.dto.MyProfileResponse;
 import com.vibenote.user.dto.UpdateProfileRequest;
 import com.vibenote.user.dto.UserProfileResponse;
 import com.vibenote.user.dto.UserStatsResponse;
+import com.vibenote.user.dto.WithdrawRequest;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.headers.Header;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-/** 내 프로필 조회·수정, 공개 프로필·학습 통계 (F-03). 공개 GET은 SecurityConfig.PUBLIC_GET_PATHS에 있다. */
+/** 내 프로필 조회·수정·탈퇴, 공개 프로필·학습 통계 (F-03). 공개 GET은 SecurityConfig.PUBLIC_GET_PATHS에 있다. */
 @Tag(name = "회원", description = "프로필 조회·수정, 학습 통계, 회원 탈퇴")
 @RestController
 @RequestMapping("/api/users")
@@ -29,10 +37,18 @@ public class UserController {
 
     private final UserService userService;
     private final UserStatsService userStatsService;
+    private final UserWithdrawalService userWithdrawalService;
+    private final RefreshTokenCookie refreshTokenCookie;
 
-    public UserController(UserService userService, UserStatsService userStatsService) {
+    public UserController(
+            UserService userService,
+            UserStatsService userStatsService,
+            UserWithdrawalService userWithdrawalService,
+            RefreshTokenCookie refreshTokenCookie) {
         this.userService = userService;
         this.userStatsService = userStatsService;
+        this.userWithdrawalService = userWithdrawalService;
+        this.refreshTokenCookie = refreshTokenCookie;
     }
 
     @Operation(summary = "내 프로필 조회", description = "email·role을 포함한 내 정보를 준다.")
@@ -67,6 +83,36 @@ public class UserController {
             @AuthenticationPrincipal AuthUser user,
             @Valid @RequestBody UpdateProfileRequest request) {
         return userService.updateMe(user.id(), request);
+    }
+
+    @Operation(
+            summary = "회원 탈퇴",
+            description =
+                    "현재 비밀번호를 확인한 뒤 비활성화(WITHDRAWN)하고 이메일·닉네임·소개를 마스킹한다. 모든 기기의 Refresh 토큰과 팔로우 관계를"
+                            + " 지우고, 작성한 글·댓글·리뷰와 퀴즈 기록은 남긴다. 같은 이메일로 다시 가입할 수 있다.")
+    @ApiResponse(
+            responseCode = "204",
+            description = "탈퇴 성공",
+            headers =
+                    @Header(
+                            name = "Set-Cookie",
+                            description = "refresh_token=; Path=/api/auth; Max-Age=0 (쿠키 삭제)"))
+    @ApiResponse(
+            responseCode = "400",
+            description = "비밀번호 누락 (COMMON_400) 또는 불일치 (USER_001), details.password",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(
+            responseCode = "401",
+            description = "토큰 없음·만료·이미 탈퇴 (AUTH_401)",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @DeleteMapping("/me")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void withdraw(
+            @AuthenticationPrincipal AuthUser user,
+            @Valid @RequestBody WithdrawRequest request,
+            HttpServletResponse response) {
+        userWithdrawalService.withdraw(user.id(), request.password());
+        response.addHeader(HttpHeaders.SET_COOKIE, refreshTokenCookie.clear());
     }
 
     @Operation(summary = "공개 프로필 조회", description = "로그인 없이 볼 수 있다. email·role은 주지 않는다.")

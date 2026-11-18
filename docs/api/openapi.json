@@ -276,6 +276,19 @@
         },
         "required" : [ "analysisCount", "learnedConceptCount" ],
         "type" : "object"
+      },
+      "WithdrawRequest" : {
+        "description" : "회원 탈퇴 요청",
+        "properties" : {
+          "password" : {
+            "description" : "현재 비밀번호",
+            "example" : "vibe1234",
+            "minLength" : 1,
+            "type" : "string"
+          }
+        },
+        "required" : [ "password" ],
+        "type" : "object"
       }
     },
     "securitySchemes" : {
@@ -476,6 +489,53 @@
       }
     },
     "/api/users/me" : {
+      "delete" : {
+        "description" : "현재 비밀번호를 확인한 뒤 비활성화(WITHDRAWN)하고 이메일·닉네임·소개를 마스킹한다. 모든 기기의 Refresh 토큰과 팔로우 관계를 지우고, 작성한 글·댓글·리뷰와 퀴즈 기록은 남긴다. 같은 이메일로 다시 가입할 수 있다.",
+        "operationId" : "withdraw",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/WithdrawRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "204" : {
+            "description" : "탈퇴 성공",
+            "headers" : {
+              "Set-Cookie" : {
+                "description" : "refresh_token=; Path=/api/auth; Max-Age=0 (쿠키 삭제)",
+                "style" : "simple"
+              }
+            }
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "비밀번호 누락 (COMMON_400) 또는 불일치 (USER_001), details.password"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "토큰 없음·만료·이미 탈퇴 (AUTH_401)"
+          }
+        },
+        "summary" : "회원 탈퇴",
+        "tags" : [ "회원" ]
+      },
       "get" : {
         "description" : "email·role을 포함한 내 정보를 준다.",
         "operationId" : "getMe",

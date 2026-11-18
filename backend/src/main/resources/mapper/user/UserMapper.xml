@@ -35,4 +35,19 @@
         SET nickname = #{nickname}, bio = #{bio}, level = #{level}
         WHERE id = #{id}
     </update>
+
+    <!--
+      탈퇴 마스킹 (F-03). email에는 @가 없고 nickname의 #은 가입 패턴 밖이라 새 가입과 UNIQUE가 겹치지 않는다(재가입 허용).
+      password_hash는 BCrypt 형식이 아니므로 어떤 비밀번호와도 맞지 않는다. 화면 표시는 status로 "탈퇴한 사용자"를 쓴다.
+    -->
+    <update id="withdraw">
+        UPDATE users
+        SET status = 'WITHDRAWN',
+            withdrawn_at = NOW(),
+            email = CONCAT('withdrawn:', id),
+            nickname = CONCAT('#탈퇴', id),
+            bio = NULL,
+            password_hash = '!WITHDRAWN'
+        WHERE id = #{id} AND status = 'ACTIVE'
+    </update>
 </mapper>

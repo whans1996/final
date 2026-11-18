@@ -30,4 +30,7 @@ public interface UserMapper {
             @Param("nickname") String nickname,
             @Param("bio") String bio,
             @Param("level") Level level);
+
+    /** 탈퇴 처리: status·withdrawn_at을 채우고 개인정보를 마스킹한다 (F-03 AC6). 활성 회원만 바꾸며 바뀐 행 수를 돌려준다. */
+    int withdraw(long id);
 }

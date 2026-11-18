@@ -112,6 +112,14 @@ public class UserService {
         return getMe(userId);
     }
 
+    /** 탈퇴 마스킹 (F-03). 그 사이 다른 요청이 먼저 탈퇴시켰으면 AUTH_401. 다른 데이터 정리는 UserWithdrawalService가 한다. */
+    @Transactional
+    public void markWithdrawn(long userId) {
+        if (userMapper.withdraw(userId) == 0) {
+            throw new BusinessException(ErrorCode.AUTH_401);
+        }
+    }
+
     private static String emptyToNull(String value) {
         return value.isEmpty() ? null : value;
     }

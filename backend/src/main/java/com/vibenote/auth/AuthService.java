@@ -113,6 +113,12 @@ public class AuthService {
         }
     }
 
+    /** 그 회원의 모든 기기 세션(Refresh 토큰)을 폐기한다 (탈퇴, F-03). */
+    @Transactional
+    public void revokeAll(long userId) {
+        refreshTokenMapper.deleteByUserId(userId);
+    }
+
     private IssuedTokens issue(User user) {
         String refreshToken = newRefreshToken();
         refreshTokenMapper.insert(

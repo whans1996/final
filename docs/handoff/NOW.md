@@ -12,14 +12,15 @@ F-03 프로필·탈퇴 — **/implement 진행 중** (`docs/specs/F-03-profile.m
 ## 진행
 
 - ✅ spec 승인 커밋 b619923
-- 🟡 AC1~AC5 구현 완료, **미커밋** (AC1·2·4·5 green 확인, AC3 green 확인 중): `ErrorCode` +USER_404·USER_001, `User.createdAt`, `UserMapper`(+existsByNicknameExceptId·updateProfile), dto `UpdateProfileRequest`·`MyProfileResponse`·`UserProfileResponse`·`UserStatsResponse`, `UserService.getActiveMember/getPublicMember/getMe/getPublicProfile/updateMe`, `UserStatsService`+`UserStatsMapper.xml`, `UserController`(GET·PATCH /me, GET /{id:\d+}, /{id:\d+}/stats), `SecurityConfig.PUBLIC_GET_PATHS`(GET 전용)
+- ✅ AC1~AC5 green·커밋 f913ad4 (BE 105): `ErrorCode` +USER_404·USER_001, `User.createdAt`, `UserMapper`(+existsByNicknameExceptId·updateProfile), dto `UpdateProfileRequest`·`MyProfileResponse`·`UserProfileResponse`·`UserStatsResponse`, `UserService.getActiveMember/getPublicMember/getMe/getPublicProfile/updateMe`, `UserStatsService`+`UserStatsMapper.xml`, `UserController`(GET·PATCH /me, GET /{id:\d+}, /{id:\d+}/stats), `SecurityConfig.PUBLIC_GET_PATHS`(GET 전용)
 - 테스트: `user/UserTestSupport`, `UserProfileApiTest`, `UserStatsApiTest`, `UserServiceTest#AC5_수정_저장_시_...`, `SecurityConfigTest#F03_공개_프로필_GET만_...`
 - conventions 3절 USER_404·USER_001, backend/CLAUDE.md 통계 문구(분석 수는 삭제 제외) 반영
 
 ## 바로 다음 할 일
 
-1. ✅ AC1~AC5 커밋
-2. AC6~8 `user/WithdrawalApiTest` 먼저(red) → `UserWithdrawalService`(UserMapper·PasswordEncoder·AuthService·FollowService), `AuthService.revokeAll`, `RefreshTokenMapper.deleteByUserId`, `follow/FollowService.removeAllOf`+`FollowMapper.xml`, `dto/WithdrawRequest`, `UserMapper.withdraw`(email `withdrawn:{id}`, nickname `#탈퇴{id}`), DELETE /me(204 + `RefreshTokenCookie.clear()`)
+1. ✅ AC6~8 green·커밋 (BE 110, 72바이트 초과 비밀번호 테스트 추가). 구현한 것: `UserWithdrawalService`(UserMapper·PasswordEncoder·AuthService·FollowService), `AuthService.revokeAll`, `RefreshTokenMapper.deleteByUserId`, `follow/FollowService.removeAllOf`+`FollowMapper.xml`, `dto/WithdrawRequest`, `UserMapper.withdraw`(email `withdrawn:{id}`, nickname `#탈퇴{id}`), DELETE /me(204 + `RefreshTokenCookie.clear()`)
+
+2. 🟡 FE AC9·AC10 테스트 작성(red 예정, 미커밋): `src/api/__tests__/users.spec.js`, `views/__tests__/UserProfileView.spec.js`·`MySettingsView.spec.js`, `stores/__tests__/auth.spec.js`(updateUser), `viewTestUtils.mountAt`에 beforeNavigate 옵션 → 구현: `src/api/users.js`, `stores/auth.js updateUser`, `views/UserProfileView.vue`(/users/:id), `views/MySettingsView.vue`(/me/settings, requiresAuth), `App.vue` 헤더 닉네임 링크(a.nickname)
 
 ## 막힌 점 / 결정 필요
 
