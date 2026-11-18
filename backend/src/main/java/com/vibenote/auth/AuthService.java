@@ -15,6 +15,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.Base64;
 import java.util.HexFormat;
+import java.util.Optional;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -90,19 +91,19 @@ public class AuthService {
         String hash = sha256(refreshToken);
         RefreshTokenMapper.StoredRefreshToken stored =
                 refreshTokenMapper.findByHash(hash).orElseThrow(UnknownRefreshTokenException::new);
+        // 잠금 순서를 users → refresh_tokens로 맞춘다. 탈퇴도 users(X)를 먼저 잠그므로 순서가 엇갈려 데드락이 나지 않는다.
+        // role·status는 Access 토큰이 아니라 DB에서 다시 읽는다 (탈퇴·권한 변경 반영)
+        Optional<User> user = userService.findByIdForShare(stored.userId());
         if (refreshTokenMapper.deleteByHash(hash) == 0) {
             throw new UnknownRefreshTokenException();
         }
         if (stored.expired()) {
             throw new BusinessException(ErrorCode.AUTH_002);
         }
-        // role·status는 Access 토큰이 아니라 DB에서 다시 읽는다 (탈퇴·권한 변경 반영)
-        User user =
-                userService
-                        .findById(stored.userId())
-                        .filter(User::isActive)
+        User member =
+                user.filter(User::isActive)
                         .orElseThrow(() -> new BusinessException(ErrorCode.AUTH_002));
-        return issue(user, ErrorCode.AUTH_002);
+        return issue(member, ErrorCode.AUTH_002);
     }
 
     /** 그 토큰의 행만 지운다 (다른 기기 세션은 유지). 토큰이 없거나 모르는 값이어도 조용히 끝낸다. */

@@ -6,16 +6,20 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.vibenote.common.Level;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.ResultActions;
 
 /** F-03 프로필 조회·수정 (docs/specs/F-03-profile.md AC1, AC2, AC4, AC5). */
 class UserProfileApiTest extends UserTestSupport {
+
+    @Autowired UserMapper userMapper;
 
     private ResultActions patchMe(long userId, String json) throws Exception {
         return mockMvc.perform(
@@ -163,5 +167,21 @@ class UserProfileApiTest extends UserTestSupport {
                 .andExpect(jsonPath("$.details.nickname").value("이미 사용 중인 닉네임입니다."));
 
         assertThat(column("level", id)).isEqualTo("BEGINNER");
+    }
+
+    @Test
+    void AC4_null인_필드는_SQL이_건드리지_않아_동시에_바뀐_값을_지킨다() {
+        long id = createUser("user@example.com", "코딩초보");
+        // 다른 요청이 먼저 닉네임·소개를 바꿔 커밋한 상태
+        jdbc.update("UPDATE users SET nickname = '먼저바꿈', bio = '먼저' WHERE id = ?", id);
+
+        assertThat(userMapper.updateProfile(id, null, null, Level.JUNIOR)).isEqualTo(1);
+        assertThat(column("nickname", id)).isEqualTo("먼저바꿈");
+        assertThat(column("bio", id)).isEqualTo("먼저");
+        assertThat(column("level", id)).isEqualTo("JUNIOR");
+
+        userMapper.updateProfile(id, null, "", null);
+        assertThat(column("bio", id)).isNull();
+        assertThat(column("nickname", id)).isEqualTo("먼저바꿈");
     }
 }

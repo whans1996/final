@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.catchThrowableOfType;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -20,6 +21,7 @@ import com.vibenote.user.domain.User;
 import java.time.Duration;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
+import org.mockito.InOrder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 /**
@@ -92,7 +94,7 @@ class AuthServiceTest {
         User user = User.newMember("user@example.com", "hashed", "코딩초보", Level.BEGINNER);
         user.setId(7L);
         UserService userService = mock(UserService.class);
-        given(userService.findById(7L)).willReturn(Optional.of(user));
+        given(userService.findByIdForShare(7L)).willReturn(Optional.of(user));
         RefreshTokenMapper mapper = mock(RefreshTokenMapper.class);
         given(mapper.findByHash(anyString()))
                 .willReturn(Optional.of(new RefreshTokenMapper.StoredRefreshToken(1L, 7L, false)));
@@ -112,5 +114,33 @@ class AuthServiceTest {
 
         assertThat(e.getErrorCode()).isEqualTo(ErrorCode.AUTH_002);
         verify(tokenProvider, never()).createAccessToken(anyLong(), anyString());
+    }
+
+    @Test
+    void F03_재발급은_회원_행을_먼저_잠근_뒤_토큰을_지운다() {
+        // Codex 리뷰: 탈퇴는 users(X) → refresh_tokens 순서로 잠근다. 재발급도 users(S)를 먼저 잠가야 데드락이 나지 않는다
+        User user = User.newMember("user@example.com", "hashed", "코딩초보", Level.BEGINNER);
+        user.setId(7L);
+        UserService userService = mock(UserService.class);
+        given(userService.findByIdForShare(7L)).willReturn(Optional.of(user));
+        RefreshTokenMapper mapper = mock(RefreshTokenMapper.class);
+        given(mapper.findByHash(anyString()))
+                .willReturn(Optional.of(new RefreshTokenMapper.StoredRefreshToken(1L, 7L, false)));
+        given(mapper.deleteByHash(anyString())).willReturn(1);
+        given(mapper.insert(anyLong(), anyString(), anyLong())).willReturn(1);
+        AuthService service =
+                new AuthService(
+                        userService,
+                        mapper,
+                        mock(JwtTokenProvider.class),
+                        PROPERTIES,
+                        mock(PasswordEncoder.class));
+
+        service.refresh("token");
+
+        InOrder order = inOrder(userService, mapper);
+        order.verify(userService).findByIdForShare(7L);
+        order.verify(mapper).deleteByHash(anyString());
+        order.verify(mapper).insert(anyLong(), anyString(), anyLong());
     }
 }

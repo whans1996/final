@@ -8,6 +8,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
 import com.vibenote.common.Level;
 import com.vibenote.common.exception.BusinessException;
@@ -109,5 +110,20 @@ class UserServiceTest {
                                         1L, new UpdateProfileRequest("주니어", null, null)));
 
         assertThat(e.getErrorCode()).isEqualTo(ErrorCode.AUTH_401);
+    }
+
+    @Test
+    void AC4_보내지_않은_필드는_null로_넘겨_동시_수정을_덮어쓰지_않는다() {
+        // Codex 리뷰: 읽은 값으로 세 컬럼을 모두 쓰면 동시에 온 다른 필드 수정이 사라진다
+        User user = User.newMember("user@example.com", "hashed", "코딩초보", Level.BEGINNER);
+        user.setId(1L);
+        given(userMapper.findById(1L)).willReturn(Optional.of(user));
+        given(userMapper.updateProfile(anyLong(), any(), any(), any())).willReturn(1);
+
+        userService.updateMe(1L, new UpdateProfileRequest(null, null, "JUNIOR"));
+        userService.updateMe(1L, new UpdateProfileRequest(null, "", null));
+
+        verify(userMapper).updateProfile(1L, null, null, Level.JUNIOR);
+        verify(userMapper).updateProfile(1L, null, "", null);
     }
 }

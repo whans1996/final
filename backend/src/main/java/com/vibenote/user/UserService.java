@@ -1,6 +1,5 @@
 package com.vibenote.user;
 
-import com.vibenote.common.Level;
 import com.vibenote.common.exception.BusinessException;
 import com.vibenote.common.exception.ErrorCode;
 import com.vibenote.user.domain.User;
@@ -68,6 +67,14 @@ public class UserService {
         return userMapper.findById(id);
     }
 
+    /**
+     * 회원 행을 공유 잠금으로 읽는다. users → refresh_tokens 순서로 잠가 탈퇴(users X 잠금 후 토큰 삭제)와 데드락이 나지 않게 할 때 쓴다
+     * (F-03, Codex 리뷰).
+     */
+    public Optional<User> findByIdForShare(long id) {
+        return userMapper.findByIdForShare(id);
+    }
+
     /** 인증된 회원 본인. Access 토큰이 남아 있어도 탈퇴했으면 AUTH_401 (필터는 DB를 보지 않는다). */
     public User getActiveMember(long userId) {
         return userMapper
@@ -92,20 +99,24 @@ public class UserService {
         return UserProfileResponse.from(getPublicMember(id));
     }
 
-    /** 보낸 필드만 바꾼다. 다른 회원의 닉네임이면 USER_409 (details.nickname). */
+    /**
+     * 보낸 필드만 바꾼다 (null은 SQL이 건드리지 않아 동시에 온 다른 필드 수정을 덮어쓰지 않는다. bio ''는 지움). 다른 회원의 닉네임이면 USER_409
+     * (details.nickname).
+     */
     @Transactional
     public MyProfileResponse updateMe(long userId, UpdateProfileRequest request) {
-        User user = getActiveMember(userId);
-        String nickname = request.nickname() == null ? user.getNickname() : request.nickname();
-        String bio = request.bio() == null ? user.getBio() : emptyToNull(request.bio());
-        Level level = request.levelValue() == null ? user.getLevel() : request.levelValue();
-
-        if (request.nickname() != null && userMapper.existsByNicknameExceptId(nickname, userId)) {
+        getActiveMember(userId);
+        String nickname = request.nickname();
+        if (nickname == null && request.bio() == null && request.levelValue() == null) {
+            return getMe(userId);
+        }
+        if (nickname != null && userMapper.existsByNicknameExceptId(nickname, userId)) {
             throw new BusinessException(ErrorCode.USER_409, Map.of("nickname", NICKNAME_TAKEN));
         }
         int updated;
         try {
-            updated = userMapper.updateProfile(userId, nickname, bio, level);
+            updated =
+                    userMapper.updateProfile(userId, nickname, request.bio(), request.levelValue());
         } catch (DuplicateKeyException e) {
             // 중복 확인과 저장 사이에 다른 회원이 같은 닉네임을 가져간 경우 (바꾸는 UNIQUE 컬럼은 닉네임뿐이다)
             throw new BusinessException(ErrorCode.USER_409, Map.of("nickname", NICKNAME_TAKEN));
@@ -123,10 +134,6 @@ public class UserService {
         if (userMapper.withdraw(userId) == 0) {
             throw new BusinessException(ErrorCode.AUTH_401);
         }
-    }
-
-    private static String emptyToNull(String value) {
-        return value.isEmpty() ? null : value;
     }
 
     private static Map<String, String> takenField(DuplicateKeyException e) {

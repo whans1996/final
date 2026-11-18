@@ -7,7 +7,7 @@
 
 ## 현재 기능
 
-F-03 프로필·탈퇴 — **PR #4 열림 (develop 대상, 리뷰어 미지정), CI·Codex 리뷰 대기**
+F-03 프로필·탈퇴 — **PR #4 (CI 초록), Codex 리뷰 P2 2건 반영 중**
 
 ## 진행
 
@@ -21,9 +21,9 @@ F-03 프로필·탈퇴 — **PR #4 열림 (develop 대상, 리뷰어 미지정),
 
 ## 바로 다음 할 일
 
-1. `gh pr checks 4`로 CI 확인 (실패 시 `gh run view --log-failed` 요약). 스크린샷 `.harness/screens/f03_*.png` 5장은 사람이 PR에 첨부
-2. Codex 자동 리뷰 확인: `gh api repos/whans1996/final/pulls/4/comments` (chatgpt-codex 봇), `.../pulls/4/reviews`, `.../issues/4/comments`. 타당하면 실패 테스트부터 써서 `fix(F-03): ... (Codex 리뷰)`
-3. CI 초록이면 영역 오너가 GitHub에서 머지 (gh pr merge 금지) → 머지 후 spec DONE·작업로그·/handoff
+1. PR #4 CI 초록(4개 pass). Codex P2 2건: 반영·커밋 완료 (verify all: BE 120, FE 74 green) — `UserMapper.xml updateProfile` `<set><if>`(보낸 필드만), `UserService.updateMe` 요청 값 그대로·전부 null이면 생략, `AuthService.refresh` users `FOR SHARE` 먼저(`UserService.findByIdForShare`). 테스트 `UserServiceTest#AC4_보내지_않은...`, `UserProfileApiTest#AC4_null인_필드는...`, `AuthServiceTest#F03_재발급은_회원_행을_먼저...`, `UserWithdrawalServiceTest`. PR 설명 `.harness/pr-F-03.md`에 Codex 반영 추가함 → `gh pr edit 4 --body-file .harness/pr-F-03.md`
+2. push 후 CI 확인 → 사용자 확인 후 `gh pr comment 4 --body "@codex review"`로 재리뷰
+3. CI 초록이면 영역 오너가 머지 (gh pr merge 금지). 스크린샷 `.harness/screens/f03_*.png` 5장은 사람이 첨부
 
 ## 막힌 점 / 결정 필요
 
