@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.regex.Pattern;
+import java.util.zip.CRC32;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipException;
 import java.util.zip.ZipFile;
@@ -222,13 +223,30 @@ public class ZipArchiveReader {
         return dot < 0 ? "" : path.substring(dot + 1).toLowerCase(Locale.ROOT);
     }
 
-    /** 최대 limit 바이트까지 읽는다. 더 있으면 null (건너뛸 파일). */
+    /**
+     * 최대 limit 바이트까지 읽는다. 더 있으면 null (건너뛸 파일).
+     *
+     * <p>{@code ZipFile.getInputStream()}은 엔트리 CRC를 검사하지 않으므로, 헤더는 멀쩡하고 내용만 바뀐 ZIP도 끝까지 읽힌다. 다 읽은
+     * 엔트리는 CRC를 직접 비교해 다르면 ANALYSIS_400으로 거부한다.
+     */
     private static byte[] readAtMost(ZipFile zipFile, ZipEntry entry, long limit)
             throws IOException {
         try (InputStream in = zipFile.getInputStream(entry)) {
             byte[] bytes = in.readNBytes(Math.toIntExact(limit));
-            return in.read() == -1 ? bytes : null;
+            if (in.read() != -1) {
+                return null;
+            }
+            if (entry.getCrc() != -1 && crc32(bytes) != entry.getCrc()) {
+                throw new AnalysisFailedException(ErrorCode.ANALYSIS_400);
+            }
+            return bytes;
         }
+    }
+
+    private static long crc32(byte[] bytes) {
+        CRC32 crc = new CRC32();
+        crc.update(bytes);
+        return crc.getValue();
     }
 
     private record Candidate(ZipEntry entry, String path) {}

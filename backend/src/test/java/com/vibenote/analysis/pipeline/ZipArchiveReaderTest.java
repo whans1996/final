@@ -14,6 +14,7 @@ import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.zip.CRC32;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 import org.junit.jupiter.api.Test;
@@ -261,6 +262,32 @@ class ZipArchiveReaderTest {
         Files.write(broken, new byte[] {'P', 'K', 3, 4, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13});
 
         assertFails(broken, ErrorCode.ANALYSIS_400, "ZIP 파일을 읽을 수 없습니다");
+    }
+
+    @Test
+    void AC9_헤더는_멀쩡하고_내용만_바뀐_ZIP은_CRC_불일치로_ANALYSIS_400() throws IOException {
+        byte[] content = "class A { int n = 1; }".getBytes(StandardCharsets.UTF_8);
+        CRC32 crc = new CRC32();
+        crc.update(content);
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+        try (ZipOutputStream out = new ZipOutputStream(bytes)) {
+            ZipEntry entry = new ZipEntry("p/A.java");
+            entry.setMethod(ZipEntry.STORED);
+            entry.setSize(content.length);
+            entry.setCompressedSize(content.length);
+            entry.setCrc(crc.getValue());
+            out.putNextEntry(entry);
+            out.write(content);
+            out.closeEntry();
+        }
+        byte[] raw = bytes.toByteArray();
+        String latin1 = new String(raw, StandardCharsets.ISO_8859_1);
+        int at = latin1.indexOf("int n = 1") + "int n = ".length();
+        raw[at] = '9';
+        Path tampered = dir.resolve("tampered.zip");
+        Files.write(tampered, raw);
+
+        assertFails(tampered, ErrorCode.ANALYSIS_400, "ZIP 파일을 읽을 수 없습니다");
     }
 
     @Test
