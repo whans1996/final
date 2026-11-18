@@ -6,6 +6,7 @@ import { fetchAnalysisFile, fetchAnalysisFiles } from '@/api/analyses'
 import { errorCode, errorMessage } from '@/api/http'
 import { groupByLayer, layerLabel } from '@/utils/layers'
 import CodeViewer from '@/components/analysis/CodeViewer.vue'
+import FilePath from '@/components/analysis/FilePath.vue'
 
 const props = defineProps({
   analysisId: { type: Number, required: true },
@@ -91,7 +92,7 @@ watch(() => [props.analysisId, props.selectedFileId], loadFile, { immediate: tru
                 :aria-current="item.id === selectedFileId ? 'true' : undefined"
                 @click="emit('select', item.id)"
               >
-                <span class="path">{{ item.path }}</span>
+                <FilePath class="path" :path="item.path" />
                 <span v-if="item.role" class="role">{{ item.role }}</span>
               </button>
             </li>
@@ -115,7 +116,7 @@ watch(() => [props.analysisId, props.selectedFileId], loadFile, { immediate: tru
       <template v-else-if="file">
         <header>
           <span class="layer">{{ layerLabel(file.layer) }}</span>
-          <h3 class="path">{{ file.path }}</h3>
+          <h3 class="path"><FilePath :path="file.path" /></h3>
           <p v-if="file.role" class="role">{{ file.role }}</p>
         </header>
         <p v-if="file.summary" class="summary">{{ file.summary }}</p>

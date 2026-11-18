@@ -274,9 +274,9 @@ LLM은 테스트에서 실제로 부르지 않는다. 파이프라인 통합 테
 - [x] BE 구현 (green) — 프롬프트 6개, fixture 2개
 - [x] FE 구현 (green) — AC13~AC15, FE 132개 green
 - [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
-- [ ] contract-checker 통과
-- [ ] ui-verifier 통과 (데스크톱·모바일)
+- [x] contract-checker 통과 (FE 포함 불일치 0)
+- [x] ui-verifier 통과 (데스크톱·모바일, 375px 가로 스크롤 없음)
 - [ ] reviewer 지적 사항 반영
-- [ ] 산출물 반영: `03-ERD.md`(role·overview), `06-화면설계서.md` SC-07 개요·파일 탭, `04-WBS.md`·`05-간트차트.md` F-06 실적, `09-데이터셋.md`·`datasets.json` DS-06, `08-외부API-생성형AI-활용.md` §1.3 프롬프트 설계
+- [x] 산출물 반영: `03-ERD.md`(role·overview), `06-화면설계서.md` SC-07 개요·파일 탭, `04-WBS.md`·`05-간트차트.md` F-06 실적, `09-데이터셋.md`·`datasets.json` DS-06, `08-외부API-생성형AI-활용.md` §1.3 프롬프트 설계
 - [ ] PR CI 초록
 - [ ] 상태 DONE (PR 머지 전 마지막 커밋)

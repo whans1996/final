@@ -4,6 +4,7 @@
 import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import { layerLabel, sortByLayer } from '@/utils/layers'
+import FilePath from '@/components/analysis/FilePath.vue'
 
 const props = defineProps({
   overview: { type: Object, default: null },
@@ -50,7 +51,9 @@ function fileLink(fileId) {
       <h2>이 순서로 읽어 보세요</h2>
       <ol class="reading">
         <li v-for="item in readingOrder" :key="item.fileId">
-          <RouterLink :to="fileLink(item.fileId)" class="path">{{ item.path }}</RouterLink>
+          <RouterLink :to="fileLink(item.fileId)" class="path"
+            ><FilePath :path="item.path"
+          /></RouterLink>
           <p class="hint">{{ item.reason }}</p>
         </li>
       </ol>
