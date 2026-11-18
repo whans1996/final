@@ -13,12 +13,14 @@
 
 - ✅ FE: vitest 5.1·jsdom 31·oxlint/eslint-plugin-oxlint 1.94·eslint-plugin-vue 10.12·prettier 3.10.1 고정. verify fe 통과(76 테스트), 설정 변경 불필요
 - ✅ setup.mjs JDK 안내, CLAUDE.md·backend/CLAUDE.md(Boot 4 채택, Jackson 3 import 규칙, JSON 컬럼 null 필드 래퍼)·README·환경설정.md 1절·5절·기획서 202행 + 결정 로그, 작업로그
-- ⏳ `/pr-review` → PR ② 생성
+- ✅ reviewer: 반드시 수정 1건(환경설정.md 경로 백슬래시 손상, c1959e0), 권장 2건(Node 하한 24.15·JacksonException 패키지, e4d9a58) 반영. ui-check `/`·`/concepts` 통과
+- ✅ PR #13 생성. CI 초록 4/4, Codex ✅ e4d9a58
+- ⏳ PR #13 머지 대기 (영역 오너가 GitHub에서)
 
 ## 바로 다음 할 일
 
-1. `/pr-review` (reviewer, ui-check `/`), PR 본문 후속 작업: 시드 카드 Boot 3 테스트 API·"빌드는 17" 문구 갱신, Lombok 제거 검토, npm audit 19건(업그레이드 전과 동일, picomatch 수정 버전 없음)
-2. (사람) PR ② 머지 → `/clear` → F-05 분석 요청 `/spec`(A), F-09·F-10 `/spec`(B, category 필터 6종)
+1. (사람) PR #13 머지 → `/clear` → `/pickup` → F-05 분석 요청 `/spec`(A), F-09·F-10 `/spec`(B, category 필터 6종)
+2. 후속(PR #13 본문): 시드 카드 Boot 3 테스트 API·`JsonProcessingException`·"빌드는 17" 문구 갱신, Lombok 제거 검토. npm audit 19건은 업그레이드 전과 동일(picomatch 수정 버전 없음)
 
 ## 막힌 점 / 결정 필요
 
