@@ -44,6 +44,10 @@ public final class SecretRedactor {
     private static final Pattern CONFIG_ENTRY =
             Pattern.compile("([ \\t]*+(?:-[ \\t]++)?([^\\s:=#{]++)[ \\t]*+[:=][ \\t]*+)(.*)");
 
+    /** .properties 한 줄. {@link #CONFIG_ENTRY}와 같되 키와 값을 공백만으로도 나눌 수 있다 ({@code key value}). */
+    private static final Pattern PROPERTIES_ENTRY =
+            Pattern.compile("([ \\t]*+([^\\s:=#!]++)(?:[ \\t]*+[:=][ \\t]*+|[ \\t]++))(.*)");
+
     /**
      * YAML 흐름 매핑 안의 항목 하나({@code {key: value, ...}}). group 1: 여는 기호·키·구분자, group 2: 키, group 3: 값.
      * 따옴표 문자열과 {@code ${...}} 안의 쉼표·중괄호는 값에 포함하고, 길이를 제한해 긴 줄에서도 선형 시간에 끝난다. 값에 '{'를 넣지 않아 중첩 매핑은
@@ -84,6 +88,11 @@ public final class SecretRedactor {
                     yaml
                             ? ConfigSecretValues.fromYaml(result)
                             : ConfigSecretValues.fromProperties(result);
+            // 이스케이프·줄 이음으로 해석한 값이 원문 글자와 다르면 위치를 찾을 수 없으므로 파일 전체를 가린다
+            String source = result;
+            if (secrets.stream().anyMatch(secret -> !source.contains(secret))) {
+                return REDACTED;
+            }
             result = redactEverywhere(redactConfigValues(result, yaml), secrets);
         }
         return result;
@@ -148,7 +157,7 @@ public final class SecretRedactor {
             if (yaml && line.indexOf('{') >= 0) {
                 line = redactFlowEntries(line);
             }
-            Matcher m = CONFIG_ENTRY.matcher(line);
+            Matcher m = (yaml ? CONFIG_ENTRY : PROPERTIES_ENTRY).matcher(line);
             if (m.matches() && isSecretKey(m.group(2))) {
                 if (yaml && YAML_BLOCK_SCALAR.matcher(m.group(3)).matches()) {
                     blockIndent = m.start(2);

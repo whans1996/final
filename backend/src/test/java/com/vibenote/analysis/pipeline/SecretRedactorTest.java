@@ -248,23 +248,48 @@ class SecretRedactorTest {
                 String.join(
                         "\n",
                         "spring.datasource.password=\\",
-                        "    hunter2\\",
-                        "    more",
+                        "    hunter2",
                         "jwt.secret=ab\\\\",
                         "server.port=8080");
 
         String redacted = SecretRedactor.redact("application.properties", props);
 
         assertThat(redacted)
-                .doesNotContain("hunter2", "more", "ab")
+                .doesNotContain("hunter2", "ab")
                 .isEqualTo(
                         String.join(
                                 "\n",
                                 "spring.datasource.password=[REDACTED]",
                                 "    [REDACTED]",
-                                "    [REDACTED]",
                                 "jwt.secret=[REDACTED]",
                                 "server.port=8080"));
+    }
+
+    @Test
+    void AC6_원문에_그대로_없는_비밀_값이_있으면_파일_전체를_가린다() {
+        // 이스케이프·줄 이음으로 해석한 값이 원문 글자와 다르면 위치를 찾을 수 없다
+        assertThat(
+                        SecretRedactor.redact(
+                                "application.properties",
+                                "spring.datasource.password hun\\u0074er2\nserver.port 8080"))
+                .isEqualTo("[REDACTED]");
+        assertThat(
+                        SecretRedactor.redact(
+                                "application.yml", "secret:\n  key: \"hun\\x74er2\"\nname: x"))
+                .isEqualTo("[REDACTED]");
+        assertThat(
+                        SecretRedactor.redact(
+                                "application.properties", "password=hun\\\n    ter2\nport=1"))
+                .isEqualTo("[REDACTED]");
+    }
+
+    @Test
+    void AC6_properties_공백_구분_항목도_줄_단위로_가린다() {
+        // 파서가 읽지 못하는 파일(잘못된 유니코드 이스케이프)이라도 1차에서 가린다
+        String props = "spring.datasource.password hunter2\nbad=\\uZZZZ";
+
+        assertThat(SecretRedactor.redact("application.properties", props))
+                .isEqualTo("spring.datasource.password [REDACTED]\nbad=\\uZZZZ");
     }
 
     @Test
