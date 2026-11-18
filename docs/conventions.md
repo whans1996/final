@@ -99,6 +99,9 @@
 - 본문은 `.github/pull_request_template.md`를 채운다 (`/pr-review`가 생성).
 - **리뷰는 reviewer 에이전트(`/pr-review`)와 Codex 봇이 한다.** 사람 리뷰 승인은 받지 않는다.
 - **CI가 초록이고 Codex가 COMPLETE일 때만** 영역 오너가 머지한다. wip 커밋이 섞여 있으면 **Squash and merge**.
+- **리뷰 지적 처리 기준**: 같은 PR에서 고치는 것은 spec 수용 기준이나 보안 기준(인증·인가, 비밀 누출, 경로 조작, 주입, 서비스 중단)을 깨는 지적만이다. 그 밖의 지적은 `follow-up` 라벨 이슈로 넘기고 PR 댓글로 이슈 번호를 답한다. 같은 주제로 재리뷰를 2회 했는데 또 지적이 나오면 사람이 정한다.
+- **후속 작업은 GitHub Issues(`follow-up` 라벨)로 관리한다.** NOW.md·spec·PR 설명에는 이슈 번호만 적는다.
+- **완료 표시(spec DONE, WBS·간트 실적)는 머지 전 마지막 커밋으로 PR 안에서 한다.** 머지 후 정리 PR은 만들지 않는다.
 - API를 바꾼 PR은 `docs/api/openapi.json` 변경을 포함해야 한다 (CI가 불일치를 실패 처리).
 - GitLab(lab.ssafy.com)은 최종 제출 전용이다. 개발 중에는 push하지 않는다.
 
