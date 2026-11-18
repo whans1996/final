@@ -27,7 +27,7 @@ class OllamaLlmClientTest {
             new OllamaLlmClient(
                     builder,
                     new LlmProperties.Ollama(
-                            "http://ollama.test:11434", "qwen-test", Duration.ofSeconds(5)));
+                            "http://ollama.test:11434", "qwen-test", Duration.ofSeconds(5), 16384));
 
     final LlmRequest request = new LlmRequest(LlmStage.FILE, Level.JUNIOR, "설명해 줘");
 
@@ -39,7 +39,8 @@ class OllamaLlmClientTest {
                         content()
                                 .json(
                                         """
-                                        {"model":"qwen-test","prompt":"설명해 줘","format":"json","stream":false}
+                                        {"model":"qwen-test","prompt":"설명해 줘","format":"json","stream":false,
+                                         "options":{"num_ctx":16384}}
                                         """,
                                         JsonCompareMode.STRICT))
                 .andRespond(
@@ -55,6 +56,37 @@ class OllamaLlmClientTest {
         server.verify();
         assertThat(response)
                 .isEqualTo(new LlmResponse("{\"summary\":\"요약\"}", "qwen-test", 21, 43));
+    }
+
+    @Test
+    void AC12_num_ctx를_보낸다() {
+        RestClient.Builder b = RestClient.builder();
+        MockRestServiceServer s = MockRestServiceServer.bindTo(b).build();
+        OllamaLlmClient c =
+                new OllamaLlmClient(
+                        b,
+                        new LlmProperties.Ollama(
+                                "http://ollama.test:11434",
+                                "qwen-test",
+                                Duration.ofSeconds(5),
+                                8192));
+        s.expect(requestTo("http://ollama.test:11434/api/generate"))
+                .andExpect(
+                        content()
+                                .json(
+                                        """
+                                        {"model":"qwen-test","prompt":"설명해 줘","format":"json","stream":false,
+                                         "options":{"num_ctx":8192}}
+                                        """,
+                                        JsonCompareMode.STRICT))
+                .andRespond(
+                        withSuccess(
+                                "{\"response\":\"{}\",\"prompt_eval_count\":1,\"eval_count\":1}",
+                                MediaType.APPLICATION_JSON));
+
+        c.complete(request);
+
+        s.verify();
     }
 
     @Test

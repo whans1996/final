@@ -1,7 +1,9 @@
 package com.vibenote.analysis;
 
 import com.vibenote.analysis.domain.Analysis;
+import com.vibenote.analysis.domain.AnalysisDetail;
 import com.vibenote.analysis.domain.AnalysisFile;
+import com.vibenote.analysis.explain.AnalysisOverview;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -45,6 +47,27 @@ public interface AnalysisMapper {
             @Param("now") LocalDateTime now);
 
     void insertFiles(@Param("files") List<AnalysisFile> files);
+
+    /** 분석의 파일 전체(content 포함), id 오름차순 = 선별 우선순위. 파이프라인 내부용. */
+    List<AnalysisFile> findFiles(long analysisId);
+
+    /** 분석의 파일 목록(content 제외), id 오름차순 (F-06 AC10). */
+    List<AnalysisFile> findFileSummaries(long analysisId);
+
+    /** 그 분석의 파일 하나(content 포함). 다른 분석의 파일이면 empty (F-06 AC11). */
+    Optional<AnalysisFile> findFile(
+            @Param("analysisId") long analysisId, @Param("fileId") long fileId);
+
+    /** 본인의 미삭제 분석 + overview + 파일 수 (F-06 AC9). */
+    Optional<AnalysisDetail> findOwnedDetail(@Param("id") long id, @Param("userId") long userId);
+
+    void updateOverview(@Param("id") long id, @Param("overview") AnalysisOverview overview);
+
+    void updateFileExplanation(
+            @Param("analysisId") long analysisId,
+            @Param("fileId") long fileId,
+            @Param("role") String role,
+            @Param("summary") String summary);
 
     /** 진행 중인 미삭제 분석을 모두 FAILED로 바꾼다 (progress는 그대로, 재시작 복구). */
     int failInterrupted(

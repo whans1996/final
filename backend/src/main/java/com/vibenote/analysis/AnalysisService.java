@@ -2,10 +2,15 @@ package com.vibenote.analysis;
 
 import com.vibenote.analysis.domain.Analysis;
 import com.vibenote.analysis.domain.AnalysisFile;
+import com.vibenote.analysis.dto.AnalysisDetailResponse;
+import com.vibenote.analysis.dto.AnalysisFileResponse;
+import com.vibenote.analysis.dto.AnalysisFileSummaryResponse;
 import com.vibenote.analysis.dto.AnalysisStatusResponse;
 import com.vibenote.analysis.dto.AnalysisSummaryResponse;
 import com.vibenote.analysis.dto.CreateAnalysisRequest;
 import com.vibenote.analysis.dto.CreateAnalysisResponse;
+import com.vibenote.analysis.explain.AnalysisOverview;
+import com.vibenote.analysis.explain.FileExplanation;
 import com.vibenote.analysis.pipeline.SelectedFile;
 import com.vibenote.common.Level;
 import com.vibenote.common.exception.BusinessException;
@@ -26,7 +31,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-/** 분석 요청 접수, 내 분석 목록, 진행 상태 (F-05a). 파이프라인 실행은 AnalysisPipeline이 한다. */
+/** 분석 요청 접수, 내 분석 목록, 진행 상태 (F-05a), 결과 조회 (F-06). 파이프라인 실행은 AnalysisPipeline이 한다. */
 @Service
 public class AnalysisService {
 
@@ -123,6 +128,66 @@ public class AnalysisService {
         if (!files.isEmpty()) {
             analysisMapper.insertFiles(
                     files.stream().map(f -> AnalysisFile.of(analysisId, f)).toList());
+        }
+    }
+
+    /** 파이프라인이 처리할 분석 (삭제 여부와 상관없음). 없으면 예기치 못한 오류다. */
+    public Analysis findForPipeline(long analysisId) {
+        return analysisMapper
+                .findById(analysisId)
+                .orElseThrow(() -> new IllegalStateException("분석 없음: " + analysisId));
+    }
+
+    /** 저장된 선별 파일 전체 (content 포함, id 오름차순). EXPLAINING 이후 단계의 입력이다. */
+    public List<AnalysisFile> findFiles(long analysisId) {
+        return analysisMapper.findFiles(analysisId);
+    }
+
+    /** 개요 저장 (EXPLAINING, F-06). LLM 호출과 분리한 짧은 트랜잭션. */
+    @Transactional
+    public void saveOverview(long analysisId, AnalysisOverview overview) {
+        analysisMapper.updateOverview(analysisId, overview);
+    }
+
+    /** 파일 묶음 하나의 역할·설명 저장 (EXPLAINING, F-06). */
+    @Transactional
+    public void saveFileExplanations(long analysisId, List<FileExplanation> explanations) {
+        for (FileExplanation e : explanations) {
+            analysisMapper.updateFileExplanation(analysisId, e.fileId(), e.role(), e.summary());
+        }
+    }
+
+    /** 내 미삭제 분석의 상세 (F-06 AC9). 진행 중이면 overview가 null일 수 있다. */
+    @Transactional(readOnly = true)
+    public AnalysisDetailResponse getDetail(long userId, long analysisId) {
+        return analysisMapper
+                .findOwnedDetail(analysisId, userId)
+                .map(AnalysisDetailResponse::from)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ANALYSIS_404));
+    }
+
+    /** 내 분석의 파일 목록 (content 제외, F-06 AC10). */
+    @Transactional(readOnly = true)
+    public List<AnalysisFileSummaryResponse> listFiles(long userId, long analysisId) {
+        requireOwned(userId, analysisId);
+        return analysisMapper.findFileSummaries(analysisId).stream()
+                .map(AnalysisFileSummaryResponse::from)
+                .toList();
+    }
+
+    /** 내 분석의 파일 하나 (F-06 AC11). 분석이 없으면 ANALYSIS_404, 파일이 그 분석 것이 아니면 ANALYSIS_001. */
+    @Transactional(readOnly = true)
+    public AnalysisFileResponse getFile(long userId, long analysisId, long fileId) {
+        requireOwned(userId, analysisId);
+        return analysisMapper
+                .findFile(analysisId, fileId)
+                .map(AnalysisFileResponse::from)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ANALYSIS_001));
+    }
+
+    private void requireOwned(long userId, long analysisId) {
+        if (analysisMapper.findOwned(analysisId, userId).isEmpty()) {
+            throw new BusinessException(ErrorCode.ANALYSIS_404);
         }
     }
 

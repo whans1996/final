@@ -1,5 +1,8 @@
 package com.vibenote.analysis;
 
+import com.vibenote.analysis.dto.AnalysisDetailResponse;
+import com.vibenote.analysis.dto.AnalysisFileResponse;
+import com.vibenote.analysis.dto.AnalysisFileSummaryResponse;
 import com.vibenote.analysis.dto.AnalysisStatusResponse;
 import com.vibenote.analysis.dto.AnalysisSummaryResponse;
 import com.vibenote.analysis.dto.CreateAnalysisRequest;
@@ -15,6 +18,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.util.List;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -28,8 +32,8 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-/** 분석 요청(ZIP), 내 분석 목록, 진행 상태 (F-05a). 결과 조회는 F-06, 수정·삭제·공개는 F-19. */
-@Tag(name = "분석", description = "프로젝트 분석 요청, 내 분석 목록, 진행 상태")
+/** 분석 요청(ZIP), 내 분석 목록, 진행 상태 (F-05a), 상세·파일 조회 (F-06). 수정·삭제·공개는 F-19. */
+@Tag(name = "분석", description = "프로젝트 분석 요청, 내 분석 목록, 진행 상태, 분석 결과(개요·파일) 조회")
 @RestController
 @RequestMapping("/api/analyses")
 public class AnalysisController {
@@ -120,5 +124,63 @@ public class AnalysisController {
     public AnalysisStatusResponse getStatus(
             @AuthenticationPrincipal AuthUser user, @PathVariable long id) {
         return analysisService.getStatus(user.id(), id);
+    }
+
+    @Operation(
+            summary = "분석 상세",
+            description =
+                    "내 분석의 정보와 개요(요약·기술 스택·레이어·읽는 순서·API 목록). 진행 중이거나 개요 생성에 실패했으면 overview가"
+                            + " null이다. LLM을 부르지 않는다.")
+    @ApiResponse(responseCode = "200", description = "조회 성공")
+    @ApiResponse(
+            responseCode = "401",
+            description = "토큰 없음·만료 (AUTH_401)",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(
+            responseCode = "404",
+            description = "없는 분석, 다른 회원의 분석, 삭제된 분석 (ANALYSIS_404)",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @GetMapping("/{id:\\d+}")
+    public AnalysisDetailResponse getDetail(
+            @AuthenticationPrincipal AuthUser user, @PathVariable long id) {
+        return analysisService.getDetail(user.id(), id);
+    }
+
+    @Operation(
+            summary = "분석 파일 목록",
+            description = "선별한 파일(최대 30개)을 선별 우선순위(id 오름차순)로 준다. 코드 내용은 단건 조회에서 받는다.")
+    @ApiResponse(responseCode = "200", description = "조회 성공 (파일 저장 전이면 빈 배열)")
+    @ApiResponse(
+            responseCode = "401",
+            description = "토큰 없음·만료 (AUTH_401)",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(
+            responseCode = "404",
+            description = "없는 분석, 다른 회원의 분석, 삭제된 분석 (ANALYSIS_404)",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @GetMapping("/{id:\\d+}/files")
+    public List<AnalysisFileSummaryResponse> listFiles(
+            @AuthenticationPrincipal AuthUser user, @PathVariable long id) {
+        return analysisService.listFiles(user.id(), id);
+    }
+
+    @Operation(
+            summary = "분석 파일 하나",
+            description = "파일의 역할·설명과 코드 내용. 키·비밀 설정값은 [REDACTED]로 가려져 있다.")
+    @ApiResponse(responseCode = "200", description = "조회 성공")
+    @ApiResponse(
+            responseCode = "401",
+            description = "토큰 없음·만료 (AUTH_401)",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(
+            responseCode = "404",
+            description = "없는 분석·다른 회원의 분석·삭제된 분석 (ANALYSIS_404), 그 분석의 파일이 아님 (ANALYSIS_001)",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @GetMapping("/{id:\\d+}/files/{fileId:\\d+}")
+    public AnalysisFileResponse getFile(
+            @AuthenticationPrincipal AuthUser user,
+            @PathVariable long id,
+            @PathVariable long fileId) {
+        return analysisService.getFile(user.id(), id, fileId);
     }
 }

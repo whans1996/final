@@ -55,12 +55,12 @@
 | `COMMON` | 검증 실패(`COMMON_400`), 없는 주소(`COMMON_404`), 허용되지 않은 메서드(`COMMON_405`), 업로드 크기 초과(`COMMON_413`), 지원하지 않는 Content-Type(`COMMON_415`), 서버 오류(`COMMON_500`) |
 | `AUTH` | 인증·토큰 (`AUTH_401` Access 토큰 없음/만료, `AUTH_403` 권한 없음, `AUTH_001` 로그인 실패, `AUTH_002` Refresh 무효·만료 → 다시 로그인) |
 | `USER` | 회원, 프로필, 팔로우 (`USER_409` 이메일·닉네임 중복, `details`에 필드 · `USER_404` 없거나 탈퇴한 회원 · `USER_001` 탈퇴 시 비밀번호 불일치, `details.password`) |
-| `ANALYSIS` | 분석 요청·파이프라인 (`ANALYSIS_413` 크기 초과, `ANALYSIS_415` 지원하지 않는 스택, `ANALYSIS_429` 일일 한도) |
+| `ANALYSIS` | 분석 요청·파이프라인 (`ANALYSIS_413` 크기 초과, `ANALYSIS_415` 지원하지 않는 스택, `ANALYSIS_429` 일일 한도, `ANALYSIS_001` 그 분석의 파일이 아님(404)) |
 | `CONCEPT` | 개념 카드, 리뷰, 찜 |
 | `QUIZ` | 퀴즈 |
 | `REVIEW_PLAN` | 복습 계획 |
 | `POST` | 게시글, 댓글 |
-| `LLM` | LLM 호출 실패·한도 (`LLM_503` 폴백까지 모두 응답 없음, 내부용 → 파이프라인 단계 FAILED) |
+| `LLM` | LLM 호출 실패·한도 (`LLM_503` 폴백까지 모두 응답 없음, `LLM_502` 재시도 후에도 응답 형식 오류. 둘 다 내부용 → 파이프라인 단계 FAILED) |
 | `CHALLENGE` | 학습 챌린지, 참여 |
 
 새 코드는 spec의 "API 계약 > 에러" 표에 먼저 적고 구현한다.

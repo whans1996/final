@@ -39,7 +39,7 @@
     { "id": "DS-03", "name": "팀 생성 평가 저장소 (AI 바이브 코딩 재현)", "split": "eval", "status": "예정 (W2, 담당 B)", "license": "팀 소유", "contamination": "none" },
     { "id": "DS-04", "name": "평가 정답 라벨", "split": "eval", "status": "예정 (W2~W3, 담당 B, 블라인드 작성)", "path": "backend/src/test/resources/prompt-eval/" },
     { "id": "DS-05", "name": "시드 개념 카드", "split": "content", "status": "작성 (2026-11-18, 85개, 카테고리 6종: java·spring·web·security·mybatis·vue)", "path": "backend/src/main/resources/db/migration/R__seed_concepts.sql", "derivedFrom": ["DS-01"] },
-    { "id": "DS-06", "name": "LLM Mock fixture", "split": "dev", "status": "예정 (W1~W2, 담당 A)", "path": "backend/src/main/resources/llm-fixtures/", "derivedFrom": ["DS-02-01", "DS-02-02", "DS-02-03"] },
+    { "id": "DS-06", "name": "LLM Mock fixture", "split": "dev", "status": "진행 (overview·file 작성 11-18, DS-02-01 기준. flow·concept·quiz 예정)", "path": "backend/src/main/resources/llm-fixtures/", "derivedFrom": ["DS-02-01", "DS-02-02", "DS-02-03"] },
     { "id": "DS-07", "name": "공개 저장소 아카이브 API (GitHub·GitLab)", "split": "runtime", "sources": [
         { "name": "GitHub REST API (zipball) / codeload", "url": "https://docs.github.com/en/rest/repos/contents#download-a-repository-archive-zip", "terms": "GitHub Terms of Service, Acceptable Use Policies", "rateLimit": "비인증 60회/시, 토큰 5,000회/시" },
         { "name": "GitLab REST API (repository archive)", "url": "https://docs.gitlab.com/api/repositories/", "terms": "GitLab 이용 약관(세부 미확인)", "rateLimit": "비인증 IP당 500회/분 (변경 예고 있음)" }

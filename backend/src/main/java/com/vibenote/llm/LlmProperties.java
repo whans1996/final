@@ -42,9 +42,11 @@ public record LlmProperties(
      * @param baseUrl Ollama 서버 주소 (예: {@code http://localhost:11434})
      * @param model 모델 이름 (예: {@code qwen2.5-coder:7b})
      * @param timeout 응답 대기 시간. 로컬 모델은 느리므로 Gemini보다 길게 둔다
+     * @param numCtx 컨텍스트 길이(토큰). 기본값(약 4K)으로는 F-06 개요·묶음 프롬프트가 잘린다 (F-06 AC12)
      */
     public record Ollama(
             @DefaultValue("http://localhost:11434") String baseUrl,
             String model,
-            @DefaultValue("120s") Duration timeout) {}
+            @DefaultValue("120s") Duration timeout,
+            @DefaultValue("16384") int numCtx) {}
 }

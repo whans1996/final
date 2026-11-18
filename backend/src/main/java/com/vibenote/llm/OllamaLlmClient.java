@@ -18,12 +18,16 @@ public class OllamaLlmClient implements LlmClient {
     private final RestClient restClient;
     private final String model;
 
+    /** 컨텍스트 길이. 기본(약 4K 토큰)으로는 F-06 개요·묶음 프롬프트가 잘린다 (F-06 AC12). */
+    private final int numCtx;
+
     /**
      * @param builder 타임아웃이 설정된 빌더 ({@link LlmConfig}). 테스트는 MockRestServiceServer를 묶은 빌더를 넘긴다
      */
     public OllamaLlmClient(RestClient.Builder builder, LlmProperties.Ollama props) {
         this.restClient = builder.baseUrl(props.baseUrl()).build();
         this.model = props.model();
+        this.numCtx = props.numCtx();
     }
 
     @Override
@@ -44,7 +48,9 @@ public class OllamaLlmClient implements LlmClient {
                                             "format",
                                             "json",
                                             "stream",
-                                            false))
+                                            false,
+                                            "options",
+                                            Map.of("num_ctx", numCtx)))
                             .retrieve()
                             .body(JsonNode.class);
         } catch (RestClientException e) {
