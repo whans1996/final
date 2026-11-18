@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 |---|---|
-| 상태 | APPROVED <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
+| 상태 | DONE (PR #4 머지, 2026-11-18) <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
 | 기능 ID | F-03 |
 | 우선순위 | P0 |
 | 영역 오너 | 팀원 B (학습·소셜) |
@@ -220,7 +220,7 @@
 - [x] `ErrorCode` USER_404·USER_001 + `docs/conventions.md` 3절 USER 줄
 - [x] contract-checker 통과 (불일치 0, 11-18)
 - [x] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일) (문제 0, 11-18)
-- [ ] reviewer 지적 사항 반영 (PR 전 reviewer + Codex PR 리뷰)
+- [x] reviewer 지적 사항 반영 (PR 전 reviewer + Codex PR 리뷰)
 - [x] 산출물 반영 (`06-화면설계서.md` SC-18·SC-19 상세, `02-유스케이스.md` UC03·UC04 흐름)
-- [ ] PR CI 초록
-- [ ] 상태 DONE (PR 머지 후)
+- [x] PR CI 초록
+- [x] 상태 DONE (PR 머지 후)
