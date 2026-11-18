@@ -59,7 +59,9 @@ function head() {
   return { sha: v.headRefOid, state: v.state };
 }
 
-const issueComments = () => ghJson(['api', `repos/${repo}/issues/${pr}/comments?per_page=100`]) || [];
+/** 모든 페이지를 읽어 하나의 배열로 (댓글이 100개를 넘어도 영수증·요청 마커를 놓치지 않게, Codex 리뷰) */
+const ghList = (path) => (ghJson(['api', '--paginate', '--slurp', `${path}?per_page=100`]) || []).flat();
+const issueComments = () => ghList(`repos/${repo}/issues/${pr}/comments`);
 
 function codexState(comments) {
   for (const c of comments) {
@@ -78,7 +80,7 @@ function codexState(comments) {
 
 /** head 커밋에 달린 Codex 인라인 지적 요약 */
 function findings(sha) {
-  const list = ghJson(['api', `repos/${repo}/pulls/${pr}/comments?per_page=100`]) || [];
+  const list = ghList(`repos/${repo}/pulls/${pr}/comments`);
   return list
     .filter((c) => c.user?.login?.startsWith(BOT) && !c.in_reply_to_id && c.original_commit_id === sha)
     .map((c) => {
