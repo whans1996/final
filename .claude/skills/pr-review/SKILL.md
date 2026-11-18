@@ -26,5 +26,10 @@ description: develop에 합치기 전 현재 feature 브랜치를 verifier·revi
      (리뷰어를 지정하려면 사용자에게 GitHub 아이디를 묻고 `--reviewer`를 붙인다)
    - 이미 PR이 있으면 `gh pr edit --body-file ...`로 설명만 갱신한다.
 7. **CI 확인**: `gh pr checks --watch` 대신 `gh pr checks`로 현재 상태를 한 번 확인하고 결과를 보고한다. 실패하면 `gh run view --log-failed`의 핵심 부분만 요약한다.
-8. **머지는 하지 않는다.** `gh pr merge`는 하네스가 차단한다. CI가 초록이면 영역 오너가 GitHub에서 머지한다 (wip 커밋이 있으면 Squash and merge).
-9. spec 상태는 DONE으로 바꾸지 않는다 (머지 후 `/progress`에서 확인).
+   - PR 이벤트로 CI가 안 돌면(실행 목록에 `pull_request`가 없음) Actions 탭 → CI → `···` Disable/Enable workflow 후 PR close/reopen을 사람에게 요청한다 (11-18 이 방법으로 해결). 임시로는 `gh workflow run CI --ref <브랜치>`.
+8. **Codex 자동 리뷰 확인 (매 PR 필수)**: PR을 열면 `chatgpt-codex-connector` 봇이 몇 분 안에 리뷰를 단다. 반드시 읽고 반영 여부를 판단한다. 자동 리뷰는 PR 생성 때만 돈다. 수정 push 후 다시 받으려면 사용자 확인 후 `gh pr comment <번호> --body "@codex review"`.
+   - 인라인 지적: `gh api repos/{owner}/{repo}/pulls/<번호>/comments -q '.[] | select(.user.login|startswith("chatgpt-codex")) | .path+":"+((.line//.original_line)|tostring)+"\n"+.body'`
+   - 요약·지적 없음(👍 반응)은 `gh api repos/{owner}/{repo}/pulls/<번호>/reviews`, `.../issues/<번호>/comments`
+   - 타당하면 실패하는 테스트부터 써서 `fix(F-xx): ... (Codex 리뷰)`로 고치고, 타당하지 않으면 이유를 사용자에게 보고한다. 리뷰가 아직 없으면 "Codex 리뷰 대기"로 보고하고 다음 턴에 다시 확인한다.
+9. **머지는 하지 않는다.** `gh pr merge`는 하네스가 차단한다. CI가 초록이면 영역 오너가 GitHub에서 머지한다 (wip 커밋이 있으면 Squash and merge).
+10. spec 상태는 DONE으로 바꾸지 않는다 (머지 후 `/progress`에서 확인).

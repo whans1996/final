@@ -1,10 +1,29 @@
 <script setup>
-import { RouterLink, RouterView } from 'vue-router'
+import { RouterLink, RouterView, useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+
+const auth = useAuthStore()
+const router = useRouter()
+
+async function onLogout() {
+  await auth.logout()
+  await router.push({ name: 'home' })
+}
 </script>
 
 <template>
   <header class="app-header">
     <RouterLink to="/" class="brand">바이브노트</RouterLink>
+    <nav class="account">
+      <template v-if="auth.isLoggedIn">
+        <span class="nickname">{{ auth.user?.nickname }}</span>
+        <button type="button" class="link-button" @click="onLogout">로그아웃</button>
+      </template>
+      <template v-else>
+        <RouterLink :to="{ name: 'login' }">로그인</RouterLink>
+        <RouterLink :to="{ name: 'signup' }">회원가입</RouterLink>
+      </template>
+    </nav>
   </header>
   <main class="app-main">
     <RouterView />
@@ -15,6 +34,7 @@ import { RouterLink, RouterView } from 'vue-router'
 .app-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   height: 56px;
   padding: 0 var(--space-4);
   border-bottom: 1px solid var(--color-border);
@@ -25,6 +45,26 @@ import { RouterLink, RouterView } from 'vue-router'
   font-weight: 700;
   color: var(--color-primary);
   text-decoration: none;
+}
+
+.account {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.nickname {
+  font-weight: 600;
+}
+
+.link-button {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-primary);
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline;
 }
 
 .app-main {

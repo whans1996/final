@@ -1,5 +1,151 @@
 {
   "components" : {
+    "schemas" : {
+      "ErrorResponse" : {
+        "description" : "실패 응답 (docs/conventions.md 2절)",
+        "properties" : {
+          "code" : {
+            "description" : "에러 코드",
+            "example" : "COMMON_400",
+            "type" : "string"
+          },
+          "details" : {
+            "additionalProperties" : {
+              "type" : "string"
+            },
+            "description" : "검증 실패 시 필드별 사유. 없으면 null",
+            "example" : {
+              "email" : "이메일 형식이 아닙니다."
+            },
+            "type" : "object"
+          },
+          "message" : {
+            "description" : "사용자에게 보여 줄 한국어 메시지",
+            "example" : "요청 값이 올바르지 않습니다.",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "LoginRequest" : {
+        "description" : "로그인 요청",
+        "properties" : {
+          "email" : {
+            "description" : "이메일",
+            "example" : "user@example.com",
+            "minLength" : 1,
+            "type" : "string"
+          },
+          "password" : {
+            "description" : "비밀번호",
+            "example" : "vibe1234",
+            "minLength" : 1,
+            "type" : "string"
+          }
+        },
+        "required" : [ "email", "password" ],
+        "type" : "object"
+      },
+      "LoginResponse" : {
+        "description" : "로그인·토큰 재발급 응답",
+        "properties" : {
+          "accessToken" : {
+            "description" : "Access 토큰 (Authorization: Bearer)",
+            "example" : "eyJhbGciOiJIUzI1NiJ9...",
+            "type" : "string"
+          },
+          "expiresIn" : {
+            "description" : "Access 토큰 유효 시간(초)",
+            "example" : 1800,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "user" : {
+            "$ref" : "#/components/schemas/LoginUser",
+            "description" : "로그인한 회원"
+          }
+        },
+        "required" : [ "accessToken", "expiresIn", "user" ],
+        "type" : "object"
+      },
+      "LoginUser" : {
+        "description" : "로그인한 회원 정보",
+        "properties" : {
+          "id" : {
+            "description" : "회원 ID",
+            "example" : 1,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "level" : {
+            "description" : "학습 수준",
+            "enum" : [ "BEGINNER", "JUNIOR", "SENIOR" ],
+            "example" : "BEGINNER",
+            "type" : "string"
+          },
+          "nickname" : {
+            "description" : "닉네임",
+            "example" : "코딩초보",
+            "type" : "string"
+          },
+          "role" : {
+            "description" : "권한",
+            "enum" : [ "USER", "ADMIN" ],
+            "example" : "USER",
+            "type" : "string"
+          }
+        },
+        "required" : [ "id", "level", "nickname", "role" ],
+        "type" : "object"
+      },
+      "SignupRequest" : {
+        "description" : "회원가입 요청",
+        "properties" : {
+          "email" : {
+            "description" : "이메일 (앞뒤 공백 제거, 소문자로 저장)",
+            "example" : "user@example.com",
+            "format" : "email",
+            "maxLength" : 255,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "level" : {
+            "description" : "학습 수준",
+            "enum" : [ "BEGINNER", "JUNIOR", "SENIOR" ],
+            "example" : "BEGINNER",
+            "pattern" : "BEGINNER|JUNIOR|SENIOR",
+            "type" : "string"
+          },
+          "nickname" : {
+            "description" : "닉네임. 2~20자의 한글·영문·숫자·_",
+            "example" : "코딩초보",
+            "pattern" : "^[가-힣A-Za-z0-9_]{2,20}$",
+            "type" : "string"
+          },
+          "password" : {
+            "description" : "비밀번호. 8~64자의 ASCII 영문·숫자·특수문자(공백 포함), 영문과 숫자를 각각 1자 이상",
+            "example" : "vibe1234",
+            "pattern" : "^(?=.*[A-Za-z])(?=.*\\d)[\\x20-\\x7E]{8,64}$",
+            "type" : "string"
+          }
+        },
+        "required" : [ "email", "level", "nickname", "password" ],
+        "type" : "object"
+      },
+      "SignupResponse" : {
+        "description" : "회원가입 결과",
+        "properties" : {
+          "id" : {
+            "description" : "가입한 회원 ID",
+            "example" : 1,
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "id" ],
+        "type" : "object"
+      }
+    },
     "securitySchemes" : {
       "bearerAuth" : {
         "bearerFormat" : "JWT",
@@ -15,12 +161,198 @@
     "version" : "v1"
   },
   "openapi" : "3.1.0",
-  "paths" : { },
+  "paths" : {
+    "/api/auth/login" : {
+      "post" : {
+        "description" : "Access 토큰과 회원 정보를 본문으로, Refresh 토큰을 HttpOnly 쿠키 refresh_token(Path=/api/auth, 14일)으로 준다.",
+        "operationId" : "login",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LoginResponse"
+                }
+              }
+            },
+            "description" : "로그인 성공",
+            "headers" : {
+              "Set-Cookie" : {
+                "description" : "refresh_token=<토큰>; Path=/api/auth; Max-Age=1209600; HttpOnly; SameSite=Strict (운영은 Secure)",
+                "style" : "simple"
+              }
+            }
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "이메일·비밀번호 누락 (COMMON_400)"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "이메일 없음·비밀번호 불일치·탈퇴 회원 (AUTH_001)"
+          }
+        },
+        "security" : [ ],
+        "summary" : "로그인",
+        "tags" : [ "인증" ]
+      }
+    },
+    "/api/auth/logout" : {
+      "post" : {
+        "description" : "이 기기의 Refresh 토큰을 폐기하고 쿠키를 지운다. 쿠키가 없어도 204.",
+        "operationId" : "logout",
+        "parameters" : [ {
+          "in" : "cookie",
+          "name" : "refresh_token",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "로그아웃 완료",
+            "headers" : {
+              "Set-Cookie" : {
+                "description" : "refresh_token=; Path=/api/auth; Max-Age=0 (쿠키 삭제)",
+                "style" : "simple"
+              }
+            }
+          }
+        },
+        "security" : [ ],
+        "summary" : "로그아웃",
+        "tags" : [ "인증" ]
+      }
+    },
+    "/api/auth/refresh" : {
+      "post" : {
+        "description" : "refresh_token 쿠키로 새 Access 토큰을 받고, Refresh 토큰도 새로 바꾼다(회전). 앱 시작 시 세션 복원에도 쓴다.",
+        "operationId" : "refresh",
+        "parameters" : [ {
+          "in" : "cookie",
+          "name" : "refresh_token",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LoginResponse"
+                }
+              }
+            },
+            "description" : "재발급 성공",
+            "headers" : {
+              "Set-Cookie" : {
+                "description" : "refresh_token=<토큰>; Path=/api/auth; Max-Age=1209600; HttpOnly; SameSite=Strict (운영은 Secure)",
+                "style" : "simple"
+              }
+            }
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "쿠키 없음·무효·만료·이미 사용·탈퇴 회원 (AUTH_002). 만료·탈퇴면 쿠키를 지우고, 없거나 이미 회전된 토큰이면 다른 탭이 받은 새 쿠키를 지키려고 그대로 둔다"
+          }
+        },
+        "security" : [ ],
+        "summary" : "토큰 재발급",
+        "tags" : [ "인증" ]
+      }
+    },
+    "/api/auth/signup" : {
+      "post" : {
+        "description" : "이메일·비밀번호·닉네임·학습 수준으로 가입한다. 로그인은 따로 호출한다.",
+        "operationId" : "signup",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SignupRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SignupResponse"
+                }
+              }
+            },
+            "description" : "가입 성공"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "검증 실패 (COMMON_400, details에 필드별 사유)"
+          },
+          "409" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "이메일 또는 닉네임 중복 (USER_409, details에 해당 필드)"
+          }
+        },
+        "security" : [ ],
+        "summary" : "회원가입",
+        "tags" : [ "인증" ]
+      }
+    }
+  },
   "security" : [ {
     "bearerAuth" : [ ]
   } ],
   "servers" : [ {
     "description" : "Generated server url",
     "url" : "http://localhost"
+  } ],
+  "tags" : [ {
+    "description" : "회원가입, 로그인, 토큰 재발급, 로그아웃",
+    "name" : "인증"
   } ]
 }

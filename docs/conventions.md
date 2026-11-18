@@ -53,8 +53,8 @@
 | 접두어 | 도메인 |
 |---|---|
 | `COMMON` | 검증 실패(`COMMON_400`), 없는 주소(`COMMON_404`), 허용되지 않은 메서드(`COMMON_405`), 업로드 크기 초과(`COMMON_413`), 지원하지 않는 Content-Type(`COMMON_415`), 서버 오류(`COMMON_500`) |
-| `AUTH` | 인증·토큰 (`AUTH_401` 토큰 없음/만료, `AUTH_403` 권한 없음) |
-| `USER` | 회원, 프로필, 팔로우 |
+| `AUTH` | 인증·토큰 (`AUTH_401` Access 토큰 없음/만료, `AUTH_403` 권한 없음, `AUTH_001` 로그인 실패, `AUTH_002` Refresh 무효·만료 → 다시 로그인) |
+| `USER` | 회원, 프로필, 팔로우 (`USER_409` 이메일·닉네임 중복, `details`에 필드) |
 | `ANALYSIS` | 분석 요청·파이프라인 (`ANALYSIS_413` 크기 초과, `ANALYSIS_415` 지원하지 않는 스택, `ANALYSIS_429` 일일 한도) |
 | `CONCEPT` | 개념 카드, 리뷰, 찜 |
 | `QUIZ` | 퀴즈 |
@@ -68,8 +68,8 @@
 ## 4. 인증
 
 - 헤더: `Authorization: Bearer <accessToken>`
-- Access 만료 시 401 + `AUTH_401` → FE 인터셉터가 `/api/auth/refresh` 후 1회 재시도
-- Refresh 토큰 저장 위치(HttpOnly 쿠키 vs 응답 본문)는 **F-02 spec에서 확정**한다. (결정 필요)
+- Access 만료 시 401 + `AUTH_401` → FE 인터셉터가 `/api/auth/refresh` 후 1회 재시도 (`AUTH_001`·`AUTH_002`·`/api/auth/*` 요청은 재시도하지 않음)
+- Access 토큰(30분)은 FE 메모리에만 둔다. Refresh 토큰(14일, 회전)은 **HttpOnly 쿠키** `refresh_token`(`SameSite=Strict; Path=/api/auth`)으로만 주고받고 DB에는 SHA-256 해시만 저장한다. 앱 시작 시 refresh로 세션을 복원한다. 상세는 `docs/specs/F-02-login-jwt.md` 1절
 
 ## 5. 네이밍
 

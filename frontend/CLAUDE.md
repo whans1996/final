@@ -24,7 +24,9 @@ src/
 - API 함수는 spec의 API 계약과 **URL, 메서드, 필드 이름이 정확히 같아야** 한다. 응답을 가공하는 변환은 store나 composable에서 한다.
 - 에러는 `error.response.data.message`를 사용자에게 보여 준다 (BE가 한국어 메시지를 보낸다). 코드 분기는 `error.response.data.code`로 한다.
 - 모든 목록 화면은 **로딩 / 빈 목록 / 에러** 세 가지 상태를 처리한다.
-- 로그인 상태, Access 토큰, 사용자 수준(level)은 `useAuthStore`에서 관리한다. 토큰 보관 위치와 Refresh 재시도는 F-02에서 정한다 (지금은 메모리, 401이면 `clear()`).
+- 로그인 상태, Access 토큰, 사용자 수준(level)은 `useAuthStore`에서 관리한다. Access 토큰은 **메모리에만** 두고(localStorage 금지), Refresh 토큰은 HttpOnly 쿠키라 JS가 다루지 않는다. 앱 시작 시 `restore()`가 refresh로 세션을 복원한다. `http.js`는 401 `AUTH_401`이면 `auth.refresh()`(동시 호출 1회) 후 1회 재시도하고, 실패하면 `setUnauthorizedHandler`로 등록한 로그인 화면 이동을 부른다 (F-02).
+- 로그인이 필요한 화면은 라우트에 `meta.requiresAuth`, 로그인·가입처럼 비로그인 전용은 `meta.guestOnly`를 붙인다. 돌아갈 주소는 `redirectTarget(route.query)`로 꺼낸다 (외부 주소 차단).
+- 폼 검증 실패는 서버 `details`를 `errorDetails(error)`로 꺼내 필드 아래에 보여 준다.
 - 에러 메시지는 `errorMessage(error)`, 분기는 `errorCode(error)`(`@/api/http`)로 꺼낸다.
 - 분석 진행 상태는 `composables/usePolling.js`로 2~3초 간격 폴링하고, `DONE`/`FAILED`이거나 화면을 떠나면 멈춘다.
 - mermaid 렌더링(F-21)은 해당 화면에서만 동적 import한다.
