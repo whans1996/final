@@ -8,8 +8,8 @@ import java.util.regex.Pattern;
 /**
  * 저장·LLM 전송 전에 키로 보이는 값을 {@code [REDACTED]}로 바꾼다 (F-05a 5.2절, AC6).
  *
- * <p>모든 파일: 알려진 키 형식. 설정 파일(.yml·.yaml·.properties): 키 이름에 password·secret 등이 들어간 항목의 값. 값이 환경변수
- * 참조({@code ${...}})이거나 비어 있으면 그대로 둔다.
+ * <p>모든 파일: 알려진 키 형식. 설정 파일(.yml·.yaml·.properties): 키 이름에 password·secret 등이 들어간 항목의 값. 값이 비어 있거나
+ * 기본값 없는 환경변수 참조({@code ${NAME}})면 그대로 두고, {@code ${NAME:기본값}}이면 기본값만 가린다.
  */
 public final class SecretRedactor {
 
@@ -28,13 +28,25 @@ public final class SecretRedactor {
                     Pattern.compile("github_pat_[A-Za-z0-9_]{22,}"),
                     Pattern.compile("AKIA[0-9A-Z]{16}"));
 
-    /** group 1: 들여쓰기·키·구분자, group 2: 값. 키에 '#'이 올 수 없으므로 주석 줄은 걸리지 않는다. */
-    private static final Pattern CONFIG_SECRET_ENTRY =
+    /**
+     * group 1: 들여쓰기·키·구분자, group 2: 키, group 3: 값. 키에 '#'이 올 수 없으므로 주석 줄은 걸리지 않는다. 키를 소유 수량자로 읽어
+     * 구분자 없는 긴 줄에서도 백트래킹하지 않는다 (ReDoS 방지). 비밀 키워드가 들어 있는지는 매칭 뒤에 검사한다.
+     */
+    private static final Pattern CONFIG_ENTRY =
             Pattern.compile(
-                    "^([ \\t]*(?:-[ \\t]+)?[^\\s:=#]*"
-                            + "(?:password|secret|api-key|apikey|api_key|token|credential)"
-                            + "[^\\s:=#]*[ \\t]*[:=][ \\t]*)(.*)$",
-                    Pattern.CASE_INSENSITIVE | Pattern.MULTILINE);
+                    "^([ \\t]*+(?:-[ \\t]++)?([^\\s:=#]++)[ \\t]*+[:=][ \\t]*+)(.*)$",
+                    Pattern.MULTILINE);
+
+    private static final List<String> SECRET_KEYWORDS =
+            List.of("password", "secret", "api-key", "apikey", "api_key", "token", "credential");
+
+    /** 기본값 없는 환경변수 참조 하나: {@code ${NAME}} (따옴표 허용). */
+    private static final Pattern PLAIN_ENV_REF =
+            Pattern.compile("[ \\t]*['\"]?\\$\\{[^}:]+}['\"]?[ \\t]*");
+
+    /** 기본값 있는 환경변수 참조 하나: group 1 앞부분, group 2 기본값, group 3 뒷부분. */
+    private static final Pattern ENV_REF_WITH_DEFAULT =
+            Pattern.compile("([ \\t]*['\"]?\\$\\{[^}:]+:)([^}]*)(}['\"]?[ \\t]*)");
 
     private SecretRedactor() {}
 
@@ -55,15 +67,31 @@ public final class SecretRedactor {
     }
 
     private static String redactConfigValues(String content) {
-        return CONFIG_SECRET_ENTRY
+        return CONFIG_ENTRY
                 .matcher(content)
                 .replaceAll(
-                        m -> {
-                            String value = m.group(2);
-                            String unquoted = value.strip().replaceFirst("^['\"]", "");
-                            String kept =
-                                    value.isBlank() || unquoted.startsWith("${") ? value : REDACTED;
-                            return Matcher.quoteReplacement(m.group(1) + kept);
-                        });
+                        m ->
+                                Matcher.quoteReplacement(
+                                        isSecretKey(m.group(2))
+                                                ? m.group(1) + redactValue(m.group(3))
+                                                : m.group()));
+    }
+
+    private static boolean isSecretKey(String key) {
+        String lower = key.toLowerCase(Locale.ROOT);
+        return SECRET_KEYWORDS.stream().anyMatch(lower::contains);
+    }
+
+    private static String redactValue(String value) {
+        if (value.isBlank() || PLAIN_ENV_REF.matcher(value).matches()) {
+            return value;
+        }
+        Matcher withDefault = ENV_REF_WITH_DEFAULT.matcher(value);
+        if (withDefault.matches()) {
+            return withDefault.group(2).isEmpty()
+                    ? value
+                    : withDefault.group(1) + REDACTED + withDefault.group(3);
+        }
+        return REDACTED;
     }
 }

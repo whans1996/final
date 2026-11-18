@@ -1,7 +1,9 @@
 package com.vibenote.analysis.pipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
+import java.time.Duration;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -124,7 +126,7 @@ class SecretRedactorTest {
                                 "  github_token: [REDACTED]",
                                 "  client-credential: [REDACTED]",
                                 "  db-password: ${DB_PASSWORD}",
-                                "  other-secret: ${OTHER:default}",
+                                "  other-secret: ${OTHER:[REDACTED]}",
                                 "  empty-secret:",
                                 "  name: vibenote"));
     }
@@ -151,6 +153,43 @@ class SecretRedactorTest {
                                 "api_key: [REDACTED]",
                                 "db.password=${DB_PASSWORD}",
                                 "server.port=8080"));
+    }
+
+    @Test
+    void AC6_환경변수_참조의_기본값은_가린다() {
+        String yml =
+                String.join(
+                        "\n",
+                        "password: ${DB_PASSWORD:hunter2}",
+                        "jwt.secret: \"${JWT_SECRET:my-real-secret}\"",
+                        "api-key: ${API_KEY:}",
+                        "token: ${A}${B:leak}",
+                        "credential: ${OUTER:${INNER:leak}}");
+
+        String redacted = SecretRedactor.redact("application.yml", yml);
+
+        assertThat(redacted)
+                .doesNotContain("hunter2", "my-real-secret", "leak")
+                .isEqualTo(
+                        String.join(
+                                "\n",
+                                "password: ${DB_PASSWORD:[REDACTED]}",
+                                "jwt.secret: \"${JWT_SECRET:[REDACTED]}\"",
+                                "api-key: ${API_KEY:}",
+                                "token: [REDACTED]",
+                                "credential: [REDACTED]"));
+    }
+
+    @Test
+    void AC6_구분자_없는_긴_줄도_선형_시간에_처리한다() {
+        String line = "token".repeat(200_000);
+
+        String redacted =
+                assertTimeoutPreemptively(
+                        Duration.ofSeconds(2),
+                        () -> SecretRedactor.redact("application.yml", line + "\npassword: x"));
+
+        assertThat(redacted).isEqualTo(line + "\npassword: [REDACTED]");
     }
 
     @Test
