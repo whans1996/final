@@ -21,11 +21,11 @@ description: develop에 합치기 전 현재 feature 브랜치를 verifier·revi
    - FE 변경이 있으면 스크린샷을 **직접 첨부한다** (사람에게 넘기지 않는다):
      1. ui-verifier가 남긴 `.harness/screens/*.png` 중 이 기능 화면을 `docs/산출물/screens/SC-xx-이름-{desktop,mobile}.png`로 복사하고, `06-화면설계서.md`의 해당 SC 절에 `<img>`로 넣어 커밋한다 (산출물 준비를 겸한다)
      2. push한 뒤 `node scripts/pr-screens.mjs SC-xx …`가 출력한 Markdown(커밋 sha 링크)을 PR 설명의 `## 스크린샷`에 붙인다. 이미 PR이 있으면 `gh pr edit --body-file`로 갱신한다
-   - 리뷰어(영역 오너)가 특히 볼 곳, 산출물 영향
+   - 리뷰어(Codex·reviewer 에이전트)가 특히 볼 곳, 산출물 영향
 6. **PR 생성 (사용자 확인 후)**
    - `git push -u origin <브랜치>`
    - 사용자가 확인하면: `gh pr create --base develop --title "<타입(F-xx): 요약>" --body-file .harness/pr-F-xx.md`
-     (리뷰어를 지정하려면 사용자에게 GitHub 아이디를 묻고 `--reviewer`를 붙인다)
+     (사람 리뷰어는 지정하지 않는다. 리뷰는 reviewer 에이전트(2단계)와 Codex 봇(8단계)이 한다 — 11-18 결정)
    - 이미 PR이 있으면 `gh pr edit --body-file ...`로 설명만 갱신한다.
 7. **CI 확인**: `gh pr checks --watch` 대신 `gh pr checks`로 현재 상태를 한 번 확인하고 결과를 보고한다. 실패하면 `gh run view --log-failed`의 핵심 부분만 요약한다.
    - PR 이벤트로 CI가 안 돌면(실행 목록에 `pull_request`가 없음) Actions 탭 → CI → `···` Disable/Enable workflow 후 PR close/reopen을 사람에게 요청한다 (11-18 이 방법으로 해결). 임시로는 `gh workflow run CI --ref <브랜치>`.

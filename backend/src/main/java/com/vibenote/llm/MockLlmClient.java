@@ -4,17 +4,14 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.io.ClassPathResource;
-import org.springframework.stereotype.Component;
 
 /**
- * 개발·테스트용 LLM. 외부 호출 없이 {@code classpath:llm-fixtures/<stage>.json}을 그대로 돌려준다.
+ * 개발·테스트용 LLM. 외부 호출 없이 {@code classpath:llm-fixtures/<stage>.json}을 그대로 돌려준다. 빈이 아니라 {@link
+ * LlmConfig}가 만든다.
  *
  * <p>결정적이어야 하므로 랜덤을 쓰지 않는다. fixture는 dev·demo 데이터로만 만든다 (eval 데이터 금지, CLAUDE.md 11번).
  */
-@Component
-@ConditionalOnProperty(name = "llm.provider", havingValue = "mock", matchIfMissing = true)
 public class MockLlmClient implements LlmClient {
 
     static final String MODEL = "mock";

@@ -60,7 +60,7 @@
 | `QUIZ` | 퀴즈 |
 | `REVIEW_PLAN` | 복습 계획 |
 | `POST` | 게시글, 댓글 |
-| `LLM` | LLM 호출 실패·한도 |
+| `LLM` | LLM 호출 실패·한도 (`LLM_503` 폴백까지 모두 응답 없음, 내부용 → 파이프라인 단계 FAILED) |
 | `CHALLENGE` | 학습 챌린지, 참여 |
 
 새 코드는 spec의 "API 계약 > 에러" 표에 먼저 적고 구현한다.
@@ -97,7 +97,8 @@
 - 대상: `feature/*` → `develop`. 마일스톤 마감 때 `develop` → `main`.
 - **제목은 커밋 메시지와 같은 형식** `타입(F-xx): 요약` (CI가 검사한다).
 - 본문은 `.github/pull_request_template.md`를 채운다 (`/pr-review`가 생성).
-- **CI가 초록일 때만** 영역 오너가 머지한다. wip 커밋이 섞여 있으면 **Squash and merge**.
+- **리뷰는 reviewer 에이전트(`/pr-review`)와 Codex 봇이 한다.** 사람 리뷰 승인은 받지 않는다.
+- **CI가 초록이고 Codex가 COMPLETE일 때만** 영역 오너가 머지한다. wip 커밋이 섞여 있으면 **Squash and merge**.
 - API를 바꾼 PR은 `docs/api/openapi.json` 변경을 포함해야 한다 (CI가 불일치를 실패 처리).
 - GitLab(lab.ssafy.com)은 최종 제출 전용이다. 개발 중에는 push하지 않는다.
 
