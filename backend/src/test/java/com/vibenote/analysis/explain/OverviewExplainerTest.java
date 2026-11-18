@@ -146,4 +146,17 @@ class OverviewExplainerTest {
                 .hasMessage("AI 응답을 받지 못했습니다. 잠시 후 다시 시도해 주세요.");
         assertThat(llm.requests).hasSize(1);
     }
+
+    @Test
+    void AC5_요약이_비어_있으면_형식_오류로_보고_한_번_다시_요청한다() {
+        FakeLlmClient llm =
+                new FakeLlmClient()
+                        .answer("{\"summary\":\" \",\"techStack\":[],\"layers\":[]}")
+                        .answer(VALID);
+
+        AnalysisOverview overview = explainer(llm).explain(analysis(Level.JUNIOR), files, apis);
+
+        assertThat(overview.summary()).isEqualTo("할 일 앱입니다.");
+        assertThat(llm.requests).hasSize(2);
+    }
 }

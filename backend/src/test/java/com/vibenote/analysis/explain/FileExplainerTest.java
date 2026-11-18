@@ -147,4 +147,35 @@ class FileExplainerTest {
         assertThat(result).isEmpty();
         assertThat(llm.requests).hasSize(1);
     }
+
+    @Test
+    void AC4_범위_밖_no는_필드가_틀려도_묶음을_다시_요청하지_않고_버린다() {
+        FakeLlmClient llm =
+                new FakeLlmClient()
+                        .answer(files(item(1, "r1", "e1"), "{\"no\":9}", "{\"no\":1,\"role\":3}"));
+        FileExplainer explainer = new FileExplainer(llm, new PromptTemplates(), PROPS);
+
+        List<FileExplanation> result = explainer.explain(analysis(Level.JUNIOR), "s", batch);
+
+        assertThat(result).containsExactly(new FileExplanation(11, "r1", "e1"));
+        assertThat(llm.requests).hasSize(1);
+    }
+
+    @Test
+    void AC4_설명이_비어_있으면_그_파일은_NULL로_남기고_빈_역할은_NULL로_저장한다() {
+        FakeLlmClient llm =
+                new FakeLlmClient()
+                        .answer(
+                                files(
+                                        item(1, "r1", "  "),
+                                        item(2, " ", "e2"),
+                                        item(3, "r3", "e3")));
+        FileExplainer explainer = new FileExplainer(llm, new PromptTemplates(), PROPS);
+
+        List<FileExplanation> result = explainer.explain(analysis(Level.JUNIOR), "s", batch);
+
+        assertThat(result)
+                .containsExactly(
+                        new FileExplanation(12, null, "e2"), new FileExplanation(13, "r3", "e3"));
+    }
 }

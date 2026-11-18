@@ -16,7 +16,8 @@ import java.util.regex.Pattern;
  * 쓴다.
  *
  * <p>controller layer {@code .java} 파일만 본다. 주석을 지운 뒤, 첫 {@code class}·{@code interface} 선언 앞의
- * {@code @RequestMapping}을 클래스 경로로, 그 뒤의 매핑 어노테이션을 메서드 경로로 읽는다. 경로는 문자열 리터럴만 인식한다(상수는 무시).
+ * {@code @RequestMapping}을 클래스 경로로, 그 뒤의 매핑 어노테이션을 메서드 경로로 읽는다. 경로는 문자열 리터럴만 인식한다. 메서드 경로가 상수면 그
+ * 메서드를, 클래스 경로가 상수면 그 파일을 건너뛴다.
  */
 public final class ApiDetector {
 
@@ -67,7 +68,11 @@ public final class ApiDetector {
             String args = arguments(code, m.end());
             Mapping mapping = parse(args);
             if (m.start() < typeStart) {
-                if (kind.equals("Request") && mapping != null && !mapping.paths().isEmpty()) {
+                if (kind.equals("Request") && mapping == null) {
+                    // 클래스 경로가 상수 등이라 알 수 없으면 틀린 경로를 확정된 API처럼 남기지 않는다
+                    return List.of();
+                }
+                if (kind.equals("Request") && !mapping.paths().isEmpty()) {
                     classPaths = mapping.paths();
                 }
                 continue;

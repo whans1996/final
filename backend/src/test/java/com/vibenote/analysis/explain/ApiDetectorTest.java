@@ -156,4 +156,29 @@ class ApiDetectorTest {
         assertThat(apis.get(0)).isEqualTo(new ApiEndpoint("GET", "/api/r00", 1L));
         assertThat(apis.get(49).path()).isEqualTo("/api/r49");
     }
+
+    @Test
+    void AC7_클래스_경로를_알_수_없으면_그_파일의_API는_건너뛴다() {
+        String constant =
+                """
+                @RestController
+                @RequestMapping(Paths.USERS)
+                public class UserController {
+                    @GetMapping("/{id}")
+                    public User get() { return null; }
+                }
+                """;
+        String literal =
+                """
+                @RestController
+                @RequestMapping("/api/todos")
+                public class TodoController {
+                    @GetMapping
+                    public List<Todo> list() { return null; }
+                }
+                """;
+
+        assertThat(ApiDetector.detect(List.of(controller(1, constant), controller(2, literal))))
+                .containsExactly(new ApiEndpoint("GET", "/api/todos", 2L));
+    }
 }

@@ -98,6 +98,9 @@ public class OverviewExplainer {
             throw new InvalidResponseException("객체가 아님");
         }
         String summary = text(root, "summary");
+        if (summary.isBlank()) {
+            throw new InvalidResponseException("summary가 비어 있음");
+        }
         JsonNode techStack = array(root, "techStack", true);
         JsonNode layers = array(root, "layers", true);
         JsonNode readingOrder = array(root, "readingOrder", false);

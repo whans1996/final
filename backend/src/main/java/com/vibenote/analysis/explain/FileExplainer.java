@@ -87,16 +87,21 @@ public class FileExplainer {
             if (!item.isObject() || no == null || !no.isIntegralNumber()) {
                 throw new InvalidResponseException("files[].no가 정수가 아님");
             }
+            int n = no.asInt();
+            // 버릴 항목(범위 밖·중복 no)의 필드 오류로 묶음 전체를 다시 요청하지 않도록 먼저 거른다 (AC4)
+            if (n < 1 || n > batch.size() || !seen.add(n)) {
+                continue;
+            }
             String role = text(item, "role");
             String explanation = text(item, "explanation");
-            int n = no.asInt();
-            if (n < 1 || n > batch.size() || !seen.add(n)) {
+            // 빈 설명을 저장하면 화면은 "설명을 만들지 못했습니다"인데 explainedFileCount에는 세어진다. NULL로 남긴다
+            if (explanation.isBlank()) {
                 continue;
             }
             result.add(
                     new FileExplanation(
                             batch.get(n - 1).getId(),
-                            cut(role, MAX_ROLE),
+                            role.isBlank() ? null : cut(role, MAX_ROLE),
                             cut(explanation, MAX_EXPLANATION)));
         }
         return result;
