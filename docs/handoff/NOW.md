@@ -14,15 +14,16 @@ F-06 개요·파일별 설명 — `docs/specs/F-06-overview-explanation.md` **AP
 - ✅ BE: 8b09a86·58a6ccd·02630fb (BE 273개 green)
 - ✅ FE: bd1e642 AC13~AC15 (FE 132개 green). 이어서 `FilePath.vue`(경로를 `/` 뒤에서만 줄바꿈) 커밋
 - ✅ contract-checker FE·BE 불일치 0, ui-verifier 데스크톱·375px 통과(375px 페이지 scrollWidth=clientWidth)
+- ✅ 프롬프트 1·2차 평가 반영(08 §1.3), #19 follow-up 생성
 - ✅ 4abb8bd 프롬프트 평가 하네스 `./gradlew promptEval` + 1차 평가(DS-02-01, 결과 `.harness/prompt-eval/20261118-214618-DS-02-01-file.json`)
 - ✅ 산출물: `06-화면설계서.md` SC-07 개요·파일 탭 + 스크린샷 4장, `08` §1.3 프롬프트 설계, `04-WBS`·`05-간트` F-06 진행 중
 - local DB에 ui 점검용 회원·분석 1·2(DONE)가 있다. 로그인 상태는 `.harness/auth.json`(git 제외)
 
 ## 바로 다음 할 일
 
-1. 사람 결정 대기: (a) 프롬프트 개선 반영 여부 — 08 §1.3 "1차 프롬프트 평가" 참고. 제안: 템플릿 1행의 "Spring Boot·MyBatis·Vue" 프라이밍 완화, `techStack`은 import·빌드 파일 근거만, 숙련은 코드 근거 있는 주의점 1개 이상, 없는 레이어 암시 금지, `layers` 예시 2항목 (b) F-05a 레이어 규칙에 `@RestController`/`@Controller` 어노테이션 판정 추가 여부(F-05a 수정이라 spec 결정 필요, 아니면 follow-up 이슈)
-2. 그 뒤 `/clear` → `/pr-review`
-3. 머지 직전 `docs(F-06): 완료 표시` 커밋 (spec 상태 DONE, WBS ✅, 간트 done)
+1. `/clear` 후 새 세션에서 `/pr-review` (verifier all → reviewer → contract-checker → PR 설명 → 사용자 확인 후 PR). PR "후속 작업"에 #19(F-05a `@RestController` 판정, F-07 spec 전에 처리)
+2. 머지 직전 `docs(F-06): 완료 표시` 커밋 (spec 상태 DONE, WBS ✅, 간트 done)
+3. 다음 프롬프트 평가 때 `prompts/file/senior.md`의 "근거가 있을 때만" 완화(2차 이후 수정, 미평가) 확인
 
 ## 막힌 점 / 결정 필요
 
