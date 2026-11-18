@@ -11,6 +11,8 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+    # 시드 카드 본문·예제에 MyBatis ${}·JS 템플릿 리터럴이 들어 있다. 플레이스홀더는 쓰지 않으므로 치환을 끈다.
+    placeholder-replacement: false
   jackson:
     time-zone: Asia/Seoul
     default-property-inclusion: always
