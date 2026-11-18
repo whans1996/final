@@ -3,11 +3,11 @@
 > 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
 > "바로 다음 할 일"은 다른 사람이 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 
-갱신: 2026-11-18 12:50 · 작업자: whans1996 (Claude, SSAFY 교육장 PC) · 브랜치: feature/F-03-profile
+갱신: 2026-11-18 13:00 · 작업자: whans1996 (Claude, SSAFY 교육장 PC) · 브랜치: feature/F-03-profile
 
 ## 현재 기능
 
-F-03 프로필·탈퇴 — **AC1~AC10 구현·push 완료, /pr-review 중 reviewer 권장 6건 반영 중** (PR 아직 안 엶)
+F-03 프로필·탈퇴 — **PR #4 열림 (develop 대상, 리뷰어 미지정), CI·Codex 리뷰 대기**
 
 ## 진행
 
@@ -21,8 +21,9 @@ F-03 프로필·탈퇴 — **AC1~AC10 구현·push 완료, /pr-review 중 review
 
 ## 바로 다음 할 일
 
-1. PR 설명 초안 작성됨 `.harness/pr-F-03.md` → 사용자 확인 → `gh pr create --base develop --title "feat(F-03): 프로필 조회·수정·학습 통계·회원 탈퇴" --body-file .harness/pr-F-03.md`
-2. 그다음 `.harness/pr-F-03.md`(템플릿 `.github/pull_request_template.md`, 예시 `.harness/pr-F-01.md`) → 사용자 확인 → `gh pr create --base develop` → `gh pr checks` → Codex 리뷰 확인
+1. `gh pr checks 4`로 CI 확인 (실패 시 `gh run view --log-failed` 요약). 스크린샷 `.harness/screens/f03_*.png` 5장은 사람이 PR에 첨부
+2. Codex 자동 리뷰 확인: `gh api repos/whans1996/final/pulls/4/comments` (chatgpt-codex 봇), `.../pulls/4/reviews`, `.../issues/4/comments`. 타당하면 실패 테스트부터 써서 `fix(F-03): ... (Codex 리뷰)`
+3. CI 초록이면 영역 오너가 GitHub에서 머지 (gh pr merge 금지) → 머지 후 spec DONE·작업로그·/handoff
 
 ## 막힌 점 / 결정 필요
 
