@@ -40,6 +40,12 @@ try {
 const outDir = join(ROOT, '.harness', 'screens');
 mkdirSync(outDir, { recursive: true });
 
+// 비로그인 상태에서 앱 시작 시 세션 복원(POST /api/auth/refresh)이 401 AUTH_002를 받는 것은 정상이다 (F-02 AC8).
+// 이 응답과 브라우저가 남기는 "Failed to load resource ... 401" 콘솔 로그는 문제로 세지 않는다.
+function isExpectedRefresh401(url = '', text = '') {
+  return String(url).includes('/api/auth/refresh') && String(text).includes('401');
+}
+
 const browser = await chromium.launch();
 const viewports = [{ name: 'desktop', width, height: 900 }];
 if (mobile) viewports.push({ name: 'mobile', width: 375, height: 812 });
@@ -54,9 +60,9 @@ for (const vp of viewports) {
   for (const route of routes) {
     const page = await context.newPage();
     const issues = [];
-    page.on('console', (m) => m.type() === 'error' && issues.push(`console: ${m.text().slice(0, 200)}`));
+    page.on('console', (m) => m.type() === 'error' && !isExpectedRefresh401(m.location()?.url, m.text()) && issues.push(`console: ${m.text().slice(0, 200)}`));
     page.on('pageerror', (e) => issues.push(`exception: ${String(e.message).slice(0, 200)}`));
-    page.on('response', (r) => r.status() >= 400 && issues.push(`HTTP ${r.status()} ${r.request().method()} ${r.url().replace(base, '')}`));
+    page.on('response', (r) => r.status() >= 400 && !isExpectedRefresh401(r.url(), String(r.status())) && issues.push(`HTTP ${r.status()} ${r.request().method()} ${r.url().replace(base, '')}`));
     page.on('requestfailed', (r) => issues.push(`요청 실패: ${r.url().replace(base, '')} (${r.failure()?.errorText})`));
 
     let finalUrl = '';
