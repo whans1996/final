@@ -7,7 +7,7 @@
 
 ## 현재 기능
 
-F-06 개요·파일별 설명 — `docs/specs/F-06-overview-explanation.md` **DRAFT, 사람 승인 대기**
+F-06 개요·파일별 설명 — `docs/specs/F-06-overview-explanation.md` **APPROVED (11-18), 구현 전**
 
 ## 진행
 
@@ -17,14 +17,14 @@ F-06 개요·파일별 설명 — `docs/specs/F-06-overview-explanation.md` **DR
 
 ## 바로 다음 할 일
 
-1. 사람이 spec을 읽고 승인 → `/spec approve F-06` (상태 APPROVED, 커밋 `docs(F-06): spec 승인`)
+1. ✅ spec 승인 완료 (whans1996 11-18)
 2. `/clear` 후 새 세션(Opus/high)에서 `/implement F-06`: V4 마이그레이션 → `ApiDetectorTest`·`PromptTemplatesTest`·`FileExplainerTest`·`OverviewExplainerTest` red → `AnalysisPipeline.stages`에 EXPLAINING 추가(F-05a AC5 테스트 기대값 수정)
 3. 1.4 유스케이스(마감 11/23): `docs/산출물/02-유스케이스.md`에 분석 요청(F-05a) UC 흐름 추가
 4. 팀원 B PC에서 `docs/환경설정.md` 6절 체크리스트로 교대 리허설 (사람)
 
 ## 막힌 점 / 결정 필요
 
-- 사람: F-06 spec 승인, 이슈 #16(설정 키 키워드 확장 범위), 노션 대시보드 팀원 초대
+- 사람: 이슈 #16(설정 키 키워드 확장 범위), 노션 대시보드 팀원 초대
 - 사람: 집 PC 스마트 앱 컨트롤이 oxlint를 막음 → SAC 끄기 또는 wasm 바인딩. FE 커밋 전 필요
 
 ## 주의
