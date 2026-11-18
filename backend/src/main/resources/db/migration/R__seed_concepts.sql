@@ -920,9 +920,10 @@ public class AnalysisService {
 
     @Transactional
     public long request(AnalysisRequest req, long userId) {
-        long id = analysisMapper.insert(req, userId);
-        events.publishEvent(new AnalysisRequested(id));
-        return id;                        // 커밋되면 리스너가 실행된다
+        Analysis analysis = Analysis.of(req, userId);
+        analysisMapper.insert(analysis);  // useGeneratedKeys로 id가 채워진다
+        events.publishEvent(new AnalysisRequested(analysis.getId()));
+        return analysis.getId();          // 커밋되면 리스너가 실행된다
     }
 }
 
@@ -1334,9 +1335,7 @@ public class CorsConfig implements WebMvcConfigurer {
 - 같은 요청을 여러 번 보내도 결과가 같은 성질(멱등성): GET·PUT·DELETE는 멱등, POST는 아니다.
 
 ## 주의
-`GET /api/deletePost?id=3`처럼 동사를 URL에 넣는 설계는 캐시·크롤러가 데이터를 지우는 사고로 이어질 수 있다.
-
-참고: MDN HTTP 요청 메서드 (링크만)',
+`GET /api/deletePost?id=3`처럼 동사를 URL에 넣는 설계는 캐시·크롤러가 데이터를 지우는 사고로 이어질 수 있다.',
 'GET    /api/posts?page=1        목록
 GET    /api/posts/42            상세
 POST   /api/posts               생성 (201 + Location)
@@ -1400,9 +1399,7 @@ Vue 컴포넌트와 Pinia 액션에서 API를 호출할 때 거의 항상 쓰인
 
 ## 주의
 - `await`를 빼먹으면 값 대신 Promise 객체를 쓰게 된다.
-- 서로 독립된 요청을 하나씩 await하면 느리다. `Promise.all`로 동시에 보낸다.
-
-참고: MDN async function (링크만)',
+- 서로 독립된 요청을 하나씩 await하면 느리다. `Promise.all`로 동시에 보낸다.',
 'async function loadDashboard(userId) {
   try {
     const [profile, stats] = await Promise.all([
@@ -1467,9 +1464,7 @@ spring:
 ## 주의
 - 토큰을 `localStorage`에 두면 XSS 한 번에 탈취된다. 민감한 토큰은 HttpOnly 쿠키가 낫다.
 - 쿠키로 인증하면 CSRF 대책(SameSite, CSRF 토큰)이 필요하다.
-- 프론트와 백엔드 출처가 다르면 `credentials: "include"`와 CORS `allowCredentials`가 함께 필요하다.
-
-참고: MDN HTTP 쿠키 (링크만)',
+- 프론트와 백엔드 출처가 다르면 `credentials: "include"`와 CORS `allowCredentials`가 함께 필요하다.',
 '// Spring: Refresh 토큰을 HttpOnly 쿠키로 내려주기
 ResponseCookie cookie = ResponseCookie.from("refresh_token", refreshToken)
         .httpOnly(true)
@@ -1497,9 +1492,7 @@ return ResponseEntity.ok()
 ## 주의
 - **fetch는 404·500에서도 예외를 던지지 않는다.** 네트워크 실패일 때만 reject된다. `res.ok`를 직접 확인한다. axios는 2xx가 아니면 예외를 던지므로 둘의 동작이 다르다.
 - 응답 본문은 한 번만 읽을 수 있다.
-- 204 응답에 `res.json()`을 부르면 오류가 난다.
-
-참고: MDN Fetch 사용하기 (링크만)',
+- 204 응답에 `res.json()`을 부르면 오류가 난다.',
 'async function createPost(post) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 10_000);
@@ -1777,9 +1770,7 @@ SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
 ## 주의
 - 입력 시점에 태그를 지우는 것만으로는 부족하다. 출력 위치(HTML 본문, 속성, URL, 스크립트)마다 필요한 처리가 다르다.
-- `href`에 사용자 입력을 넣으면 `javascript:` 주소가 실행될 수 있다.
-
-참고: MDN 사이트 간 스크립팅 (링크만)',
+- `href`에 사용자 입력을 넣으면 `javascript:` 주소가 실행될 수 있다.',
 '<!-- 안전: 자동 이스케이프 -->
 <p>{{ comment.content }}</p>
 

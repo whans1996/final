@@ -162,7 +162,7 @@ class FlywayMigrationTest extends IntegrationTestBase {
     private long insertConcept(String name) {
         jdbc.update(
                 "INSERT INTO concepts (name, category, difficulty, summary, source)"
-                        + " VALUES (?, 'spring', 'BEGINNER', '요약', 'SEED')",
+                        + " VALUES (?, 'spring', 'BEGINNER', '요약', 'AI')",
                 name);
         return lastId();
     }

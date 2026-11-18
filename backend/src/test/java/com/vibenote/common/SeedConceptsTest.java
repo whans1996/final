@@ -2,11 +2,15 @@ package com.vibenote.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.io.IOException;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
@@ -33,13 +37,17 @@ class SeedConceptsTest extends IntegrationTestBase {
     @Autowired JdbcTemplate jdbc;
 
     @Test
-    void 시드_카드가_30개_이상_120개_이하다() {
+    void 시드_카드가_80개_이상이고_파일의_행이_모두_들어갔다() throws IOException {
+        String sql =
+                new ClassPathResource("db/migration/R__seed_concepts.sql")
+                        .getContentAsString(StandardCharsets.UTF_8);
+        int rowsInFile = sql.split(Pattern.quote("'PUBLISHED', 'SEED', 'https"), -1).length - 1;
         Integer count =
                 jdbc.queryForObject(
                         "SELECT COUNT(*) FROM concepts WHERE source = 'SEED'", Integer.class);
 
-        // 상한은 R__ 파일이 잘못 복제되는 실수를 잡기 위한 값이다 (결정 로그 11-18: 상한 해제)
-        assertThat(count).isBetween(30, 120);
+        // 이름이 겹치면(콜레이션상 대소문자·악센트만 달라도) 한 INSERT 안에서 앞 행이 조용히 덮어써진다
+        assertThat(count).isGreaterThanOrEqualTo(80).isEqualTo(rowsInFile);
     }
 
     @Test

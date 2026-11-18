@@ -12,7 +12,7 @@ class UserStatsApiTest extends UserTestSupport {
     private long concept(String name) {
         return insert(
                 "INSERT INTO concepts (name, category, difficulty, summary, status, source)"
-                        + " VALUES (?, 'spring', 'BEGINNER', '요약', 'PUBLISHED', 'SEED')",
+                        + " VALUES (?, 'spring', 'BEGINNER', '요약', 'PUBLISHED', 'AI')",
                 name);
     }
 
