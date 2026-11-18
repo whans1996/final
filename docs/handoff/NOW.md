@@ -17,7 +17,7 @@
 ## 바로 다음 할 일
 
 1. 세션 운영 PR(`feature/F-00-session-ops`) CI 초록 확인 → 영역 오너가 GitHub에서 머지 (`gh pr merge` 금지). **이 세션은 여기서 끝내고 `/clear`** 후 새 세션에서 `/pickup`
-2. (사람) `/context`로 세션 시작 비용 63k 내역 확인 → 안 쓰는 플러그인을 `.claude/settings.json` `enabledPlugins`에서 끄기
+2. (선택, 사람) `/context` 결과(11-18): 고정 비용 약 39k(도구 17.9k, 스킬 9.9k 중 플러그인 약 7k, CLAUDE.md 3.5k). 플러그인은 claude.ai 동기화라 저장소 설정으로 못 끔 → 줄이려면 `/plugin`에서 searchfit-seo·product-management·data·design·brightdata·figma 비활성화 (턴당 약 7k, 효과는 `/clear`보다 작음)
 3. 다음 기능 (W1 남은 일, 둘 다 W2 기능의 전제): **2.5 시드 개념 카드 30~50개** (`backend/src/main/resources/db/migration/R__seed_concepts.sql`, 카드별 `reference_url`, `data/datasets.json` split이 eval인 데이터 금지) 또는 **2.4 LlmClient Gemini·Ollama** (`backend/.../llm/`, 실제 호출 테스트는 사람 요청 시만). `/spec`으로 시작
 4. 그다음 W2: F-05 분석 요청(A), F-09·F-10 카드 목록·상세(B)
 
