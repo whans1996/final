@@ -12,7 +12,7 @@ class UserStatsApiTest extends UserTestSupport {
     private long concept(String name) {
         return insert(
                 "INSERT INTO concepts (name, category, difficulty, summary, status, source)"
-                        + " VALUES (?, 'spring', 'BEGINNER', '요약', 'PUBLISHED', 'SEED')",
+                        + " VALUES (?, 'spring', 'BEGINNER', '요약', 'PUBLISHED', 'AI')",
                 name);
     }
 
@@ -65,10 +65,10 @@ class UserStatsApiTest extends UserTestSupport {
     void AC3_완료_미삭제_분석_수_맞힌_카드와_복습_완료_카드의_합집합_정답률을_준다() throws Exception {
         long me = createUser("user@example.com", "코딩초보");
         long other = createUser("other@example.com", "다른사람");
-        long jwt = concept("JWT");
-        long tx = concept("트랜잭션");
-        long di = concept("DI");
-        long aop = concept("AOP");
+        long jwt = concept("test-JWT");
+        long tx = concept("test-트랜잭션");
+        long di = concept("test-DI");
+        long aop = concept("test-AOP");
 
         // 분석: DONE 1개만 센다 (삭제된 DONE, FAILED, 다른 회원의 DONE은 제외)
         long done = analysis(me, "DONE", false);

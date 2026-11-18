@@ -41,7 +41,7 @@
 | 2.2 | BE 뼈대: Spring Boot, Security·JWT 기본, Swagger, Flyway, Testcontainers, 공통 예외·JSON 매핑 | `backend/` | B | 11/18~11/20 | 11/17~11/18 (PR #2) | ✅ |
 | 2.3 | FE 뼈대: Vue 3, Pinia, Router, Axios 인터셉터, Vitest, ESLint·Prettier, Playwright | `frontend/` | A | 11/18~11/20 | 11/17~11/18 (PR #2) | ✅ |
 | 2.4 | LlmClient (Mock·Gemini·Ollama) 연결 검증 | `backend/.../llm` | A | 11/19~11/22 | 11/17~11/18 (인터페이스·Mock PR #2, Gemini·Ollama·폴백·사용량 기록 PR #8) | ✅ |
-| 2.5 | 시드 개념 카드 30~50개 (카드별 출처 `reference_url` 기록) | `R__seed_concepts.sql`, `09-데이터셋.md` | B | 11/20~11/23 | | ⬜ |
+| 2.5 | 시드 개념 카드 80개 이상 (카드별 출처 `reference_url` 기록, 11-18 상한 해제) | `R__seed_concepts.sql`, `09-데이터셋.md` | B | 11/20~11/23 | 11/18~ (85개, PR 예정) | 🟡 |
 
 ## 3. 기능 구현
 

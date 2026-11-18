@@ -70,7 +70,7 @@ class FlywayMigrationTest extends IntegrationTestBase {
     @Test
     void 분석을_soft_delete해도_퀴즈_풀이_기록은_남는다() {
         long userId = insertUser("solver");
-        long conceptId = insertConcept("트랜잭션");
+        long conceptId = insertConcept("test-트랜잭션");
         jdbc.update(
                 "INSERT INTO analyses (user_id, source_type, level) VALUES (?, 'ZIP', 'BEGINNER')",
                 userId);
@@ -105,7 +105,7 @@ class FlywayMigrationTest extends IntegrationTestBase {
     @Test
     void 같은_날_같은_카드의_복습_계획은_하나만_만들_수_있다() {
         long userId = insertUser("planner");
-        long conceptId = insertConcept("인덱스");
+        long conceptId = insertConcept("test-인덱스");
         String sql =
                 "INSERT INTO review_plans (user_id, concept_id, plan_date, reason)"
                         + " VALUES (?, ?, '2026-11-20', ?)";
@@ -118,7 +118,7 @@ class FlywayMigrationTest extends IntegrationTestBase {
     @Test
     void 카드_리뷰는_사용자당_하나만_쓸_수_있다() {
         long userId = insertUser("reviewer");
-        long conceptId = insertConcept("JWT");
+        long conceptId = insertConcept("test-JWT");
         String sql =
                 "INSERT INTO concept_reviews (concept_id, user_id, rating, content)"
                         + " VALUES (?, ?, 5, '좋아요')";
@@ -162,7 +162,7 @@ class FlywayMigrationTest extends IntegrationTestBase {
     private long insertConcept(String name) {
         jdbc.update(
                 "INSERT INTO concepts (name, category, difficulty, summary, source)"
-                        + " VALUES (?, 'spring', 'BEGINNER', '요약', 'SEED')",
+                        + " VALUES (?, 'spring', 'BEGINNER', '요약', 'AI')",
                 name);
         return lastId();
     }
