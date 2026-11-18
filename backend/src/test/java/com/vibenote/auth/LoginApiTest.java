@@ -52,7 +52,7 @@ class LoginApiTest extends AuthTestSupport {
                 objectMapper
                         .readTree(result.getResponse().getContentAsString())
                         .get("accessToken")
-                        .asText();
+                        .asString();
         mockMvc.perform(get("/api/__probe__").header("Authorization", "Bearer " + accessToken))
                 .andExpect(status().isNotFound());
     }

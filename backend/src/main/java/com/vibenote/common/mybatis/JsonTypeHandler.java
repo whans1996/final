@@ -1,21 +1,26 @@
 package com.vibenote.common.mybatis;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
 import java.sql.CallableStatement;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import org.apache.ibatis.type.BaseTypeHandler;
 import org.apache.ibatis.type.JdbcType;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.DeserializationFeature;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.cfg.DateTimeFeature;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * MySQL JSON 컬럼 ↔ Java 객체 변환 (analyses.overview, analysis_flows.steps, quiz_questions.choices).
  *
  * <p>MyBatis가 {@code javaType}을 생성자 인자로 넘겨 주므로 매핑에 javaType을 함께 적는다. 목록은 제네릭 정보가 사라지므로 배열 타입이나
- * {@code JsonNode}를 쓴다.
+ * {@code JsonNode}(Jackson 3, {@code tools.jackson.databind})를 쓴다.
+ *
+ * <p>Jackson 3 기본값을 따른다 (11-18 결정). JSON의 null을 primitive 필드로 읽으면 0이 아니라 예외가 나므로, null이 올 수 있는 필드는
+ * 래퍼 타입({@code Integer} 등)으로 선언한다. 날짜는 ISO 문자열로 쓰고 모르는 속성은 무시한다(아래 두 설정은 Jackson 3 기본값과 같지만 의도를
+ * 드러내려고 적어 둔다).
  *
  * <pre>{@code
  * <result column="steps" property="steps" javaType="com.vibenote.analysis.domain.FlowStep[]"
@@ -27,10 +32,10 @@ import org.apache.ibatis.type.JdbcType;
 public class JsonTypeHandler<T> extends BaseTypeHandler<T> {
 
     private static final ObjectMapper MAPPER =
-            new ObjectMapper()
-                    .findAndRegisterModules()
-                    .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
-                    .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+            JsonMapper.builder()
+                    .disable(DateTimeFeature.WRITE_DATES_AS_TIMESTAMPS)
+                    .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+                    .build();
 
     private final Class<T> type;
 
@@ -65,7 +70,7 @@ public class JsonTypeHandler<T> extends BaseTypeHandler<T> {
     private String write(T value) throws SQLException {
         try {
             return MAPPER.writeValueAsString(value);
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new SQLException("JSON 직렬화 실패: " + type.getName(), e);
         }
     }
@@ -76,7 +81,7 @@ public class JsonTypeHandler<T> extends BaseTypeHandler<T> {
         }
         try {
             return MAPPER.readValue(json, type);
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new SQLException("JSON 역직렬화 실패: " + type.getName(), e);
         }
     }

@@ -1,11 +1,11 @@
 package com.vibenote.llm;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import java.util.List;
 import java.util.Map;
 import org.springframework.http.MediaType;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
+import tools.jackson.databind.JsonNode;
 
 /**
  * Gemini REST API ({@code POST /v1beta/models/{model}:generateContent}). 빈이 아니라 {@link LlmConfig}가
@@ -52,15 +52,15 @@ public class GeminiLlmClient implements LlmClient {
         }
         // 안전 필터 차단 등으로 후보가 없으면 text가 없다
         JsonNode text = body.at("/candidates/0/content/parts/0/text");
-        if (!text.isTextual()) {
+        if (!text.isString()) {
             throw LlmUnavailableException.malformed(PROVIDER);
         }
         JsonNode usage = body.path("usageMetadata");
         return new LlmResponse(
-                text.asText(),
+                text.asString(),
                 model,
-                usage.path("promptTokenCount").asInt(),
-                usage.path("candidatesTokenCount").asInt());
+                usage.path("promptTokenCount").asInt(0),
+                usage.path("candidatesTokenCount").asInt(0));
     }
 
     private static Map<String, Object> requestBody(String prompt) {

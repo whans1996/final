@@ -15,6 +15,7 @@ import java.time.Duration;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.test.json.JsonCompareMode;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
@@ -40,7 +41,7 @@ class OllamaLlmClientTest {
                                         """
                                         {"model":"qwen-test","prompt":"설명해 줘","format":"json","stream":false}
                                         """,
-                                        true))
+                                        JsonCompareMode.STRICT))
                 .andRespond(
                         withSuccess(
                                 """
