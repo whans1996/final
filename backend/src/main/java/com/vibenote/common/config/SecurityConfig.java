@@ -23,8 +23,12 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @EnableMethodSecurity
 public class SecurityConfig {
 
+    /** 인증 API는 와일드카드 대신 공개할 주소만 나열한다 (F-02 AC7). */
     static final String[] PUBLIC_PATHS = {
-        "/api/auth/**",
+        "/api/auth/signup",
+        "/api/auth/login",
+        "/api/auth/refresh",
+        "/api/auth/logout",
         "/v3/api-docs/**",
         "/swagger-ui/**",
         "/swagger-ui.html",

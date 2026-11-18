@@ -38,6 +38,9 @@ app:
   jwt:
     secret: ${JWT_SECRET:}
     access-token-validity: 30m
+    # Refresh 토큰: HttpOnly 쿠키 refresh_token, 재발급마다 회전 (docs/specs/F-02-login-jwt.md)
+    refresh-token-validity: 14d
+    refresh-cookie-secure: true
   upload-dir: ./uploads
 
 llm:

@@ -14,7 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
- * Access 토큰 발급·검증. Refresh 토큰의 저장 위치와 재발급 흐름은 F-02 spec에서 정한다.
+ * Access 토큰 발급·검증. Refresh 토큰(랜덤 문자열, HttpOnly 쿠키, DB 해시 저장)은 {@code auth.AuthService}가 다룬다.
  *
  * <p>토큰 내용: {@code sub} = 사용자 ID, {@code role} = USER | ADMIN.
  */

@@ -1,12 +1,14 @@
 package com.vibenote.common;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.vibenote.common.security.JwtTokenProvider;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 
 /** 인증 규칙: 공개 주소, 토큰 없음·잘못된 토큰 → 401, 관리자 주소 → 403, 응답은 공통 에러 형식. */
 class SecurityConfigTest extends IntegrationTestBase {
@@ -14,7 +16,7 @@ class SecurityConfigTest extends IntegrationTestBase {
     // 실제 API가 생겨도 깨지지 않도록 앞으로도 만들지 않을 주소로 규칙만 확인한다
     private static final String PROTECTED_PROBE = "/api/__probe__";
     private static final String ADMIN_PROBE = "/api/admin/__probe__";
-    private static final String PUBLIC_AUTH_PROBE = "/api/auth/__probe__";
+    private static final String AUTH_PROBE = "/api/auth/__probe__";
 
     @Autowired JwtTokenProvider tokenProvider;
 
@@ -25,11 +27,29 @@ class SecurityConfigTest extends IntegrationTestBase {
     }
 
     @Test
-    void 인증_API_주소는_토큰_없이_통과한다() throws Exception {
-        // 공개 주소라 401이 아니라 (없는 주소이므로) 404가 된다
-        mockMvc.perform(get(PUBLIC_AUTH_PROBE))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.code").value("COMMON_404"));
+    void F02_AC7_공개_인증_API_4개는_토큰_없이_통과한다() throws Exception {
+        // 인증 필터에서 막히면 401 AUTH_401이 된다. 통과했으므로 각 API의 응답이 온다
+        mockMvc.perform(
+                        post("/api/auth/signup")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{}"))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(
+                        post("/api/auth/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{}"))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(post("/api/auth/refresh"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("AUTH_002"));
+        mockMvc.perform(post("/api/auth/logout")).andExpect(status().isNoContent());
+    }
+
+    @Test
+    void F02_AC7_그_밖의_인증_주소는_토큰이_없으면_401_AUTH_401() throws Exception {
+        mockMvc.perform(get(AUTH_PROBE))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("AUTH_401"));
     }
 
     @Test

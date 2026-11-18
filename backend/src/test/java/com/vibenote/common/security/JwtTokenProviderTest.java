@@ -16,7 +16,7 @@ class JwtTokenProviderTest {
 
     private JwtTokenProvider providerAt(Instant instant) {
         return new JwtTokenProvider(
-                new JwtProperties(SECRET, Duration.ofMinutes(30)),
+                new JwtProperties(SECRET, Duration.ofMinutes(30), Duration.ofDays(14), true),
                 Clock.fixed(instant, ZoneOffset.UTC));
     }
 
@@ -41,7 +41,9 @@ class JwtTokenProviderTest {
                 new JwtTokenProvider(
                                 new JwtProperties(
                                         "another-secret-0123456789abcdef-xyz",
-                                        Duration.ofMinutes(30)),
+                                        Duration.ofMinutes(30),
+                                        Duration.ofDays(14),
+                                        true),
                                 Clock.fixed(NOW, ZoneOffset.UTC))
                         .createAccessToken(1L, "USER");
 
@@ -59,7 +61,11 @@ class JwtTokenProviderTest {
         assertThatThrownBy(
                         () ->
                                 new JwtTokenProvider(
-                                        new JwtProperties("short", Duration.ofMinutes(30))))
+                                        new JwtProperties(
+                                                "short",
+                                                Duration.ofMinutes(30),
+                                                Duration.ofDays(14),
+                                                true)))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("JWT_SECRET");
     }
