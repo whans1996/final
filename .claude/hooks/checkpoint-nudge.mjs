@@ -81,9 +81,13 @@ function contextNudge() {
   }
   const key = input.session_id || input.transcript_path;
   if ((state[key] || 0) >= step) return null;
+  // 다른 세션 기록은 남긴다 (덮어쓰면 세션을 오갈 때마다 다시 안내된다). 최근 20개만 유지
+  delete state[key];
+  state[key] = step;
+  const keep = Object.entries(state).slice(-20);
   try {
     mkdirSync(join(ROOT, '.harness'), { recursive: true });
-    writeFileSync(NUDGE_STATE, JSON.stringify({ [key]: step }));
+    writeFileSync(NUDGE_STATE, JSON.stringify(Object.fromEntries(keep)));
   } catch {
     // 상태를 못 남기면 다음 턴에 다시 안내될 뿐이다
   }
