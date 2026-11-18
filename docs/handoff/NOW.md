@@ -3,27 +3,26 @@
 > 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
 > "바로 다음 할 일"은 다른 사람이 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 
-갱신: 2026-11-18 19:40 · 작업자: whans1996 (Claude, 집 PC) · 브랜치: feature/F-05a-analysis-zip
+갱신: 2026-11-18 19:45 · 작업자: whans1996 (Claude, 집 PC) · 브랜치: feature/F-05a-wrapup
 
 ## 현재 기능
 
-F-05a 분석 요청(ZIP) — `docs/specs/F-05a-analysis-request-zip.md` · **PR #14 (develop)** 열림, 머지 대기
+없음 — F-05a 완료(PR #14 머지, spec DONE). 머지 후 정리(진행현황·WBS·간트·spec) 브랜치 `feature/F-05a-wrapup`
 
 ## 진행
 
-- ✅ AC1~16 green. /pr-review: verify all 통과, contract-checker 불일치 0, reviewer 반드시 2·권장 7 반영(deb7f8f·819dc96)
-- ✅ Codex P2 6건 반영(마스킹 형식 변형, 1a5e7f2~1bad898)
-- ✅ Codex 추가 재리뷰(1bad898) P2 1건 반영: `ZipArchiveReader.readAtMost()`가 다 읽은 엔트리의 CRC32를 비교해 다르면 ANALYSIS_400 (`AC9_헤더는_멀쩡하고_내용만_바뀐_ZIP은_CRC_불일치로_ANALYSIS_400`). 사용자 결정으로 **Codex 재요청 없이** 마무리
+- ✅ PR #14 머지(CI 초록, head bcfaa2f). `/progress` W1 점검: W1 대비 앞섬, 재계획 불필요 (`docs/진행현황.md`)
+- ✅ WBS 3.2a ✅(PR #14), 간트 3.2를 3.2a(done)·3.2b로 분리하고 실적 막대 추가
 
 ## 바로 다음 할 일
 
-1. `gh pr checks 14` 초록 확인 (CRC 수정 커밋 기준)
-2. PR #14 설명에 "Codex 추가 지적(CRC) 반영, 재리뷰 생략" 한 줄 추가 → 팀원 A가 GitHub에서 머지
-3. 머지 후 `/progress`에서 F-05a spec DONE 처리, 다음 기능 spec 선택
+1. `feature/F-05a-wrapup` push → develop PR(docs만) → 영역 오너 머지
+2. `/clear` 후 다음 기능 `/spec`: A 영역 F-06(개요·파일별 설명, LLM 첫 사용) 또는 F-05b(URL 수집·SSRF), B 영역 F-09·F-10
+3. 1.4 유스케이스(마감 11/23): `docs/산출물/02-유스케이스.md`에 분석 요청(F-05a) UC 흐름 추가
 
 ## 막힌 점 / 결정 필요
 
-- spec 10절 미결: 설정 키 키워드 확장(`private-key`·`access-key` 등 `key`로 끝나는 키)
+- F-05a spec 10절 미결: 설정 키 키워드 확장(`private-key`·`access-key` 등 `key`로 끝나는 키)
 - 후속: 다른 도메인 created_at/updated_at도 DB 세션 시간대 의존(UTC MySQL이면 9시간 차이). 분석은 서비스 Clock으로 고침
 
 ## 주의

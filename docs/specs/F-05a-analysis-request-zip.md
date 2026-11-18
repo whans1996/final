@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 |---|---|
-| 상태 | APPROVED <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
+| 상태 | DONE (PR #14 머지, 2026-11-18) <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
 | 기능 ID | F-05a (F-05를 a·b로 분할. F-05b = 공개 저장소 URL 수집) |
 | 우선순위 | P0 |
 | 영역 오너 | 팀원 A (AI·분석) |
@@ -254,5 +254,5 @@ F-05a에서는 SELECTING 다음이 곧 `DONE`이다. 이후 spec은 단계를 �
 - [x] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일)
 - [x] reviewer 지적 사항 반영 (반드시 2·권장 7, Codex P2 6건)
 - [x] 산출물 반영: `03-ERD.md`(error_code), `06-화면설계서.md` SC-05·06·07 스크린샷, `04-WBS.md` 3.2를 3.2a(F-05a)·3.2b(F-05b)로 분리, `01-요구사항정의서`의 F-05 행 확인
-- [ ] PR CI 초록 (PR #14: 819dc96 초록, head 1bad898 실행 중)
-- [ ] 상태 DONE (PR 머지 후)
+- [x] PR CI 초록 (PR #14 head bcfaa2f: Backend·Frontend·PR 제목 통과)
+- [x] 상태 DONE (PR #14 머지, 2026-11-18)
