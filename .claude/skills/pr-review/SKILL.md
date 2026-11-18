@@ -18,7 +18,9 @@ description: develop에 합치기 전 현재 feature 브랜치를 verifier·revi
 4. **수정**: `반드시 수정`은 바로 고치고 커밋 (`fix(F-xx): ...`). `권장`은 사용자에게 할지 묻는다.
 5. **PR 설명 생성**: `.github/pull_request_template.md` 형식으로 채워 `.harness/pr-F-xx.md`에 저장하고 요약을 보여 준다.
    - 수용 기준 표: AC별 테스트 이름과 결과
-   - FE 변경이 있으면 `.harness/screens/`의 스크린샷 경로 (PR에는 사람이 이미지를 첨부)
+   - FE 변경이 있으면 스크린샷을 **직접 첨부한다** (사람에게 넘기지 않는다):
+     1. ui-verifier가 남긴 `.harness/screens/*.png` 중 이 기능 화면을 `docs/산출물/screens/SC-xx-이름-{desktop,mobile}.png`로 복사하고, `06-화면설계서.md`의 해당 SC 절에 `<img>`로 넣어 커밋한다 (산출물 준비를 겸한다)
+     2. push한 뒤 `node scripts/pr-screens.mjs SC-xx …`가 출력한 Markdown(커밋 sha 링크)을 PR 설명의 `## 스크린샷`에 붙인다. 이미 PR이 있으면 `gh pr edit --body-file`로 갱신한다
    - 리뷰어(영역 오너)가 특히 볼 곳, 산출물 영향
 6. **PR 생성 (사용자 확인 후)**
    - `git push -u origin <브랜치>`

@@ -25,7 +25,7 @@
 - [ ] reviewer 지적 사항 중 "반드시 수정" 반영
 - [ ] 새 Flyway 마이그레이션: 없음 / `V?__...sql` (번호 충돌 없음 확인)
 - [ ] 새 환경변수: 없음 / `.env.example`에 추가함
-- [ ] FE 변경 시 스크린샷 첨부 (ui-verifier, 데스크톱·모바일)
+- [ ] FE 변경 시 스크린샷 첨부 (ui-verifier, 데스크톱·모바일 → `docs/산출물/screens/` 커밋 + `node scripts/pr-screens.mjs`)
 - [ ] 산출물 영향(화면 설계서, ERD, 요구사항 정의서) 반영 또는 후속 작업으로 기록
 - [ ] wip 커밋이 있으면 **Squash and merge**
 
