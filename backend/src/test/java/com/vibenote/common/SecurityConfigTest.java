@@ -1,6 +1,7 @@
 package com.vibenote.common;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -48,6 +49,24 @@ class SecurityConfigTest extends IntegrationTestBase {
     @Test
     void F02_AC7_그_밖의_인증_주소는_토큰이_없으면_401_AUTH_401() throws Exception {
         mockMvc.perform(get(AUTH_PROBE))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("AUTH_401"));
+    }
+
+    @Test
+    void F03_공개_프로필_GET만_토큰_없이_통과하고_me와_다른_메서드는_401() throws Exception {
+        // 통과하면 서비스가 없는 회원이라 404 USER_404를 준다
+        mockMvc.perform(get("/api/users/999999"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("USER_404"));
+        mockMvc.perform(get("/api/users/999999/stats"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("USER_404"));
+
+        mockMvc.perform(get("/api/users/me"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("AUTH_401"));
+        mockMvc.perform(patch("/api/users/1"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("AUTH_401"));
     }

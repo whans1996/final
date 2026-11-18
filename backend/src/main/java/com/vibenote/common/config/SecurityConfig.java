@@ -5,6 +5,7 @@ import com.vibenote.common.security.JwtAuthenticationFilter;
 import com.vibenote.common.security.JwtTokenProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -36,6 +37,9 @@ public class SecurityConfig {
         "/error"
     };
 
+    /** 로그인 없이 볼 수 있는 GET API. 숫자 id만 맞춰 {@code /api/users/me}는 계속 인증이 필요하다 (F-03). */
+    static final String[] PUBLIC_GET_PATHS = {"/api/users/{id:\\d+}", "/api/users/{id:\\d+}/stats"};
+
     @Bean
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http,
@@ -50,6 +54,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(
                         auth ->
                                 auth.requestMatchers(PUBLIC_PATHS)
+                                        .permitAll()
+                                        .requestMatchers(HttpMethod.GET, PUBLIC_GET_PATHS)
                                         .permitAll()
                                         .requestMatchers("/api/admin/**")
                                         .hasRole("ADMIN")

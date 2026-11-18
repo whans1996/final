@@ -98,6 +98,52 @@
         "required" : [ "id", "level", "nickname", "role" ],
         "type" : "object"
       },
+      "MyProfileResponse" : {
+        "description" : "내 프로필",
+        "properties" : {
+          "bio" : {
+            "description" : "소개. 없으면 null",
+            "example" : "AI로 만든 Spring 프로젝트를 공부하고 있어요.",
+            "type" : [ "string", "null" ]
+          },
+          "createdAt" : {
+            "description" : "가입 시각",
+            "example" : "2026-11-18T10:30:00",
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "email" : {
+            "description" : "이메일",
+            "example" : "user@example.com",
+            "type" : "string"
+          },
+          "id" : {
+            "description" : "회원 ID",
+            "example" : 1,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "level" : {
+            "description" : "학습 수준",
+            "enum" : [ "BEGINNER", "JUNIOR", "SENIOR" ],
+            "example" : "BEGINNER",
+            "type" : "string"
+          },
+          "nickname" : {
+            "description" : "닉네임",
+            "example" : "코딩초보",
+            "type" : "string"
+          },
+          "role" : {
+            "description" : "권한",
+            "enum" : [ "USER", "ADMIN" ],
+            "example" : "USER",
+            "type" : "string"
+          }
+        },
+        "required" : [ "createdAt", "email", "id", "level", "nickname", "role" ],
+        "type" : "object"
+      },
       "SignupRequest" : {
         "description" : "회원가입 요청",
         "properties" : {
@@ -143,6 +189,92 @@
           }
         },
         "required" : [ "id" ],
+        "type" : "object"
+      },
+      "UpdateProfileRequest" : {
+        "description" : "내 프로필 수정 요청. 보낸 필드만 바뀐다",
+        "properties" : {
+          "bio" : {
+            "description" : "소개 (300자 이하). 빈 문자열이면 지운다",
+            "example" : "AI로 만든 Spring 프로젝트를 공부하고 있어요.",
+            "maxLength" : 300,
+            "minLength" : 0,
+            "type" : [ "string", "null" ]
+          },
+          "level" : {
+            "description" : "학습 수준",
+            "enum" : [ "BEGINNER", "JUNIOR", "SENIOR" ],
+            "example" : "JUNIOR",
+            "pattern" : "BEGINNER|JUNIOR|SENIOR",
+            "type" : [ "string", "null" ]
+          },
+          "nickname" : {
+            "description" : "닉네임. 2~20자의 한글·영문·숫자·_",
+            "example" : "주니어개발자",
+            "pattern" : "^[가-힣A-Za-z0-9_]{2,20}$",
+            "type" : [ "string", "null" ]
+          }
+        },
+        "type" : "object"
+      },
+      "UserProfileResponse" : {
+        "description" : "공개 프로필",
+        "properties" : {
+          "bio" : {
+            "description" : "소개. 없으면 null",
+            "example" : "AI로 만든 Spring 프로젝트를 공부하고 있어요.",
+            "type" : [ "string", "null" ]
+          },
+          "createdAt" : {
+            "description" : "가입 시각",
+            "example" : "2026-11-18T10:30:00",
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "id" : {
+            "description" : "회원 ID",
+            "example" : 1,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "level" : {
+            "description" : "학습 수준",
+            "enum" : [ "BEGINNER", "JUNIOR", "SENIOR" ],
+            "example" : "BEGINNER",
+            "type" : "string"
+          },
+          "nickname" : {
+            "description" : "닉네임",
+            "example" : "코딩초보",
+            "type" : "string"
+          }
+        },
+        "required" : [ "createdAt", "id", "level", "nickname" ],
+        "type" : "object"
+      },
+      "UserStatsResponse" : {
+        "description" : "학습 통계",
+        "properties" : {
+          "analysisCount" : {
+            "description" : "완료된 분석 수 (삭제한 분석 제외)",
+            "example" : 3,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "learnedConceptCount" : {
+            "description" : "학습한 카드 수: 퀴즈에서 맞힌 카드와 복습을 완료한 카드 (중복 제외)",
+            "example" : 12,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "quizAccuracy" : {
+            "description" : "퀴즈 정답률(%, 정수). 푼 퀴즈가 없으면 null",
+            "example" : 75,
+            "format" : "int32",
+            "type" : [ "integer", "null" ]
+          }
+        },
+        "required" : [ "analysisCount", "learnedConceptCount" ],
         "type" : "object"
       }
     },
@@ -342,6 +474,174 @@
         "summary" : "회원가입",
         "tags" : [ "인증" ]
       }
+    },
+    "/api/users/me" : {
+      "get" : {
+        "description" : "email·role을 포함한 내 정보를 준다.",
+        "operationId" : "getMe",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MyProfileResponse"
+                }
+              }
+            },
+            "description" : "조회 성공"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "토큰 없음·만료·탈퇴 회원 (AUTH_401)"
+          }
+        },
+        "summary" : "내 프로필 조회",
+        "tags" : [ "회원" ]
+      },
+      "patch" : {
+        "description" : "닉네임·소개·학습 수준 중 보낸 필드만 바꾼다. null·생략은 그대로, 소개를 빈 문자열로 보내면 지운다.",
+        "operationId" : "updateMe",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdateProfileRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MyProfileResponse"
+                }
+              }
+            },
+            "description" : "수정 성공. 수정된 내 프로필"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "검증 실패 (COMMON_400, details에 필드별 사유)"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "토큰 없음·만료·탈퇴 회원 (AUTH_401)"
+          },
+          "409" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "다른 회원이 쓰는 닉네임 (USER_409, details.nickname)"
+          }
+        },
+        "summary" : "내 프로필 수정",
+        "tags" : [ "회원" ]
+      }
+    },
+    "/api/users/{id}" : {
+      "get" : {
+        "description" : "로그인 없이 볼 수 있다. email·role은 주지 않는다.",
+        "operationId" : "getProfile",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/UserProfileResponse"
+                }
+              }
+            },
+            "description" : "조회 성공"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "없는 회원 또는 탈퇴 회원 (USER_404)"
+          }
+        },
+        "security" : [ ],
+        "summary" : "공개 프로필 조회",
+        "tags" : [ "회원" ]
+      }
+    },
+    "/api/users/{id}/stats" : {
+      "get" : {
+        "description" : "완료한 분석 수(삭제 제외), 학습한 카드 수(퀴즈 정답 카드 ∪ 복습 완료 카드), 퀴즈 정답률(%, 풀이가 없으면 null). 로그인 없이 볼 수 있다.",
+        "operationId" : "getStats",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/UserStatsResponse"
+                }
+              }
+            },
+            "description" : "조회 성공"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "없는 회원 또는 탈퇴 회원 (USER_404)"
+          }
+        },
+        "security" : [ ],
+        "summary" : "학습 통계",
+        "tags" : [ "회원" ]
+      }
     }
   },
   "security" : [ {
@@ -352,6 +652,9 @@
     "url" : "http://localhost"
   } ],
   "tags" : [ {
+    "description" : "프로필 조회·수정, 학습 통계, 회원 탈퇴",
+    "name" : "회원"
+  }, {
     "description" : "회원가입, 로그인, 토큰 재발급, 로그아웃",
     "name" : "인증"
   } ]

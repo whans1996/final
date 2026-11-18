@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.vibenote.user.UserStatsMapper">
+
+    <resultMap id="stats" type="com.vibenote.user.dto.UserStatsResponse">
+        <constructor>
+            <arg column="analysis_count" javaType="_long"/>
+            <arg column="learned_concept_count" javaType="_long"/>
+            <arg column="quiz_accuracy" javaType="java.lang.Integer"/>
+        </constructor>
+    </resultMap>
+
+    <!--
+      F-03 AC3.
+      - 분석 수: 완료(DONE)이고 삭제하지 않은 분석
+      - 학습한 카드: 정답을 맞힌 문항의 카드 ∪ 복습을 완료한 카드 (UNION이 중복을 없앤다)
+      - 정답률: 전체 풀이의 맞힌 문항 / 전체 문항. 풀이가 없으면 NULL (분석을 삭제해도 풀이 기록은 남으므로 거르지 않는다)
+    -->
+    <select id="countByUser" resultMap="stats">
+        SELECT
+            (SELECT COUNT(*)
+               FROM analyses
+              WHERE user_id = #{userId} AND status = 'DONE' AND deleted_at IS NULL) AS analysis_count,
+            (SELECT COUNT(*) FROM (
+                SELECT qq.concept_id
+                  FROM quiz_answers qa
+                  JOIN quiz_attempts qt ON qt.id = qa.attempt_id
+                  JOIN quiz_questions qq ON qq.id = qa.question_id
+                 WHERE qt.user_id = #{userId} AND qa.is_correct AND qq.concept_id IS NOT NULL
+                UNION
+                SELECT concept_id
+                  FROM review_plans
+                 WHERE user_id = #{userId} AND status = 'DONE'
+            ) learned) AS learned_concept_count,
+            (SELECT ROUND(100 * SUM(score) / NULLIF(SUM(total), 0))
+               FROM quiz_attempts
+              WHERE user_id = #{userId}) AS quiz_accuracy
+    </select>
+</mapper>

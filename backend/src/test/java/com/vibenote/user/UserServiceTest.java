@@ -3,21 +3,25 @@ package com.vibenote.user;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowableOfType;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.mock;
 
+import com.vibenote.common.Level;
 import com.vibenote.common.exception.BusinessException;
 import com.vibenote.common.exception.ErrorCode;
 import com.vibenote.user.domain.User;
 import com.vibenote.user.dto.SignupRequest;
+import com.vibenote.user.dto.UpdateProfileRequest;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-/** F-01 AC6: 중복 확인을 통과한 뒤 동시 가입으로 DB UNIQUE 위반이 나도 409로 응답한다. */
+/** F-01 AC6·F-03 AC5: 중복 확인을 통과한 뒤 동시 저장으로 DB UNIQUE 위반이 나도 409로 응답한다. */
 class UserServiceTest {
 
     private UserMapper userMapper;
@@ -61,6 +65,29 @@ class UserServiceTest {
 
         BusinessException e =
                 catchThrowableOfType(BusinessException.class, () -> userService.signup(request()));
+
+        assertThat(e.getErrorCode()).isEqualTo(ErrorCode.USER_409);
+        assertThat(e.getDetails()).containsOnlyKeys("nickname");
+    }
+
+    @Test
+    void AC5_수정_저장_시_닉네임_UNIQUE_위반이면_USER_409와_nickname_사유() {
+        // F-03: 중복 확인을 통과한 뒤 다른 회원이 같은 닉네임을 먼저 저장한 경우
+        User user = User.newMember("user@example.com", "hashed", "코딩초보", Level.BEGINNER);
+        user.setId(1L);
+        given(userMapper.findById(1L)).willReturn(Optional.of(user));
+        willThrow(
+                        new DuplicateKeyException(
+                                "Duplicate entry '주니어' for key 'users.uk_users_nickname'"))
+                .given(userMapper)
+                .updateProfile(anyLong(), anyString(), any(), any());
+
+        BusinessException e =
+                catchThrowableOfType(
+                        BusinessException.class,
+                        () ->
+                                userService.updateMe(
+                                        1L, new UpdateProfileRequest("주니어", null, null)));
 
         assertThat(e.getErrorCode()).isEqualTo(ErrorCode.USER_409);
         assertThat(e.getDetails()).containsOnlyKeys("nickname");

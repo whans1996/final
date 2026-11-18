@@ -23,7 +23,11 @@ public enum ErrorCode {
     AUTH_002(HttpStatus.UNAUTHORIZED, "로그인이 만료되었습니다. 다시 로그인하세요."),
 
     /** 이메일·닉네임 중복. details에 해당 필드를 담는다 (F-01). */
-    USER_409(HttpStatus.CONFLICT, "이미 사용 중인 정보가 있습니다.");
+    USER_409(HttpStatus.CONFLICT, "이미 사용 중인 정보가 있습니다."),
+    /** 없는 회원 또는 탈퇴 회원의 공개 프로필·통계 (F-03). */
+    USER_404(HttpStatus.NOT_FOUND, "존재하지 않거나 탈퇴한 사용자입니다."),
+    /** 탈퇴 시 비밀번호 재확인 실패. details.password에 사유를 담는다 (F-03). */
+    USER_001(HttpStatus.BAD_REQUEST, "비밀번호가 올바르지 않습니다.");
 
     private final HttpStatus status;
     private final String message;

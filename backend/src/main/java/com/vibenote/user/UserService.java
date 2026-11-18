@@ -1,9 +1,13 @@
 package com.vibenote.user;
 
+import com.vibenote.common.Level;
 import com.vibenote.common.exception.BusinessException;
 import com.vibenote.common.exception.ErrorCode;
 import com.vibenote.user.domain.User;
+import com.vibenote.user.dto.MyProfileResponse;
 import com.vibenote.user.dto.SignupRequest;
+import com.vibenote.user.dto.UpdateProfileRequest;
+import com.vibenote.user.dto.UserProfileResponse;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -12,7 +16,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** 회원가입, 회원 조회 (F-01). 다른 도메인(auth 등)은 UserMapper 대신 이 Service를 쓴다. */
+/** 회원가입(F-01), 회원 조회, 프로필 조회·수정(F-03). 다른 도메인(auth 등)은 UserMapper 대신 이 Service를 쓴다. */
 @Service
 public class UserService {
 
@@ -62,6 +66,54 @@ public class UserService {
 
     public Optional<User> findById(long id) {
         return userMapper.findById(id);
+    }
+
+    /** 인증된 회원 본인. Access 토큰이 남아 있어도 탈퇴했으면 AUTH_401 (필터는 DB를 보지 않는다). */
+    public User getActiveMember(long userId) {
+        return userMapper
+                .findById(userId)
+                .filter(User::isActive)
+                .orElseThrow(() -> new BusinessException(ErrorCode.AUTH_401));
+    }
+
+    /** 공개 프로필 대상. 없거나 탈퇴했으면 USER_404. */
+    public User getPublicMember(long id) {
+        return userMapper
+                .findById(id)
+                .filter(User::isActive)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_404));
+    }
+
+    public MyProfileResponse getMe(long userId) {
+        return MyProfileResponse.from(getActiveMember(userId));
+    }
+
+    public UserProfileResponse getPublicProfile(long id) {
+        return UserProfileResponse.from(getPublicMember(id));
+    }
+
+    /** 보낸 필드만 바꾼다. 다른 회원의 닉네임이면 USER_409 (details.nickname). */
+    @Transactional
+    public MyProfileResponse updateMe(long userId, UpdateProfileRequest request) {
+        User user = getActiveMember(userId);
+        String nickname = request.nickname() == null ? user.getNickname() : request.nickname();
+        String bio = request.bio() == null ? user.getBio() : emptyToNull(request.bio());
+        Level level = request.levelValue() == null ? user.getLevel() : request.levelValue();
+
+        if (request.nickname() != null && userMapper.existsByNicknameExceptId(nickname, userId)) {
+            throw new BusinessException(ErrorCode.USER_409, Map.of("nickname", NICKNAME_TAKEN));
+        }
+        try {
+            userMapper.updateProfile(userId, nickname, bio, level);
+        } catch (DuplicateKeyException e) {
+            // 중복 확인과 저장 사이에 다른 회원이 같은 닉네임을 가져간 경우 (바꾸는 UNIQUE 컬럼은 닉네임뿐이다)
+            throw new BusinessException(ErrorCode.USER_409, Map.of("nickname", NICKNAME_TAKEN));
+        }
+        return getMe(userId);
+    }
+
+    private static String emptyToNull(String value) {
+        return value.isEmpty() ? null : value;
     }
 
     private static Map<String, String> takenField(DuplicateKeyException e) {

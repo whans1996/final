@@ -1,6 +1,7 @@
 package com.vibenote.user.domain;
 
 import com.vibenote.common.Level;
+import java.time.LocalDateTime;
 
 /** users 행. Controller 응답으로 직접 내보내지 않는다 (DTO로 변환). */
 public class User {
@@ -17,6 +18,7 @@ public class User {
     private Level level;
     private String role;
     private String status;
+    private LocalDateTime createdAt;
 
     /** 가입 직후의 새 회원 (role USER, status ACTIVE). */
     public static User newMember(String email, String passwordHash, String nickname, Level level) {
@@ -96,5 +98,13 @@ public class User {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
     }
 }
