@@ -25,7 +25,7 @@ const branch = currentBranch();
 if (branch && PROTECTED_BRANCHES.includes(branch) && hasCommits() && !isMerging()) {
   fail([
     `보호 브랜치(${branch})에는 직접 커밋할 수 없습니다.`,
-    `git switch -c feature/F-xx-slug 로 브랜치를 만든 뒤 커밋하고, develop에는 MR로 합치세요.`,
+    `git switch -c feature/F-xx-slug 로 브랜치를 만든 뒤 커밋하고, develop에는 PR로 합치세요.`,
   ]);
 }
 
