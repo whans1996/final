@@ -11,15 +11,14 @@ WBS 2.5 시드 개념 카드 (DS-05) **85개 작성 완료** (java 16 · spring 
 
 ## 진행
 
-- ✅ `R__seed_concepts.sql` 85개, 고유 URL 82개 모두 200, 백슬래시 0. 시드 테스트 green. 커밋 252b977 + wip 3개(aee4cc3·a020e8d·ebe99db·30ae9d4), 미push
-- ✅ `SeedConceptsTest.시드_카드가_30개_이상_120개_이하다`, 기획서(F-13·W1·실행 순서·결정 로그), WBS 2.5, 09·datasets DS-05, backend/CLAUDE.md(시드 upsert·HIDDEN·백슬래시·플레이스홀더) 갱신 (미커밋)
-- 🟡 `node scripts/verify.mjs be` 전체 실행 중
+- ✅ `R__seed_concepts.sql` 85개, 고유 URL 82개 모두 200, 백슬래시 0. 시드 테스트 green
+- ✅ `SeedConceptsTest.시드_카드가_30개_이상_120개_이하다`, 기획서(F-13·W1·실행 순서·결정 로그), WBS 2.5, 09·datasets DS-05, backend/CLAUDE.md(시드 upsert·HIDDEN·백슬래시·플레이스홀더) 갱신
+- ✅ `verify.mjs be` green (BE 157개). wip 4개를 b5c8d28 하나로 정리 (커밋: 252b977, b5c8d28, 미push)
 
 ## 바로 다음 할 일
 
-1. verify green → wip 커밋들을 `git reset --soft 252b977` 후 하나로: `feat(F-13): 시드 개념 카드 85개로 확장 (최신 문법·실무 위주)` (push 전이라 안전)
-2. `/pr-review`: reviewer로 출처 규칙(Oracle·MDN·Swagger는 링크만, 각색 금지)과 eval 누수(DS-02-05~08) 점검 → PR(develop). PR 본문에 "사람 표본 검수: 카드 본문은 AI 초안" 명시
-3. 그다음: F-05 분석 요청 `/spec`, F-09·F-10 `/spec` (category 필터 값 = 6종)
+1. (새 세션 권장) `/pr-review`: reviewer로 출처 규칙(Oracle·MDN·Swagger는 링크만, 각색 금지)과 eval 누수(DS-02-05~08) 점검 → PR(develop). PR 본문에 "사람 표본 검수: 카드 본문은 AI 초안" 명시
+2. 그다음: F-05 분석 요청 `/spec`, F-09·F-10 `/spec` (category 필터 값 = 6종)
 
 ## 막힌 점 / 결정 필요
 
