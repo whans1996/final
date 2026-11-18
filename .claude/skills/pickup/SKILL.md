@@ -13,7 +13,7 @@ SessionStart hook이 NOW.md와 git 상태를 이미 주입했으므로 그 내�
 1. **최신화**
    - 미커밋 변경이 있으면 먼저 사용자에게 알린다 (내 PC에서 하던 작업일 수 있음). 임의로 stash/삭제하지 않는다.
    - `origin`(GitHub)이 있으면 `git pull --ff-only`. 충돌·실패 시 멈추고 상황을 보고한다.
-   - `gh pr status`로 내 브랜치의 PR, 리뷰 요청, CI 실패를 확인한다 (gh가 없거나 원격이 없으면 건너뜀). 상대가 리뷰를 요청한 PR이 있으면 보고에 포함한다.
+   - `gh pr status`로 내 브랜치의 PR, 리뷰 요청, CI 실패를 확인한다 (gh가 없거나 원격이 없으면 건너뜀). 상대가 리뷰를 요청한 PR이 있으면 보고에 포함한다. NOW.md의 PR이 열려 있으면 `node scripts/codex-review.mjs <번호>`(대기 없음)로 Codex 상태도 확인한다. `STALE`이나 `FINDINGS`이면 `/pr-review` 8단계 루프로 이어 간다.
    - 현재 브랜치가 main/develop이면 NOW.md의 브랜치로 `git switch` 한다 (없으면 사용자에게 확인).
    - **NOW.md의 PR이 머지되었으면** (`gh pr view <번호> --json state`가 `MERGED`) 다음 기능을 시작하기 전에 "머지 후 정리"를 한다. `git switch develop && git pull` 후, 다음 기능 브랜치의 첫 커밋 또는 정리 브랜치(`feature/F-xx-wrapup`)에서:
      - spec 헤더 `DONE (PR #n 머지, 날짜)`, 체크리스트 마지막 칸
@@ -35,7 +35,7 @@ SessionStart hook이 NOW.md와 git 상태를 이미 주입했으므로 그 내�
 ✅ 완료: AC1, AC2
 🟡 진행 중: AC3 — 테스트 작성됨(red), AnalysisService.validateZip() 구현 필요
 ⛔ 막힌 점: 없음 / ⚠️ 주의: V3 마이그레이션 새로 추가됨 → 로컬 DB 자동 적용
-🔀 PR: #12 F-04 팔로우 — CI ✅, 내 리뷰 요청됨
+🔀 PR: #12 F-04 팔로우 — CI ✅, Codex FINDINGS 1건(P2), 내 리뷰 요청됨
 ➡️ 다음: validateZip()에서 200파일 제한 구현 → AC3 테스트 green
 ```
 

@@ -89,6 +89,7 @@ SSAFY 관통 프로젝트(2026-11-17 시작, 12-24 발표). Spring Boot 3 + MyBa
 | PR 스크린샷 Markdown | `node scripts/pr-screens.mjs SC-18 SC-19` (`docs/산출물/screens/` 커밋·push 후) |
 | 토큰 사용량 (메인·에이전트별) | `node scripts/token-report.mjs [latest|<세션 ID>] [--list]` |
 | PR 상태·CI 확인 | `gh pr status`, `gh pr checks` |
+| Codex 리뷰 판정·재요청 | `node scripts/codex-review.mjs <PR> [--request --wait]` (COMPLETE/FINDINGS/RUNNING/STALE) |
 | BE 실행 (mock LLM) | `cd backend && ./gradlew bootRun --args='--spring.profiles.active=local'` |
 | FE 실행 | `cd frontend && npm run dev` |
 

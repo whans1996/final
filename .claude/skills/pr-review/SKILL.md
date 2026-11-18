@@ -29,10 +29,13 @@ description: develop에 합치기 전 현재 feature 브랜치를 verifier·revi
    - 이미 PR이 있으면 `gh pr edit --body-file ...`로 설명만 갱신한다.
 7. **CI 확인**: `gh pr checks --watch` 대신 `gh pr checks`로 현재 상태를 한 번 확인하고 결과를 보고한다. 실패하면 `gh run view --log-failed`의 핵심 부분만 요약한다.
    - PR 이벤트로 CI가 안 돌면(실행 목록에 `pull_request`가 없음) Actions 탭 → CI → `···` Disable/Enable workflow 후 PR close/reopen을 사람에게 요청한다 (11-18 이 방법으로 해결). 임시로는 `gh workflow run CI --ref <브랜치>`.
-8. **Codex 자동 리뷰 확인 (매 PR 필수)**: PR을 열면 `chatgpt-codex-connector` 봇이 몇 분 안에 리뷰를 단다. 반드시 읽고 반영 여부를 판단한다. 자동 리뷰는 PR 생성 때만 돈다. 수정 push 후 다시 받으려면 사용자 확인 후 `gh pr comment <번호> --body "@codex review"`.
-   - 인라인 지적: `gh api repos/{owner}/{repo}/pulls/<번호>/comments -q '.[] | select(.user.login|startswith("chatgpt-codex")) | .path+":"+((.line//.original_line)|tostring)+"\n"+.body'`
-   - 요약·지적 없음(👍 반응)은 `gh api repos/{owner}/{repo}/pulls/<번호>/reviews`, `.../issues/<번호>/comments`
-   - 타당하면 실패하는 테스트부터 써서 `fix(F-xx): ... (Codex 리뷰)`로 고치고, 타당하지 않으면 이유를 사용자에게 보고한다. 리뷰가 아직 없으면 "Codex 리뷰 대기"로 보고하고 다음 턴에 다시 확인한다.
+8. **Codex 리뷰 루프 (매 PR 필수, head 커밋이 `COMPLETE`가 될 때까지)**: PR을 열면 `chatgpt-codex-connector` 봇이 리뷰한다. 자동 리뷰는 PR 생성 때만 돌기 때문에, 수정을 push한 뒤에는 Claude가 직접 재리뷰를 요청한다. 사용자 확인은 받지 않는다 (11-18 사용자 지시).
+   1. push할 때마다 `node scripts/codex-review.mjs <번호> --request --wait`를 **Bash `run_in_background`**로 실행하고 완료 알림을 기다린다. 직접 폴링하지 않는다. 스크립트는 Codex 요약 댓글의 `codex-review-state` 상태를 읽어 판정하고, 이전 커밋 기준이면 `@codex review`를 한 번만 단다.
+   2. `COMPLETE`(head 커밋, 지적 없음)이면 루프를 끝낸다. NOW.md에 `Codex ✅ <sha>`를 적는다.
+   3. `FINDINGS`이면 출력된 지적(`[P1/P2] path:line 제목`과 링크)을 읽고 하나씩 판단한다.
+      - 타당하면 실패하는 테스트부터 써서 `fix(F-xx): ... (Codex 리뷰)`로 커밋하고 push한 뒤 1로 돌아간다.
+      - 타당하지 않거나 spec 범위·설계 판단이 필요하면 **루프를 멈추고** 이유를 사용자에게 보고한다. 같은 지적이 되풀이되지 않게 하기 위해서다.
+   4. 재리뷰가 **3회**를 넘거나 `TIMEOUT`이면 멈추고 현재 상태를 보고한다.
 9. **머지는 하지 않는다.** `gh pr merge`는 하네스가 차단한다. CI가 초록이면 영역 오너가 GitHub에서 머지한다 (wip 커밋이 있으면 Squash and merge).
 10. spec 상태는 DONE으로 바꾸지 않는다 (머지 후 `/progress`에서 확인).
 11. PR 생성과 CI·Codex 확인 결과를 NOW.md에 남기고 사용자에게 `/clear`를 권한다. Codex 지적 반영이나 머지 후 정리는 새 세션에서 `/pickup`으로 시작한다 (CLAUDE.md "세션 운영").
