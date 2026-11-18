@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 |---|---|
-| 상태 | APPROVED <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
+| 상태 | DONE (PR #8 머지, 2026-11-18) <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
 | 기능 ID | F-00 (인프라, WBS 2.4. 기능 목록에 없는 공통 기반) |
 | 우선순위 | P0 (F-05·F-06·F-07·F-08·F-14·F-16의 전제) |
 | 영역 오너 | 팀원 A (AI·분석) |
@@ -145,5 +145,5 @@ HTTP는 `RestClient.Builder` + `MockRestServiceServer`(spring-test, 의존성 �
 - [x] reviewer 지적 사항 반영
 - [x] 산출물 반영: `08-외부API-생성형AI-활용.md` §1.1 구성도, WBS 2.4 실적
 - [x] (사람) `./gradlew liveTest` 1회 → 08 산출물 §1.5·§2에 결과 기록
-- [ ] PR CI 초록, Codex COMPLETE
-- [ ] 상태 DONE (PR 머지 후)
+- [x] PR CI 초록, Codex COMPLETE
+- [x] 상태 DONE (PR 머지 후)
