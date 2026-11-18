@@ -3,7 +3,7 @@
 > 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
 > "바로 다음 할 일"은 다른 사람이 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 
-갱신: 2026-11-18 21:10 · 작업자: whans1996 (Claude, 집 PC) · 브랜치: feature/F-06-overview-explanation
+갱신: 2026-11-18 21:25 · 작업자: whans1996 (Claude, 집 PC) · 브랜치: feature/F-06-overview-explanation
 
 ## 현재 기능
 
@@ -28,7 +28,7 @@ F-06 개요·파일별 설명 — `docs/specs/F-06-overview-explanation.md` **AP
 ## 막힌 점 / 결정 필요
 
 - 사람: 이슈 #16(설정 키 키워드 확장 범위), 노션 대시보드 팀원 초대
-- 사람: 집 PC 스마트 앱 컨트롤이 oxlint를 막음 → SAC 끄기 또는 wasm 바인딩. **FE 커밋 전 필요**
+- (해결 11-18) 스마트 앱 컨트롤의 oxlint 차단 → `frontend/scripts/run-oxlint.mjs`가 Docker로 대신 실행, Docker 꺼져 있으면 건너뜀(CI가 검사). FE 커밋 때 Docker Desktop을 켜 둔다
 
 ## 주의
 

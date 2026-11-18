@@ -46,7 +46,7 @@ src/
 |---|---|
 | 개발 서버 | `npm run dev` (http://localhost:5173, `/api`는 8080으로 프록시) |
 | 단위 테스트 | `npm run test:unit -- --run` |
-| 린트 | `npm run lint` (자동 수정) / `npm run lint:check` (검사만, CI·verify가 사용) |
+| 린트 | `npm run lint` (자동 수정) / `npm run lint:check` (검사만, CI·verify가 사용). oxlint는 `scripts/run-oxlint.mjs`로 부른다: 스마트 앱 컨트롤이 네이티브를 막는 PC는 Docker로, Docker도 없으면 건너뜀 (`docs/환경설정.md` 5절) |
 | 빌드 | `npm run build` |
 
 루트에서 `node scripts/verify.mjs fe`를 쓰면 린트, 테스트, 빌드를 돌리고 실패만 요약해 준다.
