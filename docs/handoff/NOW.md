@@ -3,30 +3,31 @@
 > 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
 > "바로 다음 할 일"은 다른 사람이 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 
-갱신: 2026-11-18 13:20 · 작업자: whans1996 (Claude, SSAFY 교육장 PC) · 브랜치: feature/F-03-profile
+갱신: 2026-11-18 11:50 · 작업자: whans1996 (Claude, SSAFY 교육장 PC) · 브랜치: feature/F-03-wrapup
 
 ## 현재 기능
 
-F-03 프로필·탈퇴 — **PR #4 머지 대기** (CI 초록 659ffa1, reviewer·Codex 지적 전부 반영). spec APPROVED, 체크리스트는 "PR CI 초록·DONE"만 남음
+F-03 머지 후 정리 PR (문서·하네스만, 코드 변경 없음). F-01~F-03 모두 DONE (PR #3·#4 머지)
 
 ## 진행
 
-- ✅ AC1~AC10 구현 (BE 120, FE 76 green). contract-checker 불일치 0, ui-verifier 문제 0 (스크린샷 `.harness/screens/f03_*.png`)
-- ✅ reviewer 권장 6건 반영 (a0539ff): 탈퇴 한 트랜잭션 롤백 테스트, 수정 UPDATE ACTIVE 조건, refresh INSERT…SELECT ACTIVE, 프로필 화면 경합, 테스트 보강
-- ✅ Codex P2 3건 반영: 보낸 필드만 UPDATE·재발급 users FOR SHARE 먼저(0e73a48), 탈퇴 뒤 늦은 refresh 응답 무시(sessionEpoch, 659ffa1)
-- 이번 기능에서 F-02 코드도 바뀜: `AuthService.refresh` 잠금 순서, `RefreshTokenMapper.insert` 조건부 (Login·Refresh 테스트 통과)
+- ✅ F-03 spec DONE, 작업로그, 화면설계서 SC-02·03·18·19에 스크린샷(`docs/산출물/screens/`)
+- ✅ WBS·간트 실적 반영: 계획 날짜는 기준선 유지 + 실적 열·간트 `실적` 섹션 (04-WBS "일정 관리 방식")
+- ✅ 하네스: `/pickup` 머지 후 정리, `/progress` WBS·간트 동기화, `/pr-review` 스크린샷 직접 첨부(`scripts/pr-screens.mjs`)
+- ✅ 첫 `docs/진행현황.md` (W1 앞섬, 재계획 불필요)
 
 ## 바로 다음 할 일
 
-1. (사람) PR #4에 스크린샷 5장 첨부 → 영역 오너가 GitHub에서 머지 (`gh pr merge` 금지). 원하면 `@codex review`로 659ffa1 재리뷰
-2. 머지 후: `git switch develop && git pull` → `docs/specs/F-03-profile.md` 상태 DONE·체크리스트 마지막 2칸 → 작업로그 → `/progress`로 다음 기능(W1: 시드 카드·LlmClient 확인, W2: F-05·F-06·F-09·F-10) 선택
+1. 이 정리 PR CI 초록 확인 → 영역 오너가 GitHub에서 머지 (`gh pr merge` 금지)
+2. 다음 기능 (W1 남은 일, 둘 다 W2 기능의 전제): **2.5 시드 개념 카드 30~50개** (`backend/src/main/resources/db/migration/R__seed_concepts.sql`, 카드별 `reference_url`, `data/datasets.json` split이 eval인 데이터 금지) 또는 **2.4 LlmClient Gemini·Ollama** (`backend/.../llm/`, 실제 호출 테스트는 사람 요청 시만). `/spec`으로 시작
+3. 그다음 W2: F-05 분석 요청(A), F-09·F-10 카드 목록·상세(B)
 
 ## 막힌 점 / 결정 필요
 
-- WBS 3.1 일정 조정(F-03은 11/18 완료로 W1 안), 팀원 GitHub 아이디(리뷰어 지정), 제출 zip 이름용 지역·반·이름 (사람)
+- 팀원 GitHub 아이디(리뷰어 지정), 제출 zip 이름용 지역·반·이름 (사람)
 
 ## 주의
 
 - verify(Gradle)를 bootRun·다른 Gradle과 동시에 돌리지 않는다 (Windows 파일 잠금). bootRun은 TaskStop 후에도 java.exe가 남을 수 있어 8080 PID를 확인해 종료
-- 셸(heredoc·node -e)로 Markdown을 쓸 때 백틱이 명령 치환된다 → 문서 수정은 Edit 도구로
-- V1·V2 수정 금지. 이번 기능은 마이그레이션 없음
+- 셸(node -e, 따옴표 없는 heredoc)로 Markdown을 쓸 때 백틱이 명령 치환된다 → Edit 도구 또는 `<<'EOF'`
+- V1·V2 수정 금지
