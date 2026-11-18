@@ -16,7 +16,7 @@
 
 ## 바로 다음 할 일
 
-1. PR #5 CI 초록 확인 → 영역 오너가 GitHub에서 머지 (`gh pr merge` 금지). **이 세션은 여기서 끝내고 `/clear`** 후 새 세션에서 `/pickup`
+1. 세션 운영 PR(`feature/F-00-session-ops`) CI 초록 확인 → 영역 오너가 GitHub에서 머지 (`gh pr merge` 금지). **이 세션은 여기서 끝내고 `/clear`** 후 새 세션에서 `/pickup`
 2. (사람) `/context`로 세션 시작 비용 63k 내역 확인 → 안 쓰는 플러그인을 `.claude/settings.json` `enabledPlugins`에서 끄기
 3. 다음 기능 (W1 남은 일, 둘 다 W2 기능의 전제): **2.5 시드 개념 카드 30~50개** (`backend/src/main/resources/db/migration/R__seed_concepts.sql`, 카드별 `reference_url`, `data/datasets.json` split이 eval인 데이터 금지) 또는 **2.4 LlmClient Gemini·Ollama** (`backend/.../llm/`, 실제 호출 테스트는 사람 요청 시만). `/spec`으로 시작
 4. 그다음 W2: F-05 분석 요청(A), F-09·F-10 카드 목록·상세(B)
