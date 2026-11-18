@@ -102,12 +102,21 @@ function findings(sha) {
     });
 }
 
-/** "지적 없음" 영수증 댓글의 커밋 sha 목록 (댓글 순서, 7~40자) */
-function cleanReceiptShas(comments) {
+/** "지적 없음" 영수증 댓글 목록 { sha(7~40자), at } (댓글 순서) */
+function cleanReceipts(comments) {
   return comments
     .filter((c) => c.user?.login?.startsWith(BOT))
-    .map((c) => CLEAN_RECEIPT_RE.exec(c.body || '')?.[1])
-    .filter(Boolean);
+    .map((c) => ({ sha: CLEAN_RECEIPT_RE.exec(c.body || '')?.[1], at: c.created_at }))
+    .filter((r) => r.sha);
+}
+
+/** Codex 인라인 지적 중 가장 늦은 시각 (없으면 '') */
+function lastFindingAt() {
+  return ghList(`repos/${repo}/pulls/${pr}/comments`)
+    .filter((c) => c.user?.login?.startsWith(BOT) && !c.in_reply_to_id)
+    .map((c) => c.created_at)
+    .sort()
+    .at(-1) ?? '';
 }
 
 /** 재리뷰 없이 넘어가도 되는 문서 경로. openapi.json은 API 계약이라 제외 */
@@ -127,8 +136,8 @@ function judge() {
   const comments = issueComments();
   const st = codexState(comments);
   const short = h.sha.slice(0, 7);
-  const receipts = cleanReceiptShas(comments);
-  const clean = receipts.some((s) => h.sha.startsWith(s));
+  const receipts = cleanReceipts(comments);
+  const clean = receipts.some((r) => h.sha.startsWith(r.sha));
   const stClean = st?.status === 'completed' && !st.has_any_findings;
   if (st?.commit_sha === h.sha && stClean) {
     return { verdict: 'COMPLETE', h, comments, msg: `head ${short} 지적 없음 (상태 댓글)` };
@@ -138,9 +147,12 @@ function judge() {
   }
   if (!st || st.commit_sha !== h.sha) {
     // 마지막 리뷰가 지적 없이 끝났을 때만(상태 댓글이 없으면 영수증으로) 기준 커밋을 잡는다.
-    // 지적이 있거나 리뷰 중이면 영수증으로 건너뛰어 그 결과를 덮지 않는다
+    // 지적이 있거나 리뷰 중이면 영수증으로 건너뛰어 그 결과를 덮지 않는다.
+    // 영수증 뒤에 인라인 지적이 달렸으면 그 영수증은 마지막 리뷰가 아니므로 쓰지 않는다 (Codex 리뷰)
     if (!st || stClean) {
-      const bases = [...new Set([...receipts.slice().reverse(), ...(stClean ? [st.commit_sha] : [])])];
+      const findingAt = receipts.length ? lastFindingAt() : '';
+      const fresh = receipts.filter((r) => r.at > findingAt).map((r) => r.sha);
+      const bases = [...new Set([...fresh.reverse(), ...(stClean ? [st.commit_sha] : [])])];
       const base = bases.find((b) => docsOnlySince(b, h.sha));
       if (base) {
         return { verdict: 'COMPLETE', h, comments, msg: `head ${short} 문서만 변경 (Codex ✅ ${base.slice(0, 7)} 이후)` };
