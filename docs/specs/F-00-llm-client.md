@@ -143,7 +143,7 @@ HTTP는 `RestClient.Builder` + `MockRestServiceServer`(spring-test, 의존성 �
 - [x] `application.yml`·`.env.example`·`build.gradle`(liveTest) 갱신
 - [x] `ErrorCode.LLM_503` + `docs/conventions.md` 에러 표
 - [ ] reviewer 지적 사항 반영
-- [ ] 산출물 반영: `08-외부API-생성형AI-활용.md` §1.1 구성도, WBS 2.4 실적
+- [x] 산출물 반영: `08-외부API-생성형AI-활용.md` §1.1 구성도, WBS 2.4 실적
 - [ ] (사람) `./gradlew liveTest` 1회 → 08 산출물 §1.5·§2에 결과 기록
 - [ ] PR CI 초록, Codex COMPLETE
 - [ ] 상태 DONE (PR 머지 후)

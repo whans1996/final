@@ -17,12 +17,45 @@
 
 | 항목 | 내용 |
 |---|---|
-| 기본 모델 | Google Gemini (무료 등급) |
-| 폴백 | Ollama (로컬 모델) — 장애·한도 초과 시 자동 전환 |
+| 기본 모델 | Google Gemini `gemini-3.5-flash-lite` (무료 등급 안정 모델. `GEMINI_MODEL`로 교체) |
+| 폴백 | Ollama `qwen2.5-coder:7b` (로컬 모델) — 장애·한도 초과 시 재시도 없이 즉시 전환 |
 | 개발·테스트 | Mock 클라이언트 (결정적인 fixture 응답) |
 | 추상화 | `LlmClient` 인터페이스 — 설정(`llm.provider`)만 바꿔 교체 |
 
-(구현 후: 호출 흐름 다이어그램, 설정 예시)
+호출 흐름 (provider=gemini, `backend/.../llm/LlmConfig.java`가 조립):
+
+```
+호출부 ─▶ FallbackLlmClient
+            ├─ 1) UsageLoggingLlmClient ─▶ GeminiLlmClient ─▶ POST /v1beta/models/{model}:generateContent
+            │      (429·5xx·타임아웃·연결 실패 → LlmUnavailableException, llm_usage_logs 실패 1행)
+            └─ 2) UsageLoggingLlmClient ─▶ OllamaLlmClient ─▶ POST /api/generate (format=json)
+                   (성공 1행 / 실패 시 BusinessException(LLM_503))
+```
+
+| provider | 조립 |
+|---|---|
+| `mock` (기본) | `Logging(Mock)` |
+| `ollama` | `Fallback(Logging(Ollama))` |
+| `gemini` | `Fallback(Logging(Gemini), Logging(Ollama))` |
+
+- JSON 출력 강제: Gemini `generationConfig.responseMimeType=application/json`, Ollama `format: "json"`
+- 키 보호: Gemini 키는 `x-goog-api-key` 헤더로만 보내고(URL에 남지 않음), 실패 예외·로그·`error_message`에는 `"Gemini 429"`처럼 공급자와 상태만 남긴다
+- 키가 비었는데 provider=gemini면 기동이 실패한다 (원인에 `GEMINI_API_KEY` 표시)
+
+설정 예시 (`application.yml`, 값은 저장소 루트 `.env`의 환경변수로 바꾼다):
+
+```yaml
+llm:
+  provider: ${LLM_PROVIDER:mock}
+  gemini:
+    api-key: ${GEMINI_API_KEY:}
+    model: ${GEMINI_MODEL:gemini-3.5-flash-lite}
+    timeout: 60s
+  ollama:
+    base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
+    model: ${OLLAMA_MODEL:qwen2.5-coder:7b}
+    timeout: 120s
+```
 
 ### 1.2 기능별 활용
 
@@ -112,6 +145,7 @@ AI는 턴마다 대화 전체를 다시 읽으므로 비용은 대화 길이에 
 | 날짜 | 상황 | AI/하네스가 한 일 | 결과 |
 |---|---|---|---|
 | 2026-11-17 | 하네스 E2E 테스트 | guard-bash가 hook 경로 우회 옵션을 차단 | 우회 없이 정상 경로로 테스트하도록 수정 |
+| 2026-11-18 | LlmClient TDD 중 `@Tag("live")` 테스트를 먼저 쓰고 red 확인 | 일반 `test`에 섞여 개발 PC `.env`의 키로 실제 Gemini가 1회 호출됨(규칙 위반). Claude가 결과 XML에서 발견해 바로 보고 | `build.gradle`에서 `live` 태그를 제외하고 `liveTest` 태스크로 분리. 키를 비운 채 `liveTest`로 건너뛰기를 확인. "외부 호출 테스트는 태그 제외를 먼저" 규칙을 backend/CLAUDE.md에 추가 |
 
 ### 3.6 효과와 한계
 

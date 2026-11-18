@@ -35,7 +35,7 @@ com.vibenote
 | `common.page` | `PageQuery`(page·size 기본값·검증, `offset()`), `PageResponse` |
 | `common.mybatis` | `JsonTypeHandler` |
 | `common.Level` | BEGINNER · JUNIOR · SENIOR |
-| `llm` | `LlmClient`, `LlmRequest`·`LlmResponse`·`LlmStage`, `MockLlmClient` |
+| `llm` | `LlmClient`, `LlmRequest`·`LlmResponse`·`LlmStage`, `MockLlmClient` (PR #2). `LlmConfig`(provider별 빈 1개 조립), `Gemini`·`OllamaLlmClient`, `FallbackLlmClient`, `UsageLoggingLlmClient`·`LlmUsageLogMapper` (F-00 2.4) |
 
 도메인 내부: `XxxController` → `XxxService` → `XxxMapper` (+ `dto/`).
 
@@ -103,6 +103,7 @@ com.vibenote
 - Mapper: 실제 DB로 SQL을 검증한다. H2를 쓰지 않는다.
 - Service 단위 테스트는 로직이 복잡할 때만 Mockito로 쓴다 (예: 추천 점수 계산).
 - **테스트 메서드 이름에 spec의 AC 번호를 넣는다**: `AC1_파일이_200개를_넘으면_413을_반환한다()`. `@DisplayName`은 쓰지 않아도 된다.
+- **실제 외부 서비스(Gemini·Ollama 등)를 부르는 테스트는 `@Tag("live")`를 단다.** `test`(CI·git hook·verify)는 이 태그를 제외하고, 사람만 `./gradlew liveTest`로 돌린다. 개발 PC의 `.env`에 키가 있으므로, 태그 없이 쓰면 red 확인만으로도 무료 한도를 쓴다 (11-18 실제 발생). HTTP 동작 검증은 `MockRestServiceServer`로 한다 (`GeminiLlmClientTest` 참고).
 - 테스트끼리 데이터가 섞이지 않게 `@Transactional` 롤백 또는 `@Sql` 정리 스크립트를 쓴다.
 
 ## 명령어 (backend 폴더에서)
