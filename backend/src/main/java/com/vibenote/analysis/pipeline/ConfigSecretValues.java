@@ -28,7 +28,7 @@ final class ConfigSecretValues {
         Set<String> values = new LinkedHashSet<>();
         // SafeConstructor: 임의 클래스 생성 금지. LoaderOptions 기본값이 별칭 수·중첩 깊이를 제한한다 (billion laughs)
         Yaml yaml = new Yaml(new SafeConstructor(new LoaderOptions()));
-        Set<Object> visited = Collections.newSetFromMap(new IdentityHashMap<>());
+        Visited visited = new Visited();
         try {
             for (Object document : yaml.loadAll(content)) {
                 collect(document, false, values, visited);
@@ -55,11 +55,11 @@ final class ConfigSecretValues {
         return values;
     }
 
-    /** 별칭(&a ... *a)으로 같은 노드가 다시 나오거나 순환하면 한 번만 본다. */
+    /** 별칭(&a ... *a)으로 같은 노드가 다시 나오거나 순환하면 문맥(비밀 키 아래인지)마다 한 번만 본다. */
     private static void collect(
-            Object node, boolean underSecret, Set<String> values, Set<Object> visited) {
+            Object node, boolean underSecret, Set<String> values, Visited visited) {
         if (node instanceof Map<?, ?> map) {
-            if (!visited.add(map)) {
+            if (!visited.first(map, underSecret)) {
                 return;
             }
             for (Map.Entry<?, ?> entry : map.entrySet()) {
@@ -71,7 +71,7 @@ final class ConfigSecretValues {
                 collect(entry.getValue(), secret, values, visited);
             }
         } else if (node instanceof Collection<?> collection) {
-            if (!visited.add(collection)) {
+            if (!visited.first(collection, underSecret)) {
                 return;
             }
             for (Object item : collection) {
@@ -91,6 +91,19 @@ final class ConfigSecretValues {
             if (!token.isEmpty() && !token.equals(SecretRedactor.REDACTED)) {
                 values.add(token);
             }
+        }
+    }
+
+    /**
+     * 비밀 키 밖·안 문맥별 방문 기록. 비밀 키 밖에서 먼저 본 별칭 노드를 비밀 키 아래에서 다시 만나면 값을 모아야 하므로 문맥마다 따로 센다. 노드당 최대 두 번이라
+     * 순환해도 끝난다.
+     */
+    private static final class Visited {
+        private final Set<Object> plain = Collections.newSetFromMap(new IdentityHashMap<>());
+        private final Set<Object> secret = Collections.newSetFromMap(new IdentityHashMap<>());
+
+        boolean first(Object node, boolean underSecret) {
+            return (underSecret ? secret : plain).add(node);
         }
     }
 }

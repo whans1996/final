@@ -319,6 +319,15 @@ class SecretRedactorTest {
     }
 
     @Test
+    void AC6_비밀_키_밖에서_정의한_yml_별칭을_비밀_키_아래에서_쓰면_가린다() {
+        String yml = "defaults: &creds\n  value: hunter2\nsecret: *creds\n";
+
+        assertThat(SecretRedactor.redact("application.yml", yml))
+                .doesNotContain("hunter2")
+                .isEqualTo("defaults: &creds\n  value: [REDACTED]\nsecret: [REDACTED]\n");
+    }
+
+    @Test
     void AC6_비밀_토큰이_상한을_넘으면_파일_전체를_가린다() {
         String yml =
                 "password: |\n  "
