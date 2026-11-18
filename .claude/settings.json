@@ -25,7 +25,10 @@
       "Bash(git push -u origin feature/:*)",
       "Bash(git push origin feature/:*)",
       "Bash(git rev-parse:*)",
-      "Bash(git ls-files:*)"
+      "Bash(git ls-files:*)",
+      "Bash(gh issue create:*)", 
+      "Bash(gh issue list:*)", 
+      "Bash(gh issue view:*)"
     ],
     "deny": [
       "Read(**/.env)",
