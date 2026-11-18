@@ -13,7 +13,8 @@ F-06 개요·파일별 설명 — `docs/specs/F-06-overview-explanation.md` **AP
 
 - ✅ 8b09a86: V4, `analysis.explain`(ApiDetector·PromptTemplates·ExplainPrompts·Overview/FileExplainer·LlmJsonCall), 프롬프트 6개, fixture
 - ✅ 58a6ccd: `AnalysisPipeline` EXPLAINING, `GET /api/analyses/{id}`·`/files`·`/files/{fileId}`, Ollama num_ctx, openapi.json, conventions·ERD·DS-06. BE 273개 green (push 전)
-- ⏳ contract-checker(BE↔spec) 실행 중
+- ✅ 02630fb: contract-checker 지적(overview `$ref`+`nullable` → OAS 3.1에서 "항상 null") 수정. BE↔spec 나머지 일치. FE 구현 후 다시 돌린다
+- AI 활용 소재: contract-checker가 springdoc OAS 3.1 nullable `$ref` 스키마 오류를 잡음, verifier red 확인에서 템플릿 규칙 문장이 구분자 카운트에 섞이는 테스트 버그 발견
 
 ## 바로 다음 할 일
 
