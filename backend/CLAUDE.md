@@ -60,7 +60,11 @@ com.vibenote
 
 - 위치: `src/main/resources/db/migration/`
 - 스키마 변경: `V{n}__{설명}.sql` (예: `V3__add_quiz_tables.sql`). **커밋된 V 파일은 수정 금지**이다 (hook이 막는다).
-- 시드 데이터: `R__seed_concepts.sql` (반복 실행 마이그레이션. 내용이 바뀌면 다시 적용된다). `INSERT ... ON DUPLICATE KEY UPDATE`로 작성한다.
+- 시드 데이터: `R__seed_concepts.sql` (반복 실행 마이그레이션. 내용이 바뀌면 다시 적용된다). `INSERT ... ON DUPLICATE KEY UPDATE`로 작성한다 (row alias `AS seed`, MySQL 8.0.19+).
+  - `name` 기준 upsert라 파일을 고치면 관리자가 화면에서 수정한 시드 카드가 덮어써진다. **카드 이름을 바꾸지 않는다** (새 카드가 생긴다). 공개 후 카드를 빼려면 DELETE 말고 `status='HIDDEN'`으로 둔다 (리뷰·찜 등이 CASCADE로 지워진다).
+  - 문자열 안 작은따옴표는 두 번(`''`) 쓰고, **백슬래시는 쓰지 않는다** (MySQL 기본 모드에서 이스케이프 문자).
+  - 출처(`reference_url`)는 `data/datasets.json` DS-01 도메인만 쓴다. `SeedConceptsTest`가 검사한다.
+- Flyway 플레이스홀더 치환은 꺼 두었다 (`spring.flyway.placeholder-replacement: false`). 시드 본문의 `${}` 예제가 그대로 들어가야 하기 때문이다. 마이그레이션에서 플레이스홀더를 쓰지 않는다.
 - 두 PC에서 버전 번호가 겹치지 않도록 새 V 파일을 만들기 전에 `git pull`로 최신 번호를 확인한다.
 
 ## API 문서 (Swagger, springdoc-openapi)

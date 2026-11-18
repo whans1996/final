@@ -33,12 +33,13 @@ class SeedConceptsTest extends IntegrationTestBase {
     @Autowired JdbcTemplate jdbc;
 
     @Test
-    void 시드_카드가_30개_이상_50개_이하다() {
+    void 시드_카드가_30개_이상_120개_이하다() {
         Integer count =
                 jdbc.queryForObject(
                         "SELECT COUNT(*) FROM concepts WHERE source = 'SEED'", Integer.class);
 
-        assertThat(count).isBetween(30, 50);
+        // 상한은 R__ 파일이 잘못 복제되는 실수를 잡기 위한 값이다 (결정 로그 11-18: 상한 해제)
+        assertThat(count).isBetween(30, 120);
     }
 
     @Test
