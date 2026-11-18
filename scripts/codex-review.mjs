@@ -70,13 +70,15 @@ function head() {
 const ghList = (path) => (ghJson(['api', '--paginate', '--slurp', `${path}?per_page=100`]) || []).flat();
 const issueComments = () => ghList(`repos/${repo}/issues/${pr}/comments`);
 
+/** 요약 댓글의 code_review 상태 + 댓글 갱신 시각(at) */
 function codexState(comments) {
   for (const c of comments) {
     if (!c.user?.login?.startsWith(BOT)) continue;
     const m = STATE_RE.exec(c.body || '');
     if (m) {
       try {
-        return JSON.parse(m[1]).code_review ?? null;
+        const cr = JSON.parse(m[1]).code_review;
+        return cr ? { ...cr, at: c.updated_at || c.created_at } : null;
       } catch {
         return null;
       }
@@ -120,6 +122,14 @@ function lastFindingAt() {
     .at(-1) ?? '';
 }
 
+/** 문서만 변경 판정의 기준 후보 커밋 (늦은 영수증부터). 마지막 인라인 지적(findingAt)보다 늦은 "지적 없음" 결과만 */
+function cleanBases(st, receipts, findingAt) {
+  const stClean = st?.status === 'completed' && !st.has_any_findings;
+  const fresh = receipts.filter((r) => r.at > findingAt).map((r) => r.sha);
+  const stFresh = stClean && st.at > findingAt ? [st.commit_sha] : [];
+  return [...new Set([...fresh.reverse(), ...stFresh])];
+}
+
 /** 재리뷰 없이 넘어가도 되는 문서 경로. openapi.json은 API 계약이라 제외 */
 const isDocPath = (p) => !!p && p.startsWith('docs/') && p !== 'docs/api/openapi.json';
 
@@ -149,11 +159,10 @@ function judge() {
   if (!st || st.commit_sha !== h.sha) {
     // 마지막 리뷰가 지적 없이 끝났을 때만(상태 댓글이 없으면 영수증으로) 기준 커밋을 잡는다.
     // 지적이 있거나 리뷰 중이면 영수증으로 건너뛰어 그 결과를 덮지 않는다.
-    // 영수증 뒤에 인라인 지적이 달렸으면 그 영수증은 마지막 리뷰가 아니므로 쓰지 않는다 (Codex 리뷰)
+    // 영수증·상태 댓글 뒤에 인라인 지적이 달렸으면 그것은 마지막 리뷰가 아니므로 쓰지 않는다.
+    // 상태 댓글도 갱신이 늦을 수 있어 같은 기준을 적용한다 (Codex 리뷰)
     if (!st || stClean) {
-      const findingAt = receipts.length ? lastFindingAt() : '';
-      const fresh = receipts.filter((r) => r.at > findingAt).map((r) => r.sha);
-      const bases = [...new Set([...fresh.reverse(), ...(stClean ? [st.commit_sha] : [])])];
+      const bases = cleanBases(st, receipts, lastFindingAt());
       const base = bases.find((b) => docsOnlySince(b, h.sha));
       if (base) {
         return { verdict: 'COMPLETE', h, comments, msg: `head ${short} 문서만 변경 (Codex ✅ ${base.slice(0, 7)} 이후)` };
