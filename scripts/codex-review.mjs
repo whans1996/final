@@ -34,7 +34,8 @@ function fail(msg) {
 }
 
 function gh(args) {
-  const r = spawnSync('gh', args, { encoding: 'utf8', windowsHide: true });
+  // 모든 페이지를 한 번에 받으므로 기본 1MiB 버퍼로는 ENOBUFS가 날 수 있다 (Codex 리뷰)
+  const r = spawnSync('gh', args, { encoding: 'utf8', windowsHide: true, maxBuffer: 64 * 1024 * 1024 });
   if (r.error) fail(`gh 실행 실패: ${r.error.message}`);
   if (r.status !== 0) fail(`gh ${args.slice(0, 2).join(' ')}: ${(r.stderr || '').trim().split('\n')[0]}`);
   return r.stdout;
