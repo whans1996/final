@@ -45,7 +45,11 @@ public enum ErrorCode {
             "분석할 수 있는 코드가 없습니다. Java·Spring·MyBatis·JavaScript·Vue 프로젝트만 지원합니다."),
     /** 예기치 못한 오류, 실행기 거절, 서버 재시작. */
     ANALYSIS_500(HttpStatus.INTERNAL_SERVER_ERROR, "분석 중 오류가 발생했습니다. 다시 요청해 주세요."),
+    /** 분석은 내 것이지만 fileId가 그 분석의 파일이 아님 (F-06 AC11). */
+    ANALYSIS_001(HttpStatus.NOT_FOUND, "파일을 찾을 수 없습니다."),
 
+    /** 개요 응답이 1회 재시도 후에도 스키마 위반. 파이프라인 FAILED 사유다 (F-06 AC5). */
+    LLM_502(HttpStatus.BAD_GATEWAY, "AI 응답 형식이 올바르지 않아 설명을 만들지 못했습니다. 다시 요청해 주세요."),
     /** 설정된 LLM이 폴백까지 모두 응답하지 못함. 호출자는 파이프라인 단계를 FAILED로 표시한다 (F-00). */
     LLM_503(HttpStatus.SERVICE_UNAVAILABLE, "AI 응답을 받지 못했습니다. 잠시 후 다시 시도해 주세요.");
 

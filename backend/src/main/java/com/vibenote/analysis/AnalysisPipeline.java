@@ -1,5 +1,12 @@
 package com.vibenote.analysis;
 
+import com.vibenote.analysis.domain.Analysis;
+import com.vibenote.analysis.domain.AnalysisFile;
+import com.vibenote.analysis.explain.AnalysisOverview;
+import com.vibenote.analysis.explain.ApiDetector;
+import com.vibenote.analysis.explain.ExplainProperties;
+import com.vibenote.analysis.explain.FileExplainer;
+import com.vibenote.analysis.explain.OverviewExplainer;
 import com.vibenote.analysis.pipeline.AnalysisFailedException;
 import com.vibenote.analysis.pipeline.FileSelector;
 import com.vibenote.analysis.pipeline.SecretRedactor;
@@ -19,8 +26,8 @@ import org.springframework.stereotype.Component;
  * 분석 파이프라인 (docs/specs/F-05a-analysis-request-zip.md 5절). 단계마다 status·progress를 기록하고, 정해진 사유로 멈추면 그
  * 사유로, 예기치 못한 예외면 ANALYSIS_500으로 FAILED 처리한다. 결과와 상관없이 임시 ZIP을 지운다 (AC10).
  *
- * <p>단계 목록은 {@link #stages} 한 곳에 둔다. F-06·F-08·F-14가 SELECTING 뒤에
- * EXPLAINING(40)·EXTRACTING(70)·QUIZ(85)를 끼워 넣는다.
+ * <p>단계 목록은 {@link #stages} 한 곳에 둔다. F-06이 SELECTING 뒤에 EXPLAINING(40)을 넣었고, F-08·F-14가 그 뒤에
+ * EXTRACTING(70)·QUIZ(85)를 끼워 넣는다.
  */
 @Component
 public class AnalysisPipeline {
@@ -32,21 +39,36 @@ public class AnalysisPipeline {
     private final ZipArchiveReader zipReader;
     private final AnalysisProperties properties;
     private final List<Stage> stages;
+    private final OverviewExplainer overviewExplainer;
+    private final FileExplainer fileExplainer;
+    private final ExplainProperties explainProperties;
+
+    /** EXPLAINING 진행률: 개요 뒤 45, 파일 묶음 k/n 뒤 45 + floor(24·k/n) (F-06 AC2). */
+    static final int EXPLAIN_OVERVIEW_DONE = 45;
+
+    static final int EXPLAIN_FILES_SPAN = 24;
 
     public AnalysisPipeline(
             AnalysisService analysisService,
             AnalysisTempFiles tempFiles,
             ZipArchiveReader zipReader,
-            AnalysisProperties properties) {
+            AnalysisProperties properties,
+            OverviewExplainer overviewExplainer,
+            FileExplainer fileExplainer,
+            ExplainProperties explainProperties) {
         this.analysisService = analysisService;
         this.tempFiles = tempFiles;
         this.zipReader = zipReader;
         this.properties = properties;
+        this.overviewExplainer = overviewExplainer;
+        this.fileExplainer = fileExplainer;
+        this.explainProperties = explainProperties;
         this.stages =
                 List.of(
                         new Stage(AnalysisStatus.FETCHING, 5, this::fetch),
                         new Stage(AnalysisStatus.FILTERING, 15, this::filter),
-                        new Stage(AnalysisStatus.SELECTING, 25, this::select));
+                        new Stage(AnalysisStatus.SELECTING, 25, this::select),
+                        new Stage(AnalysisStatus.EXPLAINING, 40, this::explain));
     }
 
     /** 분석 하나를 끝까지 실행한다. 분석 전용 실행기 스레드에서 부른다. */
@@ -103,6 +125,34 @@ public class AnalysisPipeline {
                                                 SecretRedactor.redact(f.path(), f.content())))
                         .toList();
         analysisService.saveFiles(context.analysisId, selected);
+    }
+
+    /**
+     * 개요 1회 + 파일 묶음(6개) 설명 (F-06). 개요가 실패하면 분석을 멈추고(AnalysisFailedException), 묶음 실패는 그 묶음만 비워 두고
+     * 계속한다. LLM 호출은 트랜잭션 밖에서 하고 결과 저장만 짧은 트랜잭션으로 한다.
+     */
+    private void explain(Context context) {
+        long id = context.analysisId;
+        Analysis analysis = analysisService.findForPipeline(id);
+        List<AnalysisFile> files = analysisService.findFiles(id);
+        AnalysisOverview overview =
+                overviewExplainer.explain(analysis, files, ApiDetector.detect(files));
+        analysisService.saveOverview(id, overview);
+        if (!analysisService.advance(id, AnalysisStatus.EXPLAINING, EXPLAIN_OVERVIEW_DONE)) {
+            return;
+        }
+        int size = explainProperties.batchSize();
+        int batches = (files.size() + size - 1) / size;
+        for (int k = 1; k <= batches; k++) {
+            List<AnalysisFile> batch =
+                    files.subList((k - 1) * size, Math.min(k * size, files.size()));
+            analysisService.saveFileExplanations(
+                    id, fileExplainer.explain(analysis, overview.summary(), batch));
+            int progress = EXPLAIN_OVERVIEW_DONE + EXPLAIN_FILES_SPAN * k / batches;
+            if (!analysisService.advance(id, AnalysisStatus.EXPLAINING, progress)) {
+                return;
+            }
+        }
     }
 
     /** 진입할 때 status·progress를 기록하는 단계 하나. */

@@ -8,8 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "test:unit": "vitest",
-    "lint": "oxlint . --fix && eslint . --fix --cache && prettier --write src/",
-    "lint:check": "oxlint . && eslint . && prettier --check src/",
+    "lint": "node scripts/run-oxlint.mjs . --fix && eslint . --fix --cache && prettier --write src/",
+    "lint:check": "node scripts/run-oxlint.mjs . && eslint . && prettier --check src/",
     "format": "prettier --write src/"
   },
   "dependencies": {

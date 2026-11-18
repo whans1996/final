@@ -2,14 +2,16 @@ package com.vibenote.analysis.domain;
 
 import com.vibenote.analysis.pipeline.SelectedFile;
 
-/** analysis_files 행 (summary 제외, F-06이 채운다). */
+/** analysis_files 행. role·summary는 EXPLAINING 단계가 채운다 (F-06). 목록 조회에서는 content가 null이다. */
 public class AnalysisFile {
 
     private Long id;
     private long analysisId;
     private String path;
     private String layer;
+    private String role;
     private String content;
+    private String summary;
 
     public static AnalysisFile of(long analysisId, SelectedFile file) {
         AnalysisFile row = new AnalysisFile();
@@ -50,6 +52,22 @@ public class AnalysisFile {
 
     public void setLayer(String layer) {
         this.layer = layer;
+    }
+
+    public String getRole() {
+        return role;
+    }
+
+    public void setRole(String role) {
+        this.role = role;
+    }
+
+    public String getSummary() {
+        return summary;
+    }
+
+    public void setSummary(String summary) {
+        this.summary = summary;
     }
 
     public String getContent() {

@@ -57,6 +57,48 @@
         </foreach>
     </insert>
 
+    <select id="findFiles" resultType="com.vibenote.analysis.domain.AnalysisFile">
+        SELECT id, analysis_id, path, layer, role, content, summary
+        FROM analysis_files WHERE analysis_id = #{analysisId} ORDER BY id
+    </select>
+
+    <select id="findFileSummaries" resultType="com.vibenote.analysis.domain.AnalysisFile">
+        SELECT id, analysis_id, path, layer, role, summary
+        FROM analysis_files WHERE analysis_id = #{analysisId} ORDER BY id
+    </select>
+
+    <select id="findFile" resultType="com.vibenote.analysis.domain.AnalysisFile">
+        SELECT id, analysis_id, path, layer, role, content, summary
+        FROM analysis_files WHERE id = #{fileId} AND analysis_id = #{analysisId}
+    </select>
+
+    <resultMap id="analysisDetail" type="com.vibenote.analysis.domain.AnalysisDetail" autoMapping="true">
+        <result column="overview" property="overview"
+                javaType="com.vibenote.analysis.explain.AnalysisOverview"
+                typeHandler="com.vibenote.common.mybatis.JsonTypeHandler"/>
+    </resultMap>
+
+    <!-- F-06 AC9. explained_file_count는 설명(summary)이 채워진 파일 수 -->
+    <select id="findOwnedDetail" resultMap="analysisDetail">
+        SELECT <include refid="columns"/>, overview,
+               (SELECT COUNT(*) FROM analysis_files f WHERE f.analysis_id = a.id) AS file_count,
+               (SELECT COUNT(*) FROM analysis_files f WHERE f.analysis_id = a.id AND f.summary IS NOT NULL) AS explained_file_count
+        FROM analyses a
+        WHERE a.id = #{id} AND a.user_id = #{userId} AND a.deleted_at IS NULL
+    </select>
+
+    <update id="updateOverview">
+        UPDATE analyses
+        SET overview = #{overview, javaType=com.vibenote.analysis.explain.AnalysisOverview,
+                       typeHandler=com.vibenote.common.mybatis.JsonTypeHandler}
+        WHERE id = #{id}
+    </update>
+
+    <update id="updateFileExplanation">
+        UPDATE analysis_files SET role = #{role}, summary = #{summary}
+        WHERE id = #{fileId} AND analysis_id = #{analysisId}
+    </update>
+
     <!-- 삭제된 분석은 그대로 둔다 (AC11) -->
     <update id="failInterrupted">
         UPDATE analyses

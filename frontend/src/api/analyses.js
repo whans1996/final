@@ -29,3 +29,20 @@ export function fetchAnalyses({ page, size }) {
 export function fetchAnalysisStatus(id) {
   return http.get(`/analyses/${id}/status`).then((res) => res.data)
 }
+
+// 결과 조회 (F-06, docs/specs/F-06-overview-explanation.md 3절). 없거나 남의 분석이면 404 ANALYSIS_404.
+
+/** 분석 상세 (overview·fileCount·explainedFileCount 포함). 진행 중이면 overview가 null일 수 있다. */
+export function fetchAnalysis(id) {
+  return http.get(`/analyses/${id}`).then((res) => res.data)
+}
+
+/** 선별 파일 목록 (id 오름차순 = 선별 우선순위). @returns {Promise<{ id: number, path: string, layer: string, role: string|null, summary: string|null }[]>} */
+export function fetchAnalysisFiles(id) {
+  return http.get(`/analyses/${id}/files`).then((res) => res.data)
+}
+
+/** 파일 하나 (content 포함). 그 분석의 파일이 아니면 404 ANALYSIS_001. */
+export function fetchAnalysisFile(id, fileId) {
+  return http.get(`/analyses/${id}/files/${fileId}`).then((res) => res.data)
+}

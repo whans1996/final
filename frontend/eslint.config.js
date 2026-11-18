@@ -22,6 +22,12 @@ export default defineConfig([
     },
   },
 
+  {
+    // 개발 도구 스크립트 (Node에서 실행)
+    files: ['scripts/**/*.mjs'],
+    languageOptions: { globals: { ...globals.node } },
+  },
+
   js.configs.recommended,
   ...pluginVue.configs['flat/essential'],
 

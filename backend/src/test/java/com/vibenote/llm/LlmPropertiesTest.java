@@ -20,7 +20,8 @@ class LlmPropertiesTest {
                         new LlmProperties.Ollama(
                                 "http://localhost:11434",
                                 "qwen2.5-coder:7b",
-                                Duration.ofSeconds(120)));
+                                Duration.ofSeconds(120),
+                                16384));
 
         assertThat(props.toString())
                 .doesNotContain("secret-key-123")

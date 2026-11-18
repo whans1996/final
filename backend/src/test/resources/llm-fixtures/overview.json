@@ -1,8 +1,11 @@
 {
   "summary": "테스트 전용 fixture: 회원 가입 요청을 받아 저장하는 작은 Spring Boot 예제입니다.",
+  "techStack": ["Spring Boot", "MyBatis"],
   "layers": [
-    { "name": "controller", "files": ["MemberController.java"] },
-    { "name": "service", "files": ["MemberService.java"] }
+    { "layer": "controller", "role": "MemberController가 가입 요청을 받습니다." },
+    { "layer": "service", "role": "MemberService가 가입 규칙을 처리합니다." }
   ],
-  "apis": ["POST /members"]
+  "readingOrder": [
+    { "path": "src/main/java/com/example/todo/controller/UserController.java", "reason": "요청이 들어오는 곳을 먼저 봅니다." }
+  ]
 }

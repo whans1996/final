@@ -29,7 +29,9 @@ public record AnalysisStatusResponse(
                             "ANALYSIS_400",
                             "ANALYSIS_413",
                             "ANALYSIS_415",
-                            "ANALYSIS_500"
+                            "ANALYSIS_500",
+                            "LLM_502",
+                            "LLM_503"
                         })
                 String errorCode,
         @Schema(
