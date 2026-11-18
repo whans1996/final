@@ -40,7 +40,8 @@ add(gh.ok || 'warn', 'GitHub CLI', gh.ok ? '로그인됨' : 'gh 설치 후 gh au
 const nodeMajor = Number(process.versions.node.split('.')[0]);
 add(nodeMajor >= 20 || 'warn', 'Node', `v${process.versions.node}${nodeMajor >= 20 ? '' : ' (20 이상 권장)'}`);
 
-// 3. JDK — Gradle·STS가 실제로 쓰는 JAVA_HOME 기준으로 점검한다 (PATH의 java는 참고만)
+// 3. JDK — Gradle이 실제로 쓰는 JAVA_HOME 기준으로 점검한다 (PATH의 java는 참고만).
+//    JAVA_HOME은 Gradle 9 실행용이라 17 이상이면 된다. 컴파일 JDK 21은 Gradle toolchain(foojay)이 자동으로 받는다.
 const javaMajorOf = (out) => {
   const m = /version "(\d+)(?:\.(\d+))?/.exec(out);
   return m ? (m[1] === '1' ? Number(m[2]) : Number(m[1])) : 0;
@@ -59,7 +60,7 @@ add(
   homeMajor >= 17,
   'JDK (JAVA_HOME)',
   javaHome
-    ? `${homeMajor || '확인 실패'} — ${javaHome}${homeMajor >= 17 ? '' : jdkHint || ' → JDK 17 이상을 JAVA_HOME으로 지정 (docs/환경설정.md)'}`
+    ? `${homeMajor || '확인 실패'} — ${javaHome}${homeMajor >= 17 ? (homeMajor >= 21 ? '' : ' (컴파일 JDK 21은 첫 빌드 때 Gradle이 자동으로 받음. STS는 JDK 21 필요)') : jdkHint || ' → JDK 17 이상을 JAVA_HOME으로 지정 (docs/환경설정.md)'}`
     : '없음 → JDK 17 이상을 JAVA_HOME으로 지정 (docs/환경설정.md)',
 );
 const pathJava = cmd('java -version');

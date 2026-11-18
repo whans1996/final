@@ -18,7 +18,7 @@ SSAFY Final Project (Java Track, 자율 주제) · 2026-11-17 ~ 2026-12-24
 
 | 구분 | 기술 |
 |---|---|
-| Back-End | Java 17, Spring Boot 3, Spring Security + JWT, MyBatis, MySQL 8, Flyway, Swagger(springdoc-openapi) |
+| Back-End | Java 21, Spring Boot 4, Spring Security + JWT, MyBatis, MySQL 8, Flyway, Swagger(springdoc-openapi) |
 | Front-End | Vue 3, Vite, Pinia, Vue Router, Axios |
 | AI | Gemini API (기본), Ollama (폴백), Mock (개발·테스트) |
 | 테스트·품질 | JUnit 5, MockMvc, Testcontainers(MySQL), Vitest, Playwright, GitHub Actions |
@@ -48,7 +48,7 @@ SSAFY Final Project (Java Track, 자율 주제) · 2026-11-17 ~ 2026-12-24
 ## 실행 방법
 
 ### 사전 준비
-- JDK 17+(`JAVA_HOME`), Node 24, MySQL 8, Docker Desktop(WSL2, 테스트용 Testcontainers) — 설치 절차: [docs/환경설정.md](docs/환경설정.md)
+- JDK 17+(`JAVA_HOME`, 컴파일용 JDK 21은 첫 빌드 때 Gradle이 자동으로 받음), Node 24, MySQL 8, Docker Desktop(WSL2, 테스트용 Testcontainers) — 설치 절차: [docs/환경설정.md](docs/환경설정.md)
 - 최초 1회: `node scripts/setup.mjs` (git hook 연결, 환경 점검)
 - 로컬 DB `vibenote` 생성과 `.env` 작성 (`.env.example` 복사): [docs/환경설정.md](docs/환경설정.md) 3절
 
@@ -57,7 +57,7 @@ SSAFY Final Project (Java Track, 자율 주제) · 2026-11-17 ~ 2026-12-24
 cd backend
 ./gradlew bootRun --args='--spring.profiles.active=local'   # LLM은 mock 모드
 ```
-- Spring Boot 3.5 · Gradle 8.14 (wrapper). 시작할 때 Flyway가 스키마를 자동 적용한다.
+- Spring Boot 4.1 · Java 21 · Gradle 9.9 (wrapper). 시작할 때 Flyway가 스키마를 자동 적용한다.
 - Swagger UI: http://localhost:8080/swagger-ui/index.html
 - 테스트: `./gradlew test` (Docker Desktop 실행 필요, Testcontainers MySQL 8.4)
 
