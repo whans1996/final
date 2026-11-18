@@ -1,7 +1,7 @@
 # 바이브노트 (VibeNote)
 
 AI로 코딩하는 주니어와 개발자 지망생이 **AI가 쓴 코드를 수준별 설명 → 개념 카드 → 퀴즈·복습**으로 이해하게 돕는 학습 플랫폼이다.
-SSAFY 관통 프로젝트(2026-11-17 시작, 12-24 발표). Spring Boot 3 + MyBatis + MySQL 8 / Vue 3 + Pinia.
+SSAFY 관통 프로젝트(2026-11-17 시작, 12-24 발표). Spring Boot 4 + MyBatis + MySQL 8 / Vue 3 + Pinia.
 
 2인이 서로 다른 PC에서 Claude Code로 **릴레이 개발**한다. 세션은 토큰 소진으로 언제든 끊길 수 있다.
 그래서 **상태를 파일에 남기는 일을 코드 작성만큼 중요하게** 다룬다.
@@ -24,7 +24,7 @@ SSAFY 관통 프로젝트(2026-11-17 시작, 12-24 발표). Spring Boot 3 + MyBa
 | 백엔드 규칙 | `backend/CLAUDE.md` |
 | 프론트엔드 규칙 | `frontend/CLAUDE.md` |
 | 외부 데이터 목록·라이선스·분할(dev/eval/demo) | `data/datasets.json`, `docs/산출물/09-데이터셋.md` |
-| 개발 환경 설치 (JDK 17, WSL·Docker) | `docs/환경설정.md` |
+| 개발 환경 설치 (JDK, WSL·Docker) | `docs/환경설정.md` |
 
 ## 작업 흐름
 
@@ -105,7 +105,7 @@ SSAFY 관통 프로젝트(2026-11-17 시작, 12-24 발표). Spring Boot 3 + MyBa
 
 ## 환경
 
-- Windows 11. JDK 17 이상, Node 24, Docker Desktop(Testcontainers), MySQL 8.
+- Windows 11. JAVA_HOME은 JDK 17 이상(Gradle 실행용, 컴파일 JDK 21은 Gradle이 자동으로 받는다), Node 24, Docker Desktop(Testcontainers), MySQL 8.
 - 하네스 스크립트는 셸 차이를 피하려고 전부 Node(`.mjs`)로 작성되어 있다.
 - 하네스 자체를 고칠 때는 `chore(harness): ...`로 커밋한다.
 - 하네스는 제출물에 포함되며, 개발 과정의 AI 활용 사례는 `docs/산출물/08-외부API-생성형AI-활용.md`의 소재가 된다. 기록할 만한 사례(가드가 막은 실수, 리뷰어가 잡은 버그 등)는 작업로그의 `AI 활용` 줄에 적는다.

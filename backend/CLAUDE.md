@@ -1,8 +1,8 @@
 # Backend 규칙
 
-> Java 17, Spring Boot 3.5, Spring Security + JWT(jjwt), MyBatis, MySQL 8, Flyway, springdoc, Gradle 8.14(wrapper), Spotless(google-java-format AOSP).
+> Java 21, Spring Boot 4.1, Spring Security + JWT(jjwt), MyBatis, MySQL 8, Flyway, springdoc, Jackson 3, Gradle 9.9(wrapper), Spotless(google-java-format AOSP 1.28.0).
 > 공통 API 규칙(응답 형식, 에러 코드, 네이밍)은 `../docs/conventions.md`를 따른다.
-> Spring Initializr는 Boot 4만 제공하므로 Boot 3.5를 `build.gradle`에 직접 지정했다 (F-00). Boot 4로 올리지 않는다.
+> F-00에서는 Boot 3.5로 시작했고, 11-18 환경 최신화 결정으로 Boot 4.1·Java 21로 올렸다 (PR #12, `docs/기획서.md` 결정 로그). AI가 Boot 3 시절 코드(`spring-boot-starter-web`, `com.fasterxml.jackson.databind`, `@MockBean` 등)를 제안하면 Boot 4 방식으로 바꿔 쓴다.
 
 ## 패키지 구조
 
@@ -46,12 +46,14 @@ com.vibenote
 - **Mapper**: MyBatis 인터페이스. SQL은 XML(`src/main/resources/mapper/<도메인>/XxxMapper.xml`)에 둔다. 아주 짧은 쿼리만 어노테이션을 허용한다.
 - **DTO**: Java `record`로 쓰고 `XxxRequest` / `XxxResponse`로 이름 짓는다. DB 행을 담는 객체(`domain/Xxx.java`)를 Controller 응답으로 직접 내보내지 않는다.
 - **예외**: `BusinessException(ErrorCode)`를 던지고 `GlobalExceptionHandler`가 `{code, message, details}`로 변환한다. `ErrorCode` enum에 코드와 HTTP 상태와 메시지를 함께 정의한다.
+- **JSON**: Jackson 3(`tools.jackson.*`)를 쓴다. `com.fasterxml.jackson.databind`·`com.fasterxml.jackson.core`를 import하지 않는다. 어노테이션(`com.fasterxml.jackson.annotation.*`)은 Jackson 3에서도 이 패키지 그대로라 써도 된다. 예외는 unchecked `tools.jackson.core.JacksonException`이다.
 
 ## MyBatis
 
 - `mybatis.configuration.map-underscore-to-camel-case=true`
 - **SQL에 `${}`를 쓰지 않는다** (SQL 인젝션). 정렬 컬럼처럼 꼭 필요하면 화이트리스트 enum으로 검증한 값만 쓴다.
 - JSON 컬럼(`analyses.overview`, `analysis_flows.steps`, `quiz_questions.choices`)은 `common.mybatis.JsonTypeHandler`로 매핑한다. 패키지 스캔으로 등록하지 않으므로 매핑마다 `javaType`과 `typeHandler`를 함께 적는다 (목록은 배열 타입, 예: `FlowStep[]`). 사용 예는 클래스 주석에 있다.
+  - JSON 컬럼에 담기는 record의 필드 중 null이 올 수 있는 것은 래퍼 타입(`Integer` 등)으로 선언한다. Jackson 3 기본값에서는 null을 primitive로 읽으면 예외가 난다.
 - 목록 조회는 페이지(`LIMIT #{size} OFFSET #{offset}`)와 `COUNT(*)`를 함께 제공한다.
 - **분석은 soft delete**다 (V2, F-19). 삭제 시 `analysis_files`·`analysis_flows`·`analysis_concepts`를 지우고 `analyses.deleted_at`을 채운다. 목록·상세·피드·게시글 첨부 조회는 `deleted_at IS NULL`로 거르고, 퀴즈 풀이·정답률·추천·챌린지·일일 한도 집계는 거르지 않는다. 프로필의 "분석 수"는 삭제한 분석을 뺀다 (F-03 AC3).
 - 회원도 soft delete(`users.status=WITHDRAWN`)이므로 users 행을 DELETE하지 않는다. 작성물(posts·comments·concept_reviews)의 user FK는 RESTRICT라 실패한다.
@@ -69,7 +71,7 @@ com.vibenote
 
 ## API 문서 (Swagger, springdoc-openapi)
 
-- 의존성: `org.springdoc:springdoc-openapi-starter-webmvc-ui` (Spring Boot 3 호환 버전)
+- 의존성: `org.springdoc:springdoc-openapi-starter-webmvc-ui` 3.x (Spring Boot 4 호환 버전)
 - 주소: `/swagger-ui/index.html`, `/v3/api-docs`. Security에서 permitAll로 연다.
 - `common.config.OpenApiConfig`: 제목 "VibeNote API", 버전, **JWT Bearer `securityScheme`**(이름 `bearerAuth`)와 전역 보안 요구. 공개 API는 `@SecurityRequirements()`로 해제한다.
 - Controller: 클래스에 `@Tag(name = "개념 카드", description = ...)`, 메서드에 `@Operation(summary = ...)`, 에러마다 `@ApiResponse(responseCode = "404", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))`
@@ -123,5 +125,5 @@ com.vibenote
 루트에서 `node scripts/verify.mjs be`를 쓰면 포맷 검사와 테스트를 돌리고 실패만 요약해 준다.
 
 - 설정: `application.yml`(공통, 저장소 루트 `.env`를 자동으로 읽음), `application-local.yml`(개발용 JWT 키, debug 로그). 테스트는 `IntegrationTestBase`의 `properties`가 우선한다.
-- 빌드는 **`JAVA_HOME`(JDK 17)** 기준이다. PATH의 `java`가 8이어도 Gradle wrapper는 `JAVA_HOME`을 쓴다. 설정 방법은 `docs/환경설정.md`.
-- STS에서는 Installed JREs에 JDK 17을 추가하고 프로젝트 JRE로 지정한다.
+- Gradle 실행은 **`JAVA_HOME`(JDK 17 이상)** 을 쓰고, 컴파일·테스트는 **Java 21 toolchain**으로 한다. JDK 21이 없으면 첫 빌드 때 Gradle(foojay resolver)이 `~/.gradle/jdks`에 자동으로 받는다. PATH의 `java`가 8이어도 상관없다. 설정 방법은 `docs/환경설정.md`.
+- STS에서는 Installed JREs에 **JDK 21**을 추가하고 프로젝트 JRE로 지정한다.
