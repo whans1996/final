@@ -76,7 +76,8 @@ class UserStatsApiTest extends UserTestSupport {
         analysis(me, "FAILED", false);
         analysis(other, "DONE", false);
 
-        // 퀴즈: 내 풀이 2/3 → 67%. 맞힌 문항의 카드는 JWT (concept 없는 문항은 제외)
+        // 퀴즈: 내 풀이 2/3, 1/1 → 합계 기준 3/4 = 75% (풀이별 평균이면 83%라 구분된다)
+        // 맞힌 문항의 카드는 JWT (concept 없는 문항은 제외)
         long quiz = insert("INSERT INTO quizzes (analysis_id) VALUES (?)", done);
         long qJwt = question(quiz, jwt);
         long qTx = question(quiz, tx);
@@ -85,6 +86,8 @@ class UserStatsApiTest extends UserTestSupport {
         answer(mine, qJwt, true);
         answer(mine, qTx, false);
         answer(mine, qNone, true);
+        long retry = attempt(quiz, me, 1, 1);
+        answer(retry, qJwt, true);
         // 다른 회원이 트랜잭션을 맞힌 기록은 세지 않는다
         long theirs = attempt(quiz, other, 3, 3);
         answer(theirs, qTx, true);
@@ -100,7 +103,20 @@ class UserStatsApiTest extends UserTestSupport {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.analysisCount").value(1))
                 .andExpect(jsonPath("$.learnedConceptCount").value(2))
-                .andExpect(jsonPath("$.quizAccuracy").value(67));
+                .andExpect(jsonPath("$.quizAccuracy").value(75));
+    }
+
+    @Test
+    void AC3_문항_수_합계가_0이면_정답률은_null() throws Exception {
+        long me = createUser("user@example.com", "코딩초보");
+        long quiz =
+                insert("INSERT INTO quizzes (analysis_id) VALUES (?)", analysis(me, "DONE", false));
+        attempt(quiz, me, 0, 0);
+
+        mockMvc.perform(get("/api/users/{id}/stats", me))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.analysisCount").value(1))
+                .andExpect(jsonPath("$.quizAccuracy").isEmpty());
     }
 
     @Test

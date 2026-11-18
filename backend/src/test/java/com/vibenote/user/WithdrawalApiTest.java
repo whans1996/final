@@ -10,9 +10,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.vibenote.auth.RefreshTokenMapper;
 import jakarta.servlet.http.Cookie;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.ResultActions;
 
@@ -20,6 +22,8 @@ import org.springframework.test.web.servlet.ResultActions;
 class WithdrawalApiTest extends UserTestSupport {
 
     private static final String COOKIE = "refresh_token";
+
+    @Autowired RefreshTokenMapper refreshTokenMapper;
 
     private ResultActions withdraw(long userId, String json) throws Exception {
         return withdraw(bearer(userId), json);
@@ -186,5 +190,17 @@ class WithdrawalApiTest extends UserTestSupport {
                                                         "level", "BEGINNER"))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(not((int) me)));
+    }
+
+    @Test
+    void AC8_탈퇴한_회원에게는_refresh_토큰_행을_만들지_않는다() {
+        // 로그인이 회원을 읽은 뒤 탈퇴가 커밋되는 경합 방어: INSERT가 users.status를 잠금 읽기로 다시 확인한다
+        long me = createUser("user@example.com", "코딩초보");
+        long other = createUser("other@example.com", "다른사람");
+        userService.markWithdrawn(me);
+
+        assertThat(refreshTokenMapper.insert(me, "a".repeat(64), 60)).isZero();
+        assertThat(refreshTokenMapper.insert(other, "b".repeat(64), 60)).isEqualTo(1);
+        assertThat(count("SELECT COUNT(*) FROM refresh_tokens WHERE user_id = ?", me)).isZero();
     }
 }

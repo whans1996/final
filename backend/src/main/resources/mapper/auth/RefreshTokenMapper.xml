@@ -2,9 +2,15 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.vibenote.auth.RefreshTokenMapper">
 
+    <!--
+      활성 회원일 때만 넣는다 (F-03). INSERT ... SELECT의 SELECT는 잠금 읽기라 커밋된 최신 status를 보므로,
+      로그인·재발급이 회원을 읽은 뒤 탈퇴가 커밋되면 0행이 된다.
+    -->
     <insert id="insert">
         INSERT INTO refresh_tokens (user_id, token_hash, expires_at)
-        VALUES (#{userId}, #{tokenHash}, NOW() + INTERVAL #{validitySeconds} SECOND)
+        SELECT id, #{tokenHash}, NOW() + INTERVAL #{validitySeconds} SECOND
+        FROM users
+        WHERE id = #{userId} AND status = 'ACTIVE'
     </insert>
 
     <resultMap id="stored" type="com.vibenote.auth.RefreshTokenMapper$StoredRefreshToken">

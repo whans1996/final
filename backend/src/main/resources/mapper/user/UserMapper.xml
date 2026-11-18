@@ -33,7 +33,7 @@
     <update id="updateProfile">
         UPDATE users
         SET nickname = #{nickname}, bio = #{bio}, level = #{level}
-        WHERE id = #{id}
+        WHERE id = #{id} AND status = 'ACTIVE'
     </update>
 
     <!--

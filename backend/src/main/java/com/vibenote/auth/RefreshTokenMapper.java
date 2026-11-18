@@ -8,8 +8,8 @@ import org.apache.ibatis.annotations.Param;
 @Mapper
 public interface RefreshTokenMapper {
 
-    /** 만료 시각 = 지금 + validitySeconds. */
-    void insert(
+    /** 만료 시각 = 지금 + validitySeconds. 활성 회원일 때만 넣고 넣은 행 수(0 또는 1)를 돌려준다 (F-03). */
+    int insert(
             @Param("userId") long userId,
             @Param("tokenHash") String tokenHash,
             @Param("validitySeconds") long validitySeconds);

@@ -18,6 +18,8 @@ const ME = {
   createdAt: '2026-11-18T10:30:00',
 }
 
+const SERVER_ERROR = '서버에서 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.'
+
 function login() {
   useAuthStore().setSession({
     accessToken: 'access-1',
@@ -129,9 +131,11 @@ describe('MySettingsView (F-03 AC10)', () => {
     expect(button().attributes('disabled')).toBeUndefined()
   })
 
-  it('AC10 탈퇴에 성공하면 세션을 비우고 홈으로 이동한다', async () => {
+  it('AC10 탈퇴에 성공하면 logout 호출 없이 세션만 비우고 홈으로 이동한다', async () => {
     const { wrapper, router } = await mountSettings()
     usersApi.withdraw.mockResolvedValue()
+    // 서버가 이미 쿠키·토큰을 폐기했으므로 /auth/logout을 다시 부르지 않는다 (spec 5절)
+    const logout = vi.spyOn(useAuthStore(), 'logout')
 
     await wrapper.find('input[name="withdraw-password"]').setValue('vibe1234')
     await wrapper.find('input[name="withdraw-confirm"]').setValue(true)
@@ -139,8 +143,38 @@ describe('MySettingsView (F-03 AC10)', () => {
     await flushPromises()
 
     expect(usersApi.withdraw).toHaveBeenCalledWith('vibe1234')
+    expect(logout).not.toHaveBeenCalled()
     expect(useAuthStore().isLoggedIn).toBe(false)
     await vi.waitFor(() => expect(router.currentRoute.value.path).toBe('/'))
+  })
+
+  it('AC10 내 정보를 불러오지 못하면 서버 메시지를 보여 주고 폼을 띄우지 않는다', async () => {
+    usersApi.fetchMe.mockRejectedValue(apiError(500, { code: 'COMMON_500', message: SERVER_ERROR }))
+    const { wrapper } = await mountAt(MySettingsView, '/me/settings', { beforeNavigate: login })
+    await flushPromises()
+
+    expect(wrapper.find('[role="alert"]').text()).toBe(SERVER_ERROR)
+    expect(wrapper.find('form').exists()).toBe(false)
+  })
+
+  it('AC10 저장·탈퇴에서 details가 없는 에러는 각 폼 위에 서버 메시지로 보여 준다', async () => {
+    const { wrapper } = await mountSettings()
+    usersApi.updateMe.mockRejectedValue(
+      apiError(500, { code: 'COMMON_500', message: SERVER_ERROR }),
+    )
+    usersApi.withdraw.mockRejectedValue(
+      apiError(500, { code: 'COMMON_500', message: SERVER_ERROR }),
+    )
+
+    await saveProfile(wrapper)
+    await wrapper.find('input[name="withdraw-password"]').setValue('vibe1234')
+    await wrapper.find('input[name="withdraw-confirm"]').setValue(true)
+    await wrapper.find('form[data-form="withdraw"]').trigger('submit')
+    await flushPromises()
+
+    expect(wrapper.find('form[data-form="profile"] [role="alert"]').text()).toBe(SERVER_ERROR)
+    expect(wrapper.find('form[data-form="withdraw"] [role="alert"]').text()).toBe(SERVER_ERROR)
+    expect(useAuthStore().isLoggedIn).toBe(true)
   })
 
   it('AC10 비밀번호가 틀리면(USER_001) 비밀번호 아래에 보여 주고 로그인을 유지한다', async () => {

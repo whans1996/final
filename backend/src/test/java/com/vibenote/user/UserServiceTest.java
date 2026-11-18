@@ -92,4 +92,22 @@ class UserServiceTest {
         assertThat(e.getErrorCode()).isEqualTo(ErrorCode.USER_409);
         assertThat(e.getDetails()).containsOnlyKeys("nickname");
     }
+
+    @Test
+    void AC8_수정_직전에_탈퇴가_커밋되어_바뀐_행이_없으면_AUTH_401() {
+        // getActiveMember 통과 직후 다른 요청이 탈퇴시킨 경우: 마스킹된 행을 덮어쓰지 않는다 (UPDATE ... AND status=ACTIVE)
+        User user = User.newMember("user@example.com", "hashed", "코딩초보", Level.BEGINNER);
+        user.setId(1L);
+        given(userMapper.findById(1L)).willReturn(Optional.of(user));
+        given(userMapper.updateProfile(anyLong(), anyString(), any(), any())).willReturn(0);
+
+        BusinessException e =
+                catchThrowableOfType(
+                        BusinessException.class,
+                        () ->
+                                userService.updateMe(
+                                        1L, new UpdateProfileRequest("주니어", null, null)));
+
+        assertThat(e.getErrorCode()).isEqualTo(ErrorCode.AUTH_401);
+    }
 }

@@ -29,7 +29,13 @@ function formatDate(value) {
   return value ? value.slice(0, 10).replaceAll('-', '.') : ''
 }
 
+// 요청마다 번호를 붙여, 늦게 도착한 이전 요청의 응답은 버린다 (A→B→A처럼 같은 id로 돌아와도 구분된다)
+let lastRequest = 0
+
 async function load(id) {
+  // 프로필이 아닌 주소로 나가는 중이면 params.id가 없어 NaN이 된다
+  if (!Number.isInteger(id)) return
+  const request = ++lastRequest
   loading.value = true
   notFound.value = false
   loadError.value = ''
@@ -37,15 +43,15 @@ async function load(id) {
   stats.value = null
   try {
     const [user, userStats] = await Promise.all([fetchUser(id), fetchUserStats(id)])
-    if (id !== userId.value) return // 응답 전에 다른 프로필로 이동함
+    if (request !== lastRequest) return
     profile.value = user
     stats.value = userStats
   } catch (error) {
-    if (id !== userId.value) return
+    if (request !== lastRequest) return
     if (errorCode(error) === 'USER_404') notFound.value = true
     else loadError.value = errorMessage(error)
   } finally {
-    if (id === userId.value) loading.value = false
+    if (request === lastRequest) loading.value = false
   }
 }
 

@@ -103,11 +103,16 @@ public class UserService {
         if (request.nickname() != null && userMapper.existsByNicknameExceptId(nickname, userId)) {
             throw new BusinessException(ErrorCode.USER_409, Map.of("nickname", NICKNAME_TAKEN));
         }
+        int updated;
         try {
-            userMapper.updateProfile(userId, nickname, bio, level);
+            updated = userMapper.updateProfile(userId, nickname, bio, level);
         } catch (DuplicateKeyException e) {
             // 중복 확인과 저장 사이에 다른 회원이 같은 닉네임을 가져간 경우 (바꾸는 UNIQUE 컬럼은 닉네임뿐이다)
             throw new BusinessException(ErrorCode.USER_409, Map.of("nickname", NICKNAME_TAKEN));
+        }
+        if (updated == 0) {
+            // 확인과 저장 사이에 탈퇴가 커밋됨: 마스킹된 행을 덮어쓰지 않았다
+            throw new BusinessException(ErrorCode.AUTH_401);
         }
         return getMe(userId);
     }

@@ -115,6 +115,47 @@ describe('UserProfileView (F-03 AC9)', () => {
     )
   })
 
+  it('AC9 A→B→A로 빠르게 이동하면 마지막 요청의 응답만 보여 준다', async () => {
+    const pending = []
+    usersApi.fetchUser.mockImplementation(() => new Promise((resolve) => pending.push(resolve)))
+    usersApi.fetchUserStats.mockResolvedValue({
+      analysisCount: 0,
+      learnedConceptCount: 0,
+      quizAccuracy: null,
+    })
+    const { wrapper, router } = await mountAt(UserProfileView, '/users/3')
+    await router.push('/users/4')
+    await router.push('/users/3')
+    await flushPromises()
+    expect(pending).toHaveLength(3)
+
+    // 첫 요청(옛 3번)이 마지막 요청보다 늦게 끝나도 덮어쓰지 않는다
+    pending[2]({ ...PROFILE, nickname: '최신' })
+    await flushPromises()
+    expect(wrapper.find('h1').text()).toBe('최신')
+    pending[0]({ ...PROFILE, nickname: '옛날' })
+    pending[1]({ ...PROFILE, id: 4, nickname: '사번' })
+    await flushPromises()
+    expect(wrapper.find('h1').text()).toBe('최신')
+  })
+
+  it('AC9 프로필이 아닌 주소로 나가면 id 없이 요청하지 않는다', async () => {
+    usersApi.fetchUser.mockResolvedValue(PROFILE)
+    usersApi.fetchUserStats.mockResolvedValue({
+      analysisCount: 0,
+      learnedConceptCount: 0,
+      quizAccuracy: null,
+    })
+    const { router } = await mountAt(UserProfileView, '/users/3')
+    await flushPromises()
+
+    await router.push('/')
+    await flushPromises()
+
+    expect(usersApi.fetchUser).toHaveBeenCalledTimes(1)
+    expect(usersApi.fetchUserStats).toHaveBeenCalledTimes(1)
+  })
+
   it('AC9 로그인하면 헤더 닉네임이 내 프로필 링크가 된다', async () => {
     const { wrapper } = await mountAt(App, '/')
     login(3)

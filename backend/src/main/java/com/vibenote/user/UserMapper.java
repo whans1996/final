@@ -24,8 +24,11 @@ public interface UserMapper {
 
     Optional<User> findById(long id);
 
-    /** 닉네임·소개·수준을 주어진 값으로 바꾼다 (bio null이면 NULL로 저장). */
-    void updateProfile(
+    /**
+     * 닉네임·소개·수준을 주어진 값으로 바꾼다 (bio null이면 NULL로 저장). 활성 회원만 바꾸며 바뀐 행 수를 돌려준다 (탈퇴 직후의 수정이 마스킹을 덮어쓰지
+     * 않게).
+     */
+    int updateProfile(
             @Param("id") long id,
             @Param("nickname") String nickname,
             @Param("bio") String bio,
