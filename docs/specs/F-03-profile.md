@@ -218,8 +218,8 @@
 - [x] FE 구현 (green)
 - [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
 - [x] `ErrorCode` USER_404·USER_001 + `docs/conventions.md` 3절 USER 줄
-- [ ] contract-checker 통과
-- [ ] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일)
+- [x] contract-checker 통과 (불일치 0, 11-18)
+- [x] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일) (문제 0, 11-18)
 - [ ] reviewer 지적 사항 반영 (PR 전 reviewer + Codex PR 리뷰)
 - [x] 산출물 반영 (`06-화면설계서.md` SC-18·SC-19 상세, `02-유스케이스.md` UC03·UC04 흐름)
 - [ ] PR CI 초록

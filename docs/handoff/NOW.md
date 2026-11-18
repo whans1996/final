@@ -3,11 +3,11 @@
 > 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
 > "바로 다음 할 일"은 다른 사람이 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 
-갱신: 2026-11-18 11:55 · 작업자: whans1996 (Claude, SSAFY 교육장 PC) · 브랜치: feature/F-03-profile
+갱신: 2026-11-18 12:20 · 작업자: whans1996 (Claude, SSAFY 교육장 PC) · 브랜치: feature/F-03-profile
 
 ## 현재 기능
 
-F-03 프로필·탈퇴 — **/implement 진행 중** (`docs/specs/F-03-profile.md` APPROVED, AC10개, Flyway 없음). 세션 목표: BE AC1~AC8 → FE AC9·AC10
+F-03 프로필·탈퇴 — **구현 완료, /pr-review 전** (`docs/specs/F-03-profile.md` APPROVED, AC10개, Flyway 없음). 세션 목표: BE AC1~AC8 → FE AC9·AC10
 
 ## 진행
 
@@ -21,7 +21,8 @@ F-03 프로필·탈퇴 — **/implement 진행 중** (`docs/specs/F-03-profile.m
 1. ✅ AC6~8 green·커밋 (BE 110, 72바이트 초과 비밀번호 테스트 추가). 구현한 것: `UserWithdrawalService`(UserMapper·PasswordEncoder·AuthService·FollowService), `AuthService.revokeAll`, `RefreshTokenMapper.deleteByUserId`, `follow/FollowService.removeAllOf`+`FollowMapper.xml`, `dto/WithdrawRequest`, `UserMapper.withdraw`(email `withdrawn:{id}`, nickname `#탈퇴{id}`), DELETE /me(204 + `RefreshTokenCookie.clear()`)
 
 2. ✅ FE AC9·AC10 green (FE 70): `src/api/users.js`, `stores/auth.updateUser`, `utils/authValidation.validateProfile`, `views/UserProfileView.vue`(/users/:id), `views/MySettingsView.vue`(/me/settings), App.vue 헤더 닉네임 링크. 산출물 SC-18·SC-19, UC03·UC04 반영
-3. 다음: contract-checker → BE(local)+FE dev 띄워 ui-verifier(/users/1, /me/settings) → /pr-review
+3. ✅ contract-checker 불일치 0, ui-verifier 문제 0 (데스크톱·모바일, 스크린샷 .harness/screens/f03_*)
+4. 다음: `/pr-review` (verifier·reviewer → PR → Codex 자동 리뷰 확인). AC1~AC10 전부 green, 브랜치 push됨
 
 ## 막힌 점 / 결정 필요
 
