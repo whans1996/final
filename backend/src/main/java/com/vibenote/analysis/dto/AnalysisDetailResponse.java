@@ -56,8 +56,8 @@ public record AnalysisDetailResponse(
                         description = "설명이 만들어진 파일 수",
                         example = "14")
                 int explainedFileCount,
-        @Schema(description = "프로젝트 개요. 개요 생성 전·실패 시 null", nullable = true)
-                AnalysisOverview overview) {
+        // $ref에 nullable=true를 붙이면 springdoc(OAS 3.1)이 "type": "null"을 함께 써서 "항상 null"로 읽힌다
+        @Schema(description = "프로젝트 개요. 개요 생성 전·실패 시 null") AnalysisOverview overview) {
 
     public static AnalysisDetailResponse from(AnalysisDetail a) {
         return new AnalysisDetailResponse(

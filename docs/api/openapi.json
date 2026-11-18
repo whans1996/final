@@ -50,8 +50,7 @@
           },
           "overview" : {
             "$ref" : "#/components/schemas/AnalysisOverview",
-            "description" : "프로젝트 개요. 개요 생성 전·실패 시 null",
-            "type" : "null"
+            "description" : "프로젝트 개요. 개요 생성 전·실패 시 null"
           },
           "progress" : {
             "description" : "진행률 (0~100)",
