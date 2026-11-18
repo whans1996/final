@@ -3,10 +3,10 @@ package com.vibenote.llm;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vibenote.common.Level;
 import org.junit.jupiter.api.Test;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 class MockLlmClientTest {
 
@@ -19,7 +19,7 @@ class MockLlmClientTest {
                 client.complete(new LlmRequest(LlmStage.OVERVIEW, Level.BEGINNER, "prompt"));
 
         JsonNode json = new ObjectMapper().readTree(response.content());
-        assertThat(json.path("summary").asText()).isNotBlank();
+        assertThat(json.path("summary").asString()).isNotBlank();
         assertThat(response.model()).isEqualTo("mock");
     }
 

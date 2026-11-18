@@ -1,1 +1,6 @@
+// 컴파일·테스트 JDK(toolchain 21)가 PC에 없으면 Gradle이 자동으로 내려받는다. JAVA_HOME은 Gradle 실행용(17 이상)이면 된다.
+plugins {
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
+}
+
 rootProject.name = 'vibenote'

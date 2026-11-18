@@ -1,6 +1,5 @@
 package com.vibenote.common.security;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vibenote.common.exception.ErrorCode;
 import com.vibenote.common.exception.ErrorResponse;
 import jakarta.servlet.http.HttpServletResponse;
@@ -12,6 +11,7 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.stereotype.Component;
+import tools.jackson.databind.ObjectMapper;
 
 /** 필터 단계의 인증 실패(401)와 권한 부족(403)도 공통 에러 형식으로 응답한다. */
 @Component

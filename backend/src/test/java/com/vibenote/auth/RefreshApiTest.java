@@ -136,7 +136,7 @@ class RefreshApiTest extends AuthTestSupport {
                 objectMapper
                         .readTree(result.getResponse().getContentAsString())
                         .get("accessToken")
-                        .asText();
+                        .asString();
         assertThat(tokenProvider.parse(accessToken)).contains(new AuthUser(id, "ADMIN"));
     }
 }

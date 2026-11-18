@@ -1,10 +1,10 @@
 package com.vibenote.llm;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import java.util.Map;
 import org.springframework.http.MediaType;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
+import tools.jackson.databind.JsonNode;
 
 /**
  * 로컬 Ollama REST API ({@code POST /api/generate}, JSON 모드, 비스트리밍). 빈이 아니라 {@link LlmConfig}가 만든다.
@@ -50,11 +50,11 @@ public class OllamaLlmClient implements LlmClient {
         } catch (RestClientException e) {
             throw LlmUnavailableException.of(PROVIDER, e);
         }
-        if (body == null || !body.path("response").isTextual()) {
+        if (body == null || !body.path("response").isString()) {
             throw LlmUnavailableException.malformed(PROVIDER);
         }
         return new LlmResponse(
-                body.path("response").asText(),
+                body.path("response").asString(),
                 model,
                 body.path("prompt_eval_count").asInt(),
                 body.path("eval_count").asInt());

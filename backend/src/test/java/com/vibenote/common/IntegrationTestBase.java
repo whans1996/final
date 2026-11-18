@@ -1,13 +1,13 @@
 package com.vibenote.common;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
-import org.testcontainers.containers.MySQLContainer;
+import org.testcontainers.mysql.MySQLContainer;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * 통합 테스트 공통 부모. Testcontainers MySQL 8 싱글톤 컨테이너 + Flyway + Mock LLM.
@@ -27,8 +27,8 @@ import org.testcontainers.containers.MySQLContainer;
 @AutoConfigureMockMvc
 public abstract class IntegrationTestBase {
 
-    protected static final MySQLContainer<?> MYSQL =
-            new MySQLContainer<>("mysql:8.4")
+    protected static final MySQLContainer MYSQL =
+            new MySQLContainer("mysql:8.4")
                     .withDatabaseName("vibenote")
                     .withUsername("vibenote")
                     .withPassword("vibenote")

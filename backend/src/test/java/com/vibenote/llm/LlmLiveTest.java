@@ -3,7 +3,6 @@ package com.vibenote.llm;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vibenote.common.Level;
 import java.time.Duration;
 import org.junit.jupiter.api.Tag;
@@ -12,6 +11,7 @@ import org.springframework.boot.context.config.ConfigDataEnvironmentPostProcesso
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.core.env.StandardEnvironment;
 import org.springframework.web.client.RestClient;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * 실제 Gemini·Ollama 연결 확인 (F-00 AC9). <b>사람이 수동으로</b> {@code ./gradlew liveTest}로만 실행한다. {@code
@@ -69,7 +69,7 @@ class LlmLiveTest {
                 response.inputTokens(),
                 response.outputTokens(),
                 response.content());
-        assertThat(new ObjectMapper().readTree(response.content()).path("summary").asText())
+        assertThat(new ObjectMapper().readTree(response.content()).path("summary").asString())
                 .isNotBlank();
         assertThat(response.inputTokens()).isPositive();
         assertThat(response.outputTokens()).isPositive();
