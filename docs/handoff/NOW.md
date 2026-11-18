@@ -26,5 +26,5 @@
 
 ## 주의
 
-- 집 PC: `git pull` → `node scripts/setup.mjs` → `cd frontend && npm install` → 첫 BE 빌드에서 JDK 21 자동 다운로드(몇 분). STS는 JDK 21 설치 필요
+- 집 PC: `git pull` → `node -v`가 24.15 미만이면 Node 24 최신 설치 → `node scripts/setup.mjs` → `cd frontend && npm install` → 첫 BE 빌드에서 JDK 21 자동 다운로드(몇 분). STS는 JDK 21 설치 필요
 - verify(Gradle)를 bootRun·다른 Gradle과 동시에 돌리지 않는다 (Windows 파일 잠금). V1·V2 수정 금지

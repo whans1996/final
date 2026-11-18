@@ -37,8 +37,11 @@ const gh = cmd('gh auth status --active');
 add(gh.ok || 'warn', 'GitHub CLI', gh.ok ? '로그인됨' : 'gh 설치 후 gh auth login (PR 생성·CI 확인에 사용)');
 
 // 2. Node
-const nodeMajor = Number(process.versions.node.split('.')[0]);
-add(nodeMajor >= 20 || 'warn', 'Node', `v${process.versions.node}${nodeMajor >= 20 ? '' : ' (20 이상 권장)'}`);
+// FE(jsdom 31·vitest 5) 요건: ^22.22.2 || ^24.15.0 || >=26 (frontend/package.json engines)
+const [nodeMajor, nodeMinor, nodePatch] = process.versions.node.split('.').map(Number);
+const atLeast = (mi, pa) => nodeMinor > mi || (nodeMinor === mi && nodePatch >= pa);
+const nodeOk = nodeMajor >= 26 || (nodeMajor === 24 && atLeast(15, 0)) || (nodeMajor === 22 && atLeast(22, 2));
+add(nodeOk || 'warn', 'Node', `v${process.versions.node}${nodeOk ? '' : ' (FE 테스트는 24.15 이상 필요 → Node 24 최신으로 업데이트)'}`);
 
 // 3. JDK — Gradle이 실제로 쓰는 JAVA_HOME 기준으로 점검한다 (PATH의 java는 참고만).
 //    JAVA_HOME은 Gradle 9 실행용이라 17 이상이면 된다. 컴파일 JDK 21은 Gradle toolchain(foojay)이 자동으로 받는다.

@@ -46,7 +46,7 @@ com.vibenote
 - **Mapper**: MyBatis 인터페이스. SQL은 XML(`src/main/resources/mapper/<도메인>/XxxMapper.xml`)에 둔다. 아주 짧은 쿼리만 어노테이션을 허용한다.
 - **DTO**: Java `record`로 쓰고 `XxxRequest` / `XxxResponse`로 이름 짓는다. DB 행을 담는 객체(`domain/Xxx.java`)를 Controller 응답으로 직접 내보내지 않는다.
 - **예외**: `BusinessException(ErrorCode)`를 던지고 `GlobalExceptionHandler`가 `{code, message, details}`로 변환한다. `ErrorCode` enum에 코드와 HTTP 상태와 메시지를 함께 정의한다.
-- **JSON**: Jackson 3(`tools.jackson.*`)를 쓴다. `com.fasterxml.jackson.databind`·`com.fasterxml.jackson.core`를 import하지 않는다. 어노테이션(`com.fasterxml.jackson.annotation.*`)은 Jackson 3에서도 이 패키지 그대로라 써도 된다. 예외는 unchecked `JacksonException`이다.
+- **JSON**: Jackson 3(`tools.jackson.*`)를 쓴다. `com.fasterxml.jackson.databind`·`com.fasterxml.jackson.core`를 import하지 않는다. 어노테이션(`com.fasterxml.jackson.annotation.*`)은 Jackson 3에서도 이 패키지 그대로라 써도 된다. 예외는 unchecked `tools.jackson.core.JacksonException`이다.
 
 ## MyBatis
 
