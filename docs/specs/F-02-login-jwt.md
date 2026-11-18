@@ -41,7 +41,7 @@ CSRF: Refresh 쿠키는 `SameSite=Strict` + `Path=/api/auth`라 다른 사이트
 | AC6 | 로그인한 상태에서 | `POST /api/auth/logout` 하면 | 204, 그 쿠키의 DB 행 삭제, 쿠키 삭제 헤더. 이후 그 쿠키로 refresh하면 AUTH_002. 쿠키 없이 logout해도 204 (멱등) |
 | AC7 | 토큰 없이 | `/api/auth/signup`·`/login`·`/refresh`·`/logout`을 호출하면 인증 필터를 통과하고, 그 밖의 `/api/auth/**` 주소(예: `/api/auth/__probe__`)는 | 401 `AUTH_401`을 받는다 (`PUBLIC_PATHS` 와일드카드 → 명시 나열) |
 | AC8 | 비회원이 `/login` 화면에서 | 로그인하면 | 성공 시 store에 accessToken·user가 들어가고 `redirect` 쿼리 또는 홈으로 이동. `AUTH_001`이면 폼 상단에 메시지, 입력 유지. 로그인 상태에서 로그아웃하면 `logout` 호출 후 store를 비우고 홈으로. 앱 시작 시 `restore()`가 refresh로 세션을 복원한다 (새로고침해도 로그인 유지) |
-| AC9 | 로그인 상태에서 Access가 만료되어 | API가 401 `AUTH_401`을 주면 | `http.js` 인터셉터가 `/api/auth/refresh`를 **1회** 호출하고 원 요청을 새 토큰으로 재시도한다. 동시에 여러 요청이 401이면 refresh는 한 번만 호출된다. refresh가 실패하거나 401 코드가 `AUTH_401`이 아니거나 `/api/auth/*` 요청 자체가 401이면 재시도하지 않고 store를 비운 뒤 `/login?redirect=<현재 주소>`로 보낸다. `authGuard`의 비로그인 이동 대상도 `login`이다 |
+| AC9 | 로그인 상태에서 Access가 만료되어 | API가 401 `AUTH_401`을 주면 | `http.js` 인터셉터가 `/api/auth/refresh`를 **1회** 호출하고 원 요청을 새 토큰으로 재시도한다. 동시에 여러 요청이 401이면 refresh는 한 번만 호출된다. refresh가 실패하거나 재시도한 요청도 401이면 store를 비운 뒤 `/login?redirect=<현재 주소>`로 보낸다. 401 코드가 `AUTH_401`이 아니거나 `/api/auth/*` 요청 자체의 401(예: 로그인 실패 `AUTH_001`)은 재시도·이동 없이 에러를 그대로 호출한 쪽에 돌려준다. `authGuard`의 비로그인 이동 대상도 `login`이다 |
 
 ## 3. API 계약
 
@@ -153,14 +153,14 @@ CSRF: Refresh 쿠키는 `SameSite=Strict` + `Path=/api/auth`라 다른 사이트
 `/implement`가 진행하며 체크한다.
 
 - [x] 브랜치 `feature/F-01-auth` (F-01과 공유)
-- [ ] Flyway 마이그레이션 (없음)
-- [ ] AC별 실패 테스트 작성 (red 확인)
-- [ ] BE 구현 (green)
-- [ ] FE 구현 (green)
-- [ ] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
-- [ ] contract-checker 통과
-- [ ] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일)
+- [x] Flyway 마이그레이션 (없음)
+- [x] AC별 실패 테스트 작성 (red 확인)
+- [x] BE 구현 (green)
+- [x] FE 구현 (green)
+- [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
+- [x] contract-checker 통과
+- [x] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일)
 - [ ] reviewer 지적 사항 반영
-- [ ] 산출물 반영 (`06-화면설계서.md` SC-02, `02-유스케이스.md` UC02 흐름, `07-REST-API-명세.md`)
+- [x] 산출물 반영 (`06-화면설계서.md` SC-02, `02-유스케이스.md` UC02 흐름, `07-REST-API-명세.md`)
 - [ ] PR CI 초록
 - [ ] 상태 DONE (PR 머지 후)

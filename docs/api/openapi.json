@@ -65,6 +65,7 @@
             "description" : "로그인한 회원"
           }
         },
+        "required" : [ "accessToken", "expiresIn", "user" ],
         "type" : "object"
       },
       "LoginUser" : {
@@ -94,6 +95,7 @@
             "type" : "string"
           }
         },
+        "required" : [ "id", "level", "nickname", "role" ],
         "type" : "object"
       },
       "SignupRequest" : {
@@ -140,6 +142,7 @@
             "type" : "integer"
           }
         },
+        "required" : [ "id" ],
         "type" : "object"
       }
     },
@@ -182,7 +185,13 @@
                 }
               }
             },
-            "description" : "로그인 성공 (Set-Cookie: refresh_token)"
+            "description" : "로그인 성공",
+            "headers" : {
+              "Set-Cookie" : {
+                "description" : "refresh_token=<토큰>; Path=/api/auth; Max-Age=1209600; HttpOnly; SameSite=Strict (운영은 Secure)",
+                "style" : "simple"
+              }
+            }
           },
           "400" : {
             "content" : {
@@ -224,7 +233,13 @@
         } ],
         "responses" : {
           "204" : {
-            "description" : "로그아웃 완료"
+            "description" : "로그아웃 완료",
+            "headers" : {
+              "Set-Cookie" : {
+                "description" : "refresh_token=; Path=/api/auth; Max-Age=0 (쿠키 삭제)",
+                "style" : "simple"
+              }
+            }
           }
         },
         "security" : [ ],
@@ -253,7 +268,13 @@
                 }
               }
             },
-            "description" : "재발급 성공 (Set-Cookie: 새 refresh_token)"
+            "description" : "재발급 성공",
+            "headers" : {
+              "Set-Cookie" : {
+                "description" : "refresh_token=<토큰>; Path=/api/auth; Max-Age=1209600; HttpOnly; SameSite=Strict (운영은 Secure)",
+                "style" : "simple"
+              }
+            }
           },
           "401" : {
             "content" : {

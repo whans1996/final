@@ -8,6 +8,7 @@ import com.vibenote.user.UserService;
 import com.vibenote.user.dto.SignupRequest;
 import com.vibenote.user.dto.SignupResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.headers.Header;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -30,6 +31,12 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/auth")
 @SecurityRequirements
 public class AuthController {
+
+    private static final String SET_COOKIE_ISSUE =
+            "refresh_token=<토큰>; Path=/api/auth; Max-Age=1209600; HttpOnly; SameSite=Strict (운영은"
+                    + " Secure)";
+    private static final String SET_COOKIE_CLEAR =
+            "refresh_token=; Path=/api/auth; Max-Age=0 (쿠키 삭제)";
 
     private final UserService userService;
     private final AuthService authService;
@@ -65,7 +72,10 @@ public class AuthController {
             description =
                     "Access 토큰과 회원 정보를 본문으로, Refresh 토큰을 HttpOnly 쿠키 refresh_token(Path=/api/auth,"
                             + " 14일)으로 준다.")
-    @ApiResponse(responseCode = "200", description = "로그인 성공 (Set-Cookie: refresh_token)")
+    @ApiResponse(
+            responseCode = "200",
+            description = "로그인 성공",
+            headers = @Header(name = "Set-Cookie", description = SET_COOKIE_ISSUE))
     @ApiResponse(
             responseCode = "400",
             description = "이메일·비밀번호 누락 (COMMON_400)",
@@ -86,7 +96,10 @@ public class AuthController {
             summary = "토큰 재발급",
             description =
                     "refresh_token 쿠키로 새 Access 토큰을 받고, Refresh 토큰도 새로 바꾼다(회전). 앱 시작 시 세션 복원에도 쓴다.")
-    @ApiResponse(responseCode = "200", description = "재발급 성공 (Set-Cookie: 새 refresh_token)")
+    @ApiResponse(
+            responseCode = "200",
+            description = "재발급 성공",
+            headers = @Header(name = "Set-Cookie", description = SET_COOKIE_ISSUE))
     @ApiResponse(
             responseCode = "401",
             description = "쿠키 없음·무효·만료·이미 사용·탈퇴 회원 (AUTH_002, 쿠키 삭제)",
@@ -108,7 +121,10 @@ public class AuthController {
     }
 
     @Operation(summary = "로그아웃", description = "이 기기의 Refresh 토큰을 폐기하고 쿠키를 지운다. 쿠키가 없어도 204.")
-    @ApiResponse(responseCode = "204", description = "로그아웃 완료")
+    @ApiResponse(
+            responseCode = "204",
+            description = "로그아웃 완료",
+            headers = @Header(name = "Set-Cookie", description = SET_COOKIE_CLEAR))
     @PostMapping("/logout")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void logout(

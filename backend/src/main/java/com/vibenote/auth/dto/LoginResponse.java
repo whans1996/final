@@ -7,18 +7,37 @@ import io.swagger.v3.oas.annotations.media.Schema;
 @Schema(description = "로그인·토큰 재발급 응답")
 public record LoginResponse(
         @Schema(
+                        requiredMode = Schema.RequiredMode.REQUIRED,
                         description = "Access 토큰 (Authorization: Bearer)",
                         example = "eyJhbGciOiJIUzI1NiJ9...")
                 String accessToken,
-        @Schema(description = "Access 토큰 유효 시간(초)", example = "1800") long expiresIn,
-        @Schema(description = "로그인한 회원") LoginUser user) {
+        @Schema(
+                        requiredMode = Schema.RequiredMode.REQUIRED,
+                        description = "Access 토큰 유효 시간(초)",
+                        example = "1800")
+                long expiresIn,
+        @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "로그인한 회원")
+                LoginUser user) {
 
     @Schema(description = "로그인한 회원 정보")
     public record LoginUser(
-            @Schema(description = "회원 ID", example = "1") long id,
-            @Schema(description = "닉네임", example = "코딩초보") String nickname,
-            @Schema(description = "학습 수준", example = "BEGINNER") Level level,
             @Schema(
+                            requiredMode = Schema.RequiredMode.REQUIRED,
+                            description = "회원 ID",
+                            example = "1")
+                    long id,
+            @Schema(
+                            requiredMode = Schema.RequiredMode.REQUIRED,
+                            description = "닉네임",
+                            example = "코딩초보")
+                    String nickname,
+            @Schema(
+                            requiredMode = Schema.RequiredMode.REQUIRED,
+                            description = "학습 수준",
+                            example = "BEGINNER")
+                    Level level,
+            @Schema(
+                            requiredMode = Schema.RequiredMode.REQUIRED,
                             description = "권한",
                             example = "USER",
                             allowableValues = {"USER", "ADMIN"})
