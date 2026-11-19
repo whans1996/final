@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.vibenote.quiz.QuizMapper">
+
+    <insert id="insertQuiz" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO quizzes (analysis_id, created_at) VALUES (#{analysisId}, #{createdAt})
+    </insert>
+
+    <insert id="insertQuestions">
+        INSERT INTO quiz_questions (quiz_id, concept_id, question, choices, answer_index, explanation) VALUES
+        <foreach collection="questions" item="q" separator=",">
+            (#{quizId}, #{q.conceptId}, #{q.question},
+             #{q.choices, javaType=java.util.List, typeHandler=com.vibenote.common.mybatis.JsonTypeHandler},
+             #{q.answerIndex}, #{q.explanation})
+        </foreach>
+    </insert>
+
+    <select id="findByAnalysis" resultType="com.vibenote.quiz.domain.Quiz">
+        SELECT id, analysis_id, created_at FROM quizzes WHERE analysis_id = #{analysisId}
+    </select>
+
+    <select id="findOwned" resultType="com.vibenote.quiz.domain.Quiz">
+        SELECT z.id, z.analysis_id, z.created_at
+        FROM quizzes z
+        JOIN analyses a ON a.id = z.analysis_id
+        WHERE z.id = #{quizId} AND a.user_id = #{userId} AND a.deleted_at IS NULL
+    </select>
+
+    <resultMap id="question" type="com.vibenote.quiz.domain.QuizQuestion">
+        <constructor>
+            <arg column="id" javaType="_long"/>
+            <arg column="quiz_id" javaType="_long"/>
+            <arg column="concept_id" javaType="java.lang.Long"/>
+            <arg column="question" javaType="java.lang.String"/>
+            <arg column="choices" javaType="[Ljava.lang.String;"
+                 typeHandler="com.vibenote.common.mybatis.JsonTypeHandler"/>
+            <arg column="answer_index" javaType="_int"/>
+            <arg column="explanation" javaType="java.lang.String"/>
+        </constructor>
+    </resultMap>
+
+    <select id="findQuestions" resultMap="question">
+        SELECT id, quiz_id, concept_id, question, choices, answer_index, explanation
+        FROM quiz_questions WHERE quiz_id = #{quizId}
+        ORDER BY id
+    </select>
+
+    <select id="findLastAttempt" resultType="com.vibenote.quiz.domain.QuizAttempt">
+        SELECT id, quiz_id, user_id, score, total, created_at
+        FROM quiz_attempts
+        WHERE quiz_id = #{quizId} AND user_id = #{userId}
+        ORDER BY created_at DESC, id DESC
+        LIMIT 1
+    </select>
+
+    <insert id="insertAttempt" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO quiz_attempts (quiz_id, user_id, score, total, created_at)
+        VALUES (#{quizId}, #{userId}, #{score}, #{total}, #{createdAt})
+    </insert>
+
+    <insert id="insertAnswers">
+        INSERT INTO quiz_answers (attempt_id, question_id, selected_index, is_correct) VALUES
+        <foreach collection="answers" item="a" separator=",">
+            (#{attemptId}, #{a.questionId}, #{a.selectedIndex}, #{a.correct})
+        </foreach>
+    </insert>
+</mapper>

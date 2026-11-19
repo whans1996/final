@@ -1,0 +1,76 @@
+{
+  "questions": [
+    {
+      "conceptId": 39,
+      "question": "ArticlesApi 클래스에 붙은 @RestController와 @RequestMapping(path = \"/articles\")가 하는 일로 알맞은 것은?",
+      "choices": [
+        "/articles로 오는 HTTP 요청을 이 클래스의 메서드에 연결하고, 메서드가 돌려준 값을 응답 본문(JSON)으로 내보낸다",
+        "/articles 경로의 HTML 화면 템플릿을 찾아 렌더링한다",
+        "articles 테이블과 클래스를 연결해 SQL 없이 저장하게 한다",
+        "/articles 요청에는 로그인 검사를 하지 않도록 보안 설정을 끈다"
+      ],
+      "answerIndex": 0,
+      "explanation": "@RestController는 메서드의 반환값을 뷰 이름이 아니라 응답 본문으로 쓰게 하고, 클래스의 @RequestMapping(path = \"/articles\")는 그 아래 메서드 주소의 앞부분이 됩니다. 테이블 매핑은 MyBatis 매퍼가, 인증 예외는 WebSecurityConfig가 맡습니다."
+    },
+    {
+      "conceptId": 18,
+      "question": "ArticlesApi가 ArticleCommandService와 ArticleQueryService를 쓰는 방식으로 알맞은 것은?",
+      "choices": [
+        "메서드 안에서 new ArticleCommandService()로 그때그때 만든다",
+        "생성자 매개변수로 받아 필드에 두고, 스프링 컨테이너가 만들어 둔 서비스 빈을 넣어 준다",
+        "두 서비스를 static 메서드로만 부르므로 객체가 필요 없다",
+        "요청마다 ApplicationContext에서 getBean()으로 직접 꺼낸다"
+      ],
+      "answerIndex": 1,
+      "explanation": "ArticlesApi는 두 서비스를 생성자로 받습니다. 스프링이 빈을 만들 때 생성자 매개변수에 맞는 서비스 빈을 넣어 주므로 컨트롤러가 직접 객체를 만들거나 컨테이너를 찾지 않습니다."
+    },
+    {
+      "conceptId": 42,
+      "question": "ArticlesApi의 createArticle()이 요청 본문 NewArticleParam 앞에 @Valid를 붙여서 생기는 일은?",
+      "choices": [
+        "title이 비어 있어도 일단 저장한 뒤 나중에 관리자가 고친다",
+        "NewArticleParam의 필드를 데이터베이스 컬럼 길이에 맞게 자동으로 자른다",
+        "NewArticleParam의 @NotBlank 같은 제약을 메서드 실행 전에 검사하고, 어기면 메서드를 실행하지 않고 오류 응답을 보낸다",
+        "요청 본문을 암호화해 전송 중 내용이 보이지 않게 한다"
+      ],
+      "answerIndex": 2,
+      "explanation": "@Valid가 붙은 @RequestBody 매개변수는 컨트롤러 메서드가 실행되기 전에 Bean Validation으로 검사됩니다. 제약을 어기면 예외가 나고 예외 처리기가 오류 응답을 만들므로 잘못된 글이 서비스까지 가지 않습니다."
+    },
+    {
+      "conceptId": 62,
+      "question": "ArticleMapper 인터페이스의 메서드는 어떻게 실제 SQL과 이어지나요?",
+      "choices": [
+        "메서드 이름을 분석해 SQL을 자동으로 만들어 준다",
+        "ArticleRepository를 구현한 클래스가 JDBC로 SQL 문자열을 직접 실행한다",
+        "Article 클래스에 붙은 @Entity를 보고 테이블에 저장한다",
+        "같은 namespace의 XML 매퍼에서 메서드 이름과 같은 id의 SQL을 MyBatis가 찾아 실행한다"
+      ],
+      "answerIndex": 3,
+      "explanation": "MyBatis는 @Mapper 인터페이스의 구현체를 만들고, 메서드를 XML 매퍼에서 같은 id를 가진 SQL에 연결합니다. 메서드 이름으로 쿼리를 만드는 방식이나 @Entity는 Spring Data JPA의 방식입니다."
+    },
+    {
+      "conceptId": 57,
+      "question": "JwtTokenFilter가 Authorization 헤더에서 토큰을 꺼낸 뒤 하는 일로 알맞은 것은?",
+      "choices": [
+        "토큰을 데이터베이스의 세션 테이블과 비교한다",
+        "토큰에서 사용자 id를 꺼내 사용자를 찾고, 인증 정보를 SecurityContextHolder에 넣는다",
+        "토큰을 쿠키로 옮겨 다음 요청부터 쿠키를 쓰게 한다",
+        "토큰이 없으면 403을 바로 응답한다"
+      ],
+      "answerIndex": 1,
+      "explanation": "jwtService.getSubFromToken()으로 사용자 id를 꺼내 사용자를 찾은 뒤 UsernamePasswordAuthenticationToken을 SecurityContextHolder에 넣습니다. 토큰이 없으면 인증 없이 다음 필터로 넘기고, 막을지는 WebSecurityConfig가 정합니다."
+    },
+    {
+      "conceptId": null,
+      "question": "ArticleApi의 updateArticle()이 글을 수정하기 전에 하는 일은 무엇인가요?",
+      "choices": [
+        "요청한 사용자가 글 작성자인지 확인하고, 아니면 NoAuthorizationException을 던진다",
+        "글의 slug를 새 제목으로 바꾸고 바로 저장한다",
+        "JWT 토큰을 새로 발급해 응답 헤더에 넣는다",
+        "글을 지운 뒤 같은 id로 다시 만든다"
+      ],
+      "answerIndex": 0,
+      "explanation": "AuthorizationService.canWriteArticle(user, article)이 false면 NoAuthorizationException을 던져 작성자만 수정하게 합니다. 제목·본문 변경은 이 검사를 통과한 뒤 article.update()에서 일어납니다."
+    }
+  ]
+}

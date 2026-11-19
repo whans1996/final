@@ -12,6 +12,8 @@ import com.vibenote.analysis.domain.AnalysisFile;
 import com.vibenote.common.Level;
 import com.vibenote.concept.ConceptStatus;
 import com.vibenote.concept.domain.Concept;
+import com.vibenote.quiz.GeneratedQuestion;
+import com.vibenote.quiz.QuizResponseParser;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -130,5 +132,28 @@ class MainFixturesTest {
                                 .body())
                 .startsWith("## 핵심")
                 .contains("## 주의");
+    }
+
+    @Test
+    void AC11_F14_quiz_fixture는_6문항이고_시드_카드_4개_이상과_null_1개를_가리킨다() throws Exception {
+        // concept.json이 가리키는 시드 카드 id (#49: 로컬 DB에 따라 다를 수 있어 목록 밖이면 파서가 NULL로 바꾼다)
+        Set<Long> seedIds = Set.of(18L, 39L, 42L, 57L, 62L);
+
+        List<GeneratedQuestion> result =
+                QuizResponseParser.parse(
+                        JsonMapper.builder().build().readTree(read("quiz.json")),
+                        seedIds,
+                        1L,
+                        5,
+                        10);
+
+        assertThat(result).hasSize(6);
+        assertThat(
+                        result.stream()
+                                .filter(q -> q.conceptId() != null)
+                                .map(GeneratedQuestion::conceptId)
+                                .distinct())
+                .hasSizeGreaterThanOrEqualTo(4);
+        assertThat(result.stream().filter(q -> q.conceptId() == null)).hasSize(1);
     }
 }

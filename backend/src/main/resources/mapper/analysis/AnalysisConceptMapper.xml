@@ -28,4 +28,22 @@
         WHERE ac.analysis_id = #{analysisId}
         ORDER BY ac.file_id IS NULL, ac.file_id, ac.concept_id
     </select>
+
+    <!-- F-14 AC2 -->
+    <resultMap id="linkedConcept" type="com.vibenote.analysis.concept.LinkedConcept">
+        <constructor>
+            <arg column="concept_id" javaType="_long"/>
+            <arg column="name" javaType="java.lang.String"/>
+            <arg column="status" javaType="java.lang.String"/>
+            <arg column="context_note" javaType="java.lang.String"/>
+        </constructor>
+    </resultMap>
+
+    <select id="findForQuiz" resultMap="linkedConcept">
+        SELECT ac.concept_id, c.name, c.status, ac.context_note
+        FROM analysis_concepts ac
+        JOIN concepts c ON c.id = ac.concept_id
+        WHERE ac.analysis_id = #{analysisId} AND c.status &lt;&gt; 'HIDDEN'
+        ORDER BY ac.concept_id
+    </select>
 </mapper>

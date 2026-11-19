@@ -295,9 +295,9 @@ LLM은 테스트에서 실제로 부르지 않는다. 파이프라인 통합 테
 `/implement`가 진행하며 체크한다.
 
 - [x] 브랜치 `feature/F-14-code-quiz`
-- [ ] Flyway 마이그레이션 — 없음
-- [ ] AC별 실패 테스트 작성 (red 확인)
-- [ ] BE 구현 (green) — 프롬프트 3개, fixture 1개, ErrorCode 2개, conventions 3절 QUIZ 행
+- [x] Flyway 마이그레이션 — 없음
+- [ ] AC별 실패 테스트 작성 (red 확인) — AC1~AC4·AC11 ✅
+- [ ] BE 구현 (green) — 프롬프트 3개, fixture 1개, ErrorCode 2개, conventions 3절 QUIZ 행 — 생성(AC1~AC4·AC11) ✅
 - [ ] FE 구현 (green)
 - [ ] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
 - [ ] contract-checker 통과
