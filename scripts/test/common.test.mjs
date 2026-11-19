@@ -8,6 +8,7 @@ import {
   ownerKey,
   previousPc,
   recordStamp,
+  sessionBanner,
   worklogEntries,
 } from '../lib/common.mjs';
 
@@ -77,4 +78,28 @@ test('다른 사람 PC에서 쓴 내 NOW 갱신 줄은 PC 전환으로 보지 �
   const nowText = '갱신: 2026-11-19 10:26 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: x (초기 생성)\n';
   assert.equal(previousPc({ nowText, entry: null, knownIds, key: 'js' }), null);
   assert.equal(previousPc({ nowText, entry: null, knownIds, key: 'dh' }), 'dh-ssafy');
+});
+
+test('세션 배너는 사람·PC·브랜치를 첫 줄에, 환경·주의(첫 문장)·내/상대 작업을 다음 줄에 보여 준다', () => {
+  const pc = { id: 'dh-ssafy', label: '김동환 SSAFY 교육장', owner: '김동환', hostname: 'h' };
+  const b = sessionBanner({
+    pc,
+    branch: 'develop',
+    warnings: ['보호 브랜치(develop)에 있습니다. 코드를 바꾸기 전에 브랜치를 만드세요.'],
+    myFeature: '공통 기반 spec',
+    peerName: '김준섭',
+    peerFeature: '없음 — 착수 전',
+  }).split('\n');
+  assert.equal(b[0], '[바이브노트] 👤 김동환 · 🖥️ SSAFY 교육장 (dh-ssafy) · 🌿 develop');
+  assert.equal(b[1], '환경 ✅');
+  assert.equal(b[2], '⚠️ 보호 브랜치(develop)에 있습니다.');
+  assert.equal(b[3], '내 작업: 공통 기반 spec');
+  assert.equal(b[4], '김준섭: 없음 — 착수 전');
+});
+
+test('세션 배너: 미등록 PC는 setup 안내, 환경 문제는 항목을 나열, 긴 기능명은 자른다', () => {
+  const b = sessionBanner({ pc: { id: null, hostname: 'PC1' }, branch: 'feature/x', envBad: ['⚠️ Docker'], myFeature: 'a'.repeat(200) }).split('\n');
+  assert.ok(b[0].includes('미등록 PC (hostname PC1) → node scripts/setup.mjs --pc <id>'));
+  assert.equal(b[1], '환경: ⚠️ Docker');
+  assert.ok(b[2].length <= '내 작업: '.length + 90 && b[2].endsWith('…'));
 });

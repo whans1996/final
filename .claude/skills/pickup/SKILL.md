@@ -6,7 +6,7 @@ description: 새 세션이나 PC 교대 후 내 작업을 이어받는다. git p
 # /pickup — 이어받기
 
 두 사람이 영역별로 **병렬** 개발한다 (`docs/기획서.md` 4절). 이 스킬은 **내 작업**(내 NOW 파일 `docs/handoff/NOW-<dh|js>.md`)을 내 다른 PC에서 넘긴(또는 토큰 소진으로 끊긴) 상태에서 **빠르게, 정확하게** 복원한다.
-SessionStart hook이 내 NOW 파일, 상대 작업 요약, git 상태를 이미 주입했으므로 그 내용을 다시 출력하지 않는다. 내 NOW 파일 경로는 `node scripts/stamp.mjs --file`.
+SessionStart hook이 내 NOW 파일, 상대 작업 요약, git 상태를 이미 주입했으므로 그 내용을 다시 출력하지 않는다. 사용자는 hook의 화면 배너(systemMessage: 사람·PC·브랜치·환경·주의·내/상대 기능 한 줄씩)만 보고 주입된 본문은 보지 못한다. 내 NOW 파일 경로는 `node scripts/stamp.mjs --file`.
 
 ## 절차
 
@@ -34,7 +34,7 @@ SessionStart hook이 내 NOW 파일, 상대 작업 요약, git 상태를 이미 
 4. **보고** (아래 형식, 10줄 이내)
 
 ```
-📍 F-08 개념 추출 · feature/F-08-concepts · 마지막 작업: @dh-home (11/20 22:10, wip) → 지금 dh-ssafy
+📍 김동환 @dh-ssafy · F-08 개념 추출 · feature/F-08-concepts · 마지막 작업: @dh-home (11/20 22:10, wip)
 🖥️ 환경: ✅ (또는 ⚠️ Docker 꺼짐 → BE 테스트 불가)
 ✅ 완료: AC1, AC2
 🟡 진행 중: AC3 — 테스트 작성됨(red), ConceptExtractor.link() 구현 필요

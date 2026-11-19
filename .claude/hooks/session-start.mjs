@@ -22,6 +22,7 @@ import {
   previousPc,
   readStdinJson,
   readText,
+  sessionBanner,
   workFilesNewerThanNow,
   worklogEntries,
 } from '../../scripts/lib/common.mjs';
@@ -161,8 +162,20 @@ parts.push(
     : `이어서 작업하려면 /pickup 을 사용한다. 작업 단위가 끝날 때마다 ${me ? nowRelPath(me) : '내 NOW 파일'}을 갱신한다.`,
 );
 
+// additionalContext는 모델에만 간다. 사람에게는 systemMessage로 누구·어느 PC인지 바로 보여 준다
+const banner = sessionBanner({
+  pc,
+  branch: isGitRepo() ? currentBranch() || '(detached)' : null,
+  envBad: bad.map((r) => `${icon(r.status)} ${r.item}`),
+  warnings,
+  myFeature: me && now ? nowHeadline(now).feature : null,
+  peerName: other ? Object.entries(loadPcs()).find(([id]) => ownerKey(id) === other)?.[1].owner : null,
+  peerFeature: otherNow ? nowHeadline(otherNow.text).feature : null,
+});
+
 process.stdout.write(
   JSON.stringify({
+    systemMessage: banner,
     hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext: parts.join('\n\n') },
   }),
 );

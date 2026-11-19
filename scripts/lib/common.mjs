@@ -262,3 +262,24 @@ export function lastContextTokens(path, tailBytes = 512 * 1024) {
   }
   return 0;
 }
+
+/**
+ * SessionStart 화면 배너 (systemMessage). additionalContext는 모델에만 가므로 사람에게는 이것만 보인다.
+ * 누구·어느 PC·브랜치·환경·주의(첫 문장)·내/상대 현재 기능을 몇 줄로 요약한다.
+ */
+export function sessionBanner({ pc, branch, envBad = [], warnings = [], myFeature, peerName, peerFeature }) {
+  const cut = (t, n = 90) => (t.length > n ? `${t.slice(0, n - 1)}…` : t);
+  let who = `👤 ? · 🖥️ 미등록 PC (hostname ${pc?.hostname ?? '?'}) → node scripts/setup.mjs --pc <id>`;
+  if (pc?.id) {
+    // label은 "김동환 SSAFY 교육장"처럼 사람 이름으로 시작한다
+    const label = String(pc.label ?? '');
+    const place = pc.owner && label.startsWith(pc.owner) ? label.slice(pc.owner.length).trim() : label;
+    who = `👤 ${pc.owner ?? '?'} · 🖥️ ${place || pc.id} (${pc.id})`;
+  }
+  const lines = [`[바이브노트] ${who} · 🌿 ${branch ?? '?'}`];
+  lines.push(envBad.length ? `환경: ${envBad.join(', ')}` : '환경 ✅');
+  for (const w of warnings) lines.push(`⚠️ ${cut(w.split(/(?<=\.)\s/)[0])}`);
+  if (myFeature) lines.push(`내 작업: ${cut(myFeature)}`);
+  if (peerFeature) lines.push(`${peerName ?? '상대'}: ${cut(peerFeature)}`);
+  return lines.join('\n');
+}
