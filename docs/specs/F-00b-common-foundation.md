@@ -136,13 +136,13 @@
   - [x] `router/routes/*.js` 분리, `utils/navItems.js`, `App.vue` nav를 `navItems`로
   - [x] `layouts/AdminLayout.vue`, `views/admin/AdminHomeView.vue`, `router/routes/admin.js`
   - [x] `ConceptCard`, `PageNav`, `EmptyState`, `AnalysisListView` 적용
-- [ ] Swagger 어노테이션 + `docs/api/openapi.json` 갱신 (새 API 없음 → 변경 없음 확인)
-- [ ] contract-checker 통과 (해당 없음이면 생략)
+- [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신 (새 API 없음 → 변경 없음 확인)
+- [x] contract-checker 통과 (해당 없음이면 생략)
 - [ ] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일)
 - [ ] reviewer 지적 사항 반영
-- [ ] CODEOWNERS: `/frontend/src/router/routes/analysis.js`·`challenge.js` A, `community.js` B, `/frontend/src/layouts/`·`/frontend/src/views/admin/` 공통, `**/vibenote/concept/`·`mapper/concept/`는 이미 공통
-- [ ] `docs/환경설정.md`에 로컬 관리자 계정 만드는 법(`ADMIN_BOOTSTRAP_EMAIL`), `.env.example`에 빈 항목, `frontend/CLAUDE.md`·`docs/conventions.md` 9절에 route 파일·`meta.nav` 규칙
-- [ ] 산출물 반영 (화면 설계서 SC-20·21에 관리자 레이아웃 공통 구조 한 줄)
+- [x] CODEOWNERS: `/frontend/src/router/routes/analysis.js`·`challenge.js` A, `community.js` B, `/frontend/src/layouts/`·`/frontend/src/views/admin/` 공통, `**/vibenote/concept/`·`mapper/concept/`는 이미 공통
+- [x] `docs/환경설정.md`에 로컬 관리자 계정 만드는 법(`ADMIN_BOOTSTRAP_EMAIL`), `.env.example`에 빈 항목, `frontend/CLAUDE.md`·`docs/conventions.md` 9절에 route 파일·`meta.nav` 규칙
+- [x] 산출물 반영 (화면 설계서 SC-20·21에 관리자 레이아웃 공통 구조 한 줄)
 - [ ] PR 본문에 `@JoonseobKim` 멘션 (공통 코드)
 - [ ] PR CI 초록
 - [ ] 상태 DONE (PR 머지 후)
