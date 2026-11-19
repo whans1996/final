@@ -4,23 +4,21 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
 
-갱신: 2026-11-19 16:50 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/F-08-concept-extraction
+갱신: 2026-11-19 17:28 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/F-14-code-quiz
 
 ## 현재 기능
 
-F-08 개념 카드 추출·연결 — **PR #50 머지 대기** (CI 초록, Codex ✅ `2a55ced`, spec DONE). 사람이 GitHub에서 머지
+F-14 코드 이해 퀴즈 — `docs/specs/F-14-code-quiz.md` **APPROVED (whans1996 11-19)**, 구현 전 (AC 11개, Flyway 없음, 새 에러 QUIZ_404·QUIZ_400)
 
 ## 진행
 
-- ✅ BE AC1~AC7·AC10, FE AC8·AC9, 산출물 02·03·06·08·09·datasets.json
-- ✅ /pr-review 점검: verifier 통과(BE 374·FE 182·하네스 57), contract-checker 불일치 0, develop(#45·#47 F-09) 병합(06 충돌 해결, openapi.json 재생성 차이 없음)
-- ✅ reviewer 반드시 수정 1건 `c9b4ede` + 권장 3건 `3621925`
-- ✅ 스크린샷 `16c61fa` SC-07-concepts-{desktop,mobile} (로컬 계정 `ui-f08@local.test`, 로그인 상태 `.harness/ui-f08.json`, 분석 4번), follow-up #49(fixture가 시드 auto-increment id에 기댐)
+- ✅ F-08 PR #50 머지 후 정리 (develop `7f9e2fc`)
+- ✅ F-14 spec 초안 + 결정로그 한 줄 (오답 → 내일 복습 자동 추가, 생성 실패 시 퀴즈 없이 DONE·재생성 없음, 재풀이 허용, #49 흡수 안 함)
+- ✅ spec 승인 커밋 `docs(F-14): spec 승인`, `feature/F-14-code-quiz` push
 
 ## 바로 다음 할 일
 
-1. PR #50 머지 확인(`gh pr view 50 --json state`) → `git switch develop && git pull`, #23은 close-issues 워크플로가 닫는지 확인
-2. 다음 기능: 내 영역(A)에서 `/spec` (F-14 퀴즈 등, `docs/기획서.md` 일정 확인) 또는 follow-up #24·#26·#49
+1. `/clear` 후 새 세션(Opus / high)에서 `/implement F-14`: 먼저 `quiz/QuizResponseParserTest`(AC3)·`analysis/AnalysisQuizPipelineTest`(AC1, `AnalysisExtractingPipelineTest` 본뜸) red부터. `llm-fixtures/quiz.json`이 없으면 mock 파이프라인에서 QUIZ가 항상 비게 됨
 
 ## 막힌 점 / 결정 필요
 
@@ -28,5 +26,5 @@ F-08 개념 카드 추출·연결 — **PR #50 머지 대기** (CI 초록, Codex
 
 ## 주의
 
-- B 파일(`ConceptService`·`ConceptController`·`api/concepts.js`·`routes/concept.js`)과 공용 `ConceptCard.vue`는 고치지 않는다. Gradle 테스트를 bootRun과 동시에 돌리지 않는다. V1~V5 수정 금지
+- B 파일(`ConceptService`·`ConceptController`·`api/concepts.js`·`routes/concept.js`)과 공용 `ConceptCard.vue`·`EmptyState.vue`는 고치지 않는다. Gradle 테스트를 bootRun과 동시에 돌리지 않는다. V1~V5 수정 금지
 - Git Bash heredoc·sed에서 한글·`\n`이 깨질 수 있다 → 한글 수정은 Edit 도구로
