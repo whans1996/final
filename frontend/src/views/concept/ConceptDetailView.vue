@@ -23,6 +23,8 @@ const difficultyLabel = computed(
     LEVELS.find((l) => l.value === concept.value?.difficulty)?.label ?? concept.value?.difficulty,
 )
 const rating = computed(() => Number(concept.value?.avgRating ?? 0).toFixed(1))
+// javascript: 같은 URL이 링크가 되지 않게 http(s)만 <a>로 그린다
+const referenceIsLink = computed(() => /^https?:\/\//i.test(concept.value?.referenceUrl ?? ''))
 
 // :id를 빠르게 바꿀 때 늦게 도착한 이전 요청의 응답은 버린다
 let lastRequest = 0
@@ -111,9 +113,15 @@ function backToList() {
 
       <section v-if="concept.referenceUrl" data-section="reference">
         <h2>출처</h2>
-        <a :href="concept.referenceUrl" target="_blank" rel="noopener noreferrer">
+        <a
+          v-if="referenceIsLink"
+          :href="concept.referenceUrl"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
           {{ concept.referenceUrl }}
         </a>
+        <span v-else>{{ concept.referenceUrl }}</span>
       </section>
 
       <section v-if="concept.appearances?.length" data-section="appearances">

@@ -69,7 +69,7 @@
 
     <!-- F-10 상세: 내 코드 등장 위치 -->
     <select id="findAppearances" resultType="com.vibenote.concept.domain.ConceptAppearance">
-        SELECT a.id AS analysis_id, COALESCE(a.title, a.project_name) AS analysis_title,
+        SELECT a.id AS analysis_id, COALESCE(NULLIF(TRIM(a.title), ''), a.project_name) AS analysis_title,
                f.id AS file_id, f.path AS file_path, ac.line_hint, ac.context_note
         FROM analysis_concepts ac
         JOIN analyses a ON a.id = ac.analysis_id

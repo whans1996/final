@@ -115,6 +115,16 @@ describe('ConceptDetailView (F-10 AC9~AC13)', () => {
     expect(wrapper.text()).not.toContain('쉬운 설명')
   })
 
+  it('AC9 출처가 http(s) URL이 아니면 링크로 만들지 않고 글자로 보여 준다', async () => {
+    conceptsApi.fetchConcept.mockResolvedValue(detail({ referenceUrl: 'javascript:alert(1)' }))
+
+    const { wrapper } = await mountDetail()
+
+    const reference = section(wrapper, 'reference')
+    expect(reference.find('a').exists()).toBe(false)
+    expect(reference.text()).toContain('javascript:alert(1)')
+  })
+
   it('AC9 복사를 누르면 예제 코드를 클립보드에 넣고 2초간 "복사됨"이 된다', async () => {
     const writeText = vi.fn().mockResolvedValue()
     Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })

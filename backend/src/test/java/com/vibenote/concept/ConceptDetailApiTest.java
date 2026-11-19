@@ -231,6 +231,24 @@ class ConceptDetailApiTest extends IntegrationTestBase {
                 .andExpect(jsonPath("$.appearances[2].contextNote").value("로그인 성공 시 토큰을 만든다"));
     }
 
+    @Test
+    void AC3_제목이_빈_문자열이면_프로젝트_이름으로_대체한다() throws Exception {
+        long userId = insertUser("f10ac3blank");
+        long c = published("f10-ac3b 카드", "f10-ac3b");
+        long blank = insertAnalysis(userId, "DONE", BASE, false, "", "blank-project");
+        long spaces = insertAnalysis(userId, "DONE", BASE.plusDays(1), false, "  ", null);
+        link(blank, c);
+        link(spaces, c);
+
+        detail(c, bearer(userId))
+                .andExpect(status().isOk())
+                .andExpect(
+                        jsonPath(
+                                "$.appearances[*].analysisId", contains((int) spaces, (int) blank)))
+                .andExpect(jsonPath("$.appearances[0].analysisTitle").value("제목 없는 분석"))
+                .andExpect(jsonPath("$.appearances[1].analysisTitle").value("blank-project"));
+    }
+
     // ── AC4 ──
 
     @Test
