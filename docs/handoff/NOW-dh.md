@@ -19,7 +19,7 @@
 ## 바로 다음 할 일
 
 1. `/pr-review`로 reviewer → PR (본문 @JoonseobKim 멘션, 공통 코드) → Codex 루프 → 머지. 머지 뒤 close-issues 워크플로가 도는지 확인
-2. 기존 열린 이슈 8개 area 라벨·담당자 지정 (사람 확인 후 `gh issue edit`): #16·#23·#24·#26 area:A, #17·#29·#32·#39 area:common
+2. (완료) 기존 이슈 8개 분류: #16·#23·#24·#26 area:A, #17·#29·#32·#39 area:common, 담당 whans1996
 3. `/clear` 뒤 `/spec`으로 **공통 기반** spec (concept 도메인·Mapper·카드 DTO, ErrorCode·ActivityType 블록, 라우터·nav 분리, ConceptCard·Pagination, 관리자 레이아웃)
 4. 1.4 유스케이스(마감 11/23) `docs/산출물/02-유스케이스.md`
 
