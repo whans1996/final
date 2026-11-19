@@ -12,5 +12,5 @@ public record QuizResponse(
                 long analysisId,
         @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "문항 5~10개 (no 순서)")
                 List<QuizQuestionResponse> questions,
-        @Schema(description = "내 가장 최근 풀이. 풀이가 없으면 null", nullable = true)
+        @Schema(description = "내 가장 최근 풀이. 풀이가 없으면 null")
                 LastAttemptResponse lastAttempt) {}

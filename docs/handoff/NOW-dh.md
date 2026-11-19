@@ -4,23 +4,24 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
 
-갱신: 2026-11-19 17:49 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/F-14-code-quiz
+갱신: 2026-11-19 17:55 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/F-14-code-quiz
 
 ## 현재 기능
 
-F-14 코드 이해 퀴즈 — `docs/specs/F-14-code-quiz.md` APPROVED, `/implement` 진행 중. AC1~AC11 모두 green
+F-14 코드 이해 퀴즈 (`docs/specs/F-14-code-quiz.md`) — AC1~AC11 green·push, 마무리(모바일 탭·develop 병합·스크린샷) 후 `/pr-review`
 
 ## 진행
 
-- ✅ `bd9a7e9` BE 생성 AC1~AC4·AC11 / `df139ec` FE AC9·AC10 (퀴즈 탭·SC-08)
-- ✅ BE API AC5~AC8 green (`QuizService`·`QuizController`·dto 8개, `reviewplan/ReviewPlanService`·Mapper, ErrorCode QUIZ_404·QUIZ_400, `AnalysisService.checkOwned`), openapi.json 갱신, 산출물(UC30·ERD·화면설계서 SC-07 퀴즈 탭·SC-08·08·09·datasets DS-06) 반영 — 커밋 직전
-- 복습 INSERT는 `INSERT ... SELECT ... WHERE NOT EXISTS + ODKU`(Connector/J CLIENT_FOUND_ROWS 때문에 spec의 ODKU 영향 행 수 방식은 중복도 1) → PR에 적기
+- ✅ AC1~AC4·AC11 `bd9a7e9` / AC9·AC10 `df139ec` / AC5~AC8 + openapi + 산출물 `e97ace4`
+- ✅ contract-checker 불일치 0. 경미 지적 반영: `QuizResponse.lastAttempt`·`QuizResultItem.concept`의 `nullable=true` 제거(기존 `overview` 방식) — wip 커밋, **openapi.json 재생성 안 함**
+- 🟡 ui-verifier 중단(교대). 스크린샷 6장 `docs/산출물/screens/SC-07-quiz-*`·`SC-08-solve-*`·`SC-08-result-*` wip 커밋. 콘솔·요청 오류 보고는 못 받음
 
 ## 바로 다음 할 일
 
-1. 커밋 `feat(F-14): AC5~AC8 퀴즈 조회·채점·오답 복습 API` push
-2. `contract-checker`(spec 3절 ↔ openapi.json ↔ `frontend/src/api/quizzes.js`) → BE local + FE dev 띄워 `ui-verifier`(SC-07 `?tab=quiz`, SC-08 데스크톱·375px) → 스크린샷 `SC-07-quiz`·`SC-08` 을 `docs/산출물/screens/`에 넣고 06-화면설계서 표에 추가
-3. `/pr-review` 제안
+1. 375px에서 탭 5개 이름이 세로로 줄바꿈("개/요", "퀴/즈") → `frontend/src/views/AnalysisDetailView.vue` `.tabs`에 `overflow-x: auto`, `.tab`에 `white-space: nowrap; flex-shrink: 0` (B 화면 아님, A 파일). `AnalysisDetailView.spec.js` 영향 없음 확인
+2. `git merge origin/develop` (F-10 PR #52, `docs/api/openapi.json` 충돌: 아무 쪽이나 고른 뒤 `cd backend && ./gradlew test --tests "*OpenApiExportTest"`로 재생성) → `node scripts/verify.mjs all` → 정식 커밋
+3. BE local + FE dev 띄워 ui-verifier 재실행(SC-07 `?tab=quiz`, SC-08 풀이·결과, 1280·375) → 스크린샷 6장 다시 찍고 `06-화면설계서.md` SC-07 퀴즈 탭·SC-08 절에 표 추가(개념 탭처럼 "mock fixture 시드 id라 카드가 문항과 안 맞을 수 있음(#49)" 메모)
+4. `/pr-review` (새 세션)
 
 ## 막힌 점 / 결정 필요
 
@@ -28,6 +29,6 @@ F-14 코드 이해 퀴즈 — `docs/specs/F-14-code-quiz.md` APPROVED, `/impleme
 
 ## 주의
 
-- 공통 파일 변경: `application.yml`(quiz 블록), `docs/conventions.md`(QUIZ 행), `ErrorCode`(QUIZ 2개), `AnalysisService.checkOwned` 추가 → PR에 @JoonseobKim 멘션
-- FE는 테스트와 구현을 함께 쓴 뒤 돌렸다 (red 단계 생략). PR 본문에 적는다
-- B 파일(`ConceptService`·`ConceptController`·`api/concepts.js`)과 공용 `ConceptCard.vue`·`EmptyState.vue`는 고치지 않는다. Gradle 테스트를 bootRun과 동시에 돌리지 않는다
+- 공통 파일 변경: `application.yml`(quiz 블록), `docs/conventions.md`(QUIZ 행), `ErrorCode`(QUIZ 2개), `AnalysisService.checkOwned` → PR에 @JoonseobKim 멘션
+- spec과 다른 점(PR 본문에): 복습 INSERT는 `NOT EXISTS + ODKU`(Connector/J CLIENT_FOUND_ROWS 때문에 ODKU 영향 행 수가 중복에도 1). FE는 red 단계 생략
+- 마지막 커밋이 wip라 openapi.json이 코드와 다를 수 있다 (nullable 2곳). 2번에서 재생성. Gradle 테스트를 bootRun과 동시에 돌리지 않는다

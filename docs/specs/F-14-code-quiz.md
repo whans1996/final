@@ -300,9 +300,9 @@ LLM은 테스트에서 실제로 부르지 않는다. 파이프라인 통합 테
 - [x] BE 구현 (green) — 프롬프트 3개, fixture 1개, ErrorCode 2개, conventions 3절 QUIZ 행
 - [x] FE 구현 (green)
 - [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
-- [ ] contract-checker 통과
-- [ ] ui-verifier 통과 (데스크톱·모바일, ui-check 스크린샷 SC-07-quiz·SC-08)
+- [x] contract-checker 통과
+- [ ] ui-verifier 통과 (데스크톱·모바일, ui-check 스크린샷 SC-07-quiz·SC-08) — 1차 스크린샷만, 375px 탭 줄바꿈 수정 필요
 - [ ] reviewer 지적 사항 반영
-- [ ] 산출물 반영: `02-유스케이스.md` UC30(기획 기준 → 확정, 대안 흐름), `03-ERD.md` quiz 4테이블·review_plans WRONG, `06-화면설계서.md` SC-07 퀴즈 탭·SC-08, `08-외부API-생성형AI-활용.md` F-14 행, `09-데이터셋.md`·`datasets.json` DS-06
+- [x] 산출물 반영 (스크린샷 표는 ui-verifier 뒤): `02-유스케이스.md` UC30(기획 기준 → 확정, 대안 흐름), `03-ERD.md` quiz 4테이블·review_plans WRONG, `06-화면설계서.md` SC-07 퀴즈 탭·SC-08, `08-외부API-생성형AI-활용.md` F-14 행, `09-데이터셋.md`·`datasets.json` DS-06
 - [ ] PR CI 초록, Codex ✅
 - [ ] 상태 DONE (PR 머지 전 마지막 커밋)

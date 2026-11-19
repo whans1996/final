@@ -37,5 +37,5 @@ public record QuizResultItem(
                                 "jwtService.getSubFromToken()으로 사용자 id를 꺼내 SecurityContextHolder에"
                                         + " 넣습니다.")
                 String explanation,
-        @Schema(description = "관련 개념 카드. 없거나 공개되지 않은 카드면 null", nullable = true)
+        @Schema(description = "관련 개념 카드. 없거나 공개되지 않은 카드면 null")
                 ConceptSummaryResponse concept) {}
