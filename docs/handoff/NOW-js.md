@@ -15,11 +15,11 @@ F-09 개념 카드 목록·검색 — `docs/specs/F-09-concept-list.md` **APPROV
 - 🟡 js-ssafy 착수 체크리스트: pcs.json 등록됨, 교육장 PC에서 `/pickup` 확인만 남음
 - ✅ F-09 spec 승인: AC 11개, `GET /api/concepts` 공개(PUBLISHED만), DB 변경 없음
 - ✅ `ConceptSummaryResponse` 필드 일치 확인: F-00b spec AC4(origin/feature/F-00b-common-foundation)와 F-09 spec 3절 필드가 같음 → 김동환에게 따로 공유할 필요 없음
-- ✅ 화면 설계서 B 화면 와이어프레임 초안: SC-09, SC-10 카드 상세, SC-14~16 커뮤니티, SC-17 피드, SC-20 관리자 카드 (커밋 881f314, push 전). 각 절의 "spec에서 정할 것"에 미정 사항을 적어 둠 (관련 카드 기준, 1인 1리뷰, 첨부 범위, SC-07 진입 버튼은 A와 협의 등)
+- ✅ 화면 설계서 B 화면 와이어프레임 초안: SC-09, SC-10 카드 상세, SC-14~16 커뮤니티, SC-17 피드, SC-20 관리자 카드 (커밋 881f314, push 완료). 각 절의 "spec에서 정할 것"에 미정 사항을 적어 둠 (관련 카드 기준, 1인 1리뷰, 첨부 범위, SC-07 진입 버튼은 A와 협의 등)
 
 ## 바로 다음 할 일
 
-1. 이 브랜치 push (`git push`). 화면 설계서 커밋은 F-09 구현 PR에 함께 올린다
+1. 화면 설계서 커밋은 F-09 구현 PR에 함께 올린다 (별도 PR 없음)
 2. F-00b(A 공통 기반)가 develop에 머지되면 `git merge origin/develop` → `/implement F-09` (Opus/high, 첫 테스트 `ConceptListApiTest#AC1_...`)
 3. 그 전에 시간이 남으면 `/spec F-10` (카드 상세): SC-10의 "spec에서 정할 것" 3가지(관련 카드 기준, 리뷰 정책, 페이지 크기)를 결정 필요로 가져간다
 
