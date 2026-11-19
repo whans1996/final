@@ -6,8 +6,36 @@ import { fileURLToPath } from 'node:url';
 
 /** 저장소 루트 (scripts/lib 기준 두 단계 위) */
 export const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
-export const NOW_FILE = join(ROOT, 'docs', 'handoff', 'NOW.md');
 export const WORKLOG_FILE = join(ROOT, 'docs', '작업로그.md');
+
+// 두 사람이 영역별로 병렬 개발한다 (11-19 결정). 현재 작업 스냅샷은 사람별 파일 docs/handoff/NOW-<key>.md이고,
+// key는 PC id 접두다 (dh-ssafy → dh). 같은 사람의 PC 사이에서는 이 파일로 교대한다.
+export const OWNER_KEYS = ['dh', 'js'];
+
+/** PC id → 사람 key (dh/js). 모르면 null */
+export function ownerKey(pcId) {
+  const k = String(pcId || '').split('-')[0];
+  return OWNER_KEYS.includes(k) ? k : null;
+}
+
+export const nowRelPath = (key) => `docs/handoff/NOW-${key}.md`;
+export const nowFileOf = (key) => join(ROOT, nowRelPath(key));
+export const otherOwnerKey = (key) => OWNER_KEYS.find((k) => k !== key) ?? null;
+
+/** 이 PC에 등록된 PC id (.harness/pc.json). 등록부 검증은 env-check.currentPc가 한다 */
+export function localPcId() {
+  try {
+    return JSON.parse(readFileSync(join(ROOT, '.harness', 'pc.json'), 'utf8')).id || null;
+  } catch {
+    return null;
+  }
+}
+
+/** 이 PC 사용자의 NOW 파일 경로. PC 미등록이면 null */
+export function myNowFile() {
+  const key = ownerKey(localPcId());
+  return key ? nowFileOf(key) : null;
+}
 export const PROTECTED_BRANCHES = ['main', 'develop'];
 export const isWin = process.platform === 'win32';
 
@@ -83,8 +111,9 @@ export function mdSection(md, title) {
 const WORK_WATCH = /^(backend\/|frontend\/|docs\/specs\/)/;
 const WORK_IGNORE = /(^|\/)(node_modules|build|dist|\.gradle)\/|(^|\/)CLAUDE\.md$/;
 
-/** NOW.md보다 1초 넘게 나중에 바뀐 미커밋 작업 파일 경로. 최근 것부터 */
-export function workFilesNewerThanNow(cwd = ROOT) {
+/** 내 NOW 파일보다 1초 넘게 나중에 바뀐 미커밋 작업 파일 경로. 최근 것부터. PC 미등록(nowFile null)이면 판정하지 않는다 */
+export function workFilesNewerThanNow(cwd = ROOT, nowFile = myNowFile()) {
+  if (!nowFile) return [];
   const st = git(['status', '--porcelain', '-z', '--untracked-files=all'], { cwd });
   if (!st.ok || !st.out) return [];
 
@@ -99,9 +128,9 @@ export function workFilesNewerThanNow(cwd = ROOT) {
 
   let nowMtime = 0;
   try {
-    nowMtime = statSync(NOW_FILE).mtimeMs;
+    nowMtime = statSync(nowFile).mtimeMs;
   } catch {
-    // NOW.md 없음
+    // NOW 파일 없음
   }
   const out = [];
   for (const p of paths) {
@@ -120,6 +149,56 @@ export function workFilesNewerThanNow(cwd = ROOT) {
 export function nowStamp(d = new Date()) {
   const p = (n) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+/** 작업로그 헤더·NOW "갱신:" 줄에 쓰는 기록 머리 "YYYY-MM-DD HH:mm · 작업자 · PC id · 브랜치" (AI가 시각을 짐작해 쓰지 않게) */
+export function recordStamp({ date = new Date(), author, pcId, branch }) {
+  return `${nowStamp(date)} · ${author || '?'} · ${pcId || 'unknown-pc'} · ${branch || '(detached)'}`;
+}
+
+/** 작업로그 항목 [{ at: 'YYYY-MM-DD HH:mm', author, pcId, text }] (문서 순서). 헤더 "## 날짜 [시각] · 작업자 · PC id · 브랜치" */
+export function worklogEntries(log) {
+  if (!log) return [];
+  return log
+    .split(/\r?\n(?=## )/)
+    .filter((e) => e.startsWith('## '))
+    .map((text) => {
+      const m = /^## (\d{4}-\d{2}-\d{2})(?: (\d{2}:\d{2}))? · ([^·\n]+?) · ([\w-]+) · /.exec(text);
+      return m ? { at: `${m[1]} ${m[2] || '00:00'}`, author: m[3], pcId: m[4], text } : { at: null, author: null, pcId: null, text };
+    });
+}
+
+/**
+ * 이 사람(key)의 가장 최근 작업로그 항목. 병렬 작업이라 상대 항목은 건너뛴다.
+ * unknown-pc 항목(미등록 PC의 handoff.mjs)은 작업자가 이 사람 PC의 github 계정일 때만 넣는다 (pcs: pcs.json의 pcs).
+ * union 머지 뒤에는 문서 순서가 시간순이 아닐 수 있어 시각으로 고른다 (같으면 뒤의 것).
+ */
+export function lastWorklogEntryOf(entries, key, pcs = {}) {
+  const accounts = new Set(
+    Object.entries(pcs)
+      .filter(([id, p]) => ownerKey(id) === key && p?.github)
+      .map(([, p]) => p.github),
+  );
+  const mine = entries.filter((e) => e.pcId && (ownerKey(e.pcId) === key || (e.pcId === 'unknown-pc' && accounts.has(e.author))));
+  return mine.reduce((best, e) => (!best || e.at >= best.at ? e : best), null);
+}
+
+/**
+ * 직전 작업 PC: 내 NOW "갱신:" 줄과 내 마지막 작업로그 항목 중 더 최근 것.
+ * (자동 handoff.mjs는 NOW의 갱신 줄만 바꾸고 본문은 그대로 둔다)
+ * knownIds: pcs.json의 id 목록. 모르는 id와 다른 사람의 PC는 무시한다
+ * (상대가 내 NOW 파일을 처음 만들어 준 경우처럼, 다른 사람 PC에서 쓴 기록은 내 PC 전환이 아니다)
+ */
+export function previousPc({ nowText, entry, knownIds, key }) {
+  const nowHead = /^갱신: (\d{4}-\d{2}-\d{2})(?: (\d{2}:\d{2}))?.*?\bPC: ([\w-]+)/m.exec(nowText || '');
+  const cands = [];
+  if (nowHead) cands.push({ at: `${nowHead[1]} ${nowHead[2] || '00:00'}`, id: nowHead[3] });
+  if (entry?.pcId) cands.push({ at: entry.at, id: entry.pcId });
+  return (
+    cands
+      .filter((c) => c.id === 'unknown-pc' || (knownIds.includes(c.id) && (!key || ownerKey(c.id) === key)))
+      .sort((a, b) => (a.at < b.at ? 1 : -1))[0]?.id ?? null
+  );
 }
 
 /** assistant 메시지 한 줄의 usage를 { ctx, input, cacheWrite, cacheRead, output, model }로. usage가 없으면 null */

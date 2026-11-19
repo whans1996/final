@@ -51,6 +51,13 @@ const staged = git(['diff', '--cached', '--name-only']).out.split('\n').filter(B
 const targets = [];
 if (staged.some((f) => f.startsWith('backend/') && !f.endsWith('.md'))) targets.push('be');
 if (staged.some((f) => f.startsWith('frontend/') && !f.endsWith('.md'))) targets.push('fe');
+
+// 하네스(hook·스크립트) 변경은 단위 테스트만 돈다 (몇 초)
+if (staged.some((f) => /^(scripts|\.claude\/hooks|\.githooks)\/.*\.mjs$/.test(f))) {
+  console.log('🧪 하네스 단위 테스트 (scripts/test) 실행 중…');
+  const h = spawnSync(process.execPath, ['--test', 'scripts/test/*.test.mjs'], { cwd: ROOT, stdio: 'inherit', windowsHide: true });
+  if (h.status !== 0) fail(['하네스 단위 테스트가 실패했습니다. `node --test "scripts/test/*.test.mjs"`로 확인하세요.']);
+}
 if (targets.length === 0) process.exit(0);
 
 console.log(`🧪 테스트 게이트: verify ${targets.join(' ')} 실행 중… (wip 커밋은 건너뜀)`);

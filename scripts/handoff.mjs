@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 // AI 없이 실행하는 인수인계 스크립트. 토큰이 떨어져 Claude가 멈췄을 때 사람이 실행한다.
-//   1) docs/작업로그.md 끝에 자동 항목 추가 (최근 커밋, 미커밋 변경, NOW.md의 다음 할 일·막힌 점)
-//   2) 모든 변경을 wip(F-xx) 커밋 (wip는 테스트 게이트 예외)
-//   3) 원격에 push
+//   1) docs/작업로그.md 끝에 자동 항목 추가 (이 브랜치 커밋, 미커밋 변경, 내 NOW 파일의 다음 할 일·막힌 점)
+//   2) 내 NOW 파일(docs/handoff/NOW-<dh|js>.md)의 "갱신:" 줄만 지금 값으로 바꾼다 (본문은 그대로. 다음 세션의 PC 전환 판정용)
+//   3) 변경을 wip(F-xx) 커밋 (wip는 테스트 게이트 예외). 추적 중인 파일과 작업 폴더의 새 파일만 넣는다
+//   4) 원격에 push
 //
 // 사용법: node scripts/handoff.mjs [-m "메모"] [--no-push]
-import { appendFileSync, readFileSync } from 'node:fs';
+import { appendFileSync, readFileSync, writeFileSync } from 'node:fs';
 import { userInfo } from 'node:os';
 import {
-  NOW_FILE,
   PROTECTED_BRANCHES,
   WORKLOG_FILE,
   currentBranch,
@@ -17,8 +17,12 @@ import {
   hasCommits,
   isGitRepo,
   mdSection,
+  nowFileOf,
+  nowRelPath,
   nowStamp,
+  ownerKey,
   readText,
+  recordStamp,
 } from './lib/common.mjs';
 import { currentPc } from './lib/env-check.mjs';
 
@@ -26,6 +30,10 @@ const args = process.argv.slice(2);
 const noPush = args.includes('--no-push');
 const mIdx = args.indexOf('-m');
 const memo = mIdx >= 0 ? args[mIdx + 1] || '' : '';
+
+// 새 파일은 이 폴더 아래 것만 커밋한다 (같은 작업 트리의 임시 파일·다른 세션 산출물이 섞이지 않게)
+const NEW_FILE_DIRS = /^(backend|frontend|docs|scripts|data|\.claude|\.githooks|\.github)\//;
+const SECRET_FILE = /(^|\/)\.env(\.(?!example$)[^/]*)?$|\.(pem|key|p12|jks)$/;
 
 function die(msg) {
   console.error(`❌ ${msg}`);
@@ -42,16 +50,27 @@ if (PROTECTED_BRANCHES.includes(branch) && hasCommits()) {
 const fid = featureIdFrom(branch) || 'common';
 const author = git(['config', 'user.name']).out || userInfo().username;
 const pcId = currentPc().id || 'unknown-pc';
+const key = ownerKey(pcId);
 
-// 최근 커밋: develop 이후 커밋, 없으면 최근 8개
-const hasDevelop = git(['rev-parse', '--verify', '-q', 'develop']).ok;
-const logArgs = hasDevelop && branch !== 'develop' ? ['log', '--oneline', '-15', 'develop..HEAD'] : ['log', '--oneline', '-8'];
+// 이 브랜치 커밋: develop에 이미 들어간 커밋(상대가 머지한 것, develop 합치기 머지)은 뺀다. develop이 없으면 최근 8개
+const base = ['origin/develop', 'develop'].find((b) => git(['rev-parse', '--verify', '-q', b]).ok);
+const logArgs = base ? ['log', '--oneline', '--no-merges', '-15', `${base}..HEAD`] : ['log', '--oneline', '-8'];
 const commits = hasCommits() ? git(logArgs).out.split('\n').filter(Boolean) : [];
 
 const changed = git(['status', '--porcelain', '--untracked-files=all']).out.split('\n').filter(Boolean);
 
-const nowMd = readText(NOW_FILE) || '';
-const next = mdSection(nowMd, '바로 다음 할 일') || '(NOW.md에 없음)';
+// 커밋할 새 파일: 작업 폴더 아래 것만. 비밀 파일로 보이는 것이 있으면 아무것도 쓰기 전에 멈춘다 (다시 실행해도 작업로그가 중복되지 않게)
+const untracked = git(['ls-files', '--others', '--exclude-standard']).out.split('\n').filter(Boolean);
+const newFiles = untracked.filter((f) => NEW_FILE_DIRS.test(f));
+const skipped = untracked.filter((f) => !NEW_FILE_DIRS.test(f));
+const tracked = git(['diff', '--name-only', 'HEAD']).out.split('\n').filter(Boolean);
+const secret = [...newFiles, ...tracked].find((f) => SECRET_FILE.test(f));
+if (secret) die(`비밀 파일로 보이는 ${secret} 이(가) 커밋 대상에 있어 중단했습니다. .gitignore를 확인하세요.`);
+
+const nowFile = key ? nowFileOf(key) : null;
+const nowMd = (nowFile && readText(nowFile)) || '';
+const nowName = key ? nowRelPath(key) : 'NOW 파일';
+const next = mdSection(nowMd, '바로 다음 할 일') || `(${nowName}에 없음)`;
 const blocked = mdSection(nowMd, '막힌 점') || '없음';
 
 const indent = (text) =>
@@ -63,12 +82,12 @@ const indent = (text) =>
 
 const entry = [
   '',
-  `## ${nowStamp()} · ${author} · ${pcId} · ${branch} (자동 handoff)`,
+  `## ${recordStamp({ author, pcId, branch })} (자동 handoff)`,
   `- 한 일 (이 브랜치 커밋):`,
   commits.length ? commits.map((c) => `  - ${c}`).join('\n') : '  - (커밋 없음)',
-  `- 미커밋 변경 ${changed.length}개 → 이 handoff의 wip 커밋에 포함`,
+  `- 미커밋 변경 ${changed.length}개 → 이 handoff의 wip 커밋에 포함 (작업 폴더 밖의 새 파일은 제외)`,
   changed.length ? changed.slice(0, 15).map((c) => `  - \`${c.trim()}\``).join('\n') + (changed.length > 15 ? `\n  - … 외 ${changed.length - 15}개` : '') : '',
-  `- 다음 할 일 (NOW.md):`,
+  `- 다음 할 일 (${nowName}):`,
   indent(next),
   `- 막힌 점: ${blocked
     .split(/\r?\n/)
@@ -77,7 +96,7 @@ const entry = [
     .join(' / ')}`,
   memo ? `- 메모: ${memo}` : '',
   `- AI 활용: (있으면 이어받는 사람이 채움)`,
-  `- 주의: 자동 기록이다. NOW.md가 오래되었을 수 있으니 이어받는 사람은 git diff로 마지막 변경을 확인할 것`,
+  `- 주의: 자동 기록이다. ${nowName} 본문이 오래되었을 수 있으니 이어받는 사람은 git diff로 마지막 변경을 확인할 것`,
   '',
 ]
   .filter((l) => l !== '')
@@ -87,14 +106,29 @@ const prev = readFileSync(WORKLOG_FILE, 'utf8');
 appendFileSync(WORKLOG_FILE, (prev.endsWith('\n') ? '' : '\n') + entry + '\n', 'utf8');
 console.log(`📝 작업로그에 항목을 추가했습니다.`);
 
-// 스테이징 (.env 등은 .gitignore로 제외됨). 혹시 스테이징된 비밀 파일이 있으면 중단
-git(['add', '-A']);
-const staged = git(['diff', '--cached', '--name-only']).out.split('\n').filter(Boolean);
-const secret = staged.find((f) => /(^|\/)\.env(\.(?!example$)[^/]*)?$|\.(pem|key)$/.test(f));
-if (secret) {
-  git(['reset', '-q', '--', secret]);
-  die(`비밀 파일로 보이는 ${secret} 이(가) 스테이징되어 중단했습니다. .gitignore를 확인하세요.`);
+if (nowFile && nowMd) {
+  const head = `갱신: ${nowStamp()} · 작업자: ${author} · PC: ${pcId} · 브랜치: ${branch} (자동 handoff, 본문 미갱신)`;
+  const updated = /^갱신:.*$/m.test(nowMd) ? nowMd.replace(/^갱신:.*$/m, head) : `${head}\n\n${nowMd}`;
+  writeFileSync(nowFile, updated, 'utf8');
+  console.log(`📝 ${nowName}의 갱신 줄을 바꿨습니다.`);
+} else if (!key) {
+  console.warn('⚠️  PC가 등록되지 않아 NOW 파일을 정할 수 없습니다. node scripts/setup.mjs --pc <id>');
 }
+
+// 스테이징: 추적 중인 파일 변경 + 작업 폴더 아래 새 파일 (위에서 비밀 파일 검사를 마쳤다)
+const addTracked = git(['add', '-u']);
+if (!addTracked.ok) die(`git add -u 실패 (작업로그·NOW 변경은 커밋되지 않고 남아 있음):\n${addTracked.err}`);
+if (newFiles.length) {
+  const addNew = git(['add', '--', ...newFiles]);
+  if (!addNew.ok) die(`새 파일 스테이징 실패 (작업로그·NOW 변경은 커밋되지 않고 남아 있음):\n${addNew.err}`);
+}
+const staged = git(['diff', '--cached', '--name-only']).out.split('\n').filter(Boolean);
+const stagedSecret = staged.filter((f) => SECRET_FILE.test(f));
+if (stagedSecret.length) {
+  git(['reset', '-q', '--', ...stagedSecret]);
+  die(`비밀 파일로 보이는 ${stagedSecret.join(', ')} 이(가) 스테이징되어 중단했습니다. .gitignore를 확인하세요.`);
+}
+if (skipped.length) console.log(`⏭  작업 폴더 밖의 새 파일 ${skipped.length}개는 커밋하지 않았습니다: ${skipped.slice(0, 5).join(', ')}${skipped.length > 5 ? ' …' : ''}`);
 
 const msg = `wip(${fid}): 교대 체크포인트 (handoff.mjs)${memo ? ` - ${memo}` : ''}`;
 const c = git(['commit', '-m', msg]);
@@ -113,4 +147,4 @@ if (!remote.length) {
 const p = git(['push', '-u', remote.includes('origin') ? 'origin' : remote[0], branch], { timeout: 60_000 });
 if (!p.ok) die(`push 실패 (커밋은 로컬에 남아 있음):\n${p.err}`);
 console.log(`🚀 push 완료: ${branch}`);
-console.log(`\n상대방은 "git pull" 후 Claude Code에서 /pickup 으로 이어받으면 됩니다.`);
+console.log(`\n이어받을 때(내 다른 PC 또는 상대): "git switch ${branch} && git pull" 후 Claude Code에서 /pickup`);

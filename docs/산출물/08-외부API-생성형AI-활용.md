@@ -5,7 +5,7 @@
 
 이 프로젝트에서 생성형 AI는 두 곳에 쓰인다.
 1. **서비스 기능**: 사용자의 코드를 수준에 맞게 설명하고 개념 카드·퀴즈·추천 이유를 만든다.
-2. **개발 과정**: 2인 릴레이 팀이 Claude Code를 "하네스"로 구성해 AI가 같은 규칙으로 개발·검증하게 했다.
+2. **개발 과정**: 2인 팀(W1 릴레이, 11-19부터 영역별 병렬)이 Claude Code를 "하네스"로 구성해 AI가 같은 규칙으로 개발·검증하게 했다.
 
 서비스 주제("AI가 쓴 코드를 이해하기")와 개발 방식("AI가 코드를 쓰되 사람이 이해·검증할 수 있게 통제하기")이 같은 문제의식을 공유한다.
 
@@ -149,7 +149,7 @@ F-06(개요·파일 설명)에서 정한 구조를 이후 단계(F-07·F-08·F-1
 
 ### 3.1 배경
 
-- 2인 팀이 **서로 다른 PC에서 릴레이**로 개발한다. AI 도구 토큰이 떨어지면 세션이 갑자기 끊기고 상대가 이어받는다.
+- 2인 팀이 PC 4대(각자 교육장·집)에서 개발한다. W1은 **릴레이**(한 사람씩 교대)로, 11-19부터는 **영역별 병렬**(동시에 각자 기능)로 일한다. AI 도구 토큰이 떨어지면 세션이 갑자기 끊기고 다른 PC에서 이어받는다.
 - AI가 생성한 코드를 팀이 이해하지 못한 채 쌓이는 문제(= 우리 서비스가 푸는 문제)를 개발 과정에서도 막고 싶었다.
 - 그래서 AI에게 일을 맡기되, **AI가 같은 규칙으로 일하고, 스스로 검증하고, 실수가 기계적으로 차단되고, 끊겨도 상태가 남도록** 개발 환경(하네스)을 설계했다.
 
@@ -157,17 +157,18 @@ F-06(개요·파일 설명)에서 정한 구조를 이후 단계(F-07·F-08·F-1
 
 | 층 | 목적 | 구성 |
 |---|---|---|
-| 1. 컨텍스트 | AI가 처음에 읽는 규칙과 지도 | 루트·backend·frontend `CLAUDE.md`, `docs/conventions.md`, 기능별 spec(`docs/specs/`), 현재 상태 `docs/handoff/NOW.md` |
+| 1. 컨텍스트 | AI가 처음에 읽는 규칙과 지도 | 루트·backend·frontend `CLAUDE.md`, `docs/conventions.md`, 기능별 spec(`docs/specs/`), 사람별 현재 상태 `docs/handoff/NOW-dh.md`·`NOW-js.md` |
 | 2. 워크플로 스킬 | 반복 작업을 정해진 절차로 | `/pickup`(이어받기), `/spec`(기능 명세), `/implement`(TDD 구현), `/pr-review`(PR 전 리뷰), `/handoff`(인수인계), `/progress`(진척·산출물 점검) |
 | 3. 가드레일 | 위험한 행동을 기계적으로 차단 | Claude Code hooks: main 직접 커밋·강제 push·`--no-verify`·`.env` 접근·커밋된 DB 마이그레이션 수정·API 키 작성 차단. git `commit-msg` hook: 커밋 규칙·테스트 게이트 |
 | 4. 피드백 루프 | AI가 스스로 결과를 확인 | `verify.mjs`(테스트·빌드 실패만 요약), `ui-check.mjs`(실제 화면 점검), Testcontainers MySQL, LLM Mock, GitHub Actions CI, Swagger openapi.json 일치 검사 |
 | 5. 서브에이전트 | 역할 분리와 토큰 절약 | verifier(검증, Haiku·low), reviewer(spec·보안 리뷰, Opus·high), contract-checker(FE·BE API 계약, Sonnet·medium), ui-verifier(화면, Sonnet·medium), prompt-evaluator(프롬프트 품질, Sonnet·medium) |
 
-### 3.3 릴레이 체크포인트 설계
+### 3.3 체크포인트 설계 (릴레이 → 병렬)
 
-- 세션 시작 시 hook이 브랜치·git 상태·`NOW.md`·마지막 작업로그를 AI에게 자동 주입한다.
-- AI가 코드를 바꾸고 `NOW.md`를 갱신하지 않은 채 턴을 끝내려 하면 Stop hook이 한 번 막는다.
+- 세션 시작 시 hook이 브랜치·git 상태·내 NOW 파일·내 마지막 작업로그·상대 작업 요약을 AI에게 자동 주입한다.
+- AI가 코드를 바꾸고 내 NOW 파일을 갱신하지 않은 채 턴을 끝내려 하면 Stop hook이 한 번 막는다.
 - 토큰이 떨어져 AI가 멈추면 사람이 `node scripts/handoff.mjs` 한 줄로 작업로그 기록·wip 커밋·push를 한다.
+- **병렬 전환 (11-19)**: 한 사람이 이어받는 전제로 만든 하네스를 AI와 함께 점검하자, 두 사람이 동시에 일하면 깨지는 곳 8군데가 나왔다(단일 NOW.md 덮어쓰기, 파일 끝 결정 로그·작업로그 추가, PR마다 고치는 진행현황·WBS·간트, Flyway 번호, openapi.json, PC 전환 경고 오탐, develop 합치기 후 Codex 재리뷰). 결정 로그 충돌은 이미 한 번 실제로 났다. 사람별 NOW 파일, 기록 파일 `merge=union`, 상태표는 주간 `/progress` PR로만, 마이그레이션 번호 CI 검사(`check-migrations.mjs`), develop에서 들어온 파일을 뺀 Codex 재리뷰 판정으로 바꾸고 하네스 단위 테스트(`node --test`)를 CI에 넣었다.
 
 ### 3.3.1 토큰·컨텍스트 관리 (11-18 실측 후 도입)
 

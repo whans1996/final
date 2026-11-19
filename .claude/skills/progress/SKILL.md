@@ -5,12 +5,17 @@ description: 기능 spec 상태, 관통 필수 요구사항 13개와 명세서 �
 
 # /progress — 진척 점검
 
+진행현황·WBS·간트는 두 사람이 공유하는 상태표라서 기능 PR에서 고치지 않고 **이 스킬만** 고친다 (11-19 결정). 주 1회(일요일, 기본 담당 김동환) 또는 사람이 요청할 때 실행한다.
+
 ## 절차
+
+0. **브랜치**: 기능 브랜치에서 하지 않는다. `git fetch && git switch -c feature/common-progress-MMDD origin/develop`(MMDD = 오늘). 판정은 develop 기준이다.
 
 1. **수집**
    - `docs/기획서.md`: 기능 목록 표(F-01~F-25, 우선순위, 필수 요구사항 매핑), "명세서 구조 매핑", 4절 마일스톤, 일정 판단 기준
    - `docs/specs/*.md`: 각 파일 헤더의 상태(DRAFT/APPROVED/DONE)와 구현 체크리스트 체크 비율
-   - git·GitHub: `git branch -a`, `git log origin/develop --oneline`(없으면 `develop`), `gh pr list --state all --limit 50 --json number,title,state,headRefName` (gh가 없거나 원격이 없으면 생략)
+   - git·GitHub: `git branch -a`, `git log origin/develop --oneline`(없으면 `develop`), `gh pr list --state all --limit 50 --json number,title,state,headRefName,mergedAt` (gh가 없거나 원격이 없으면 생략). 실적 날짜는 PR의 `mergedAt`을 쓴다
+   - 두 사람의 NOW 파일(`docs/handoff/NOW-dh.md`·`NOW-js.md`)의 현재 기능
    - `docs/산출물/` 각 파일의 존재와 "작성 상태" 표시, `docs/api/openapi.json` 존재
    - 오늘 날짜로 현재 주차(W1~W5, 버퍼)를 계산한다.
 2. **판정**: 기능 상태는 다음 중 하나로 정한다.
@@ -33,7 +38,7 @@ description: 기능 spec 상태, 관통 필수 요구사항 13개와 명세서 �
 | 명세서 구분 | 기능 | 상태 |
 
 ## 기능별
-| ID | 기능 | 우선순위 | 오너 | 상태 | 브랜치/PR/spec |
+| ID | 기능 | 우선순위 | 오너 (A 김동환 / B 김준섭) | 상태 | 브랜치/PR/spec |
 
 ## 제출 산출물 준비 현황
 | 구분 | 산출물 | 파일 | 상태 | 마감 주차 |
@@ -56,7 +61,7 @@ description: 기능 spec 상태, 관통 필수 요구사항 13개와 명세서 �
 ```
 
 4. **WBS·간트 동기화**: `docs/산출물/04-WBS.md`의 상태·실적 열과 `05-간트차트.md`의 `done`/`active` 태그를 2단계 판정에 맞춘다. 계획 기간(기준선)은 고치지 않는다. 계획과 실제 날짜가 다른 완료 작업은 간트 `실적` 섹션에 막대를 추가한다.
-   - 재계획(계획 날짜 변경)은 지연으로 마일스톤(M1 12/07, M2 12/14)이 위험할 때만 **사용자에게 제안**하고, 승인받으면 두 문서와 `docs/기획서.md` 결정 로그를 함께 고친다.
-5. **보고**: 요약 섹션만 채팅으로 보여 준다. 지연이면 기획서의 일정 판단 기준(예: 12/07에 핵심 흐름 미완성 → P1 포기)을 근거로 무엇을 줄일지 제안한다. 산출물 마감이 지난 항목은 따로 강조한다.
+   - 재계획(계획 날짜 변경)은 지연으로 마일스톤(M1 12/07, M2 12/14)이 위험할 때만 **사용자에게 제안**하고, 승인받으면 두 문서를 고치고 `docs/결정로그.md`에 한 줄 추가한다.
+5. **보고**: 요약 섹션만 채팅으로 보여 준다. 사람(영역)별 진척도 한 줄씩 적는다. 지연이면 기획서의 일정 판단 기준(예: 12/07에 핵심 흐름 미완성 → P1 포기)을 근거로 무엇을 줄일지 제안한다. 산출물 마감이 지난 항목은 따로 강조한다.
 6. **노션 대시보드 (선택)**: Notion MCP를 쓸 수 있으면 `docs/notion.md`에 적힌 대시보드 페이지의 "진행 현황" 섹션(기준 날짜 callout, 요약 4줄, 상태별 기능 표)을 3단계 요약으로 바꾼다(`notion-update-page`의 `update_content`, 다른 섹션과 하위 DB는 건드리지 않는다). MCP가 없으면 건너뛰었다고 보고한다. 노션은 사람용 요약이고 정본은 `docs/진행현황.md`다.
-7. 커밋: `docs: 진행현황 갱신 (W?)` (WBS·간트 변경 포함) — 현재 브랜치가 main/develop이면 커밋하지 않고 사용자에게 알린다.
+7. 커밋: `docs: 진행현황 갱신 (W?)` (WBS·간트 변경 포함) → push → 사용자 확인 후 `gh pr create --base develop --title "docs: 진행현황 갱신 (W?)"`. docs만 바뀌므로 Codex 재리뷰 루프는 생략하고(자동 리뷰 지적이 달리면 읽고 판단) CI 초록이면 실행한 사람이 머지한다 (`docs/conventions.md` 7절 예외). 기능 브랜치에 섞지 않는다.
