@@ -4,33 +4,30 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
 
-갱신: 2026-11-19 11:38 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/common-harness-sync
+갱신: 2026-11-19 11:57 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/common-notify-per-person
 
 ## 현재 기능
 
-하네스 병렬 동기화·알림·영역 경계 (common) — **PR #31 열림** — reviewer 반영(b24a2f6·b756765, 권장 2 → #29), Codex ✅ 4a40f15 (P2 1건 수정: Actions push payload 파일 목록 없음, P2 2건 → #32), Mattermost 전송 확인(PR 열림). CI BE 대기
+하네스 2건 (common) — **PR #35** Codex 리뷰 루프 강제(`feature/common-codex-loop`, Codex P2 2건 수정 8e433c2, 재리뷰 대기) / **Mattermost 사람별 웹훅**(`feature/common-notify-per-person`, PR 생성 중)
 
 ## 진행
 
-- ✅ 상대 NOW 원격 읽기(`lib/peer.mjs` latestPeerNow, session-start 출처 표시·스냅샷), `peer-watch` UserPromptSubmit hook(10분, develop·NOW·PR 변화)
-- ✅ Mattermost: `lib/notify.mjs`·`notify-message.mjs`·`.github/workflows/notify.yml` (secret 없으면 건너뜀)
-- ✅ `.github/CODEOWNERS`(정본), `lib/owners.mjs`·`scripts/owners.mjs`, guard-files 상대 NOW 차단, `area-notice` PostToolUse 경고
-- ✅ 스킬(implement·spec push, pr-review owners), 결정로그 3줄, conventions 9절, 환경설정 6·7절, CLAUDE.md, PR 템플릿, 라벨 area:A·B·common 생성
-- ✅ develop(PR #28 js-home macOS) 합침. 김준섭 PR #28이 peer-watch 실측에서 잡힘
+- ✅ #35: 계정 미연결 ERROR, Stop hook `codex-loop`, PR 체크 `Codex`, 상한 5회, reviewer 반드시 1·권장 7, Codex P2 2건(끝난 --wait 오인, --resolve 체크 갱신)
+- ✅ 알림: `lib/notify.mjs` senderKey, `notify-message.mjs --sender`, `notify.yml`이 행동한 사람 웹훅(`MATTERMOST_WEBHOOK_URL_DH`·`_JS`, 없으면 공용)으로 전송, username 제거, 환경설정 7절, 결정로그
+- 김준섭 PR #34(계정 미연결 ERROR)는 #35의 부분집합 → 준섭님이 닫거나 먼저 머지 후 #35에서 develop 합쳐 정리
 
 ## 바로 다음 할 일
 
-1. PR #31: `gh pr checks 31` BE 잡 초록 확인 → GitHub에서 본인 머지(Mattermost "✅ 머지됨" 확인) → `git switch develop && git pull`
-2. 김준섭 PR #30(NOW-js 착수 기록) 열려 있음. #31 머지 뒤 그쪽이 develop을 합치면 NOW push 알림도 받는다
-3. `/clear` 뒤 `/spec`으로 **공통 기반** spec (concept 도메인·Mapper·카드 DTO, ErrorCode·ActivityType 블록, 라우터·nav 분리, ConceptCard·Pagination, 관리자 레이아웃). 결정 필요: analysis_concepts·AI 초안 형식, DTO 공유, 공개 GET, ADMIN 시드, /api/users/me/challenges, 업로드 유틸, F-01~03 유지보수, 공동 산출물 분담
-4. 1.4 유스케이스(마감 11/23) `docs/산출물/02-유스케이스.md`
+1. PR #35: `node scripts/codex-review.mjs 35 --request --wait --status` COMPLETE + CI 초록 → 본인 머지
+2. 알림 PR: CI·Codex 확인 → 머지. 두 PR 모두 NOW-dh를 고쳐서 늦게 머지하는 쪽이 develop 합칠 때 NOW-dh 충돌 → 최신 내용으로 정리
+3. 사람: 동환 웹훅 URL을 secret `MATTERMOST_WEBHOOK_URL_DH`로, 준섭 웹훅을 `_JS`로 등록(환경설정 7절). 준섭 Codex 계정 연결(8절, #35 머지 뒤)
+4. `/clear` 뒤 `/spec`으로 **공통 기반** spec
+5. 1.4 유스케이스(마감 11/23) `docs/산출물/02-유스케이스.md`
 
 ## 막힌 점 / 결정 필요
 
 - 사람: 이슈 #16, 노션 팀원 초대, 고아 폴더 `../final-harness` 삭제 여부
-- 김준섭 js-home은 macOS — hook은 Node라 동작하지만 첫 세션에서 peer-watch·area-notice 출력 확인 필요
 
 ## 주의
 
 - Gradle 테스트를 bootRun과 동시에 돌리지 않는다. 통합 테스트는 Docker Desktop 필요. V1~V5 수정 금지
-- 이 PC는 `node scripts/setup.mjs` 전체 점검 기록 없음

@@ -14,6 +14,15 @@ export function whoOf(login, pcs) {
 }
 
 /**
+ * 이벤트를 일으킨 사람(sender: PR을 열거나 머지하거나 push한 계정)의 key (dh/js, 모르면 null).
+ * Mattermost 수신 웹훅은 웹훅을 만든 사람 이름으로 글을 올리고 SSAFY 서버는 이름 바꾸기(username)를 무시한다.
+ * 그래서 사람마다 자기 웹훅을 두고, 행동한 사람의 웹훅으로 보내 글쓴이가 실제 행동한 사람이 되게 한다 (11-19).
+ */
+export function senderKey(payload, pcs) {
+  return accountsOf(pcs)[String(payload?.sender?.login || '').toLowerCase()]?.key ?? null;
+}
+
+/**
  * push 이벤트에서 바뀐 NOW 파일의 사람 key 목록.
  * develop 합치기로 딸려 온 커밋(distinct:false)은 빼고, push한 사람을 알면 그 사람의 NOW만 남긴다
  * (머지 직전 develop을 합쳐 push하면 상대의 옛 NOW 커밋이 payload.commits에 섞인다).
@@ -21,7 +30,7 @@ export function whoOf(login, pcs) {
  * notify-message.mjs가 커밋 id로 git에서 조회해 넘긴다. 기본값은 webhook payload의 added·modified.
  */
 export function changedNowKeys(payload, pcs = {}, filesOf = (c) => [...(c.added || []), ...(c.modified || [])]) {
-  const pusher = accountsOf(pcs)[String(payload?.sender?.login || '').toLowerCase()]?.key;
+  const pusher = senderKey(payload, pcs);
   const keys = new Set();
   for (const c of payload?.commits || []) {
     if (c.distinct === false) continue;
