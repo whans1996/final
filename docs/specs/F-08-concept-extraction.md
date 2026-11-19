@@ -223,13 +223,13 @@ LLM은 테스트에서 실제로 부르지 않는다. 파이프라인 통합 테
 
 - [x] 브랜치 `feature/F-08-concept-extraction`
 - [x] Flyway 마이그레이션 — 없음
-- [ ] AC별 실패 테스트 작성 (red 확인) — BE AC1~AC7·AC10, FE AC8~AC9
-- [ ] BE 구현 (green) — 프롬프트 3개, fixture 1개, #23 수정
-- [ ] FE 구현 (green)
-- [ ] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
-- [ ] contract-checker 통과
+- [x] AC별 실패 테스트 작성 (red 확인) — BE AC1~AC7·AC10, FE AC8~AC9 (AC1~AC6은 테스트·구현을 함께 작성, AC7·FE는 red 확인)
+- [x] BE 구현 (green) — 프롬프트 3개, fixture 1개, #23 수정
+- [x] FE 구현 (green)
+- [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
+- [x] contract-checker 통과 (nullable 표기 1건 반영)
 - [ ] ui-verifier 통과 (데스크톱·모바일)
 - [ ] reviewer 지적 사항 반영
-- [ ] 산출물 반영: `02-유스케이스.md` UC24 대안 흐름 확정, `03-ERD.md` analysis_concepts·concepts 설명, `06-화면설계서.md` SC-07 개념 탭, `08-외부API-생성형AI-활용.md` F-08 행, `09-데이터셋.md`·`datasets.json` DS-06
+- [x] 산출물 반영 (06 스크린샷은 ui-verifier 뒤): `02-유스케이스.md` UC24 대안 흐름 확정, `03-ERD.md` analysis_concepts·concepts 설명, `06-화면설계서.md` SC-07 개념 탭, `08-외부API-생성형AI-활용.md` F-08 행, `09-데이터셋.md`·`datasets.json` DS-06
 - [ ] PR CI 초록 (본문 `Closes #23`)
 - [ ] 상태 DONE (PR 머지 전 마지막 커밋)

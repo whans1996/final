@@ -11,23 +11,23 @@
           "contextNote" : {
             "description" : "이 코드에서 개념이 쓰인 방식 (없으면 null)",
             "example" : "생성자로 TodoMapper를 받아 필드에 저장합니다.",
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "fileId" : {
             "description" : "개념이 쓰인 분석 파일 ID (없으면 null)",
             "example" : 102,
             "format" : "int64",
-            "type" : "integer"
+            "type" : [ "integer", "null" ]
           },
           "filePath" : {
             "description" : "그 파일 경로 (없으면 null)",
             "example" : "src/main/java/com/example/todo/TodoService.java",
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "lineHint" : {
             "description" : "줄 위치 L12 또는 L12-L30 (없으면 null)",
             "example" : "L8-L15",
-            "type" : "string"
+            "type" : [ "string", "null" ]
           }
         },
         "required" : [ "concept" ],
