@@ -67,6 +67,8 @@ Guest --> UC02
 Guest --> UC20
 Guest --> UC03
 Guest --> UC21
+Guest --> UC22
+Guest --> UC41
 Guest --> UC40
 
 Member --> UC04
