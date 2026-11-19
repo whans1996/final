@@ -29,4 +29,4 @@ F-11 카드 리뷰 (`docs/specs/F-11-concept-review.md` **DRAFT, 승인 대기**
 
 - concept 패키지·`components/concept`·`src/api/concepts.js`·`SecurityConfig`·`ErrorCode`는 CODEOWNERS상 공통 → PR 본문에 @whans1996 멘션
 - F-04 피드는 지워진 리뷰의 REVIEW 활동을 `concept_reviews` JOIN으로 걸러야 함 (F-04 spec에 반영)
-- 이 브랜치는 develop(`c6c0c..` 이전)에서 갈라짐. 김동환 PR #53(F-08 mock fixture) 머지분은 `git merge origin/develop`으로 받음
+- develop(김동환 PR #53 F-08 mock fixture 머지분)을 `fbcb1c9`에서 합침
