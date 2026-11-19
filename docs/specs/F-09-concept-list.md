@@ -7,7 +7,7 @@
 | 우선순위 | P0 |
 | 영역 오너 | B 김준섭 (카드·소셜) |
 | 관련 필수 요구사항 | ⑧ 콘텐츠 목록·검색 |
-| 의존 spec | F-13 시드 카드(`R__seed_concepts.sql`, 85개, DONE). **A 김동환의 concept 공통 기반 PR**(결정로그 11-19: concept 도메인·`ConceptMapper`·카드 응답 DTO·`ConceptCard.vue`·`Pagination`·라우터 영역 분리). 그 PR이 develop에 머지된 뒤 구현을 시작한다. 목록 항목 DTO 계약은 이 spec 3절이 정하고, 공통 기반 PR이 이 계약대로 만든다 |
+| 의존 spec | F-13 시드 카드(`R__seed_concepts.sql`, 85개, DONE). **A 김동환의 concept 공통 기반 PR**(결정로그 11-19: concept 도메인·`ConceptMapper`·카드 응답 DTO·`ConceptCard.vue`·`PageNav`·라우터 영역 분리, **PR #42로 11-19 develop 머지됨**). 목록 항목 DTO 계약은 이 spec 3절이 정하고, 공통 기반 PR이 이 계약대로 만든다 |
 | 관련 이슈 | 없음 |
 | 승인 | 김준섭 2026-11-19 |
 
@@ -116,13 +116,13 @@
 | 항목 | 내용 |
 |---|---|
 | 화면/라우트 | `/concepts` → `views/concept/ConceptListView.vue` (공개, `meta` 없음). 라우트는 공통 기반이 나눈 concept 블록에 추가 |
-| 컴포넌트 | `ConceptCard.vue`(공통 기반 제공: 이름·카테고리·난이도 배지·요약·찜 수·평점, 클릭 → `/concepts/:id`), `Pagination`(공통 기반 제공), 필터 바는 `components/concept/ConceptFilterBar.vue` (B 영역 새 파일) |
+| 컴포넌트 | `components/concept/ConceptCard.vue`(공통 기반 제공: 이름·카테고리·난이도 배지·요약·찜 수·평점, 클릭 → `/concepts/:id`), `components/common/PageNav.vue`(공통 기반 제공, `page·size·total` props, `change` 이벤트), `components/common/EmptyState.vue`(0건 문구 + `action` 슬롯에 "필터 초기화"), 필터 바는 `components/concept/ConceptFilterBar.vue` (B 영역 새 파일) |
 | store | 없음. 조건의 정본은 라우트 쿼리이고, 화면이 `watch(route.query)`로 다시 조회한다 |
-| API 함수 | `src/api/concepts.js`의 `fetchConcepts({ keyword, category, difficulty, sort, page, size })`. 빈 값은 쿼리에서 뺀다. 파일이 공통 기반에 없으면 이 기능에서 만든다 |
-| 상수 | `CONCEPT_CATEGORIES`(6종 value·label), `DIFFICULTY_LABELS`(입문·주니어·숙련, F-01의 수준 표기와 같게). 공통 기반에 있으면 그것을 쓴다 |
+| API 함수 | `src/api/concepts.js`(공통 기반에 없어 이 기능에서 새로 만든다)의 `fetchConcepts({ keyword, category, difficulty, sort, page, size })`. 빈 값은 쿼리에서 뺀다 |
+| 상수 | `CONCEPT_CATEGORIES`(6종 value·label, 새로 만든다). 난이도는 `utils/authValidation`의 `LEVELS`(ConceptCard와 같은 표기)를 쓴다 |
 | 상태별 UI | 로딩 / 0건(필터 초기화 버튼) / 에러(서버 message) — AC11 |
 | 반응형 | 카드 그리드 `repeat(auto-fill, minmax(260px, 1fr))` (SC-06과 같은 규칙), 필터 바는 모바일에서 줄바꿈 |
-| nav | 상단 nav concept 블록에 "개념 카드" (`/concepts`), 비로그인에도 보인다 |
+| nav | `router/routes/concept.js`의 `/concepts` route에 `meta.nav = { label: "개념 카드", order, show: "all" }`. F-00b `utils/navItems.js`에는 `show`가 `guest`·`user`·`admin`뿐이라 **모두에게 보이는 `all`을 추가한다** (공통 파일, 테스트 `navItems.spec.js`에 케이스 추가, PR에서 @whans1996 멘션) |
 
 ## 6. LLM (AI 기능만)
 
@@ -156,18 +156,19 @@
 
 ## 9. 결정 필요
 
-- (구현 착수 전) A의 공통 기반 PR에서 `ConceptSummaryResponse` 필드·이름이 3절과 다르면 이 spec을 그에 맞춰 고친다. 공통 기반 PR이 F-09 착수 때까지(W2 11/24) 머지되지 않으면 김동환과 Mattermost로 일정을 정한다
+- ✅ (11-19 해결) F-00b PR #42 머지 후 대조: `ConceptSummaryResponse` 필드·이름 일치(`difficulty`는 `Level` enum). 이름이 다른 공통 부품(`PageNav`·`EmptyState`·`LEVELS`·`meta.nav`)과 `navItems` `show: "all"` 추가를 5절에 반영
+- ~~(구현 착수 전) A의 공통 기반 PR에서 `ConceptSummaryResponse` 필드·이름이 3절과 다르면 이 spec을 그에 맞춰 고친다. 공통 기반 PR이 F-09 착수 때까지(W2 11/24) 머지되지 않으면 김동환과 Mattermost로 일정을 정한다~~
 
 ## 10. 구현 체크리스트
 
 `/implement`가 진행하며 체크한다.
 
-- [ ] A 공통 기반 PR develop 머지 확인 → `git merge origin/develop`
+- [x] A 공통 기반 PR develop 머지 확인 → `git merge origin/develop` (PR #42, 11-19)
 - [ ] 브랜치 `feature/F-09-concept-list`
 - [ ] Flyway 마이그레이션 (없음)
 - [ ] AC별 실패 테스트 작성 (red 확인)
 - [ ] BE 구현 (green): `ConceptController#list`, `ConceptService#search`, `ConceptMapper` `findPublished`·`countPublished`, `ConceptSearchRequest`(검증), `PUBLIC_GET_PATHS`
-- [ ] FE 구현 (green): `fetchConcepts`, `ConceptListView`, `ConceptFilterBar`, 라우트·nav
+- [ ] FE 구현 (green): `fetchConcepts`, `ConceptListView`, `ConceptFilterBar`, 라우트 `meta.nav`, `navItems.js` `show: "all"`
 - [ ] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
 - [ ] contract-checker 통과
 - [ ] ui-verifier 통과 (데스크톱·모바일)
