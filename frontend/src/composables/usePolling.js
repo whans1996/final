@@ -25,9 +25,15 @@ export function usePolling(task, { interval = 2000 } = {}) {
     timer = null
   }
 
-  function start() {
+  /** `delay`(ms)를 주면 첫 실행도 그만큼 기다린다 (방금 받은 응답이 최신일 때). */
+  function start({ delay = 0 } = {}) {
     stop()
-    run(generation)
+    const gen = generation
+    if (delay > 0) {
+      timer = setTimeout(() => run(gen), delay)
+    } else {
+      run(gen)
+    }
   }
 
   onBeforeUnmount(stop)

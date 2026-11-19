@@ -1,7 +1,8 @@
 <script setup>
 // SC-07 분석 상세.
 // 진행 중: 상태를 바로 1회, 이후 2초마다 조회하고 DONE·FAILED·404이거나 화면을 떠나면 멈춘다 (F-05a AC15).
-// DONE: 상세를 1회 불러와 "개요"·"파일" 탭을 보여 준다. 탭과 선택 파일은 쿼리(?tab=files&file=123)에 둔다 (F-06 AC13~AC15).
+// DONE: 상세를 1회 불러와 "개요"·"파일"·"실행 흐름" 탭을 보여 준다. 탭과 선택 파일은 쿼리(?tab=files&file=123)에 둔다
+// (F-06 AC13~AC15, F-07 AC14).
 import { computed, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { fetchAnalysis, fetchAnalysisStatus } from '@/api/analyses'
@@ -11,12 +12,14 @@ import { isInProgress } from '@/utils/analysisStatus'
 import AnalysisStatusBadge from '@/components/analysis/AnalysisStatusBadge.vue'
 import AnalysisOverviewTab from '@/components/analysis/AnalysisOverviewTab.vue'
 import AnalysisFilesTab from '@/components/analysis/AnalysisFilesTab.vue'
+import AnalysisFlowsTab from '@/components/analysis/AnalysisFlowsTab.vue'
 import { LEVELS } from '@/utils/authValidation'
 
 const POLL_INTERVAL_MS = 2000
 const TABS = [
   { name: 'overview', label: '개요' },
   { name: 'files', label: '파일' },
+  { name: 'flows', label: '실행 흐름' },
 ]
 
 const route = useRoute()
@@ -32,7 +35,9 @@ const detailLoading = ref(false)
 const detailError = ref('')
 
 const isDone = computed(() => status.value?.status === 'DONE')
-const activeTab = computed(() => (route.query.tab === 'files' ? 'files' : 'overview'))
+const activeTab = computed(() =>
+  TABS.some((t) => t.name === route.query.tab) ? route.query.tab : 'overview',
+)
 const selectedFileId = computed(() => {
   const id = Number(route.query.file)
   return Number.isInteger(id) && id > 0 ? id : null
@@ -171,10 +176,16 @@ watch(
           >
             <AnalysisOverviewTab v-if="activeTab === 'overview'" :overview="analysis.overview" />
             <AnalysisFilesTab
-              v-else
+              v-else-if="activeTab === 'files'"
               :analysis-id="analysis.id"
               :selected-file-id="selectedFileId"
               @select="selectFile"
+            />
+            <AnalysisFlowsTab
+              v-else
+              :analysis-id="analysis.id"
+              :apis="analysis.overview?.apis ?? []"
+              @select-file="selectFile"
             />
           </div>
         </template>

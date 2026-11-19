@@ -8,6 +8,8 @@ import {
   fetchAnalysisFile,
   fetchAnalysisFiles,
   fetchAnalysisStatus,
+  fetchAnalysisFlows,
+  requestAnalysisFlows,
 } from '@/api/analyses'
 
 // API 계약(docs/specs/F-05a-analysis-request-zip.md 3절)과 URL·메서드·파트 이름이 같은지 확인한다
@@ -103,5 +105,30 @@ describe('api/analyses (F-06)', () => {
     await expect(fetchAnalysisFile(42, 101)).resolves.toMatchObject({ content: 'class A {}' })
 
     expect(`${calls[0].method} ${calls[0].url}`).toBe('get /analyses/42/files/101')
+  })
+})
+
+describe('api/analyses (F-07)', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
+  it('AC14 fetchAnalysisFlows는 GET /api/analyses/{id}/flows', async () => {
+    const flows = [{ id: 7, method: 'POST', path: '/api/todos', status: 'PENDING' }]
+    const calls = capture(flows)
+
+    await expect(fetchAnalysisFlows(42)).resolves.toEqual(flows)
+
+    expect(`${calls[0].method} ${calls[0].url}`).toBe('get /analyses/42/flows')
+  })
+
+  it('AC14 requestAnalysisFlows는 POST /api/analyses/{id}/flows에 endpoints를 보낸다', async () => {
+    const calls = capture([])
+    const endpoints = [{ method: 'POST', path: '/api/todos' }]
+
+    await expect(requestAnalysisFlows(42, endpoints)).resolves.toEqual([])
+
+    expect(`${calls[0].method} ${calls[0].url}`).toBe('post /analyses/42/flows')
+    expect(JSON.parse(calls[0].data)).toEqual({ endpoints })
   })
 })

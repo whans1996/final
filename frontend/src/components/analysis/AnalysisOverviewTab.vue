@@ -5,6 +5,7 @@ import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import { layerLabel, sortByLayer } from '@/utils/layers'
 import FilePath from '@/components/analysis/FilePath.vue'
+import MethodBadge from '@/components/analysis/MethodBadge.vue'
 
 const props = defineProps({
   overview: { type: Object, default: null },
@@ -74,7 +75,7 @@ function fileLink(fileId) {
           <tbody>
             <tr v-for="api in apis" :key="`${api.method} ${api.path}`">
               <td>
-                <span class="method" :data-method="api.method">{{ api.method }}</span>
+                <MethodBadge :method="api.method" />
               </td>
               <td class="path">{{ api.path }}</td>
               <td>
@@ -188,35 +189,6 @@ th {
 
 td:last-child {
   white-space: nowrap;
-}
-
-.method {
-  display: inline-block;
-  min-width: 4.2em;
-  padding: 0 var(--space-2);
-  border-radius: 4px;
-  color: #fff;
-  background: #6b7280;
-  font-size: 0.8em;
-  font-weight: 700;
-  text-align: center;
-}
-
-.method[data-method='GET'] {
-  background: #2563eb;
-}
-
-.method[data-method='POST'] {
-  background: #059669;
-}
-
-.method[data-method='PUT'],
-.method[data-method='PATCH'] {
-  background: #d97706;
-}
-
-.method[data-method='DELETE'] {
-  background: #dc2626;
 }
 
 @media (max-width: 480px) {

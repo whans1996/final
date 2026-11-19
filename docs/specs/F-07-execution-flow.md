@@ -290,9 +290,9 @@ LLM은 테스트에서 실제로 부르지 않는다. `@MockitoBean LlmClient`�
 
 - [x] 브랜치 `feature/F-07-execution-flow`
 - [x] Flyway `V5__analysis_flow_status.sql`
-- [ ] AC별 실패 테스트 작성 (red 확인) — BE AC1~AC13 ✅(서비스·컨트롤러는 구현과 함께 작성, AC7 잠금은 변이로 확인), FE AC14~AC16
+- [x] AC별 실패 테스트 작성 (red 확인) — BE AC1~AC13(서비스·컨트롤러는 구현과 함께 작성, AC7 잠금은 변이로 확인), FE AC14~AC16
 - [x] BE 구현 (green) — 프롬프트 3개, fixture 1개, #19·#21
-- [ ] FE 구현 (green)
+- [x] FE 구현 (green)
 - [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
 - [ ] contract-checker 통과
 - [ ] ui-verifier 통과 (데스크톱·모바일)
