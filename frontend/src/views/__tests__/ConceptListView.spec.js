@@ -66,6 +66,7 @@ describe('ConceptListView (F-09 AC9~AC11)', () => {
       ['LATEST', '최신순'],
     ])
 
+    expect(wrapper.find('[data-testid="concept-total"]').text()).toBe('2개')
     const cards = wrapper.findAll('[data-concept-id]')
     expect(cards).toHaveLength(2)
     expect(cards[0].attributes('href')).toBe('/concepts/57')

@@ -95,7 +95,12 @@ function resetFilters() {
 
 <template>
   <section class="list">
-    <h1>개념 카드</h1>
+    <div class="heading">
+      <h1>개념 카드</h1>
+      <span v-if="!loading && !loadError" class="total" data-testid="concept-total">
+        {{ total }}개
+      </span>
+    </div>
     <ConceptFilterBar :filters="filters" @change="onFilterChange" />
 
     <p v-if="loading" class="hint">불러오는 중…</p>
@@ -125,8 +130,18 @@ function resetFilters() {
   padding: var(--space-8) 0;
 }
 
+.heading {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
 h1 {
   margin: 0;
+}
+
+.total {
+  color: var(--color-text-muted);
 }
 
 .hint {

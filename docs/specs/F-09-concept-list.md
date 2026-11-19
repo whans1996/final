@@ -170,9 +170,9 @@
 - [x] BE 구현 (green): `ConceptController#list`, `ConceptService#search`, `ConceptMapper` `findPublished`·`countPublished`, `ConceptSearchRequest`(검증), `PUBLIC_GET_PATHS`
 - [x] FE 구현 (green): `fetchConcepts`, `ConceptListView`, `ConceptFilterBar`, 라우트 `meta.nav`, `navItems.js` `show: "all"`
 - [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
-- [ ] contract-checker 통과
-- [ ] ui-verifier 통과 (데스크톱·모바일)
+- [x] contract-checker 통과
+- [x] ui-verifier 통과 (데스크톱·모바일)
 - [ ] reviewer 지적 사항 반영
-- [ ] 산출물 반영: `06-화면설계서.md` SC-09 절 + 스크린샷(`screens/SC-09-*.png`), CODEOWNERS에 새 FE 폴더(`views/concept/`·`components/concept/`)가 없으면 추가
+- [x] 산출물 반영: `06-화면설계서.md` SC-09 절 + 스크린샷(`screens/SC-09-*.png`), CODEOWNERS에 새 FE 폴더(`views/concept/`·`components/concept/`)가 없으면 추가
 - [ ] PR CI 초록 (공통 파일 변경 → 본문에서 @whans1996 멘션)
 - [ ] 상태 DONE (PR 머지 전 마지막 커밋)
