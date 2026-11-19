@@ -250,10 +250,13 @@ watch(
 .tabs {
   display: flex;
   gap: var(--space-1);
+  overflow-x: auto;
   border-bottom: 1px solid var(--color-border);
 }
 
 .tab {
+  flex-shrink: 0;
+  white-space: nowrap;
   padding: var(--space-2) var(--space-4);
   border: none;
   border-bottom: 2px solid transparent;
