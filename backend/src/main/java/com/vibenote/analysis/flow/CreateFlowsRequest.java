@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.util.List;
 
@@ -20,7 +21,7 @@ public record CreateFlowsRequest(
                         maxItems = 3)
                 @NotEmpty(message = "실행 흐름을 만들 API를 하나 이상 고르세요.")
                 @Size(min = 1, max = 3, message = "API는 한 번에 1~3개를 고를 수 있습니다.")
-                List<@Valid Endpoint> endpoints) {
+                List<@NotNull(message = "API를 입력하세요.") @Valid Endpoint> endpoints) {
 
     @Schema(description = "API 하나 (개요 apis의 method·path 그대로)")
     public record Endpoint(

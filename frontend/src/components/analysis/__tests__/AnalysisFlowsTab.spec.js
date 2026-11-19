@@ -176,6 +176,26 @@ describe('AnalysisFlowsTab (F-07)', () => {
     expect(analysesApi.fetchAnalysisFlows).toHaveBeenCalledTimes(2)
   })
 
+  it('AC15 요청 응답 전에 화면을 떠나면 응답이 와도 폴링을 시작하지 않는다', async () => {
+    analysesApi.fetchAnalysisFlows.mockResolvedValue([])
+    let resolveRequest
+    analysesApi.requestAnalysisFlows.mockReturnValue(
+      new Promise((resolve) => {
+        resolveRequest = resolve
+      }),
+    )
+    const wrapper = await mountTab()
+
+    await checkbox(wrapper, 'POST /api/todos').setValue(true)
+    await submitButton(wrapper).trigger('click')
+    wrapper.unmount()
+    resolveRequest([flow({ id: 7 })])
+    await flushPromises()
+
+    await advance(9000)
+    expect(analysesApi.fetchAnalysisFlows).toHaveBeenCalledTimes(1)
+  })
+
   it('AC16 FAILED 카드의 다시 만들기는 그 API 하나만 POST한다', async () => {
     analysesApi.fetchAnalysisFlows.mockResolvedValue([
       flow({

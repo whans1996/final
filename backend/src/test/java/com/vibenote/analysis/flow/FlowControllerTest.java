@@ -66,7 +66,8 @@ class FlowControllerTest extends FlowTestSupport {
                         "{}",
                         body("POST /a", "POST /b", "POST /c", "POST /d"),
                         "{\"endpoints\":[{\"method\":\"\",\"path\":\"/api/todos\"}]}",
-                        "{\"endpoints\":[{\"method\":\"POST\"}]}")) {
+                        "{\"endpoints\":[{\"method\":\"POST\"}]}",
+                        "{\"endpoints\":[null]}")) {
             postFlows(userId, analysisId, body)
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.code").value("COMMON_400"))
