@@ -30,11 +30,13 @@
       ]
     },
     "js-home": {
-      "label": "김준섭 집",
+      "label": "김준섭 집 (macOS)",
       "owner": "김준섭",
-      "github": null,
+      "github": "JoonseobKim",
       "notes": [
-        "환경 확인 기록 없음. 첫 교대 전 docs/환경설정.md 6절 체크리스트를 끝내고 scripts/lib/pcs.json의 github를 채운다"
+        "macOS(Apple Silicon)라 docs/환경설정.md의 Windows 절차 대신 Homebrew로 설치했다: gh, node@24, openjdk@21, docker-desktop(cask, 맥 비밀번호 필요). setup·verify all·bootRun(local) 확인(11-19)",
+        "시스템 JDK가 25다. JAVA_HOME 25로 Gradle을 돌리면 Spotless가 'google-java-format 1.30.0 이상 필요'로 실패한다 → ~/.gradle/gradle.properties의 org.gradle.java.home을 Homebrew openjdk@21로 지정해 둠(저장소 밖 설정)",
+        "Docker Desktop이 첫 실행 직후 꺼질 수 있다. Testcontainers가 'Could not find a valid Docker environment'면 Docker를 다시 켠다"
       ]
     }
   }
