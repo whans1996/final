@@ -21,6 +21,7 @@ SessionStart hook이 내 NOW 파일, 상대 작업 요약, git 상태를 이미 
    - 내 NOW 파일의 PR이 있으면 `node scripts/codex-review.mjs <번호>`(대기 없음)로 Codex 상태를 확인한다. `STALE`이나 `FINDINGS`이면 `/pr-review` 8단계 루프로 이어 간다. `RUNNING`이면 `--wait --status`를 백그라운드로 다시 걸어 결과를 받는다. `ERROR Codex 계정 미연결`이면 `docs/환경설정.md` 8절을 사용자에게 안내한다. `CLOSED`(이미 머지·종료)면 루프를 돌지 않는다.
    - 현재 브랜치가 main/develop이면 **내 NOW 파일의 브랜치**로 `git switch` 한다 (없으면 사용자에게 확인). **상대 NOW 파일의 브랜치로는 switch하지 않는다.**
    - **내 NOW 파일의 PR이 머지되었으면** (`gh pr view <번호> --json state,body`가 `MERGED`) `git switch develop && git pull` 후 다음 기능을 시작한다. PR 본문의 `Closes #n` 이슈가 아직 열려 있으면 `close-issues` 워크플로가 실패한 것이니 보고에 적는다. spec DONE은 `/pr-review` 10단계에서 PR 안에 이미 반영했다. WBS·간트·진행현황은 주간 `/progress`가 맞춘다 (PR에서 고치지 않는다, 11-19 결정).
+   - SessionStart가 "자동 동기화"로 develop·내 원격 브랜치를 이미 합쳤으면 결과만 짧게 알린다 (⏸️ 미룸·⚠️ 충돌이면 커밋 후 `git merge origin/develop` 또는 충돌 해결을 제안한다).
    - SessionStart가 "develop에 이 브랜치에 없는 커밋"을 알렸고 새 마이그레이션·openapi.json 변경이 있으면, 마이그레이션·API를 추가하기 전에 `git merge origin/develop`을 제안한다.
 2. **상태 읽기**
    - 내 NOW 파일 (pull 후 바뀌었을 수 있으니 다시 읽는다). 상대 NOW 파일은 hook 요약 두 줄로 충분하다.

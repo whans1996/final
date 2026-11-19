@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // UserPromptSubmit hook: 세션 도중에도 상대 작업 변화를 알린다 (11-19 결정, 병렬 개발).
 // 10분에 한 번만 원격을 확인한다: origin/develop 새 커밋(마이그레이션·API), 상대 NOW 갱신(원격 브랜치), 상대 PR 열림·머지·push.
+// 확인할 때 받을 커밋이 있으면 자동으로 합친다 (scripts/lib/sync.mjs, 끄기: git config vibenote.autoSync false).
 // 변화가 있을 때만 컨텍스트에 주입한다. 어떤 오류도 프롬프트를 막지 않는다 (항상 exit 0).
 import { NON_INTERACTIVE_GIT_ENV, git, localPcId, ownerKey, otherOwnerKey } from '../../scripts/lib/common.mjs';
 
@@ -21,6 +22,9 @@ try {
   // 같은 PC의 두 세션이 동시에 같은 변화를 알리는 것도 줄인다
   peer.writePeerState({ ...prev, checkedAt: Date.now() });
   git(['fetch', '--quiet'], { timeout: 4000, env: NON_INTERACTIVE_GIT_ENV });
+  // 상대가 develop에 머지한 커밋·다른 PC의 내 브랜치 커밋을 자동으로 합친다 (scripts/lib/sync.mjs)
+  const { autoSync } = await import('../../scripts/lib/sync.mjs');
+  const synced = autoSync();
   const developSha = git(['rev-parse', '-q', '--verify', 'origin/develop']).out || null;
   const now = peer.latestPeerNow(other);
   const curr = {
@@ -36,12 +40,15 @@ try {
   delete curr.develop;
   peer.writePeerState(curr);
 
-  if (lines.length) {
+  const sections = [];
+  if (lines.length) sections.push(`## 📣 상대 작업 변화 (peer-watch hook, 10분 간격)\n${lines.join('\n')}`);
+  if (synced.length) sections.push(`## 🔄 자동 동기화 (작업 트리가 바뀌었을 수 있다)\n${synced.join('\n')}`);
+  if (sections.length) {
     process.stdout.write(
       JSON.stringify({
         hookSpecificOutput: {
           hookEventName: 'UserPromptSubmit',
-          additionalContext: `## 📣 상대 작업 변화 (peer-watch hook, 10분 간격)\n${lines.join('\n')}\n사용자 요청과 관련 있으면 답변에서 짧게 알린다.`,
+          additionalContext: `${sections.join('\n\n')}\n사용자 요청과 관련 있으면 답변에서 짧게 알린다.`,
         },
       }),
     );
