@@ -10,6 +10,10 @@ SessionStart hook이 NOW.md와 git 상태를 이미 주입했으므로 그 내�
 
 ## 절차
 
+0. **PC·환경 확인** (SessionStart hook의 "PC·환경" 섹션과 ⚠️ 주의)
+   - PC가 미등록이면 사용자에게 `node scripts/setup.mjs --pc <id>`를 요청하고 기다린다 (인계 기록에 PC를 남길 수 없다).
+   - ❌ 항목이 있으면 작업 전에 사용자와 해결한다. ⚠️는 보고에 한 줄로 적는다 (예: Docker 꺼짐 → BE 테스트 불가).
+   - "직전 작업은 다른 PC" 경고가 있으면 아래 pull을 반드시 하고, 3단계 검증을 건너뛰지 않는다. 그 PC의 주의 사항(pcs.json `notes`)도 보고에 반영한다.
 1. **최신화**
    - 미커밋 변경이 있으면 먼저 사용자에게 알린다 (내 PC에서 하던 작업일 수 있음). 임의로 stash/삭제하지 않는다.
    - `origin`(GitHub)이 있으면 `git pull --ff-only`. 충돌·실패 시 멈추고 상황을 보고한다.
@@ -28,7 +32,8 @@ SessionStart hook이 NOW.md와 git 상태를 이미 주입했으므로 그 내�
 4. **보고** (아래 형식, 10줄 이내)
 
 ```
-📍 F-05 분석 요청 · feature/F-05-analysis-request · 마지막 작업: B (11/18 14:20, wip)
+📍 F-05 분석 요청 · feature/F-05-analysis-request · 마지막 작업: B @js-home (11/18 14:20, wip) → 지금 dh-ssafy
+🖥️ 환경: ✅ (또는 ⚠️ Docker 꺼짐 → BE 테스트 불가)
 ✅ 완료: AC1, AC2
 🟡 진행 중: AC3 — 테스트 작성됨(red), AnalysisService.validateZip() 구현 필요
 ⛔ 막힌 점: 없음 / ⚠️ 주의: V3 마이그레이션 새로 추가됨 → 로컬 DB 자동 적용

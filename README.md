@@ -49,7 +49,7 @@ SSAFY Final Project (Java Track, 자율 주제) · 2026-11-17 ~ 2026-12-24
 
 ### 사전 준비
 - JDK 17+(`JAVA_HOME`, 컴파일용 JDK 21은 첫 빌드 때 Gradle이 자동으로 받음), Node 24, MySQL 8, Docker Desktop(WSL2, 테스트용 Testcontainers) — 설치 절차: [docs/환경설정.md](docs/환경설정.md)
-- 최초 1회: `node scripts/setup.mjs` (git hook 연결, 환경 점검)
+- 최초 1회 (PC마다): `node scripts/setup.mjs --pc <PC id>` (PC 등록, git hook 연결, 환경 점검. PC id는 [docs/환경설정.md](docs/환경설정.md) 0절)
 - 로컬 DB `vibenote` 생성과 `.env` 작성 (`.env.example` 복사): [docs/환경설정.md](docs/환경설정.md) 3절
 
 ### Back-End
