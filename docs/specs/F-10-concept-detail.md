@@ -191,9 +191,9 @@
 - [x] BE 구현 (green): `ConceptController#detail`, `ConceptService#getDetail`, `ConceptMapper` `findAppearances`·`findCoOccurring`·`findSameCategoryPopular`, `ConceptDetailResponse`·`ConceptAppearanceResponse`, `PUBLIC_GET_PATHS`
 - [x] FE 구현 (green): `fetchConcept`, `markdown.js`·`MarkdownBody`, `CodeBlock`, `ConceptAppearances`, `ConceptDetailView`, 라우트
 - [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
-- [ ] contract-checker 통과
-- [ ] ui-verifier 통과 (데스크톱·모바일)
+- [x] contract-checker 통과
+- [x] ui-verifier 통과 (데스크톱·모바일)
 - [ ] reviewer 지적 사항 반영
-- [ ] 산출물 반영: `06-화면설계서.md` SC-10 절(언어 표시 삭제, "spec에서 정할 것" 정리) + 스크린샷(`screens/SC-10-*.png`)
+- [x] 산출물 반영: `06-화면설계서.md` SC-10 절(언어 표시 삭제, "spec에서 정할 것" 정리) + 스크린샷(`screens/SC-10-*.png`)
 - [ ] PR CI 초록 (공통 파일 변경 → 본문에서 @whans1996 멘션)
 - [ ] 상태 DONE (PR 머지 전 마지막 커밋)
