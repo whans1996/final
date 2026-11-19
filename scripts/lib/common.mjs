@@ -267,7 +267,7 @@ export function lastContextTokens(path, tailBytes = 512 * 1024) {
  * SessionStart 화면 배너 (systemMessage). additionalContext는 모델에만 가므로 사람에게는 이것만 보인다.
  * 누구·어느 PC·브랜치·환경·주의·follow-up 이슈·내/상대 현재 기능을 몇 줄로 요약한다.
  */
-export function sessionBanner({ pc, branch, envBad = [], warnings = [], issueLine, myFeature, peerName, peerFeature }) {
+export function sessionBanner({ pc, branch, envBad = [], warnings = [], syncLines = [], issueLine, myFeature, peerName, peerFeature }) {
   const cut = (t, n = 90) => (t.length > n ? `${t.slice(0, n - 1)}…` : t);
   let who = `👤 ? · 🖥️ 미등록 PC (hostname ${pc?.hostname ?? '?'}) → node scripts/setup.mjs --pc <id>`;
   if (pc?.id) {
@@ -280,6 +280,8 @@ export function sessionBanner({ pc, branch, envBad = [], warnings = [], issueLin
   lines.push(envBad.length ? `환경: ${envBad.join(', ')}` : '환경 ✅');
   // 경고는 대개 "상태. 할 일." 순서라 첫 문장만 자르면 할 일이 빠진다 → 길이로만 자른다
   for (const w of warnings) lines.push(`⚠️ ${cut(w, 110)}`);
+  // 자동 동기화 결과 (scripts/lib/sync.mjs): 줄마다 ✅·⚠️·⏸️로 시작한다
+  for (const s of syncLines) lines.push(`🔄 ${cut(s.replace(/^- /, ''), 110)}`);
   if (issueLine) lines.push(issueLine);
   if (myFeature) lines.push(`내 작업: ${cut(myFeature)}`);
   if (peerFeature) lines.push(`${peerName ?? '상대'}: ${cut(peerFeature)}`);

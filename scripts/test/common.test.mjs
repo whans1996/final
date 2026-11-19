@@ -121,3 +121,14 @@ test('NOW 파일마다 맨 앞이 "갱신:"인 줄이 있다 (previousPc·peer-w
     assert.match(text, /^갱신: \d{4}-\d{2}-\d{2} \d{2}:\d{2}/m, nowRelPath(key));
   }
 });
+
+test('세션 배너: 자동 동기화 결과는 경고 다음 줄에 🔄로 보여 준다', () => {
+  const b = sessionBanner({
+    pc: { id: 'js-home', owner: '김준섭', label: '김준섭 집' },
+    branch: 'feature/x',
+    warnings: ['경고'],
+    syncLines: ['- ✅ origin/develop의 새 커밋 2개를 자동으로 합쳤습니다.'],
+  }).split('\n');
+  assert.equal(b[2], '⚠️ 경고');
+  assert.equal(b[3], '🔄 ✅ origin/develop의 새 커밋 2개를 자동으로 합쳤습니다.');
+});
