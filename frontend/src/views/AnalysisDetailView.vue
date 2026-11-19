@@ -1,8 +1,8 @@
 <script setup>
 // SC-07 분석 상세.
 // 진행 중: 상태를 바로 1회, 이후 2초마다 조회하고 DONE·FAILED·404이거나 화면을 떠나면 멈춘다 (F-05a AC15).
-// DONE: 상세를 1회 불러와 "개요"·"파일"·"실행 흐름" 탭을 보여 준다. 탭과 선택 파일은 쿼리(?tab=files&file=123)에 둔다
-// (F-06 AC13~AC15, F-07 AC14).
+// DONE: 상세를 1회 불러와 "개요"·"파일"·"실행 흐름"·"개념" 탭을 보여 준다. 탭과 선택 파일은 쿼리(?tab=files&file=123)에 둔다
+// (F-06 AC13~AC15, F-07 AC14, F-08 AC8).
 import { computed, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { fetchAnalysis, fetchAnalysisStatus } from '@/api/analyses'
@@ -13,6 +13,7 @@ import AnalysisStatusBadge from '@/components/analysis/AnalysisStatusBadge.vue'
 import AnalysisOverviewTab from '@/components/analysis/AnalysisOverviewTab.vue'
 import AnalysisFilesTab from '@/components/analysis/AnalysisFilesTab.vue'
 import AnalysisFlowsTab from '@/components/analysis/AnalysisFlowsTab.vue'
+import AnalysisConceptsTab from '@/components/analysis/AnalysisConceptsTab.vue'
 import { LEVELS } from '@/utils/authValidation'
 
 const POLL_INTERVAL_MS = 2000
@@ -20,6 +21,7 @@ const TABS = [
   { name: 'overview', label: '개요' },
   { name: 'files', label: '파일' },
   { name: 'flows', label: '실행 흐름' },
+  { name: 'concepts', label: '개념' },
 ]
 
 const route = useRoute()
@@ -182,11 +184,12 @@ watch(
               @select="selectFile"
             />
             <AnalysisFlowsTab
-              v-else
+              v-else-if="activeTab === 'flows'"
               :analysis-id="analysis.id"
               :apis="analysis.overview?.apis ?? []"
               @select-file="selectFile"
             />
+            <AnalysisConceptsTab v-else :analysis-id="analysis.id" @select-file="selectFile" />
           </div>
         </template>
       </div>

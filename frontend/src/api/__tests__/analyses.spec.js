@@ -10,6 +10,7 @@ import {
   fetchAnalysisStatus,
   fetchAnalysisFlows,
   requestAnalysisFlows,
+  fetchAnalysisConcepts,
 } from '@/api/analyses'
 
 // API 계약(docs/specs/F-05a-analysis-request-zip.md 3절)과 URL·메서드·파트 이름이 같은지 확인한다
@@ -130,5 +131,20 @@ describe('api/analyses (F-07)', () => {
 
     expect(`${calls[0].method} ${calls[0].url}`).toBe('post /analyses/42/flows')
     expect(JSON.parse(calls[0].data)).toEqual({ endpoints })
+  })
+})
+
+describe('api/analyses (F-08)', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
+  it('AC8 fetchAnalysisConcepts는 GET /api/analyses/{id}/concepts', async () => {
+    const body = { items: [], pendingCount: 1 }
+    const calls = capture(body)
+
+    await expect(fetchAnalysisConcepts(42)).resolves.toEqual(body)
+
+    expect(`${calls[0].method} ${calls[0].url}`).toBe('get /analyses/42/concepts')
   })
 })
