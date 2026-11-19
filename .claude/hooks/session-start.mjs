@@ -28,6 +28,7 @@ import {
 } from '../../scripts/lib/common.mjs';
 import { followUpIssues, issueBannerLine, issueContext, summarizeIssues } from '../../scripts/lib/issues.mjs';
 import { latestPeerNow, nowHeadline, readPeerState, writePeerState } from '../../scripts/lib/peer.mjs';
+import { autoSync } from '../../scripts/lib/sync.mjs';
 
 // env-check가 깨져도 NOW 주입은 살린다
 let envCheck;
@@ -40,6 +41,7 @@ try {
 const input = readStdinJson();
 const parts = ['# 바이브노트 세션 컨텍스트 (SessionStart hook 자동 주입)'];
 const warnings = [];
+let synced = [];
 // 외부 명령(gh·docker)은 병렬·3초 제한이라 아래 git fetch와 겹쳐 돈다
 const checksFailed = (e) => [{ status: 'warn', item: '환경 점검', detail: `실패: ${e?.message ?? e}` }];
 const checksP = envCheck.runChecks ? envCheck.runChecks({ fast: true }).catch(checksFailed) : Promise.resolve(checksFailed(envCheck.error));
@@ -55,6 +57,9 @@ if (!isGitRepo()) {
   // 원격과 비교 (네트워크가 느리면 건너뜀)
   if (git(['remote']).out) {
     git(['fetch', '--quiet'], { timeout: 5000, env: NON_INTERACTIVE_GIT_ENV });
+    // 다른 PC가 push한 내 브랜치 커밋과 상대가 develop에 머지한 커밋을 자동으로 합친다 (scripts/lib/sync.mjs)
+    synced = autoSync();
+    if (synced.length) parts.push(`## 자동 동기화\n${synced.join('\n')}`);
     const ab = git(['rev-list', '--left-right', '--count', 'HEAD...@{u}']);
     if (ab.ok) {
       const [ahead, behind] = ab.out.split(/\s+/).map(Number);
@@ -193,6 +198,7 @@ try {
     branch: isGitRepo() ? currentBranch() || '(detached)' : null,
     envBad: bad.map((r) => `${icon(r.status)} ${r.item}`),
     warnings,
+    syncLines: synced.filter((l) => /^- (✅|⚠️|⏸️)/.test(l)),
     issueLine: issueSummary ? issueBannerLine(issueSummary) : null,
     myFeature: me && now ? nowHeadline(now).feature : null,
     peerName: other ? Object.entries(loadPcs()).find(([id]) => ownerKey(id) === other)?.[1].owner : null,
