@@ -1,0 +1,20 @@
+{
+  "concepts": [
+    { "conceptId": 39, "fileNo": 1, "lineHint": "L1-L20", "contextNote": "ArticlesApi에 @RestController와 @RequestMapping(path = \"/articles\")가 붙어 있어 /articles로 오는 요청을 메서드에 연결합니다." },
+    { "conceptId": 18, "fileNo": 1, "lineHint": "L20-L30", "contextNote": "ArticlesApi는 ArticleCommandService와 ArticleQueryService를 생성자로 받습니다. 스프링 컨테이너가 두 서비스 빈을 넣어 줍니다." },
+    { "conceptId": 42, "fileNo": 1, "contextNote": "글 작성 요청 본문에 @Valid를 붙여 제목·본문·설명이 비어 있지 않은지 컨트롤러에 들어오기 전에 검사합니다." },
+    { "conceptId": 62, "fileNo": 3, "contextNote": "ArticleMapper 인터페이스의 메서드가 같은 이름의 XML 매퍼 SQL과 연결되어 글을 저장하고 조회합니다." },
+    { "conceptId": 57, "contextNote": "로그인에 성공하면 JWT를 발급하고, 요청마다 Authorization 헤더의 토큰으로 사용자를 확인합니다." },
+    {
+      "new": {
+        "name": "GraphQL API (DGS)",
+        "category": "web",
+        "difficulty": "SENIOR",
+        "summary": "클라이언트가 필요한 필드만 골라 한 번의 요청으로 받아 가는 질의 언어 기반 API입니다. 스프링에서는 Netflix DGS 같은 프레임워크로 스키마와 데이터 페처를 연결합니다.",
+        "body": "## 핵심\n- 스키마(.graphqls)에 타입과 질의(Query)·변경(Mutation)을 정의합니다.\n- 데이터 페처(@DgsQuery, @DgsData 등)가 스키마의 필드를 채웁니다.\n- REST처럼 URL을 여러 개 두지 않고 하나의 엔드포인트로 필요한 필드만 요청합니다.\n## 주의\n- 연관 필드를 그대로 조회하면 N+1 쿼리가 생기기 쉬우므로 DataLoader로 묶어 조회합니다.\n- 질의 깊이·복잡도를 제한하지 않으면 무거운 요청 하나로 서버가 느려질 수 있습니다."
+      },
+      "fileNo": 2,
+      "contextNote": "REST API와 함께 GraphQL 스키마와 데이터 페처로 글·댓글·프로필을 조회하고 변경하는 API도 제공합니다."
+    }
+  ]
+}

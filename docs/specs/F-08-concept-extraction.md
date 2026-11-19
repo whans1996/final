@@ -221,8 +221,8 @@ LLM은 테스트에서 실제로 부르지 않는다. 파이프라인 통합 테
 
 `/implement`가 진행하며 체크한다.
 
-- [ ] 브랜치 `feature/F-08-concept-extraction`
-- [ ] Flyway 마이그레이션 — 없음
+- [x] 브랜치 `feature/F-08-concept-extraction`
+- [x] Flyway 마이그레이션 — 없음
 - [ ] AC별 실패 테스트 작성 (red 확인) — BE AC1~AC7·AC10, FE AC8~AC9
 - [ ] BE 구현 (green) — 프롬프트 3개, fixture 1개, #23 수정
 - [ ] FE 구현 (green)

@@ -63,6 +63,14 @@ analysis:
     max-files: 8
     max-per-analysis: 3
     max-steps: 12
+  # EXTRACTING 단계 (docs/specs/F-08-concept-extraction.md 5절): 프롬프트 입력 상한, 분석당 연결·새 초안 수 상한
+  concept:
+    catalog-max-chars: 6000
+    file-list-max-chars: 6000
+    max-file-chars: 3000
+    max-chars: 24000
+    max-links: 15
+    max-drafts: 5
 
 # LlmConfig가 provider별로 LlmClient 하나를 조립한다 (docs/specs/F-00-llm-client.md).
 # gemini는 실패(4xx·5xx·타임아웃·연결 실패·응답 형식 오류)하면 재시도 없이 ollama로 폴백한다.

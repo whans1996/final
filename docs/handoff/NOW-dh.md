@@ -4,27 +4,30 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
 
-갱신: 2026-11-19 15:59 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/F-08-concept-extraction
+갱신: 2026-11-19 16:11 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/F-08-concept-extraction
 
 ## 현재 기능
 
-F-08 개념 카드 추출·연결 — `docs/specs/F-08-concept-extraction.md` **APPROVED (11-19)**, 구현 시작 전. PR #43(유스케이스)·#42(F-00b)는 11-19 머지됨
+F-08 개념 카드 추출·연결 — `docs/specs/F-08-concept-extraction.md` APPROVED, `/implement` 진행 중. 이번 세션 목표: BE AC1~AC7·AC10 → FE AC8·AC9
 
 ## 진행
 
-- ✅ spec 초안 AC1~AC10: EXTRACTING(70) 1회 호출, 기존 카드 `conceptId` 연결(15개), 없는 개념 AI 초안(요약+본문, 5개), 실패면 연결 없이 DONE, `GET /api/analyses/{id}/concepts`(PUBLISHED만 + pendingCount), SC-07 개념 탭, #23 구분자 `<<<`→`‹‹‹` 흡수. Flyway 없음
-- ✅ 결정로그 1줄 추가 (F-08 결정)
+- ✅ AC1~AC6·AC10 (BE): `analysis/concept/` ConceptPrompts·ConceptResponseParser·ConceptExtractor·ConceptLinkService·AnalysisConceptMapper, 파이프라인 EXTRACTING(70), 프롬프트 3종, fixture `concept.json`(main: 시드 id 39·18·42·62·57 + GraphQL 초안, test: 빈 배열), #23 `ExplainPrompts.escapeDelimiters`
+- ✅ 공통 파일: `concept/ConceptDraftService`(새 파일, 분석 도메인이 ConceptMapper를 직접 부르지 않게), `ConceptMapper` F-08 블록(`findAllForMatching`·`insertDraft`) → PR에 @JoonseobKim 멘션
+- ⏳ AC7 `GET /api/analyses/{id}/concepts`
 
 ## 바로 다음 할 일
 
-1. `/clear` 후 새 세션(Opus/high)에서 `/implement F-08` (브랜치 `feature/F-08-concept-extraction` 이미 push됨, Flyway 없음): 첫 red는 `AnalysisExtractingPipelineTest#AC1_EXPLAINING_뒤에_EXTRACTING을_거쳐_DONE이_된다`, `ConceptResponseParserTest`
+1. AC7: `analysis/AnalysisConceptApiTest#AC7_…` 작성 → `AnalysisConceptService.getConcepts(userId, id)`(AnalysisMapper.findOwned + AnalysisConceptMapper.findByAnalysis + ConceptQueryService.findPublishedSummaries), DTO `AnalysisConceptsResponse`·`AnalysisConceptItem`, `AnalysisController` `GET /{id}/concepts` + Swagger, `OpenApiExportTest`로 openapi.json 갱신
+2. FE AC8·AC9: `api/analyses.js` `fetchAnalysisConcepts`, `components/analysis/AnalysisConceptsTab.vue`, `AnalysisDetailView.vue` TABS에 concepts
 
 ## 막힌 점 / 결정 필요
 
-- ui 점검 계정 `ui-admin@vibe.dev`/`vibe1234`(로컬 DB에만, ADMIN). storageState `.harness/ui-admin.json`
-- 사람: 이슈 #16, 노션 팀원 초대, 고아 폴더 `../final-harness` 삭제 여부, 김준섭에게 F-00b 머지 알림(Mattermost)
+- red를 따로 확인하지 않고 테스트와 구현을 함께 썼다 (AC1~AC6). AC7부터 red 먼저
+- 사람: 이슈 #16, 노션 팀원 초대, 고아 폴더 `../final-harness` 삭제 여부
 
 ## 주의
 
-- B 파일(`ConceptService`·`ConceptController`·`api/concepts.js`·`routes/concept.js`)과 공용 `ConceptCard.vue`는 고치지 않는다, `ConceptMapper`는 F-08 블록에만. Gradle 테스트를 bootRun과 동시에 돌리지 않는다. V1~V5 수정 금지
-- Git Bash heredoc·sed·python stdin에서 한글·`\n`·`\|`가 깨진다 → 한글·표(`|`)가 든 수정은 Edit 도구로 쓴다
+- B 파일(`ConceptService`·`ConceptController`·`api/concepts.js`·`routes/concept.js`)과 공용 `ConceptCard.vue`는 고치지 않는다. Gradle 테스트를 bootRun과 동시에 돌리지 않는다. V1~V5 수정 금지
+- 테스트 카드는 `f08-test-` 이름, `@AfterEach`에서 지운다. test classpath의 `llm-fixtures/concept.json`은 빈 배열이라 다른 파이프라인 테스트가 카드를 만들지 않는다
+- Git Bash heredoc·sed에서 한글·`\n`이 깨질 수 있다 → 한글 수정은 Edit 도구로

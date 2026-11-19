@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.vibenote.analysis.concept.AnalysisConceptMapper">
+
+    <insert id="insertAll">
+        INSERT INTO analysis_concepts (analysis_id, concept_id, file_id, line_hint, context_note) VALUES
+        <foreach collection="links" item="l" separator=",">
+            (#{analysisId}, #{l.conceptId}, #{l.fileId}, #{l.lineHint}, #{l.contextNote})
+        </foreach>
+    </insert>
+
+    <resultMap id="link" type="com.vibenote.analysis.concept.AnalysisConceptMapper$LinkRow">
+        <constructor>
+            <arg column="concept_id" javaType="_long"/>
+            <arg column="file_id" javaType="java.lang.Long"/>
+            <arg column="line_hint" javaType="java.lang.String"/>
+            <arg column="context_note" javaType="java.lang.String"/>
+            <arg column="status" javaType="java.lang.String"/>
+            <arg column="file_path" javaType="java.lang.String"/>
+        </constructor>
+    </resultMap>
+
+    <select id="findByAnalysis" resultMap="link">
+        SELECT ac.concept_id, ac.file_id, ac.line_hint, ac.context_note, c.status, f.path AS file_path
+        FROM analysis_concepts ac
+        JOIN concepts c ON c.id = ac.concept_id
+        LEFT JOIN analysis_files f ON f.id = ac.file_id
+        WHERE ac.analysis_id = #{analysisId}
+        ORDER BY ac.file_id IS NULL, ac.file_id, ac.concept_id
+    </select>
+</mapper>

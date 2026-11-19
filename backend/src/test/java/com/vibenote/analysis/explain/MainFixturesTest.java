@@ -5,13 +5,20 @@ import static com.vibenote.analysis.explain.FileExplainerTest.PROPS;
 import static com.vibenote.analysis.explain.FileExplainerTest.analysis;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.vibenote.analysis.concept.ConceptPrompts;
+import com.vibenote.analysis.concept.ConceptResponseParser;
+import com.vibenote.analysis.concept.ExtractedConcept;
 import com.vibenote.analysis.domain.AnalysisFile;
 import com.vibenote.common.Level;
+import com.vibenote.concept.ConceptStatus;
+import com.vibenote.concept.domain.Concept;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * 앱(mock 프로필)이 쓰는 main fixture가 spec 5.3절 스키마를 통과하는지 본다 (F-06 spec 8절).
@@ -82,5 +89,46 @@ class MainFixturesTest {
                             assertThat(e.role()).isNotBlank();
                             assertThat(e.summary()).isNotBlank();
                         });
+    }
+
+    @Test
+    void AC10_F08_concept_fixture는_시드_카드_연결_3개_이상과_새_개념_1개를_담는다() throws Exception {
+        List<Concept> seeds = new ArrayList<>();
+        for (long id = 1; id <= 85; id++) {
+            Concept c = new Concept();
+            c.setId(id);
+            c.setName("시드 " + id);
+            c.setCategory("spring");
+            c.setStatus(ConceptStatus.PUBLISHED);
+            seeds.add(c);
+        }
+        Set<Long> catalog = Set.copyOf(seeds.stream().map(Concept::getId).toList());
+        ConceptPrompts.Input input =
+                new ConceptPrompts.Input("", "", "", catalog, List.of(1L, 2L, 3L), Set.of(1, 2, 3));
+
+        List<ExtractedConcept> result =
+                ConceptResponseParser.parse(
+                        JsonMapper.builder().build().readTree(read("concept.json")),
+                        input,
+                        seeds,
+                        Level.JUNIOR,
+                        15,
+                        5);
+
+        assertThat(result.stream().filter(c -> c.conceptId() != null))
+                .hasSizeGreaterThanOrEqualTo(3);
+        assertThat(result.stream().filter(c -> c.draft() != null)).hasSize(1);
+        assertThat(result)
+                .allSatisfy(c -> assertThat(c.contextNote()).isNotBlank())
+                .anySatisfy(c -> assertThat(c.lineHint()).isNotNull());
+        assertThat(
+                        result.stream()
+                                .filter(c -> c.draft() != null)
+                                .findFirst()
+                                .orElseThrow()
+                                .draft()
+                                .body())
+                .startsWith("## 핵심")
+                .contains("## 주의");
     }
 }
