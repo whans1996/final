@@ -32,3 +32,5 @@
 
 - 공통 코드(SecurityConfig, GlobalExceptionHandler, 라우터, 레이아웃, 공용 컴포넌트)를 바꾸면 PR 본문에서 @whans1996 멘션
 - 마이그레이션 만들기 전 `node scripts/next-migration.mjs`. 통합 테스트는 Docker Desktop 필요
+
+<!-- [임시] Codex 자동 리뷰 확인용 줄. 이 PR은 머지하지 않고 닫는다. -->
