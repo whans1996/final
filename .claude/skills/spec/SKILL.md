@@ -34,7 +34,7 @@ argument-hint: F-xx
 6. **DRAFT로 저장**하고 사용자에게 요약(수용 기준 목록, API, DB 변경, 범위 밖)을 보여 주며 승인을 요청한다.
    내 NOW 파일(`node scripts/stamp.mjs --file`)을 갱신한다 (현재 기능 = 이 spec, 다음 할 일 = 승인 대기). 갱신 줄은 `node scripts/stamp.mjs --now`.
 7. **승인 처리**: 사용자가 승인하면 헤더의 상태를 `APPROVED`, 승인 칸에 `<사람> YYYY-MM-DD`를 적는다.
-   커밋: `docs(F-xx): spec 승인`. (브랜치가 main/develop이면 `feature/F-xx-slug`를 만든 뒤 커밋)
+   커밋: `docs(F-xx): spec 승인`. (브랜치가 main/develop이면 `feature/F-xx-slug`를 만든 뒤 커밋) 내 NOW 파일과 함께 `git push -u origin <브랜치>`로 올려 상대가 착수 사실을 보게 한다.
 
 ## 기준
 

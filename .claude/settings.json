@@ -46,7 +46,8 @@
       "Bash(gh pr edit:*)",
       "Bash(gh pr comment:*)",
       "Bash(gh run view:*)",
-      "Bash(gh run list:*)"
+      "Bash(gh run list:*)",
+      "Bash(node scripts/owners.mjs:*)"
     ],
     "deny": [
       "Read(**/.env)",
@@ -102,6 +103,22 @@
             "type": "command",
             "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/format-on-edit.mjs\"",
             "timeout": 30
+          },
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/area-notice.mjs\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/peer-watch.mjs\"",
+            "timeout": 15
           }
         ]
       }

@@ -4,31 +4,31 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
 
-갱신: 2026-11-19 10:41 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/common-harness-parallel
+갱신: 2026-11-19 11:38 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/common-harness-sync
 
 ## 현재 기능
 
-하네스 병렬 전환 (common) — **PR #27 열림**, verifier 통과, reviewer 반드시 1·권장 9 반영(9b67770), CI·Codex 확인 중
+하네스 병렬 동기화·알림·영역 경계 (common) — **PR #31 열림** — reviewer 반영(b24a2f6·b756765, 권장 2 → #29), Codex ✅ 4a40f15 (P2 1건 수정: Actions push payload 파일 목록 없음, P2 2건 → #32), Mattermost 전송 확인(PR 열림). CI BE 대기
 
 ## 진행
 
-- ✅ 사람별 NOW(`NOW-dh`·`NOW-js`), SessionStart·Stop hook·handoff.mjs 전환, `stamp.mjs`
-- ✅ Flyway `next-migration.mjs`·`check-migrations.mjs`, CI harness 잡, commit-msg 하네스 테스트, `node --test` 12개
-- ✅ codex-review `--resolve`·merge-back 제외·CLOSED, settings 허용 목록, pcs.json JoonseobKim
-- ✅ 결정 로그 → `docs/결정로그.md` (union), 스킬·CLAUDE.md·conventions·환경설정 6절·WBS·간트·진행현황 재분배(F-15·24·25 → A)
-- ✅ 이슈 #19·#21 close, worktree `../final-harness-pc` 제거, 작업로그 F-06·F-07 보충
+- ✅ 상대 NOW 원격 읽기(`lib/peer.mjs` latestPeerNow, session-start 출처 표시·스냅샷), `peer-watch` UserPromptSubmit hook(10분, develop·NOW·PR 변화)
+- ✅ Mattermost: `lib/notify.mjs`·`notify-message.mjs`·`.github/workflows/notify.yml` (secret 없으면 건너뜀)
+- ✅ `.github/CODEOWNERS`(정본), `lib/owners.mjs`·`scripts/owners.mjs`, guard-files 상대 NOW 차단, `area-notice` PostToolUse 경고
+- ✅ 스킬(implement·spec push, pr-review owners), 결정로그 3줄, conventions 9절, 환경설정 6·7절, CLAUDE.md, PR 템플릿, 라벨 area:A·B·common 생성
+- ✅ develop(PR #28 js-home macOS) 합침. 김준섭 PR #28이 peer-watch 실측에서 잡힘
 
 ## 바로 다음 할 일
 
-1. PR #27: `gh pr checks 27`(harness·backend·frontend 잡) 초록, `node scripts/codex-review.mjs 27` COMPLETE 확인 → GitHub에서 본인 머지 → `git switch develop && git pull`
-2. 김준섭에게 `docs/환경설정.md` 6절 착수 체크리스트 전달 (메모리 relay-development-mode는 갱신함)
-3. 1.4 유스케이스(마감 11/23): `docs/산출물/02-유스케이스.md`에 분석 요청·결과 조회·실행 흐름 UC
-4. 다음 A 영역 `/spec`: F-05b(URL 수집·SSRF, W2) 또는 F-08(개념 추출, W3)
+1. PR #31: `gh pr checks 31` BE 잡 초록 확인 → GitHub에서 본인 머지(Mattermost "✅ 머지됨" 확인) → `git switch develop && git pull`
+2. 김준섭 PR #30(NOW-js 착수 기록) 열려 있음. #31 머지 뒤 그쪽이 develop을 합치면 NOW push 알림도 받는다
+3. `/clear` 뒤 `/spec`으로 **공통 기반** spec (concept 도메인·Mapper·카드 DTO, ErrorCode·ActivityType 블록, 라우터·nav 분리, ConceptCard·Pagination, 관리자 레이아웃). 결정 필요: analysis_concepts·AI 초안 형식, DTO 공유, 공개 GET, ADMIN 시드, /api/users/me/challenges, 업로드 유틸, F-01~03 유지보수, 공동 산출물 분담
+4. 1.4 유스케이스(마감 11/23) `docs/산출물/02-유스케이스.md`
 
 ## 막힌 점 / 결정 필요
 
-- 사람: 이슈 #16, 노션 팀원 초대, 고아 폴더 `../final-harness`(11-17 사본, .git 깨짐) 삭제 여부 (11-19 답이 모호해 보류)
-- 선택(reviewer 권장, 범위 밖): 상대 NOW 수정을 guard-files로 차단, 미등록 PC Stop hook block
+- 사람: 이슈 #16, 노션 팀원 초대, 고아 폴더 `../final-harness` 삭제 여부
+- 김준섭 js-home은 macOS — hook은 Node라 동작하지만 첫 세션에서 peer-watch·area-notice 출력 확인 필요
 
 ## 주의
 

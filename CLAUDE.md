@@ -3,7 +3,7 @@
 AI로 코딩하는 주니어와 개발자 지망생이 **AI가 쓴 코드를 수준별 설명 → 개념 카드 → 퀴즈·복습**으로 이해하게 돕는 학습 플랫폼이다.
 SSAFY 관통 프로젝트(2026-11-17 시작, 12-24 발표). Spring Boot 4 + MyBatis + MySQL 8 / Vue 3 + Pinia.
 
-2인이 **영역별로 병렬 개발**한다 (11-19부터. A 김동환 = AI·분석·학습 루프, B 김준섭 = 카드·소셜, `docs/기획서.md` 4절). 각자 PC 2대(SSAFY 교육장·집, id `dh-ssafy`·`dh-home`·`js-ssafy`·`js-home`)를 오가며 Claude Code로 작업하고, 같은 사람의 PC 사이에서는 사람별 NOW 파일로 교대한다. PC는 `setup.mjs --pc`로 등록하고, 세션 시작 hook이 PC·환경 점검·PC 전환·상대 작업 요약을 알린다 (`docs/환경설정.md` 0절). 세션은 토큰 소진으로 언제든 끊길 수 있다.
+2인이 **영역별로 병렬 개발**한다 (11-19부터. A 김동환 = AI·분석·학습 루프, B 김준섭 = 카드·소셜, `docs/기획서.md` 4절). 각자 PC 2대(SSAFY 교육장·집, id `dh-ssafy`·`dh-home`·`js-ssafy`·`js-home`)를 오가며 Claude Code로 작업하고, 같은 사람의 PC 사이에서는 사람별 NOW 파일로 교대한다. PC는 `setup.mjs --pc`로 등록하고, 세션 시작 hook이 PC·환경 점검·PC 전환·상대 작업 요약(원격 브랜치의 상대 NOW)을 알리고, 세션 중에는 `peer-watch` hook(10분 간격)과 Mattermost가 상대 변화를 알린다 (`docs/환경설정.md` 0·7절, `docs/conventions.md` 9절). 세션은 토큰 소진으로 언제든 끊길 수 있다.
 그래서 **상태를 파일에 남기는 일을 코드 작성만큼 중요하게** 다룬다.
 
 - 개발 저장소: **GitHub private** (`origin`, PR + Actions CI)
@@ -24,6 +24,7 @@ SSAFY 관통 프로젝트(2026-11-17 시작, 12-24 발표). Spring Boot 4 + MyBa
 | 제출 산출물 (요구사항 정의서, 유스케이스, ERD, WBS, 간트, 화면 설계서, API 명세, AI 활용, 데이터 셋, 보고서) | `docs/산출물/` (제출 허브는 루트 `README.md`) |
 | 후속 작업 (기능 밖으로 미룬 것) | GitHub Issues `follow-up` 라벨 (`gh issue list --label follow-up`) |
 | 팀 대시보드·AI 활용 사례 (노션, 사람용 요약이며 정본 아님) | `docs/notion.md` |
+| 영역 경계 (어느 파일이 누구 것인가) | `.github/CODEOWNERS`, `docs/conventions.md` 9절 (`node scripts/owners.mjs <경로>`) |
 | 백엔드 규칙 | `backend/CLAUDE.md` |
 | 프론트엔드 규칙 | `frontend/CLAUDE.md` |
 | 외부 데이터 목록·라이선스·분할(dev/eval/demo) | `data/datasets.json`, `docs/산출물/09-데이터셋.md` |
@@ -95,6 +96,7 @@ SSAFY 관통 프로젝트(2026-11-17 시작, 12-24 발표). Spring Boot 4 + MyBa
 | 다음 마이그레이션 번호 | `node scripts/next-migration.mjs` (develop·원격 feature 브랜치 포함) |
 | 하네스 단위 테스트 | `node --test "scripts/test/*.test.mjs"` |
 | PR 스크린샷 Markdown | `node scripts/pr-screens.mjs SC-18 SC-19` (`docs/산출물/screens/` 커밋·push 후) |
+| 파일 영역·PR @멘션 대상 | `node scripts/owners.mjs [--diff origin/develop | <경로...>]` |
 | 토큰 사용량 (메인·에이전트별) | `node scripts/token-report.mjs [latest|<세션 ID>] [--list]` |
 | PR 상태·CI 확인 | `gh pr status`, `gh pr checks` |
 | Codex 리뷰 판정·재요청·이관 | `node scripts/codex-review.mjs <PR> [--request --wait \| --resolve]` (COMPLETE/FINDINGS/RUNNING/STALE/TIMEOUT/CLOSED/ERROR) |

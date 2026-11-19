@@ -24,7 +24,7 @@ description: develop에 합치기 전 현재 feature 브랜치를 verifier·revi
      1. ui-verifier가 남긴 `.harness/screens/*.png` 중 이 기능 화면을 `docs/산출물/screens/SC-xx-이름-{desktop,mobile}.png`로 복사하고, `06-화면설계서.md`의 해당 SC 절에 `<img>`로 넣어 커밋한다 (산출물 준비를 겸한다)
      2. push한 뒤 `node scripts/pr-screens.mjs SC-xx …`가 출력한 Markdown(커밋 sha 링크)을 PR 설명의 `## 스크린샷`에 붙인다. 이미 PR이 있으면 `gh pr edit --body-file`로 갱신한다
    - 리뷰어(Codex·reviewer 에이전트)가 특히 볼 곳, 산출물 영향
-   - 영역 오너(머지) 칸에 내 GitHub 계정. 공통 코드(설정·보안·전역 예외·공통 응답·라우터·레이아웃·공용 컴포넌트·api 클라이언트)를 바꿨으면 본문에 상대 계정을 @멘션한다 (A `@whans1996`, B `@JoonseobKim`)
+   - 영역 오너(머지) 칸에 내 GitHub 계정. `node scripts/owners.mjs --diff origin/develop`이 `.github/CODEOWNERS` 기준으로 상대 영역·공통 파일을 뽑아 주면, "공통 코드 변경"에 그 파일과 이유를 적고 상대 계정을 @멘션한다 (A `@whans1996`, B `@JoonseobKim`). CODEOWNERS 때문에 GitHub이 상대에게 리뷰를 자동 요청하지만 승인은 기다리지 않는다
 6. **PR 생성 (사용자 확인 후)**
    - `git push -u origin <브랜치>`
    - 사용자가 확인하면: `gh pr create --base develop --title "<타입(F-xx): 요약>" --body-file .harness/pr-F-xx.md`

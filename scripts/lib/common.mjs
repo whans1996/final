@@ -39,13 +39,17 @@ export function myNowFile() {
 export const PROTECTED_BRANCHES = ['main', 'develop'];
 export const isWin = process.platform === 'win32';
 
-/** git 실행. 한글 경로가 escape되지 않도록 core.quotepath=false */
-export function git(args, { cwd = ROOT, timeout } = {}) {
+/** hook 안의 fetch가 인증 창(Windows Git Credential Manager)이나 터미널 프롬프트로 멈추지 않게 하는 env */
+export const NON_INTERACTIVE_GIT_ENV = { GIT_TERMINAL_PROMPT: '0', GCM_INTERACTIVE: 'never' };
+
+/** git 실행. 한글 경로가 escape되지 않도록 core.quotepath=false. env는 process.env에 덧붙인다 */
+export function git(args, { cwd = ROOT, timeout, env } = {}) {
   const r = spawnSync('git', ['-c', 'core.quotepath=false', ...args], {
     cwd,
     encoding: 'utf8',
     timeout,
     windowsHide: true,
+    env: env ? { ...process.env, ...env } : undefined,
   });
   return { ok: r.status === 0, out: (r.stdout || '').trim(), err: (r.stderr || '').trim(), status: r.status };
 }

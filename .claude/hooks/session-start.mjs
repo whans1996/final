@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 // SessionStart hook: 새 세션·교대 직후에도 AI가 바로 상태를 알도록
 // 브랜치, git 상태, 최근 커밋, 내 NOW 파일(docs/handoff/NOW-<dh|js>.md), 내 작업로그 마지막 항목을 컨텍스트에 주입한다.
-// 두 사람이 영역별로 병렬 개발하므로 상대 NOW는 요약 두 줄만 보여 주고, develop에 새로 들어온 상대 변경(마이그레이션·API)을 알린다.
+// 두 사람이 영역별로 병렬 개발하므로 상대 NOW는 원격 브랜치까지 보고 가장 최근 것의 요약만 보여 주고, develop에 새로 들어온 상대 변경(마이그레이션·API)을 알린다.
+// 세션 도중의 상대 변화는 peer-watch hook(UserPromptSubmit)이 여기서 남긴 스냅샷(.harness/peer-watch.json)과 비교해 알린다.
 // PC 4대의 환경이 서로 달라서 어느 PC인지, 빠른 환경 점검 결과, 그 PC의 함정, 직전 작업 PC와 다른지도 알린다.
 import {
+  NON_INTERACTIVE_GIT_ENV,
   PROTECTED_BRANCHES,
   ROOT,
   WORKLOG_FILE,
@@ -13,7 +15,6 @@ import {
   isGitRepo,
   lastWorklogEntryOf,
   localPcId,
-  mdSection,
   nowFileOf,
   nowRelPath,
   otherOwnerKey,
@@ -24,6 +25,7 @@ import {
   workFilesNewerThanNow,
   worklogEntries,
 } from '../../scripts/lib/common.mjs';
+import { latestPeerNow, nowHeadline, readPeerState, writePeerState } from '../../scripts/lib/peer.mjs';
 
 // env-check가 깨져도 NOW 주입은 살린다
 let envCheck;
@@ -48,7 +50,7 @@ if (!isGitRepo()) {
 
   // 원격과 비교 (네트워크가 느리면 건너뜀)
   if (git(['remote']).out) {
-    git(['fetch', '--quiet'], { timeout: 5000 });
+    git(['fetch', '--quiet'], { timeout: 5000, env: NON_INTERACTIVE_GIT_ENV });
     const ab = git(['rev-list', '--left-right', '--count', 'HEAD...@{u}']);
     if (ab.ok) {
       const [ahead, behind] = ab.out.split(/\s+/).map(Number);
@@ -105,12 +107,12 @@ parts.splice(1, 0, `## PC·환경\n${env.join('\n')}`);
 if (!pc.id) warnings.push('이 PC가 등록되지 않아 내 NOW 파일을 정할 수 없습니다 (NOW 주입·Stop hook 체크포인트 검사가 꺼지고 인계 기록에 PC를 적을 수 없음). 작업 전에 사용자에게 `node scripts/setup.mjs --pc <id>` 실행을 요청하세요.');
 if (rows.some((r) => r.status === 'fail')) warnings.push('환경 점검에 ❌ 항목이 있습니다. 작업 전에 사용자와 해결하세요 (PC·환경 섹션).');
 
-// 사람별 NOW 파일: 내 것은 전문, 상대 것은 갱신 줄과 현재 기능 첫 줄만
+// 사람별 NOW 파일: 내 것은 전문, 상대 것은 원격 브랜치·작업 트리 중 가장 최근 것의 요약만
 // env-check를 못 불러와도(pc.id null) 로컬 등록(.harness/pc.json)으로 NOW 주입은 살린다
 const me = ownerKey(pc.id ?? localPcId());
 const now = me ? readText(nowFileOf(me)) : null;
 const other = me ? otherOwnerKey(me) : null;
-const otherNow = other ? readText(nowFileOf(other)) : null;
+const otherNow = other ? latestPeerNow(other) : null;
 const myEntry = me ? lastWorklogEntryOf(worklogEntries(readText(WORKLOG_FILE)), me, loadPcs()) : null;
 
 // 이전 세션이 체크포인트 없이 남긴 변경 (Stop hook은 이 세션이 건드린 파일만 보므로 여기서 알린다)
@@ -134,9 +136,20 @@ if (prevPc === 'unknown-pc' && pc.id) {
 if (me) {
   parts.push(`## ${nowRelPath(me)} (내 작업)\n${now ? now.trim() : '(없음)'}`);
   if (otherNow) {
-    const head = /^갱신:.*$/m.exec(otherNow)?.[0] ?? '갱신: ?';
-    const feature = mdSection(otherNow, '현재 기능').split(/\r?\n/)[0] || '(없음)';
-    parts.push(`## 상대 작업 (${nowRelPath(other)}, 수정하지 않는다)\n- ${head}\n- 현재 기능: ${feature}`);
+    const h = nowHeadline(otherNow.text);
+    parts.push(
+      `## 상대 작업 (${nowRelPath(other)} · 출처 ${otherNow.source}, 수정하지 않는다)\n- ${h.stamp}\n- 현재 기능: ${h.feature}\n- 다음: ${h.next}`,
+    );
+  }
+  // peer-watch hook의 비교 기준 (PR 목록은 직전 것을 유지해 자리를 비운 사이의 변화를 알린다)
+  if (isGitRepo()) {
+    const prevState = readPeerState();
+    writePeerState({
+      checkedAt: Date.now(),
+      developSha: git(['rev-parse', '-q', '--verify', 'origin/develop']).out || null,
+      peerNow: otherNow ? { source: otherNow.source, ...nowHeadline(otherNow.text) } : null,
+      prs: prevState?.prs ?? null,
+    });
   }
 }
 if (myEntry) parts.push(`## 내 작업로그 마지막 항목\n${myEntry.text.trim()}`);
