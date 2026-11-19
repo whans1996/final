@@ -8,8 +8,16 @@ import { after, test } from 'node:test';
 import { autoSync, mergeNotes, syncPlan } from '../lib/sync.mjs';
 
 // git hook(커밋 테스트 게이트) 안에서 돌면 GIT_DIR·GIT_INDEX_FILE 등이 실제 저장소를 가리킨다. 그대로 두면 아래 임시
-// 저장소용 git 명령이 실제 저장소의 index·설정을 건드리므로 모두 지운다 (autoSync도 process.env를 물려받는다)
+// 저장소용 git 명령이 실제 저장소의 index·설정을 건드리므로 모두 지운다 (autoSync도 process.env를 물려받는다).
+// 이 삭제는 import 평가 뒤에 일어나므로 common.mjs·sync.mjs는 import 시점에 git을 실행하지 않아야 한다.
 for (const key of Object.keys(process.env)) if (key.startsWith('GIT_')) delete process.env[key];
+const tmp = mkdtempSync(join(tmpdir(), 'vibenote-sync-'));
+after(() => rmSync(tmp, { recursive: true, force: true }));
+// 개발 PC의 전역·시스템 git 설정(commit.gpgsign, merge.ff 등)이 결과를 바꾸지 않게 빈 설정을 쓴다
+const EMPTY_GLOBAL = join(tmp, 'empty-gitconfig');
+writeFileSync(EMPTY_GLOBAL, '');
+process.env.GIT_CONFIG_GLOBAL = EMPTY_GLOBAL;
+process.env.GIT_CONFIG_NOSYSTEM = '1';
 
 test('받을 커밋이 없으면 할 일이 없다', () => {
   const plan = syncPlan({ branch: 'feature/F-09-x', upstream: { ref: 'origin/feature/F-09-x', ahead: 1, behind: 0 }, developBehind: 0 });
@@ -33,6 +41,14 @@ test('upstream이 origin/develop이면 한 번만 합친다', () => {
     plan.actions.map((a) => a.ref),
     ['origin/develop'],
   );
+});
+
+test('develop은 feature/·fix/ 브랜치에만 합친다', () => {
+  const at = (branch) => syncPlan({ branch, upstream: null, developBehind: 2 }).actions.map((a) => a.ref);
+  assert.deepEqual(at('feature/F-09-x'), ['origin/develop']);
+  assert.deepEqual(at('fix/F-09-x'), ['origin/develop']);
+  assert.deepEqual(at('experiment'), []);
+  assert.deepEqual(at('main'), []);
 });
 
 test('보호 브랜치는 fast-forward만 하고 develop을 합치지 않는다', () => {
@@ -61,8 +77,6 @@ test('병합으로 들어온 마이그레이션과 openapi.json을 알린다', (
 
 // ── 임시 저장소 ──
 
-const tmp = mkdtempSync(join(tmpdir(), 'vibenote-sync-'));
-after(() => rmSync(tmp, { recursive: true, force: true }));
 // 개발 PC의 git hook(테스트 게이트 등)이 임시 저장소에서 돌지 않게 빈 폴더를 hooksPath로 쓴다 (Windows 호환)
 const NO_HOOKS = join(tmp, 'no-hooks');
 mkdirSync(NO_HOOKS);
@@ -146,6 +160,7 @@ test('충돌하면 되돌리고 충돌 파일을 알린다', () => {
 
   assert.match(lines[0], /충돌\(shared\.txt\)이 나서 되돌렸습니다/);
   assert.equal(sh(me, 'rev-parse', 'HEAD'), head);
+  assert.equal(spawnSync('git', ['rev-parse', '-q', '--verify', 'MERGE_HEAD'], { cwd: me }).status, 1, '병합 상태가 남지 않는다');
   assert.equal(sh(me, 'status', '--porcelain'), '');
 });
 
@@ -170,4 +185,22 @@ test('git config vibenote.autoSync false면 아무것도 하지 않는다', () =
 
   assert.deepEqual(autoSync({ cwd: me }), []);
   assert.equal(sh(me, 'rev-list', '--count', 'HEAD..origin/develop'), '1');
+});
+
+test('다른 PC가 develop을 합쳐 push했으면 내 원격만 받고 develop을 "0개 합침"으로 보고하지 않는다', () => {
+  const { peer, me } = setup();
+  peerMergesToDevelop(peer, 'theirs.txt', 'theirs\n');
+  // 같은 사람의 다른 PC: develop을 합쳐 내 브랜치에 push
+  const other = join(me, '..', 'other-pc');
+  sh(tmp, 'clone', '-q', '-b', 'feature/F-09-x', join(me, '..', 'origin.git'), other);
+  sh(other, 'config', 'core.hooksPath', NO_HOOKS);
+  sh(other, 'merge', '-q', '--no-edit', 'origin/develop');
+  sh(other, 'push', '-q', 'origin', 'feature/F-09-x');
+  sh(me, 'fetch', '-q');
+
+  const lines = autoSync({ cwd: me });
+
+  assert.equal(lines.length, 1, lines.join('\n'));
+  assert.match(lines[0], /원격 origin\/feature\/F-09-x의 새 커밋/);
+  assert.equal(sh(me, 'rev-list', '--count', 'HEAD..origin/develop'), '0');
 });

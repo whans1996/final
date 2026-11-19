@@ -1,10 +1,14 @@
 // 자동 동기화 (11-19 결정): 세션 시작 hook과 peer-watch hook이 git fetch 직후 부른다.
 //   1) 내 브랜치의 원격(@{u})에 다른 PC가 push한 커밋 → 받는다 (같은 사람의 PC 교대)
-//   2) feature 브랜치면 상대가 develop에 머지한 커밋(origin/develop) → git merge (rebase 금지 규칙 그대로)
+//   2) 기능 브랜치(feature/·fix/)면 상대가 develop에 머지한 커밋(origin/develop) → git merge (rebase 금지 규칙 그대로)
 // 안전 규칙: 커밋 안 된 변경(추적 파일)이 있거나 병합 중이면 건드리지 않고 알리기만 한다. 충돌하면 바로 merge --abort로
 // 되돌리고 충돌 파일을 알린다. push는 하지 않는다 (다음 커밋 push 때 같이 올라간다. Codex 재리뷰를 불필요하게 일으키지 않음).
 // 끄기: PC마다 `git config vibenote.autoSync false` (다시 켜기: `git config --unset vibenote.autoSync`).
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { PROTECTED_BRANCHES, ROOT, currentBranch, git, isMerging } from './common.mjs';
+
+const DEVELOP_TARGET = /^(feature|fix)\//;
 
 // hook 제한(15초) 안에서 fetch와 함께 끝나야 한다. 로컬 병합은 보통 1초 안이다
 const MERGE_TIMEOUT = 6000;
@@ -26,7 +30,8 @@ export function syncPlan({ branch, merging, dirty = [], upstream, developBehind 
     // 보호 브랜치에는 merge 커밋을 만들지 않는다 (fast-forward만)
     actions.push({ ref: upstream.ref, label: `원격 ${upstream.ref}`, ffOnly: isProtected });
   }
-  if (!isProtected && developBehind > 0 && upstream?.ref !== 'origin/develop') {
+  // develop은 기능 브랜치(feature/·fix/)에만 합친다 (실험용 로컬 브랜치 등은 건드리지 않는다)
+  if (DEVELOP_TARGET.test(branch) && developBehind > 0 && upstream?.ref !== 'origin/develop') {
     actions.push({ ref: 'origin/develop', label: 'origin/develop', ffOnly: false });
   }
   if (!actions.length) return { actions, blocked: null };
@@ -42,6 +47,8 @@ export function mergeNotes(files) {
     Boolean,
   );
 }
+
+const firstLine = (r) => (r.status === null ? '시간 초과' : (r.err || r.out || `exit ${r.status}`).split('\n')[0]);
 
 function readState(cwd) {
   const branch = currentBranch(cwd);
@@ -62,7 +69,10 @@ function readState(cwd) {
 
 function mergeOne({ ref, label, ffOnly }, cwd) {
   const before = git(['rev-parse', 'HEAD'], { cwd }).out;
+  // 앞 단계(내 원격 받기)에 이미 들어왔으면 할 일이 없다 (다른 PC가 develop을 합쳐 push한 경우)
   const count = Number(git(['rev-list', '--count', `HEAD..${ref}`], { cwd }).out) || 0;
+  if (count === 0) return { ok: true, line: null };
+  const target = git(['rev-parse', ref], { cwd }).out;
   const r = git(['merge', ffOnly ? '--ff-only' : '--no-edit', ref], { cwd, timeout: MERGE_TIMEOUT });
   if (r.ok) {
     const files = git(['diff', '--name-only', before, 'HEAD'], { cwd }).out.split('\n').filter(Boolean);
@@ -72,13 +82,28 @@ function mergeOne({ ref, label, ffOnly }, cwd) {
     return { ok: true, mergeCommit, line: `- ✅ ${label}의 새 커밋 ${count}개를 자동으로 합쳤습니다${notes.length ? ` (${notes.join(', ')})` : ''}.` };
   }
   const conflicts = git(['diff', '--name-only', '--diff-filter=U'], { cwd }).out.split('\n').filter(Boolean);
-  if (isMerging(cwd)) git(['merge', '--abort'], { cwd });
-  const why = conflicts.length
-    ? `충돌(${conflicts.slice(0, 5).join(', ')}${conflicts.length > 5 ? ' 외' : ''})이 나서 되돌렸습니다`
-    : ffOnly
-      ? 'fast-forward가 안 되어 건너뜀 (로컬에만 있는 커밋이 있음)'
-      : `실패해서 건너뜀 (${(r.err || 'timeout').split('\n')[0]})`;
-  return { ok: false, line: `- ⚠️ ${label} 자동 병합: ${why}. 직접 \`git merge ${ref}\` 후 충돌을 해결하세요.` };
+  // 이번에 내가 시작한 병합(MERGE_HEAD가 대상 커밋)만 되돌린다. 같은 PC의 다른 세션·터미널이 시작한 병합은 건드리지 않는다
+  const ours = isMerging(cwd) && git(['rev-parse', '-q', '--verify', 'MERGE_HEAD'], { cwd }).out === target;
+  if (ours) git(['merge', '--abort'], { cwd });
+  if (conflicts.length && ours) {
+    const files = `${conflicts.slice(0, 5).join(', ')}${conflicts.length > 5 ? ' 외' : ''}`;
+    return { ok: false, line: `- ⚠️ ${label} 자동 병합: 충돌(${files})이 나서 되돌렸습니다. 직접 \`git merge ${ref}\` 후 충돌을 해결하세요.` };
+  }
+  // 충돌이 아닌 실패(타임아웃, 파일 잠금, index.lock): 시작 전에는 깨끗했으므로 무엇이든 남았으면 분명히 알린다
+  const lock = git(['rev-parse', '--git-path', 'index.lock'], { cwd }).out;
+  const leftover =
+    git(['rev-parse', 'HEAD'], { cwd }).out !== before ||
+    isMerging(cwd) ||
+    git(['status', '--porcelain', '--untracked-files=no'], { cwd }).out !== '' ||
+    (lock !== '' && existsSync(resolve(cwd, lock)));
+  if (leftover) {
+    return {
+      ok: false,
+      line: `- ⚠️ ${label} 자동 병합이 도중에 실패해 작업 트리·병합 상태가 남았을 수 있습니다 (${firstLine(r)}). \`git status\`와 \`.git/index.lock\`을 확인하세요.`,
+    };
+  }
+  const why = ffOnly ? 'fast-forward가 안 되어 건너뜀 (로컬에만 있는 커밋이 있음)' : `실패해서 건너뜀 (${firstLine(r)})`;
+  return { ok: false, line: `- ⚠️ ${label} 자동 병합: ${why}. 직접 \`git merge ${ref}\`로 합치세요.` };
 }
 
 /**
@@ -96,7 +121,7 @@ export function autoSync({ cwd = ROOT } = {}) {
     let mergeCommit = false;
     for (const action of plan.actions) {
       const result = mergeOne(action, cwd);
-      lines.push(result.line);
+      if (result.line) lines.push(result.line);
       mergeCommit ||= Boolean(result.mergeCommit);
       if (!result.ok) break;
     }

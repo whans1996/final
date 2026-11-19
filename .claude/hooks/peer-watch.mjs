@@ -40,6 +40,10 @@ try {
   delete curr.develop;
   peer.writePeerState(curr);
 
+  // develop을 이미 자동으로 합쳤으면 "git merge origin/develop 하라"는 권고를 결과로 바꾼다
+  if (synced.some((l) => l.startsWith('- ✅ origin/develop'))) {
+    for (let i = 0; i < lines.length; i++) lines[i] = lines[i].replace(/마이그레이션·API를 추가하거나 PR을 올리기 전에 `git merge origin\/develop`$/, '(이 브랜치에 자동 병합됨)');
+  }
   const sections = [];
   if (lines.length) sections.push(`## 📣 상대 작업 변화 (peer-watch hook, 10분 간격)\n${lines.join('\n')}`);
   if (synced.length) sections.push(`## 🔄 자동 동기화 (작업 트리가 바뀌었을 수 있다)\n${synced.join('\n')}`);
