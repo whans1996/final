@@ -77,7 +77,7 @@ const entry = [
   `## ${recordStamp({ author, pcId, branch })} (자동 handoff)`,
   `- 한 일 (이 브랜치 커밋):`,
   commits.length ? commits.map((c) => `  - ${c}`).join('\n') : '  - (커밋 없음)',
-  `- 미커밋 변경 ${changed.length}개 → 이 handoff의 wip 커밋에 포함`,
+  `- 미커밋 변경 ${changed.length}개 → 이 handoff의 wip 커밋에 포함 (작업 폴더 밖의 새 파일은 제외)`,
   changed.length ? changed.slice(0, 15).map((c) => `  - \`${c.trim()}\``).join('\n') + (changed.length > 15 ? `\n  - … 외 ${changed.length - 15}개` : '') : '',
   `- 다음 할 일 (${nowName}):`,
   indent(next),
