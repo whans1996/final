@@ -124,14 +124,14 @@
 
 `/implement`가 진행하며 체크한다.
 
-- [ ] 브랜치 `feature/F-00b-common-foundation`
-- [ ] Flyway 마이그레이션 (없음)
-- [ ] AC별 실패 테스트 작성 (red 확인)
-- [ ] BE 구현 (green)
-  - [ ] `com.vibenote.concept`: `domain/Concept`, `ConceptStatus`, `ConceptSource`, `ConceptMapper`(+`mapper/concept/ConceptMapper.xml`), `ConceptQueryService`, `dto/ConceptSummaryResponse`. Mapper Java·XML은 `// ── 공통 조회 ──` / `// ── F-08 개념 추출 (A) ──` / `// ── F-09~13 카드 (B) ──` 블록으로 나눈다. 다른 도메인은 `ConceptQueryService`로 읽는다(9절 "상대 테이블")
-  - [ ] `ErrorCode`: conventions 3절 순서의 도메인 블록 주석(`// ── CONCEPT (A F-08 · B F-09~13) ──` 등, QUIZ·REVIEW_PLAN·POST·CHALLENGE는 주석만), **모든 항목 끝에 `,`, `;`는 단독 줄**. `CONCEPT_404` 추가
-  - [ ] `ActivityType`·`SecurityConfig.PUBLIC_GET_PATHS`: 같은 블록·끝 쉼표 방식 (`PUBLIC_GET_PATHS`는 여러 줄로 펴고 도메인 블록 주석만)
-  - [ ] `user/AdminBootstrap`(`ApplicationReadyEvent`) + `UserMapper.promoteToAdmin(email)`(ACTIVE만, 갱신 행 수 반환), `AdminProperties`(`app.admin.bootstrap-email`). `application-local.yml`에 `${ADMIN_BOOTSTRAP_EMAIL:}`만 둔다(저장소에 이메일 없음). 승격 후에는 새로고침(앱 시작 refresh가 DB role로 Access 토큰을 다시 발급)으로 반영된다
+- [x] 브랜치 `feature/F-00b-common-foundation`
+- [x] Flyway 마이그레이션 (없음)
+- [x] AC별 실패 테스트 작성 (red 확인)
+- [x] BE 구현 (green)
+  - [x] `com.vibenote.concept`: `domain/Concept`, `ConceptStatus`, `ConceptSource`, `ConceptMapper`(+`mapper/concept/ConceptMapper.xml`), `ConceptQueryService`, `dto/ConceptSummaryResponse`. Mapper Java·XML은 `// ── 공통 조회 ──` / `// ── F-08 개념 추출 (A) ──` / `// ── F-09~13 카드 (B) ──` 블록으로 나눈다. 다른 도메인은 `ConceptQueryService`로 읽는다(9절 "상대 테이블")
+  - [x] `ErrorCode`: conventions 3절 순서의 도메인 블록 주석(`// ── CONCEPT (A F-08 · B F-09~13) ──` 등, QUIZ·REVIEW_PLAN·POST·CHALLENGE는 주석만), **모든 항목 끝에 `,`, `;`는 단독 줄**. `CONCEPT_404` 추가
+  - [x] `ActivityType`·`SecurityConfig.PUBLIC_GET_PATHS`: 같은 블록·끝 쉼표 방식 (`PUBLIC_GET_PATHS`는 여러 줄로 펴고 도메인 블록 주석만)
+  - [x] `user/AdminBootstrap`(`ApplicationReadyEvent`) + `UserMapper.promoteToAdmin(email)`(ACTIVE만, 갱신 행 수 반환), `AdminProperties`(`app.admin.bootstrap-email`). `application-local.yml`에 `${ADMIN_BOOTSTRAP_EMAIL:}`만 둔다(저장소에 이메일 없음). 승격 후에는 새로고침(앱 시작 refresh가 DB role로 Access 토큰을 다시 발급)으로 반영된다
 - [ ] FE 구현 (green)
   - [ ] `router/routes/*.js` 분리, `utils/navItems.js`, `App.vue` nav를 `navItems`로
   - [ ] `layouts/AdminLayout.vue`, `views/admin/AdminHomeView.vue`, `router/routes/admin.js`

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- A(F-08)와 B(F-09~13)가 함께 쓴다. 자기 블록 안에만 추가한다 (ConceptMapper.java와 같은 블록) -->
+<mapper namespace="com.vibenote.concept.ConceptMapper">
+
+    <!-- ── 공통 조회 ── -->
+
+    <sql id="columns">
+        id, name, category, difficulty, summary, body, example_code, status, source, reference_url,
+        wish_count, avg_rating, created_at, updated_at
+    </sql>
+
+    <sql id="summaryColumns">id, name, category, difficulty, summary, wish_count, avg_rating</sql>
+
+    <select id="findById" resultType="com.vibenote.concept.domain.Concept">
+        SELECT <include refid="columns"/> FROM concepts WHERE id = #{id}
+    </select>
+
+    <select id="findPublishedByIds" resultType="com.vibenote.concept.domain.Concept">
+        SELECT <include refid="summaryColumns"/>
+        FROM concepts
+        WHERE status = 'PUBLISHED'
+          AND id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
+    </select>
+
+    <!-- ── F-08 개념 추출 (A) ── -->
+
+    <!-- ── F-09~13 카드 (B) ── -->
+
+</mapper>

@@ -63,4 +63,9 @@
             password_hash = '!WITHDRAWN'
         WHERE id = #{id} AND status = 'ACTIVE'
     </update>
+
+    <!-- 로컬 관리자 계정 승격 (F-00b AC6). 탈퇴 회원은 email이 마스킹되어 맞지 않지만 status로도 거른다 -->
+    <update id="promoteToAdmin">
+        UPDATE users SET role = 'ADMIN' WHERE email = #{email} AND status = 'ACTIVE'
+    </update>
 </mapper>
