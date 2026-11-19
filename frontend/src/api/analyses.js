@@ -65,3 +65,13 @@ export function fetchAnalysisFlows(id) {
 export function requestAnalysisFlows(id, endpoints) {
   return http.post(`/analyses/${id}/flows`, { endpoints }).then((res) => res.data)
 }
+
+// 개념 카드 (F-08, docs/specs/F-08-concept-extraction.md 3절). 없거나 남의 분석이면 404 ANALYSIS_404.
+
+/**
+ * 분석 코드에 쓰인 공개 카드와 위치. 검수 전 AI 초안은 수만 준다. 추출 전이면 빈 목록.
+ * @returns {Promise<{ items: { concept: object, fileId: number|null, filePath: string|null, lineHint: string|null, contextNote: string|null }[], pendingCount: number }>}
+ */
+export function fetchAnalysisConcepts(id) {
+  return http.get(`/analyses/${id}/concepts`).then((res) => res.data)
+}

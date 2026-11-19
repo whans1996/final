@@ -27,6 +27,15 @@ public interface ConceptMapper {
 
     // ── F-08 개념 추출 (A) ──
 
+    /** 이름 비교·카드 목록용 전체 카드 (id·name·category·status만, id 오름차순). 카드 수백 개 규모라 한 번에 읽는다. */
+    List<Concept> findAllForMatching();
+
+    /**
+     * AI 초안 INSERT. 같은 이름의 카드가 이미 있으면(UNIQUE 충돌) 넣지 않고 그 카드의 id를 {@code concept.id}에 채운다 (F-08
+     * AC5).
+     */
+    void insertDraft(Concept concept);
+
     // ── F-09~13 카드 (B) ──
 
     /** PUBLISHED 카드 검색 (F-09). keyword는 {@code !}로 이스케이프된 값이고, null인 조건은 걸지 않는다. 요약 컬럼만 채운다. */

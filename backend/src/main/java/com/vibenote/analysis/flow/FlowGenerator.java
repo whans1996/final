@@ -4,6 +4,7 @@ import com.vibenote.analysis.AnalysisService;
 import com.vibenote.analysis.domain.AnalysisDetail;
 import com.vibenote.analysis.domain.AnalysisFile;
 import com.vibenote.analysis.explain.ApiEndpoint;
+import com.vibenote.analysis.explain.ExplainPrompts;
 import com.vibenote.analysis.explain.ExplainProperties;
 import com.vibenote.analysis.explain.LlmJsonCall;
 import com.vibenote.analysis.explain.PromptTemplates;
@@ -109,11 +110,13 @@ public class FlowGenerator {
                         LlmStage.FLOW,
                         analysis.getLevel(),
                         Map.of(
-                                "projectName", analysis.getProjectName(),
-                                "endpoint", flow.getEndpoint(),
+                                "projectName",
+                                        ExplainPrompts.escapeDelimiters(analysis.getProjectName()),
+                                "endpoint", ExplainPrompts.escapeDelimiters(flow.getEndpoint()),
                                 "overviewSummary",
-                                        Objects.requireNonNullElse(
-                                                analysis.getOverview().summary(), ""),
+                                        ExplainPrompts.escapeDelimiters(
+                                                Objects.requireNonNullElse(
+                                                        analysis.getOverview().summary(), "")),
                                 "files",
                                         FlowContextBuilder.render(
                                                 input,

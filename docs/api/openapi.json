@@ -1,6 +1,58 @@
 {
   "components" : {
     "schemas" : {
+      "AnalysisConceptItem" : {
+        "description" : "분석 코드에 쓰인 개념 카드와 위치",
+        "properties" : {
+          "concept" : {
+            "$ref" : "#/components/schemas/ConceptSummaryResponse",
+            "description" : "카드 요약"
+          },
+          "contextNote" : {
+            "description" : "이 코드에서 개념이 쓰인 방식 (없으면 null)",
+            "example" : "생성자로 TodoMapper를 받아 필드에 저장합니다.",
+            "type" : [ "string", "null" ]
+          },
+          "fileId" : {
+            "description" : "개념이 쓰인 분석 파일 ID (없으면 null)",
+            "example" : 102,
+            "format" : "int64",
+            "type" : [ "integer", "null" ]
+          },
+          "filePath" : {
+            "description" : "그 파일 경로 (없으면 null)",
+            "example" : "src/main/java/com/example/todo/TodoService.java",
+            "type" : [ "string", "null" ]
+          },
+          "lineHint" : {
+            "description" : "줄 위치 L12 또는 L12-L30 (없으면 null)",
+            "example" : "L8-L15",
+            "type" : [ "string", "null" ]
+          }
+        },
+        "required" : [ "concept" ],
+        "type" : "object"
+      },
+      "AnalysisConceptsResponse" : {
+        "description" : "분석에 연결된 개념 카드",
+        "properties" : {
+          "items" : {
+            "description" : "공개(PUBLISHED) 카드. 파일이 있는 것 먼저 파일 ID 순, 그다음 카드 ID 순",
+            "items" : {
+              "$ref" : "#/components/schemas/AnalysisConceptItem"
+            },
+            "type" : "array"
+          },
+          "pendingCount" : {
+            "description" : "관리자 검수를 기다리는 새 개념(AI 초안) 수",
+            "example" : 1,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "items", "pendingCount" ],
+        "type" : "object"
+      },
       "AnalysisDetailResponse" : {
         "description" : "분석 상세 (개요 포함)",
         "properties" : {
@@ -1134,6 +1186,55 @@
         "tags" : [ "분석" ]
       }
     },
+    "/api/analyses/{id}/concepts" : {
+      "get" : {
+        "description" : "분석 코드에 쓰인 공개 개념 카드와 위치(파일·줄·맥락). 검수 전 AI 초안은 수(pendingCount)만 준다. 추출 전이거나 연결이 없으면 빈 목록이다. LLM을 부르지 않는다.",
+        "operationId" : "listConcepts",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AnalysisConceptsResponse"
+                }
+              }
+            },
+            "description" : "조회 성공"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "토큰 없음·만료 (AUTH_401)"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "없는 분석, 다른 회원의 분석, 삭제된 분석 (ANALYSIS_404)"
+          }
+        },
+        "summary" : "분석의 개념 카드",
+        "tags" : [ "분석" ]
+      }
+    },
     "/api/analyses/{id}/files" : {
       "get" : {
         "description" : "선별한 파일(최대 30개)을 선별 우선순위(id 오름차순)로 준다. 코드 내용은 단건 조회에서 받는다.",
@@ -1945,6 +2046,9 @@
   "tags" : [ {
     "description" : "프로필 조회·수정, 학습 통계, 회원 탈퇴",
     "name" : "회원"
+  }, {
+    "description" : "프로젝트 분석 요청, 내 분석 목록, 진행 상태, 분석 결과(개요·파일·개념) 조회",
+    "name" : "분석"
   }, {
     "description" : "프로젝트 분석 요청, 내 분석 목록, 진행 상태, 분석 결과(개요·파일) 조회",
     "name" : "분석"

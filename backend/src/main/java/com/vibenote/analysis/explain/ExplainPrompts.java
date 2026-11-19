@@ -47,9 +47,27 @@ public final class ExplainPrompts {
                 + "자 생략)";
     }
 
+    /**
+     * 값 안의 {@code <<<}를 {@code ‹‹‹}로 바꾼다. 코드·경로에 든 {@code <<<END FILE>>>} 같은 문자열이 우리가 만든 구분자처럼 보이지
+     * 않게 한다 (F-08 AC3, #23). 프롬프트에 넣는 값에만 쓰고 DB의 내용은 바꾸지 않는다.
+     */
+    public static String escapeDelimiters(String value) {
+        return value.replace("<<<", "‹‹‹");
+    }
+
     public static String fileBlock(int no, AnalysisFile f, int maxChars) {
+        return fileBlock(no, f.getPath(), f.getLayer(), f.getContent(), maxChars);
+    }
+
+    /** {@code content}를 {@code maxChars}에서 잘라 구분자로 감싼다. 경로·내용의 구분자 문자열은 바꿔 넣는다. */
+    public static String fileBlock(
+            int no, String path, String layer, String content, int maxChars) {
         return "<<<FILE no=%d path=%s layer=%s>>>\n%s\n<<<END FILE>>>"
-                .formatted(no, f.getPath(), f.getLayer(), truncate(f.getContent(), maxChars));
+                .formatted(
+                        no,
+                        escapeDelimiters(path),
+                        layer,
+                        escapeDelimiters(truncate(content, maxChars)));
     }
 
     /** 파일 묶음. 번호는 1부터 묶음 안 순서다. */
@@ -69,13 +87,18 @@ public final class ExplainPrompts {
      * 넘지 않는다.
      */
     static String limitLines(List<String> lines, int maxChars) {
+        return limitLines(lines, maxChars, "줄");
+    }
+
+    /** {@link #limitLines(List, int)}와 같고 생략 줄의 단위를 고른다 (예: 카드 목록은 {@code 개}). */
+    public static String limitLines(List<String> lines, int maxChars, String unit) {
         StringBuilder out = new StringBuilder();
         for (int i = 0; i < lines.size(); i++) {
             String line = (i == 0 ? "" : "\n") + lines.get(i);
             int rest = lines.size() - i - 1;
-            String marker = rest == 0 ? "" : omitted(false, rest);
+            String marker = rest == 0 ? "" : omitted(false, rest, unit);
             if (out.length() + line.length() + marker.length() > maxChars) {
-                String tail = omitted(out.isEmpty(), lines.size() - i);
+                String tail = omitted(out.isEmpty(), lines.size() - i, unit);
                 return out.length() + tail.length() <= maxChars ? out + tail : out.toString();
             }
             out.append(line);
@@ -83,8 +106,8 @@ public final class ExplainPrompts {
         return out.toString();
     }
 
-    private static String omitted(boolean first, int count) {
-        return (first ? "" : "\n") + "... (이하 " + count + "줄 생략)";
+    private static String omitted(boolean first, int count, String unit) {
+        return (first ? "" : "\n") + "... (이하 " + count + unit + " 생략)";
     }
 
     /**
@@ -96,7 +119,9 @@ public final class ExplainPrompts {
         int metaChars = maxChars / META_SHARE;
         String fileTree =
                 limitLines(
-                        files.stream().map(f -> f.getPath() + " [" + f.getLayer() + "]").toList(),
+                        files.stream()
+                                .map(f -> escapeDelimiters(f.getPath()) + " [" + f.getLayer() + "]")
+                                .toList(),
                         metaChars);
         Map<Long, String> paths = new HashMap<>();
         files.forEach(f -> paths.put(f.getId(), f.getPath()));
@@ -107,13 +132,14 @@ public final class ExplainPrompts {
                                 apis.stream()
                                         .map(
                                                 a ->
-                                                        a.method()
-                                                                + " "
-                                                                + a.path()
-                                                                + " ("
-                                                                + paths.getOrDefault(
-                                                                        a.fileId(), "?")
-                                                                + ")")
+                                                        escapeDelimiters(
+                                                                a.method()
+                                                                        + " "
+                                                                        + a.path()
+                                                                        + " ("
+                                                                        + paths.getOrDefault(
+                                                                                a.fileId(), "?")
+                                                                        + ")"))
                                         .toList(),
                                 metaChars);
 

@@ -123,6 +123,8 @@ class AnalysisExplainingPipelineTest extends AnalysisTestSupport {
         InOrder order = inOrder(analysisService);
         order.verify(analysisService).advance(id, AnalysisStatus.SELECTING, 25);
         order.verify(analysisService).advance(id, AnalysisStatus.EXPLAINING, 40);
+        // F-08이 EXPLAINING 뒤에 EXTRACTING을 끼웠다 (F-08 AC1)
+        order.verify(analysisService).advance(id, AnalysisStatus.EXTRACTING, 70);
         order.verify(analysisService).complete(eq(id));
 
         List<Map<String, Object>> files = files(id);
@@ -168,7 +170,12 @@ class AnalysisExplainingPipelineTest extends AnalysisTestSupport {
         List<LlmRequest> requests = requests();
         assertThat(requests)
                 .extracting(LlmRequest::stage)
-                .containsExactly(LlmStage.OVERVIEW, LlmStage.FILE, LlmStage.FILE, LlmStage.FILE);
+                .containsExactly(
+                        LlmStage.OVERVIEW,
+                        LlmStage.FILE,
+                        LlmStage.FILE,
+                        LlmStage.FILE,
+                        LlmStage.CONCEPT);
         assertThat(requests)
                 .allSatisfy(
                         r -> {
@@ -193,7 +200,11 @@ class AnalysisExplainingPipelineTest extends AnalysisTestSupport {
                                 id))
                 .extracting(r -> r.get("stage") + " " + r.get("user_id"))
                 .containsExactly(
-                        "overview " + userId, "file " + userId, "file " + userId, "file " + userId);
+                        "overview " + userId,
+                        "file " + userId,
+                        "file " + userId,
+                        "file " + userId,
+                        "concept " + userId);
 
         InOrder order = inOrder(analysisService);
         order.verify(analysisService).advance(id, AnalysisStatus.EXPLAINING, 40);
@@ -201,6 +212,7 @@ class AnalysisExplainingPipelineTest extends AnalysisTestSupport {
         order.verify(analysisService).advance(id, AnalysisStatus.EXPLAINING, 53);
         order.verify(analysisService).advance(id, AnalysisStatus.EXPLAINING, 61);
         order.verify(analysisService).advance(id, AnalysisStatus.EXPLAINING, 69);
+        order.verify(analysisService).advance(id, AnalysisStatus.EXTRACTING, 70);
         order.verify(analysisService).complete(eq(id));
     }
 
@@ -245,7 +257,8 @@ class AnalysisExplainingPipelineTest extends AnalysisTestSupport {
                         LlmStage.FILE,
                         LlmStage.FILE,
                         LlmStage.FILE,
-                        LlmStage.FILE);
+                        LlmStage.FILE,
+                        LlmStage.CONCEPT);
     }
 
     @Test
@@ -279,6 +292,6 @@ class AnalysisExplainingPipelineTest extends AnalysisTestSupport {
         assertThat(files(id)).allSatisfy(f -> assertThat(f.get("role")).isNull());
         assertThat(requests())
                 .extracting(LlmRequest::stage)
-                .containsExactly(LlmStage.OVERVIEW, LlmStage.FILE, LlmStage.FILE);
+                .containsExactly(LlmStage.OVERVIEW, LlmStage.FILE, LlmStage.FILE, LlmStage.CONCEPT);
     }
 }

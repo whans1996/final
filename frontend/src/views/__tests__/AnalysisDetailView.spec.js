@@ -229,7 +229,7 @@ describe('AnalysisDetailView 결과 탭 (F-06 AC13~AC15)', () => {
     expect(analysesApi.fetchAnalysis).toHaveBeenCalledWith(42)
     expect(wrapper.find('h1').text()).toBe('todo-app')
     const tabs = wrapper.findAll('[role="tab"]')
-    expect(tabs.map((t) => t.text())).toEqual(['개요', '파일', '실행 흐름'])
+    expect(tabs.map((t) => t.text())).toEqual(['개요', '파일', '실행 흐름', '개념'])
     expect(tabs[0].attributes('aria-selected')).toBe('true')
     expect(wrapper.find('[data-section="summary"]').text()).toContain('Todo 서비스')
     expect(analysesApi.fetchAnalysisFiles).not.toHaveBeenCalled()
@@ -251,7 +251,7 @@ describe('AnalysisDetailView 결과 탭 (F-06 AC13~AC15)', () => {
 
     expect(analysesApi.fetchAnalysis).toHaveBeenCalledTimes(1)
     expect(wrapper.find('h1').text()).toBe('todo-app')
-    expect(wrapper.findAll('[role="tab"]')).toHaveLength(3)
+    expect(wrapper.findAll('[role="tab"]')).toHaveLength(4)
   })
 
   it('AC13 FAILED면 결과 탭 없이 F-05a 실패 화면 그대로다', async () => {
@@ -370,5 +370,42 @@ describe('AnalysisDetailView 결과 탭 (F-06 AC13~AC15)', () => {
     await wrapper.find('[data-action="open-file"]').trigger('click')
     await flushPromises()
     expect(router.currentRoute.value.query).toEqual({ tab: 'files', file: '101' })
+  })
+
+  it('F-08 AC8 개념 탭은 실행 흐름 다음이고, ?tab=concepts로 열면 복원하며 위치를 누르면 파일 탭으로 간다', async () => {
+    analysesApi.fetchAnalysisStatus.mockResolvedValue(status({ status: 'DONE', progress: 100 }))
+    analysesApi.fetchAnalysis.mockResolvedValue(detail())
+    analysesApi.fetchAnalysisConcepts.mockResolvedValue({
+      items: [
+        {
+          concept: {
+            id: 12,
+            name: '의존성 주입 (DI)',
+            category: 'spring',
+            difficulty: 'BEGINNER',
+            summary: '요약',
+            avgRating: 0,
+            wishCount: 0,
+          },
+          fileId: 102,
+          filePath: 'src/TodoService.java',
+          lineHint: 'L8',
+          contextNote: '생성자로 받습니다.',
+        },
+      ],
+      pendingCount: 0,
+    })
+
+    const { wrapper, router } = await mountDetail('/analyses/42?tab=concepts')
+
+    const tabs = wrapper.findAll('[role="tab"]')
+    expect(tabs.map((t) => t.text())).toEqual(['개요', '파일', '실행 흐름', '개념'])
+    expect(tabs[3].attributes('aria-selected')).toBe('true')
+    expect(analysesApi.fetchAnalysisConcepts).toHaveBeenCalledWith(42)
+    expect(wrapper.find('[data-concept-id="12"]').exists()).toBe(true)
+
+    await wrapper.find('[data-action="open-file"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.query).toEqual({ tab: 'files', file: '102' })
   })
 })

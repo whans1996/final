@@ -1,5 +1,7 @@
 package com.vibenote.analysis;
 
+import com.vibenote.analysis.concept.ConceptExtractor;
+import com.vibenote.analysis.concept.ConceptLinkService;
 import com.vibenote.analysis.domain.Analysis;
 import com.vibenote.analysis.domain.AnalysisFile;
 import com.vibenote.analysis.explain.AnalysisOverview;
@@ -14,6 +16,7 @@ import com.vibenote.analysis.pipeline.SelectedFile;
 import com.vibenote.analysis.pipeline.SourceFile;
 import com.vibenote.analysis.pipeline.ZipArchiveReader;
 import com.vibenote.common.exception.ErrorCode;
+import com.vibenote.concept.ConceptDraftService;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -26,8 +29,8 @@ import org.springframework.stereotype.Component;
  * 분석 파이프라인 (docs/specs/F-05a-analysis-request-zip.md 5절). 단계마다 status·progress를 기록하고, 정해진 사유로 멈추면 그
  * 사유로, 예기치 못한 예외면 ANALYSIS_500으로 FAILED 처리한다. 결과와 상관없이 임시 ZIP을 지운다 (AC10).
  *
- * <p>단계 목록은 {@link #stages} 한 곳에 둔다. F-06이 SELECTING 뒤에 EXPLAINING(40)을 넣었고, F-08·F-14가 그 뒤에
- * EXTRACTING(70)·QUIZ(85)를 끼워 넣는다.
+ * <p>단계 목록은 {@link #stages} 한 곳에 둔다. F-06이 SELECTING 뒤에 EXPLAINING(40)을, F-08이 그 뒤에 EXTRACTING(70)을
+ * 넣었고, F-14가 그 뒤에 QUIZ(85)를 끼워 넣는다.
  */
 @Component
 public class AnalysisPipeline {
@@ -42,6 +45,9 @@ public class AnalysisPipeline {
     private final OverviewExplainer overviewExplainer;
     private final FileExplainer fileExplainer;
     private final ExplainProperties explainProperties;
+    private final ConceptDraftService conceptDraftService;
+    private final ConceptExtractor conceptExtractor;
+    private final ConceptLinkService conceptLinkService;
 
     /** EXPLAINING 진행률: 개요 뒤 45, 파일 묶음 k/n 뒤 45 + floor(24·k/n) (F-06 AC2). */
     static final int EXPLAIN_OVERVIEW_DONE = 45;
@@ -55,7 +61,10 @@ public class AnalysisPipeline {
             AnalysisProperties properties,
             OverviewExplainer overviewExplainer,
             FileExplainer fileExplainer,
-            ExplainProperties explainProperties) {
+            ExplainProperties explainProperties,
+            ConceptDraftService conceptDraftService,
+            ConceptExtractor conceptExtractor,
+            ConceptLinkService conceptLinkService) {
         this.analysisService = analysisService;
         this.tempFiles = tempFiles;
         this.zipReader = zipReader;
@@ -63,12 +72,16 @@ public class AnalysisPipeline {
         this.overviewExplainer = overviewExplainer;
         this.fileExplainer = fileExplainer;
         this.explainProperties = explainProperties;
+        this.conceptDraftService = conceptDraftService;
+        this.conceptExtractor = conceptExtractor;
+        this.conceptLinkService = conceptLinkService;
         this.stages =
                 List.of(
                         new Stage(AnalysisStatus.FETCHING, 5, this::fetch),
                         new Stage(AnalysisStatus.FILTERING, 15, this::filter),
                         new Stage(AnalysisStatus.SELECTING, 25, this::select),
-                        new Stage(AnalysisStatus.EXPLAINING, 40, this::explain));
+                        new Stage(AnalysisStatus.EXPLAINING, 40, this::explain),
+                        new Stage(AnalysisStatus.EXTRACTING, 70, this::extract));
     }
 
     /** 분석 하나를 끝까지 실행한다. 분석 전용 실행기 스레드에서 부른다. */
@@ -153,6 +166,21 @@ public class AnalysisPipeline {
                 return;
             }
         }
+    }
+
+    /**
+     * 개념 추출 1회 (F-08). 추출이 실패해도 연결 없이 계속한다 (ConceptExtractor). LLM은 트랜잭션 밖에서 부르고, 새 초안과 연결은 한
+     * 트랜잭션으로 저장한다. 저장 중 예외는 ANALYSIS_500이다.
+     */
+    private void extract(Context context) {
+        long id = context.analysisId;
+        Analysis analysis = analysisService.findForPipeline(id);
+        conceptLinkService.save(
+                id,
+                conceptExtractor.extract(
+                        analysis,
+                        conceptDraftService.findAllForMatching(),
+                        analysisService.findFiles(id)));
     }
 
     /** 진입할 때 status·progress를 기록하는 단계 하나. */

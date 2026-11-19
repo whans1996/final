@@ -26,6 +26,18 @@
 
     <!-- ── F-08 개념 추출 (A) ── -->
 
+    <select id="findAllForMatching" resultType="com.vibenote.concept.domain.Concept">
+        SELECT id, name, category, status FROM concepts ORDER BY id
+    </select>
+
+    <!-- 이름이 겹치면 행을 바꾸지 않고 LAST_INSERT_ID를 기존 id로 맞춘다 -->
+    <insert id="insertDraft">
+        INSERT INTO concepts (name, category, difficulty, summary, body, status, source)
+        VALUES (#{name}, #{category}, #{difficulty}, #{summary}, #{body}, 'DRAFT', 'AI')
+        ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)
+        <selectKey keyProperty="id" resultType="long" order="AFTER">SELECT LAST_INSERT_ID()</selectKey>
+    </insert>
+
     <!-- ── F-09~13 카드 (B) ── -->
 
     <!-- F-09 목록 조건. keyword는 Service가 ! 로 이스케이프한 값. 대소문자 무시는 collation(utf8mb4_0900_ai_ci)에 맡긴다 -->

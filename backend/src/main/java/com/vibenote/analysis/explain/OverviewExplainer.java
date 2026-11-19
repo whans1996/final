@@ -68,7 +68,8 @@ public class OverviewExplainer {
                         LlmStage.OVERVIEW,
                         analysis.getLevel(),
                         Map.of(
-                                "projectName", analysis.getProjectName(),
+                                "projectName",
+                                        ExplainPrompts.escapeDelimiters(analysis.getProjectName()),
                                 "fileTree", input.fileTree(),
                                 "apis", input.apis(),
                                 "sources", input.sources()));

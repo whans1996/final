@@ -112,7 +112,7 @@ class AnalysisPipelineTest extends AnalysisTestSupport {
     }
 
     @Test
-    void AC5_단계를_FETCHING_FILTERING_SELECTING_EXPLAINING_순서로_거친다() throws IOException {
+    void AC5_단계를_FETCHING_FILTERING_SELECTING_EXPLAINING_EXTRACTING_순서로_거친다() throws IOException {
         long id = prepare(createUser("ac5order", "JUNIOR"), zip(springProject()));
 
         pipeline.run(id);
@@ -123,6 +123,8 @@ class AnalysisPipelineTest extends AnalysisTestSupport {
         order.verify(analysisService).advance(id, AnalysisStatus.SELECTING, 25);
         // F-06이 SELECTING 뒤에 EXPLAINING을 끼웠다 (F-06 AC1)
         order.verify(analysisService).advance(id, AnalysisStatus.EXPLAINING, 40);
+        // F-08이 EXPLAINING 뒤에 EXTRACTING을 끼웠다 (F-08 AC1)
+        order.verify(analysisService).advance(id, AnalysisStatus.EXTRACTING, 70);
         order.verify(analysisService).complete(eq(id));
     }
 

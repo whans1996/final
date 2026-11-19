@@ -52,8 +52,9 @@ public class FileExplainer {
                         LlmStage.FILE,
                         analysis.getLevel(),
                         Map.of(
-                                "projectName", analysis.getProjectName(),
-                                "overviewSummary", overviewSummary,
+                                "projectName",
+                                        ExplainPrompts.escapeDelimiters(analysis.getProjectName()),
+                                "overviewSummary", ExplainPrompts.escapeDelimiters(overviewSummary),
                                 "files", ExplainPrompts.files(batch, properties.maxFileChars())));
         LlmRequest request =
                 new LlmRequest(
