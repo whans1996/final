@@ -28,6 +28,8 @@
 /frontend/src/api/http.js                    @whans1996 @JoonseobKim
 /frontend/src/api/auth.js                    @whans1996 @JoonseobKim
 /frontend/src/api/users.js                   @whans1996 @JoonseobKim
+/frontend/src/api/concepts.js                @whans1996 @JoonseobKim
+/frontend/src/utils/conceptCategories.js     @whans1996 @JoonseobKim
 /frontend/src/stores/auth.js                 @whans1996 @JoonseobKim
 /frontend/src/components/common/             @whans1996 @JoonseobKim
 /frontend/src/composables/                   @whans1996 @JoonseobKim

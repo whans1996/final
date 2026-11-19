@@ -9,12 +9,13 @@ const admin = { isLoggedIn: true, isAdmin: true }
 const labels = (items) => items.map((i) => i.label)
 
 describe('navItems (F-00b AC8)', () => {
-  it('AC8 비로그인은 로그인·회원가입만 본다', () => {
-    expect(labels(navItems(routes, loggedOut))).toEqual(['로그인', '회원가입'])
+  it('AC8 비로그인은 개념 카드·로그인·회원가입을 본다 (F-09 AC9)', () => {
+    expect(labels(navItems(routes, loggedOut))).toEqual(['개념 카드', '로그인', '회원가입'])
   })
 
-  it('AC8 로그인하면 분석 요청·내 분석을 본다', () => {
+  it('AC8 로그인하면 개념 카드·분석 요청·내 분석을 본다', () => {
     expect(navItems(routes, user)).toEqual([
+      { label: '개념 카드', to: '/concepts' },
       { label: '분석 요청', to: '/analyses/new' },
       { label: '내 분석', to: '/analyses' },
     ])
@@ -22,6 +23,7 @@ describe('navItems (F-00b AC8)', () => {
 
   it('AC8 ADMIN은 여기에 관리자가 더해진다', () => {
     expect(navItems(routes, admin)).toEqual([
+      { label: '개념 카드', to: '/concepts' },
       { label: '분석 요청', to: '/analyses/new' },
       { label: '내 분석', to: '/analyses' },
       { label: '관리자', to: '/admin' },
@@ -37,6 +39,14 @@ describe('navItems (F-00b AC8)', () => {
     ]
 
     expect(labels(navItems(fake, user))).toEqual(['A', 'B'])
+  })
+
+  it("F-09 AC9 show: 'all'은 비로그인·회원·ADMIN 모두에게 보인다", () => {
+    const fake = [{ path: '/c', meta: { nav: { label: 'C', order: 1, show: 'all' } } }]
+
+    expect(labels(navItems(fake, loggedOut))).toEqual(['C'])
+    expect(labels(navItems(fake, user))).toEqual(['C'])
+    expect(labels(navItems(fake, admin))).toEqual(['C'])
   })
 })
 

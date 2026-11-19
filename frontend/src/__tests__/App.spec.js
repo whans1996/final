@@ -20,24 +20,24 @@ async function headerLinks(options) {
 
 // F-00b AC8: 헤더 메뉴는 route meta.nav로 만들고, 닉네임·로그아웃은 App이 고정으로 붙인다
 describe('App 헤더 (F-00b AC8)', () => {
-  it('AC8 비로그인은 로그인·회원가입을 본다', async () => {
+  it('AC8 비로그인은 개념 카드·로그인·회원가입을 본다 (F-09 AC9)', async () => {
     const { wrapper, links } = await headerLinks()
 
-    expect(links).toEqual(['로그인', '회원가입'])
+    expect(links).toEqual(['개념 카드', '로그인', '회원가입'])
     expect(wrapper.find('header button').exists()).toBe(false)
   })
 
-  it('AC8 로그인하면 분석 요청·내 분석, 닉네임, 로그아웃을 본다 (관리자 없음)', async () => {
+  it('AC8 로그인하면 개념 카드·분석 요청·내 분석, 닉네임, 로그아웃을 본다 (관리자 없음)', async () => {
     const { wrapper, links } = await headerLinks({ beforeNavigate: loginAs('USER') })
 
-    expect(links).toEqual(['분석 요청', '내 분석', '코딩초보'])
+    expect(links).toEqual(['개념 카드', '분석 요청', '내 분석', '코딩초보'])
     expect(wrapper.find('header button').text()).toBe('로그아웃')
   })
 
   it('AC8 ADMIN은 관리자 메뉴가 /admin으로 더해진다', async () => {
     const { wrapper, links } = await headerLinks({ beforeNavigate: loginAs('ADMIN') })
 
-    expect(links).toEqual(['분석 요청', '내 분석', '관리자', '코딩초보'])
+    expect(links).toEqual(['개념 카드', '분석 요청', '내 분석', '관리자', '코딩초보'])
     expect(wrapper.find('header a[href="/admin"]').text()).toBe('관리자')
   })
 })

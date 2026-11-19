@@ -40,4 +40,31 @@
 
     <!-- ── F-09~13 카드 (B) ── -->
 
+    <!-- F-09 목록 조건. keyword는 Service가 ! 로 이스케이프한 값. 대소문자 무시는 collation(utf8mb4_0900_ai_ci)에 맡긴다 -->
+    <sql id="publishedSearchWhere">
+        WHERE status = 'PUBLISHED'
+        <if test="category != null">AND category = #{category}</if>
+        <if test="difficulty != null">AND difficulty = #{difficulty}</if>
+        <if test="keyword != null">
+            AND (name LIKE CONCAT('%', #{keyword}, '%') ESCAPE '!'
+                 OR summary LIKE CONCAT('%', #{keyword}, '%') ESCAPE '!')
+        </if>
+    </sql>
+
+    <select id="findPublished" resultType="com.vibenote.concept.domain.Concept">
+        SELECT <include refid="summaryColumns"/>
+        FROM concepts
+        <include refid="publishedSearchWhere"/>
+        <choose>
+            <when test="sort.name() == 'LATEST'">ORDER BY created_at DESC, id DESC</when>
+            <otherwise>ORDER BY wish_count DESC, avg_rating DESC, id ASC</otherwise>
+        </choose>
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="countPublished" resultType="long">
+        SELECT COUNT(*) FROM concepts
+        <include refid="publishedSearchWhere"/>
+    </select>
+
 </mapper>

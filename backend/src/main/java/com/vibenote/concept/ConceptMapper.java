@@ -1,5 +1,6 @@
 package com.vibenote.concept;
 
+import com.vibenote.common.Level;
 import com.vibenote.concept.domain.Concept;
 import java.util.List;
 import java.util.Optional;
@@ -37,4 +38,18 @@ public interface ConceptMapper {
 
     // ── F-09~13 카드 (B) ──
 
+    /** PUBLISHED 카드 검색 (F-09). keyword는 {@code !}로 이스케이프된 값이고, null인 조건은 걸지 않는다. 요약 컬럼만 채운다. */
+    List<Concept> findPublished(
+            @Param("keyword") String keyword,
+            @Param("category") String category,
+            @Param("difficulty") Level difficulty,
+            @Param("sort") ConceptSort sort,
+            @Param("size") int size,
+            @Param("offset") long offset);
+
+    /** {@link #findPublished}와 같은 조건의 개수. */
+    long countPublished(
+            @Param("keyword") String keyword,
+            @Param("category") String category,
+            @Param("difficulty") Level difficulty);
 }
