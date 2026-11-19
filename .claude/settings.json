@@ -46,7 +46,8 @@
       "Bash(gh pr edit:*)",
       "Bash(gh pr comment:*)",
       "Bash(gh run view:*)",
-      "Bash(gh run list:*)"
+      "Bash(gh run list:*)",
+      "Bash(node scripts/owners.mjs:*)"
     ],
     "deny": [
       "Read(**/.env)",
