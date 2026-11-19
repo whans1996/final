@@ -4,23 +4,22 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
 
-갱신: 2026-11-19 15:28 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/common-usecase
+갱신: 2026-11-19 15:36 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/common-usecase
 
 ## 현재 기능
 
-WBS 1.4 유스케이스 산출물 (`docs/산출물/02-유스케이스.md`, 마감 11/23). F-00b PR #42는 11-19 머지됨
+WBS 1.4 유스케이스 산출물 — **PR #43** (develop). CI 초록, **Codex ✅ 12c2c2c**(재리뷰 1회) → 사람이 GitHub에서 머지만 남음. F-00b PR #42는 11-19 머지됨
 
 ## 진행
 
-- ✅ `diagrams/usecase.puml` 보정: `!pragma layout smetana`(Graphviz 불필요), UC16 내 분석 목록 추가, 비회원→UC03, UC31→UC30 extend 방향 수정
-- ✅ `diagrams/usecase.png` 렌더링 (PlantUML 1.2026.8 jar는 scratchpad, 저장소에 넣지 않음. 명령은 02 머리)
-- ✅ UC05~UC51 흐름 작성 (UC 27개, 표·흐름·puml ID 일치 확인). spec 있는 UC10~16·20·21은 spec AC 기준, 나머지는 "(기획 기준)" 표시
-- 🟡 커밋 → push → `/pr-review`(docs만: verifier 생략, reviewer로 기획서·spec 대조) → PR(develop)
+- ✅ `98b047e` puml 보정(smetana, UC16, 비회원 조회), png 렌더링, UC05~UC51 흐름 (UC 27개)
+- ✅ reviewer 반드시 2·권장 6 반영 `12c2c2c`: UC22·41 비회원 조회, UC24·UC30 실패 처리는 F-08·F-14 spec 결정으로, UC14·15 구현 기준, 01 요구사항 F-05/F-06 행·결정로그(내 분석 목록 = F-05a)
+- PlantUML jar는 저장소 밖(Maven Central `net.sourceforge.plantuml:plantuml:1.2026.8`), 명령은 02 머리
 
 ## 바로 다음 할 일
 
-1. `/pr-review` → PR 본문에 `@JoonseobKim` 확인 요청 (B 영역 UC20~23·40~42·51 흐름을 기획서·F-09/F-10 spec 기준으로 씀). CI·Codex COMPLETE 뒤 사람이 머지
-2. 머지 뒤 다음 A 기능 `/spec` (F-08 개념 추출이 F-10 "등장 위치"의 데이터 원천, Opus/high 새 세션)
+1. 사람: PR #43 머지 (wip 없음). 머지 전 develop이 앞서 있으면 `git merge origin/develop` → push
+2. 머지 뒤 `git switch develop && git pull`, 다음 A 기능 `/spec F-08` 개념 추출·연결 (Opus/high 새 세션). F-10 "등장 위치"(`analysis_concepts`)의 데이터 원천이고, UC24 실패 처리(단계 FAILED vs 연결 없이 완료)를 spec "결정 필요"에 올린다
 
 ## 막힌 점 / 결정 필요
 
