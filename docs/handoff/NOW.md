@@ -7,25 +7,24 @@
 
 ## 현재 기능
 
-F-07 실행 흐름 설명 — `docs/specs/F-07-execution-flow.md` APPROVED, **구현 중 (BE 순수 로직 완료, 서비스·생성기 전)**
+F-07 실행 흐름 설명 — `docs/specs/F-07-execution-flow.md` APPROVED, **BE 완료(AC1~AC13 green), FE 전**
 
 ## 진행
 
-- ✅ V5 `analysis_flows`(status·summary·error_code·updated_at)
-- ✅ AC12(#19) `FileSelector.layer(path, content)` + `pipeline/JavaComments`(주석 제거 공용), AC13(#21) `ApiDetector` 리터럴·배열만 + 190자 상한
-- ✅ AC2·AC3 `flow/FlowContextBuilder`(inputFiles·render), AC4·AC5(파서) `flow/FlowResponseParser`·`FlowStep`·`FlowResult`, 프롬프트 `prompts/flow/*.md`
-- `explain/LlmJsonCall`·`ExplainPrompts.fileBlock/truncate`를 public으로 (flow 패키지 재사용)
+- ✅ V5, AC12(#19)·AC13(#21), AC2~AC5 순수 로직(`FlowContextBuilder`·`FlowResponseParser`), 프롬프트 `prompts/flow/*`
+- ✅ `flow/` FlowService(접수·캐시·개수·FOR UPDATE)·FlowLauncher(AFTER_COMMIT→analysisExecutor, 거부→FAILED)·FlowGenerator·FlowController(`/api/analyses/{id}/flows` POST 202·GET)·FlowMapper(.xml), `AnalysisRecovery`가 PENDING 흐름도 정리, `llm-fixtures/flow.json`, openapi.json
+- 결정(11-19): 흐름 `ANALYSIS_500` 문구는 공통 "실행 흐름 생성이 중단되었습니다. 다시 요청해 주세요." (spec AC11·결정 로그 반영)
+- MyBatis 배열 javaType은 `[Lcom...FlowStep;` (`FlowStep[]`은 못 읽음, backend/CLAUDE.md·JsonTypeHandler 주석 수정)
 
 ## 바로 다음 할 일
 
-1. `flow/FlowMapper`(+`mapper/analysis/FlowMapper.xml`): 분석 `FOR UPDATE` 잠금, 흐름 INSERT·리셋·조회·완료·실패, PENDING 일괄 FAILED
-2. `FlowService`(AC6~AC9·AC11 거부), `FlowRequestedEvent`+`FlowLauncher`(AFTER_COMMIT→`analysisExecutor`), `FlowGenerator`(AC1·AC5), `AnalysisRecovery`에 흐름 정리(AC11)
-3. `ErrorCode` ANALYSIS_002·003·409, 엔드포인트(`AnalysisFlowControllerTest` AC8~AC10), `llm-fixtures/flow.json`(DS-02-01 dev만), application.yml `analysis.flow.*`
-4. FE 탭(AC14~AC16), 산출물·openapi.json
+1. FE: `src/api/analyses.js`에 `fetchAnalysisFlows(id)`·`requestAnalysisFlows(id, endpoints)` + `src/api/__tests__/analyses.spec.js`
+2. `components/analysis/AnalysisFlowsTab.vue`(선택·버튼·3초 폴링)·`AnalysisFlowCard.vue`(상태별 카드) + `__tests__` (AC14~AC16), `AnalysisDetailView.vue`에 `?tab=flows`
+3. contract-checker, ui-verifier(BE local + FE dev), `06-화면설계서.md` SC-07 실행 흐름 탭, WBS·간트, `/pr-review` (본문에 Closes #19, #21)
+4. 1.4 유스케이스(마감 11/23): `docs/산출물/02-유스케이스.md`에 분석 요청·결과 조회·실행 흐름 UC
 
 ## 막힌 점 / 결정 필요
 
-- AC11 문구: 흐름은 메시지를 저장하지 않아 `ANALYSIS_500`이 재시작·큐 거부·예기치 못한 오류에 같이 쓰인다 → 재시작 문구를 모든 ANALYSIS_500 흐름에 보여 줄지 사용자 확인 필요
 - 사람: 이슈 #16, 노션 팀원 초대. 하네스: `codex-review.mjs` 옛 스레드 FINDINGS 판정
 
 ## 주의

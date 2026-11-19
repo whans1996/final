@@ -47,6 +47,12 @@ public enum ErrorCode {
     ANALYSIS_500(HttpStatus.INTERNAL_SERVER_ERROR, "분석 중 오류가 발생했습니다. 다시 요청해 주세요."),
     /** 분석은 내 것이지만 fileId가 그 분석의 파일이 아님 (F-06 AC11). */
     ANALYSIS_001(HttpStatus.NOT_FOUND, "파일을 찾을 수 없습니다."),
+    /** 실행 흐름을 요청한 API가 개요 apis에 없음 (F-07 AC8). */
+    ANALYSIS_002(HttpStatus.BAD_REQUEST, "탐지된 API가 아닙니다. 개요의 API 목록에서 골라 주세요."),
+    /** 요청 후 FAILED가 아닌 흐름이 분석당 상한(3개)을 넘음 (F-07 AC7). */
+    ANALYSIS_003(HttpStatus.BAD_REQUEST, "실행 흐름은 분석 하나에 3개까지 만들 수 있습니다."),
+    /** 분석이 DONE이 아닐 때 실행 흐름 요청 (F-07 AC9). */
+    ANALYSIS_409(HttpStatus.CONFLICT, "분석이 끝난 뒤에 실행 흐름을 요청할 수 있습니다."),
 
     /** 개요 응답이 1회 재시도 후에도 스키마 위반. 파이프라인 FAILED 사유다 (F-06 AC5). */
     LLM_502(HttpStatus.BAD_GATEWAY, "AI 응답 형식이 올바르지 않아 설명을 만들지 못했습니다. 다시 요청해 주세요."),

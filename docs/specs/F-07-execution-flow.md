@@ -32,7 +32,7 @@ F-06이 놓친 컨트롤러(`*Api.java`, #19)와 잘못 읽은 경로(문자열 
 | AC8 | 로그인한 회원이 | `endpoints`가 0개·4개 이상·같은 (method, path) 중복·method나 path가 비었으면 / 개요 `apis`에 없는 (method, path)면 | 400 `COMMON_400`(`details`에 필드) / 400 `ANALYSIS_002`. method는 `apis`의 값(`ANY` 포함)과 대소문자까지 같아야 한다 |
 | AC9 | 분석이 `DONE`이 아닐 때 / 없는 id·다른 회원의 분석·soft delete된 분석 / 토큰 없음 | `POST /flows` 하면 | 409 `ANALYSIS_409` / 404 `ANALYSIS_404` / 401 `AUTH_401` |
 | AC10 | 내 분석에 흐름이 있을 때 | `GET /api/analyses/{id}/flows` 하면 | 200과 배열(`id` 오름차순). 항목은 3절 형태이고 `DONE`이 아니면 `summary`·`steps`가 null. 흐름이 없거나 분석이 진행 중이면 빈 배열. 권한·404는 AC9와 같다(DONE이 아니어도 조회는 됨) |
-| AC11 | 흐름이 `PENDING`인 채로 서버가 꺼졌을 때 / 실행 큐가 가득 차 작업이 거부될 때 | 서버가 다시 시작하면 / 제출이 거부되면 | `PENDING` 흐름은 모두 `FAILED`, error_code `ANALYSIS_500`, 문구 "서버가 다시 시작되어 실행 흐름 생성이 중단되었습니다. 다시 요청해 주세요."(`AnalysisRecovery`에서 분석 정리와 함께) / 그 흐름만 `FAILED`, `ANALYSIS_500`. 사용자는 다시 요청할 수 있다(AC6) |
+| AC11 | 흐름이 `PENDING`인 채로 서버가 꺼졌을 때 / 실행 큐가 가득 차 작업이 거부될 때 | 서버가 다시 시작하면 / 제출이 거부되면 | `PENDING` 흐름은 모두 `FAILED`, error_code `ANALYSIS_500`(`AnalysisRecovery`에서 분석 정리와 함께) / 그 흐름만 `FAILED`, `ANALYSIS_500`. 흐름의 `ANALYSIS_500` 문구는 재시작·큐 거부·예기치 못한 오류 공통으로 "실행 흐름 생성이 중단되었습니다. 다시 요청해 주세요."(메시지를 저장하지 않아 셋을 구분할 수 없음, 11-19 결정). 사용자는 다시 요청할 수 있다(AC6) |
 | AC12 | (#19) 이름이 `ArticlesApi.java`이고 주석 밖에 `@RestController`(또는 `@Controller`)가 있는 파일이 | 선별할 때 layer를 정하면 | `FileSelector.layer(path, content)`가 `controller`를 돌려준다. 파일명 규칙(`*Controller.java`)은 그대로이고, 주석(`//`, `/* */`) 안에만 있는 어노테이션은 무시한다. `@RestControllerAdvice`·`@ControllerAdvice`는 controller가 아니다 |
 | AC13 | (#21) `@RequestMapping("/api" + "/users")`·`@GetMapping(Paths.API + "/x")`·`@PostMapping(value = BASE)`처럼 매핑 속성 값이 문자열 리터럴 하나 또는 `{리터럴, …}` 배열이 아닐 때 | API를 탐지하면 | 그 경로는 알 수 없음으로 보고 메서드 어노테이션이면 그 메서드만, 클래스 어노테이션이면 그 파일 전체를 `apis`에서 뺀다. 리터럴·배열 경로는 F-06 AC7 그대로다 |
 | AC14 | 로그인한 회원이 `DONE` 분석의 SC-07에서 | "실행 흐름" 탭(`?tab=flows`)을 열면 | `GET /flows`를 불러 개요 `apis`를 체크박스 목록(메서드 배지·경로)으로 보여 준다. 이미 흐름이 있는 API는 상태 배지("생성 중"·"완료"·"실패")를 붙이고 체크할 수 없다(실패는 AC16의 다시 만들기). 남은 개수(3 − FAILED가 아닌 흐름 수)까지만 체크되고, "실행 흐름 만들기 (n개)" 버튼은 1개 이상 고를 때만 켜진다. `apis`가 비면 "탐지된 API가 없어 실행 흐름을 만들 수 없습니다.", 남은 개수가 0이면 "실행 흐름은 분석 하나에 3개까지 만들 수 있습니다." |
@@ -181,7 +181,7 @@ ALTER TABLE analysis_flows
 ```
 
 - `endpoint`는 `"{METHOD} {path}"`(예: `POST /api/todos`)로 저장하고 기존 `UNIQUE (analysis_id, endpoint)`로 중복을 막는다. 응답의 `method`·`path`는 첫 공백에서 나눈다. 200자를 넘는 API는 F-06 탐지 단계에서 뺀다(5절)
-- `steps`(JSON)에는 AC4로 정리한 단계 배열을, `summary`에는 요약을 저장한다. 오류 메시지는 저장하지 않고 `error_code`로 `ErrorCode` 문구를 돌려준다(재시작 문구는 AC11 상수)
+- `steps`(JSON)에는 AC4로 정리한 단계 배열을, `summary`에는 요약을 저장한다. 오류 메시지는 저장하지 않고 `error_code`로 `ErrorCode` 문구를 돌려준다(`ANALYSIS_500`은 AC11의 흐름 공통 문구)
 - `created_at`·`updated_at`은 서비스 `Clock`으로 넣는다 (DB 세션 시간대 의존 회피, #17)
 - 사용 테이블: `analysis_flows`(INSERT·UPDATE·조회), `analyses`(소유·상태 확인, `FOR UPDATE`), `analysis_files`(입력 파일·path→fileId), `llm_usage_logs`(F-00 데코레이터가 INSERT)
 - 산출물: `03-ERD.md`의 `analysis_flows`에 칼럼 추가
@@ -261,14 +261,14 @@ LLM은 테스트에서 실제로 부르지 않는다. `@MockitoBean LlmClient`�
 | AC2, AC3 | `analysis/flow/FlowContextBuilderTest` | 단위 (1·2단계 추적, Impl·xml, 관계없는 파일 제외, 주석 속 식별자, 8파일·24,000자, 구분자) |
 | AC4, AC5 | `analysis/flow/FlowResponseParserTest` | 단위 (path→fileId, 모르는 path, 12개 상한, 재번호, 길이 자르기, 필수 필드) |
 | AC7 | `analysis/flow/FlowServiceTest#AC7_…` (동시 요청 2개 → 합계 3개 초과 안 됨 포함) | 통합 |
-| AC8~AC10 | `analysis/AnalysisFlowControllerTest#AC8_…`~`AC10_…` | MockMvc 통합 |
+| AC8~AC10 | `analysis/flow/FlowControllerTest#AC8_…`~`AC10_…` (FlowTestSupport가 flow 패키지라 같은 패키지에 둠) | MockMvc 통합 |
 | AC11 | `analysis/AnalysisRecoveryTest#AC11_…`, `FlowServiceTest#AC11_큐_거부면_FAILED` | 통합 |
 | AC12 | `analysis/pipeline/FileSelectorTest#AC12_…` | 단위 (`*Api.java`, 주석 속 어노테이션, ControllerAdvice) |
 | AC13 | `analysis/explain/ApiDetectorTest#AC13_…` | 단위 (연결식, 상수, `value = 상수`, 190자 초과) |
 | AC14~AC16 | `src/components/analysis/__tests__/AnalysisFlowsTab.spec.js`, `AnalysisFlowCard.spec.js` | Vitest (선택 제한, 폴링 시작·중지 fake timer, 파일 링크, 에러·다시 만들기) |
 | AC14 | `src/views/__tests__/AnalysisDetailView.spec.js` (flows 탭 쿼리) | Vitest |
 | API 함수 | `src/api/__tests__/analyses.spec.js` | Vitest |
-| Mock fixture | `llm/MockLlmClientTest` + `flow.json`이 5.3절 스키마를 통과하는지 | 단위 |
+| Mock fixture | `FlowGeneratorTest#AC1_PENDING_…`이 main `flow.json`으로 끝까지 DONE(6단계)이 되는지 | 통합 |
 
 ## 9. 범위 밖
 
@@ -290,10 +290,10 @@ LLM은 테스트에서 실제로 부르지 않는다. `@MockitoBean LlmClient`�
 
 - [x] 브랜치 `feature/F-07-execution-flow`
 - [x] Flyway `V5__analysis_flow_status.sql`
-- [ ] AC별 실패 테스트 작성 (red 확인) — BE AC1~AC13, FE AC14~AC16
-- [ ] BE 구현 (green) — 프롬프트 3개, fixture 1개, #19·#21
+- [ ] AC별 실패 테스트 작성 (red 확인) — BE AC1~AC13 ✅(서비스·컨트롤러는 구현과 함께 작성, AC7 잠금은 변이로 확인), FE AC14~AC16
+- [x] BE 구현 (green) — 프롬프트 3개, fixture 1개, #19·#21
 - [ ] FE 구현 (green)
-- [ ] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
+- [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
 - [ ] contract-checker 통과
 - [ ] ui-verifier 통과 (데스크톱·모바일)
 - [ ] reviewer 지적 사항 반영
