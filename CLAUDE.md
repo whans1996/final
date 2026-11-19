@@ -3,7 +3,7 @@
 AI로 코딩하는 주니어와 개발자 지망생이 **AI가 쓴 코드를 수준별 설명 → 개념 카드 → 퀴즈·복습**으로 이해하게 돕는 학습 플랫폼이다.
 SSAFY 관통 프로젝트(2026-11-17 시작, 12-24 발표). Spring Boot 4 + MyBatis + MySQL 8 / Vue 3 + Pinia.
 
-2인이 서로 다른 PC에서 Claude Code로 **릴레이 개발**한다. 세션은 토큰 소진으로 언제든 끊길 수 있다.
+2인이 PC 4대(각자 SSAFY 교육장·집, id `dh-ssafy`·`dh-home`·`js-ssafy`·`js-home`)에서 Claude Code로 **릴레이 개발**한다. PC는 `setup.mjs --pc`로 등록하고, 세션 시작 hook이 PC·환경 점검·PC 전환을 알린다 (`docs/환경설정.md` 0절). 세션은 토큰 소진으로 언제든 끊길 수 있다.
 그래서 **상태를 파일에 남기는 일을 코드 작성만큼 중요하게** 다룬다.
 
 - 개발 저장소: **GitHub private** (`origin`, PR + Actions CI)
@@ -84,7 +84,7 @@ SSAFY 관통 프로젝트(2026-11-17 시작, 12-24 발표). Spring Boot 4 + MyBa
 
 | 목적 | 명령 |
 |---|---|
-| 최초 1회 세팅 (PC마다) | `node scripts/setup.mjs` |
+| 최초 1회 세팅·PC 등록 (PC마다) | `node scripts/setup.mjs --pc <dh-ssafy\|dh-home\|js-ssafy\|js-home>` |
 | 검증 (실패만 요약) | `node scripts/verify.mjs [be\|fe\|all] [--fix]` |
 | 화면 점검 | `node scripts/ui-check.mjs / /concepts` (FE dev 서버 실행 중일 때) |
 | AI 없이 교대 | `node scripts/handoff.mjs [-m "메모"] [--no-push]` |
