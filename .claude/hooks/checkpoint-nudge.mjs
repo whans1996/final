@@ -3,11 +3,13 @@
 // 1. 코드를 바꿨는데 NOW.md를 갱신하지 않고 턴을 끝내려 하면 한 번 막고 갱신을 지시한다.
 //    세션이 토큰 소진으로 갑자기 끊겨도 상대가 이어받을 수 있게 하기 위한 장치다.
 //    루프 방지: stop_hook_active(이미 한 번 막힌 뒤의 재시도)면 통과시킨다.
+//    이 세션이 고친 파일만 본다: 같은 작업 트리에서 다른 세션이 바꾼 파일로 막지 않는다 (11-19 오탐).
+//    계획 모드에서는 NOW.md를 고칠 수 없으므로 검사하지 않는다.
 // 2. 체크포인트가 최신인데 컨텍스트가 200k를 넘었으면 사용자에게 /clear를 권한다 (100k마다 한 번).
 //    턴마다 컨텍스트 전체를 다시 읽으므로 비용의 대부분이 여기서 나온다 (11-18 실측: 메인 cache read 78%).
 //    NOW.md가 최신이면 /clear 후 SessionStart hook이 다시 주입하므로 이어받기 비용이 작다.
 import { mkdirSync, statSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { basename, join, relative, resolve } from 'node:path';
 import {
   NOW_FILE,
   ROOT,
@@ -26,8 +28,44 @@ const NUDGE_STATE = join(ROOT, '.harness', 'context-nudge.json');
 const WATCH = /^(backend\/|frontend\/|docs\/specs\/)/;
 const IGNORE = /(^|\/)(node_modules|build|dist|\.gradle)\/|(^|\/)CLAUDE\.md$/;
 
-/** NOW.md보다 나중에 바뀐 작업 파일 경로. 없으면 null */
+const EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit']);
+const SHELL_TOOLS = new Set(['Bash', 'PowerShell']);
+
+/**
+ * 이 세션이 건드린 파일 판정 함수. transcript를 못 읽으면 null(= 전부 이 세션 것으로 본다).
+ * 편집 도구의 경로는 정확히, 셸 명령은 명령 문자열에 경로나 파일 이름이 들어 있으면 건드린 것으로 본다.
+ */
+function sessionTouched(transcriptPath) {
+  const text = transcriptPath ? readText(transcriptPath) : null;
+  if (text == null) return null;
+  const norm = (p) => p.replace(/\\/g, '/').toLowerCase();
+  const edited = new Set();
+  const commands = [];
+  for (const line of text.split('\n')) {
+    if (!line.includes('"tool_use"')) continue;
+    let o;
+    try {
+      o = JSON.parse(line);
+    } catch {
+      continue;
+    }
+    for (const c of o.message?.content || []) {
+      if (c?.type !== 'tool_use') continue;
+      const p = c.input?.file_path || c.input?.notebook_path;
+      if (EDIT_TOOLS.has(c.name) && p) edited.add(norm(relative(ROOT, resolve(ROOT, p))));
+      else if (SHELL_TOOLS.has(c.name) && c.input?.command) commands.push(norm(c.input.command));
+    }
+  }
+  return (path) => {
+    const p = norm(path);
+    const name = norm(basename(path));
+    return edited.has(p) || commands.some((cmd) => cmd.includes(p) || cmd.includes(name));
+  };
+}
+
+/** NOW.md보다 나중에 바뀐, 이 세션이 건드린 작업 파일 경로. 없으면 null */
 function missingCheckpoint() {
+  const touched = sessionTouched(input.transcript_path);
   const st = git(['status', '--porcelain', '-z', '--untracked-files=all']);
   if (!st.ok || !st.out) return null;
 
@@ -44,7 +82,7 @@ function missingCheckpoint() {
   let latest = 0;
   let latestPath = '';
   for (const p of paths) {
-    if (!WATCH.test(p) || IGNORE.test(p)) continue;
+    if (!WATCH.test(p) || IGNORE.test(p) || (touched && !touched(p))) continue;
     try {
       const m = statSync(join(ROOT, p)).mtimeMs;
       if (m > latest) {
@@ -98,7 +136,7 @@ function contextNudge() {
 }
 
 const input = readStdinJson();
-if (input.stop_hook_active) process.exit(0);
+if (input.stop_hook_active || input.permission_mode === 'plan') process.exit(0);
 if (!isGitRepo()) process.exit(0);
 
 const missing = missingCheckpoint();
