@@ -4,24 +4,23 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
 
-갱신: 2026-11-19 20:16 · 작업자: whans1996@naver.com · PC: dh-home · 브랜치: feature/issue-49-mock-concept-names
+갱신: 2026-11-19 20:26 · 작업자: whans1996@naver.com · PC: dh-home · 브랜치: feature/issue-49-mock-concept-names
 
 ## 현재 기능
 
-follow-up #49 mock concept fixture가 시드 카드 id에 기대는 문제 — **구현·커밋 완료 `c69697e`, PR 전** (F-08 PR #50·F-10 PR #52는 머지됨, #23 닫힘)
+follow-up #49 mock concept fixture가 시드 카드 id에 기대는 문제 — **PR #53 열림** (develop 대상, `Closes #49`). **Codex ✅ `28641e7`** (지적 없음), CI Backend 검증 실행 중
 
 ## 진행
 
-- ✅ `MockLlmClient.linkConceptNames`: CONCEPT 단계 fixture의 `conceptName`을 프롬프트 카드 목록(`id | 이름 | 카테고리`)에서 id로 바꿈, 목록에 없는 이름은 뺌
-- ✅ `llm-fixtures/concept.json` 기존 카드 5개를 시드 이름으로 (DI, @RestController와 요청 매핑, Bean Validation, Mapper, JWT)
-- ✅ 테스트: `MockLlmClientTest#issue49_*`, `MainFixturesTest#issue49_*`(id를 1000부터 역순으로 붙여도 의도한 카드), AC10은 실제 시드 이름 + `ConceptPrompts.input`으로 검사. red→green 확인, verify be 통과
-- ✅ F-08 spec 186행에 #49 이후 방식 한 줄 추가
-- ✅ 스크린샷 `c4d22d1` SC-07-concepts-{desktop,mobile} 다시 찍음 (dh-home 로컬 계정 `ui-49@local.test`, 로그인 상태 `.harness/ui-49.json`, `DS-02-01.zip` 분석 3번), 06 설명 수정
+- ✅ `MockLlmClient.linkConceptNames` + `concept.json` 시드 이름 5개 (`c69697e`), SC-07 개념 탭 스크린샷 (`c4d22d1`)
+- ✅ /pr-review: verifier 통과, reviewer 반드시 수정 0·권장 3 모두 반영 (`28641e7`): 템플릿 전체 프롬프트로 AC10 검사, `MockLlmClient(Function)` 주입 생성자로 `complete()` CONCEPT 분기 테스트, 이름에 ` | ` 포함 테스트, spec AC10·8절 문구 + 결정로그 1줄
+- PR 설명 `.harness/pr-issue-49.md`
 
 ## 바로 다음 할 일
 
-1. `/pr-review` → PR(`Closes #49`, develop 대상). FE 변경 없음, API 변경 없음
-2. 머지 뒤 다음 기능: F-14 코드 이해 퀴즈 `/spec` (Opus/high)
+1. `gh pr checks 53`으로 Backend 검증 초록 확인 (실패하면 `gh run view --log-failed`)
+2. CI 초록 + Codex ✅ → 사람이 GitHub에서 머지 (spec 완료 표시는 없음: F-08은 이미 DONE)
+3. 머지 뒤 다음 기능: F-14 코드 이해 퀴즈 `/spec` (Opus/high)
 
 ## 막힌 점 / 결정 필요
 
