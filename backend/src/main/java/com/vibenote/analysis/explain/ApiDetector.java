@@ -1,6 +1,7 @@
 package com.vibenote.analysis.explain;
 
 import com.vibenote.analysis.domain.AnalysisFile;
+import com.vibenote.analysis.pipeline.JavaComments;
 import com.vibenote.analysis.pipeline.Layer;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -16,12 +17,15 @@ import java.util.regex.Pattern;
  * 쓴다.
  *
  * <p>controller layer {@code .java} 파일만 본다. 주석을 지운 뒤, 첫 {@code class}·{@code interface} 선언 앞의
- * {@code @RequestMapping}을 클래스 경로로, 그 뒤의 매핑 어노테이션을 메서드 경로로 읽는다. 경로는 문자열 리터럴만 인식한다. 메서드 경로가 상수면 그
- * 메서드를, 클래스 경로가 상수면 그 파일을 건너뛴다.
+ * {@code @RequestMapping}을 클래스 경로로, 그 뒤의 매핑 어노테이션을 메서드 경로로 읽는다. 경로는 문자열 리터럴 하나나 리터럴 배열만 인식한다. 메서드
+ * 경로가 상수·연결식이면 그 메서드를, 클래스 경로가 그러면 그 파일을 건너뛴다 (F-07 AC13).
  */
 public final class ApiDetector {
 
     public static final int MAX_APIS = 50;
+
+    /** analysis_flows.endpoint(200자)에 {@code "{METHOD} {path}"}로 들어가도록 이보다 긴 경로는 뺀다 (F-07 5절). */
+    static final int MAX_PATH_LENGTH = 190;
 
     private static final Pattern MAPPING =
             Pattern.compile("@(?:\\w+\\.)*(Get|Post|Put|Patch|Delete|Request)Mapping\\b");
@@ -41,7 +45,7 @@ public final class ApiDetector {
         for (AnalysisFile file : files) {
             if (Layer.CONTROLLER.value().equals(file.getLayer())
                     && file.getPath().toLowerCase(Locale.ROOT).endsWith(".java")) {
-                found.addAll(detect(file.getId(), stripComments(file.getContent())));
+                found.addAll(detect(file.getId(), JavaComments.strip(file.getContent())));
             }
         }
         Map<String, ApiEndpoint> unique = new LinkedHashMap<>();
@@ -87,8 +91,12 @@ public final class ApiDetector {
             List<String> paths = mapping.paths().isEmpty() ? List.of("") : mapping.paths();
             for (String base : classPaths) {
                 for (String path : paths) {
+                    String full = normalize(base + "/" + path);
+                    if (full.length() > MAX_PATH_LENGTH) {
+                        continue;
+                    }
                     for (String method : methods) {
-                        apis.add(new ApiEndpoint(method, normalize(base + "/" + path), fileId));
+                        apis.add(new ApiEndpoint(method, full, fileId));
                     }
                 }
             }
@@ -126,11 +134,13 @@ public final class ApiDetector {
         return code.substring(i + 1);
     }
 
-    /** 경로·메서드 속성. 경로 속성이 있는데 문자열 리터럴이 없으면(상수 등) 알 수 없으므로 null. */
+    /**
+     * 경로·메서드 속성. 경로 속성 값이 문자열 리터럴 하나나 {@code {리터럴, …}} 배열이 아니면(연결식·상수 등) 경로를 알 수 없으므로 null (F-07
+     * AC13).
+     */
     private static Mapping parse(String args) {
         List<String> paths = new ArrayList<>();
         List<String> methods = new ArrayList<>();
-        boolean unknownPath = false;
         for (String segment : splitTopLevel(args)) {
             if (segment.isBlank()) {
                 continue;
@@ -140,8 +150,8 @@ public final class ApiDetector {
             String value = attr.matches() ? attr.group(2) : segment;
             if (name.equals("value") || name.equals("path")) {
                 List<String> literals = literals(value);
-                if (literals.isEmpty()) {
-                    unknownPath = true;
+                if (literals == null) {
+                    return null;
                 }
                 paths.addAll(literals);
             } else if (name.equals("method")) {
@@ -150,9 +160,6 @@ public final class ApiDetector {
                     methods.add(hm.group(1));
                 }
             }
-        }
-        if (unknownPath && paths.isEmpty()) {
-            return null;
         }
         return new Mapping(paths, methods);
     }
@@ -186,13 +193,25 @@ public final class ApiDetector {
         return parts;
     }
 
+    /** 리터럴 하나 또는 리터럴 배열의 값. 그 밖의 식이거나 빈 배열이면 null. */
     private static List<String> literals(String value) {
+        String v = value.strip();
+        List<String> parts =
+                v.startsWith("{") && v.endsWith("}")
+                        ? splitTopLevel(v.substring(1, v.length() - 1))
+                        : List.of(v);
         List<String> result = new ArrayList<>();
-        Matcher sm = STRING.matcher(value);
-        while (sm.find()) {
+        for (String part : parts) {
+            if (part.isBlank()) {
+                continue;
+            }
+            Matcher sm = STRING.matcher(part.strip());
+            if (!sm.matches()) {
+                return null;
+            }
             result.add(sm.group(1));
         }
-        return result;
+        return result.isEmpty() ? null : result;
     }
 
     /** 슬래시 하나로 시작하고, 연속 슬래시는 하나로, 끝 슬래시는 뗀다(루트는 "/"). */
@@ -202,38 +221,6 @@ public final class ApiDetector {
             p = p.substring(0, p.length() - 1);
         }
         return p;
-    }
-
-    /** 문자열·문자 리터럴은 두고 {@code //}·{@code /* *\/} 주석을 공백으로 바꾼다. */
-    static String stripComments(String code) {
-        StringBuilder out = new StringBuilder(code.length());
-        int i = 0;
-        int n = code.length();
-        while (i < n) {
-            char c = code.charAt(i);
-            char next = i + 1 < n ? code.charAt(i + 1) : '\0';
-            if (c == '"' || c == '\'') {
-                int end = i + 1;
-                while (end < n && code.charAt(end) != c && code.charAt(end) != '\n') {
-                    end += code.charAt(end) == '\\' ? 2 : 1;
-                }
-                end = Math.min(end + 1, n);
-                out.append(code, i, end);
-                i = end;
-            } else if (c == '/' && next == '/') {
-                while (i < n && code.charAt(i) != '\n') {
-                    i++;
-                }
-            } else if (c == '/' && next == '*') {
-                int end = code.indexOf("*/", i + 2);
-                i = end < 0 ? n : end + 2;
-                out.append(' ');
-            } else {
-                out.append(c);
-                i++;
-            }
-        }
-        return out.toString();
     }
 
     private record Mapping(List<String> paths, List<String> methods) {}

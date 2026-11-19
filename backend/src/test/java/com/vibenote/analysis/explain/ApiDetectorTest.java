@@ -181,4 +181,81 @@ class ApiDetectorTest {
         assertThat(ApiDetector.detect(List.of(controller(1, constant), controller(2, literal))))
                 .containsExactly(new ApiEndpoint("GET", "/api/todos", 2L));
     }
+
+    @Test
+    void AC13_메서드_경로가_연결식이나_상수면_그_메서드만_뺀다() {
+        String code =
+                """
+                @RestController
+                @RequestMapping("/api")
+                public class UserController {
+                    @GetMapping("/users" + "/me")
+                    public User me() { return null; }
+
+                    @GetMapping(Paths.API + "/x")
+                    public User x() { return null; }
+
+                    @PostMapping(value = BASE)
+                    public User create() { return null; }
+
+                    @PutMapping(path = {"/a", BASE})
+                    public void put() {}
+
+                    @DeleteMapping(value = {"/b", "/c"}, produces = "application/json")
+                    public void delete() {}
+
+                    @GetMapping("/ok")
+                    public void ok() {}
+                }
+                """;
+
+        assertThat(ApiDetector.detect(List.of(controller(1, code))))
+                .containsExactly(
+                        new ApiEndpoint("DELETE", "/api/b", 1L),
+                        new ApiEndpoint("DELETE", "/api/c", 1L),
+                        new ApiEndpoint("GET", "/api/ok", 1L));
+    }
+
+    @Test
+    void AC13_클래스_경로가_연결식이면_그_파일을_뺀다() {
+        String concat =
+                """
+                @RestController
+                @RequestMapping("/api" + "/users")
+                public class UserController {
+                    @GetMapping("/{id}")
+                    public User get() { return null; }
+                }
+                """;
+        String valueConstant =
+                """
+                @RestController
+                @RequestMapping(value = BASE)
+                public class TodoController {
+                    @GetMapping
+                    public List<Todo> list() { return null; }
+                }
+                """;
+
+        assertThat(ApiDetector.detect(List.of(controller(1, concat), controller(2, valueConstant))))
+                .isEmpty();
+    }
+
+    @Test
+    void AC13_경로가_190자를_넘으면_뺀다() {
+        String tooLong = "/" + "a".repeat(190);
+        String fits = "/" + "b".repeat(189);
+        String code =
+                "@RestController class C {\n"
+                        + "  @GetMapping(\""
+                        + tooLong
+                        + "\") void a() {}\n"
+                        + "  @GetMapping(\""
+                        + fits
+                        + "\") void b() {}\n"
+                        + "}";
+
+        assertThat(ApiDetector.detect(List.of(controller(1, code))))
+                .containsExactly(new ApiEndpoint("GET", fits, 1L));
+    }
 }
