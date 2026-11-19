@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { authGuard, redirectTarget } from '@/router'
+import { createMemoryHistory, createRouter } from 'vue-router'
+import { authGuard, redirectTarget, routes } from '@/router'
 
 const loggedOut = { isLoggedIn: false, isAdmin: false }
 const user = { isLoggedIn: true, isAdmin: false }
@@ -27,6 +28,16 @@ describe('authGuard', () => {
     const meta = { requiresAuth: true, requiresAdmin: true }
     expect(authGuard(route(meta), user)).toEqual({ name: 'home' })
     expect(authGuard(route(meta), admin)).toBe(true)
+  })
+
+  it('F-00b AC9 /admin은 자식 route에도 부모의 관리자 전용 meta가 적용된다', () => {
+    const router = createRouter({ history: createMemoryHistory(), routes })
+    const to = router.resolve('/admin')
+
+    expect(to.name).toBe('admin-home')
+    expect(authGuard(to, loggedOut)).toEqual({ name: 'login', query: { redirect: '/admin' } })
+    expect(authGuard(to, user)).toEqual({ name: 'home' })
+    expect(authGuard(to, admin)).toBe(true)
   })
 
   it('F-02 AC8 guestOnly 화면(로그인·회원가입)은 로그인 상태면 홈으로 보낸다', () => {

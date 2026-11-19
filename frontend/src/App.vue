@@ -1,9 +1,14 @@
 <script setup>
+import { computed } from 'vue'
 import { RouterLink, RouterView, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { navItems } from '@/utils/navItems'
 
 const auth = useAuthStore()
 const router = useRouter()
+
+// 메뉴는 각 route의 meta.nav로 정한다 (F-00b). 닉네임·로그아웃만 여기서 고정으로 붙인다
+const menu = computed(() => navItems(router.options.routes, auth))
 
 async function onLogout() {
   await auth.logout()
@@ -15,9 +20,8 @@ async function onLogout() {
   <header class="app-header">
     <RouterLink to="/" class="brand">바이브노트</RouterLink>
     <nav class="account">
+      <RouterLink v-for="item in menu" :key="item.to" :to="item.to">{{ item.label }}</RouterLink>
       <template v-if="auth.isLoggedIn">
-        <RouterLink :to="{ name: 'analysis-new' }">분석 요청</RouterLink>
-        <RouterLink :to="{ name: 'analyses' }">내 분석</RouterLink>
         <RouterLink
           v-if="auth.user"
           :to="{ name: 'user-profile', params: { id: auth.user.id } }"
@@ -26,10 +30,6 @@ async function onLogout() {
           {{ auth.user.nickname }}
         </RouterLink>
         <button type="button" class="link-button" @click="onLogout">로그아웃</button>
-      </template>
-      <template v-else>
-        <RouterLink :to="{ name: 'login' }">로그인</RouterLink>
-        <RouterLink :to="{ name: 'signup' }">회원가입</RouterLink>
       </template>
     </nav>
   </header>

@@ -132,10 +132,10 @@
   - [x] `ErrorCode`: conventions 3절 순서의 도메인 블록 주석(`// ── CONCEPT (A F-08 · B F-09~13) ──` 등, QUIZ·REVIEW_PLAN·POST·CHALLENGE는 주석만), **모든 항목 끝에 `,`, `;`는 단독 줄**. `CONCEPT_404` 추가
   - [x] `ActivityType`·`SecurityConfig.PUBLIC_GET_PATHS`: 같은 블록·끝 쉼표 방식 (`PUBLIC_GET_PATHS`는 여러 줄로 펴고 도메인 블록 주석만)
   - [x] `user/AdminBootstrap`(`ApplicationReadyEvent`) + `UserMapper.promoteToAdmin(email)`(ACTIVE만, 갱신 행 수 반환), `AdminProperties`(`app.admin.bootstrap-email`). `application-local.yml`에 `${ADMIN_BOOTSTRAP_EMAIL:}`만 둔다(저장소에 이메일 없음). 승격 후에는 새로고침(앱 시작 refresh가 DB role로 Access 토큰을 다시 발급)으로 반영된다
-- [ ] FE 구현 (green)
-  - [ ] `router/routes/*.js` 분리, `utils/navItems.js`, `App.vue` nav를 `navItems`로
-  - [ ] `layouts/AdminLayout.vue`, `views/admin/AdminHomeView.vue`, `router/routes/admin.js`
-  - [ ] `ConceptCard`, `PageNav`, `EmptyState`, `AnalysisListView` 적용
+- [x] FE 구현 (green)
+  - [x] `router/routes/*.js` 분리, `utils/navItems.js`, `App.vue` nav를 `navItems`로
+  - [x] `layouts/AdminLayout.vue`, `views/admin/AdminHomeView.vue`, `router/routes/admin.js`
+  - [x] `ConceptCard`, `PageNav`, `EmptyState`, `AnalysisListView` 적용
 - [ ] Swagger 어노테이션 + `docs/api/openapi.json` 갱신 (새 API 없음 → 변경 없음 확인)
 - [ ] contract-checker 통과 (해당 없음이면 생략)
 - [ ] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일)
