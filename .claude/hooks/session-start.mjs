@@ -158,9 +158,16 @@ if (me) {
 }
 if (myEntry) parts.push(`## 내 작업로그 마지막 항목\n${myEntry.text.trim()}`);
 
-const issues = me ? await issuesP : null;
-const issueSummary = issues ? summarizeIssues(issues, { key: me, github: pc.github }) : null;
-const issueList = issueSummary ? issueContext(issueSummary) : null;
+// 이슈 표시가 깨져도 NOW 주입은 살린다
+let issueSummary = null;
+let issueList = null;
+try {
+  const issues = me ? await issuesP : null;
+  issueSummary = issues ? summarizeIssues(issues, { key: me, github: pc.github }) : null;
+  issueList = issueSummary ? issueContext(issueSummary) : null;
+} catch {
+  issueSummary = null;
+}
 if (issueList) {
   parts.push(
     `## 열린 follow-up 이슈 (내 영역·공통)\n${issueList}\n` +

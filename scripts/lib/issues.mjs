@@ -18,7 +18,8 @@ export function followUpIssues({ timeout = 3000 } = {}) {
       (err, stdout) => {
         if (err) return resolve(null);
         try {
-          resolve(JSON.parse(stdout));
+          const issues = JSON.parse(stdout);
+          resolve(Array.isArray(issues) ? issues : null);
         } catch {
           resolve(null);
         }
@@ -29,7 +30,7 @@ export function followUpIssues({ timeout = 3000 } = {}) {
 
 /**
  * 이슈를 내 것·공통·분류 필요로 나눈다 (상대 영역은 세지 않는다).
- * 내 것 = 내 area 라벨이거나 담당자가 나. stale = 그중 STALE_DAYS일 넘게 열린 것.
+ * 공통 = area:common, 내 것 = (공통이 아닌 것 중) 내 area 라벨이거나 담당자가 나. stale = 그중 STALE_DAYS일 넘게 열린 것.
  */
 export function summarizeIssues(issues, { key, github } = {}, now = Date.now()) {
   const mine = [];
@@ -39,8 +40,9 @@ export function summarizeIssues(issues, { key, github } = {}, now = Date.now()) 
   for (const i of issues ?? []) {
     const labels = (i.labels ?? []).map((l) => l.name);
     const assignees = (i.assignees ?? []).map((a) => a.login);
-    if ((myArea && labels.includes(myArea)) || (github && assignees.includes(github))) mine.push(i);
-    else if (labels.includes(COMMON_AREA)) common.push(i);
+    // 공통은 담당자가 나여도 공통으로 센다 (공통 이슈 담당은 만든 사람이라 대부분 나)
+    if (labels.includes(COMMON_AREA)) common.push(i);
+    else if ((myArea && labels.includes(myArea)) || (github && assignees.includes(github))) mine.push(i);
     else if (!labels.some((l) => l.startsWith('area:'))) untriaged.push(i);
   }
   const byNumber = (a, b) => a.number - b.number;
@@ -73,6 +75,7 @@ export function issueContext({ mine, common, untriaged }, limit = 10) {
 /** PR 본문에서 닫을 이슈 번호 (GitHub 키워드: close·closes·closed·fix·fixes·fixed·resolve·resolves·resolved) */
 export function closingRefs(body) {
   const refs = new Set();
-  for (const m of String(body ?? '').matchAll(/\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s*:?\s+#(\d+)(?![\w-])/gi)) refs.add(Number(m[1]));
+  // 키워드와 번호는 같은 줄에 있어야 한다 (줄 끝 "fix" + 다음 줄 "#5" 오탐 방지)
+  for (const m of String(body ?? '').matchAll(/\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)[ \t]*:?[ \t]+#(\d+)(?![\w-])/gi)) refs.add(Number(m[1]));
   return [...refs].sort((a, b) => a - b);
 }

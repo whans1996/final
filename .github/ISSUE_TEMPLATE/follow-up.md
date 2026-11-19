@@ -1,6 +1,6 @@
 ---
 name: 후속 작업 (follow-up)
-about: 기능·PR 범위 밖으로 미룬 작업. 영역 라벨(area:A·area:B·area:common)과 담당자(영역 오너)를 함께 단다
+about: 기능·PR 범위 밖으로 미룬 작업. 영역 라벨(area:A·area:B·area:common)과 담당자(영역 오너, 공통은 만든 사람)를 함께 단다
 title: "<F-xx 또는 harness>: 요약"
 labels: follow-up
 ---

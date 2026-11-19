@@ -15,13 +15,13 @@ const issue = (number, labels, { days = 1, assignees = [], title = `이슈 ${num
 const ISSUES = [
   issue(26, ['follow-up', 'area:A'], { days: 2 }),
   issue(16, ['follow-up', 'area:A'], { days: 8 }),
-  issue(17, ['follow-up', 'area:common'], { days: 9 }),
+  issue(17, ['follow-up', 'area:common'], { days: 9, assignees: ['whans1996'] }),
   issue(40, ['follow-up', 'area:B']),
   issue(41, ['follow-up', 'area:B'], { assignees: ['whans1996'] }),
   issue(39, ['follow-up']),
 ];
 
-test('내 area 라벨이나 담당자는 내 것, area:common은 공통, area 라벨 없음은 분류 필요, 상대 영역은 뺀다', () => {
+test('area:common은 담당자가 나여도 공통, 내 area 라벨이나 담당자는 내 것, area 라벨 없음은 분류 필요, 상대 영역은 뺀다', () => {
   const s = summarizeIssues(ISSUES, { key: 'dh', github: 'whans1996' }, NOW);
   assert.deepEqual(s.mine.map((i) => i.number), [16, 26, 41]);
   assert.deepEqual(s.common.map((i) => i.number), [17]);
@@ -59,5 +59,7 @@ test('PR 본문의 닫는 키워드에서 이슈 번호를 뽑는다', () => {
   assert.deepEqual(closingRefs('closes #16\nCLOSES #16'), [16]);
   // 키워드 없는 언급, 다른 단어 안의 키워드, 번호 뒤에 글자가 붙은 것은 무시
   assert.deepEqual(closingRefs('관련 #17, #29 로 이관, enclosed #5, prefixes #6, closes #12a, closes #'), []);
+  // 줄 끝 키워드와 다음 줄 번호는 엮지 않는다
+  assert.deepEqual(closingRefs('이번 PR은 버그를 fix\n#5 는 다음에'), []);
   assert.deepEqual(closingRefs(null), []);
 });

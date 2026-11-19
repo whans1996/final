@@ -9,7 +9,7 @@ description: develop에 합치기 전 현재 feature 브랜치를 verifier·revi
 
 ## 절차
 
-1. **범위 파악**: `git fetch` 후 `git diff --stat origin/develop...HEAD` (원격이 없으면 `develop...HEAD`). 브랜치 이름에서 F-xx를 뽑아 spec을 찾는다.
+1. **범위 파악**: `git fetch` 후 `git diff --stat origin/develop...HEAD` (원격이 없으면 `develop...HEAD`). 브랜치 이름에서 F-xx를 뽑아 spec을 찾는다. `feature/issue-<번호>-slug`이면 spec 대신 그 이슈 본문(`gh issue view <번호>`)을 기준으로 삼고 PR 설명 파일은 `.harness/pr-issue-<번호>.md`, 본문 "해결 이슈"에 `Closes #<번호>`를 적는다 (`docs/conventions.md` 7절).
    - develop에 이 브랜치에 없는 커밋이 있으면(`git rev-list --count HEAD..origin/develop`) 먼저 `git merge origin/develop`으로 합친다 (rebase·force push 금지). openapi.json이 충돌하면 한쪽을 고른 뒤 BE 테스트로 다시 생성하고, 마이그레이션 번호는 `node scripts/check-migrations.mjs`로 확인한다.
 2. **병렬 점검** — 세 에이전트를 한 번에 실행한다:
    - `verifier`: 전체(`all`) 검증
