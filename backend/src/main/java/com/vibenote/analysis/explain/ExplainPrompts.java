@@ -10,7 +10,7 @@ import java.util.Map;
  * EXPLAINING 프롬프트의 입력 조각 (F-06 AC3, 5.2절). 파일은 {@code <<<FILE no=.. path=.. layer=..>>>} ~ {@code
  * <<<END FILE>>>}로 감싸고, 긴 내용은 프롬프트에서만 자른다 (DB의 content는 그대로).
  */
-final class ExplainPrompts {
+public final class ExplainPrompts {
 
     /** 개요 입력에서 파일 하나에 넣는 최대 글자 수. */
     static final int OVERVIEW_FILE_CHARS = 3000;
@@ -37,7 +37,7 @@ final class ExplainPrompts {
         }
     }
 
-    static String truncate(String content, int maxChars) {
+    public static String truncate(String content, int maxChars) {
         if (content.length() <= maxChars) {
             return content;
         }
@@ -47,7 +47,7 @@ final class ExplainPrompts {
                 + "자 생략)";
     }
 
-    static String fileBlock(int no, AnalysisFile f, int maxChars) {
+    public static String fileBlock(int no, AnalysisFile f, int maxChars) {
         return "<<<FILE no=%d path=%s layer=%s>>>\n%s\n<<<END FILE>>>"
                 .formatted(no, f.getPath(), f.getLayer(), truncate(f.getContent(), maxChars));
     }

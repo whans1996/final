@@ -288,8 +288,8 @@ LLM은 테스트에서 실제로 부르지 않는다. `@MockitoBean LlmClient`�
 
 `/implement`가 진행하며 체크한다.
 
-- [ ] 브랜치 `feature/F-07-execution-flow`
-- [ ] Flyway `V5__analysis_flow_status.sql`
+- [x] 브랜치 `feature/F-07-execution-flow`
+- [x] Flyway `V5__analysis_flow_status.sql`
 - [ ] AC별 실패 테스트 작성 (red 확인) — BE AC1~AC13, FE AC14~AC16
 - [ ] BE 구현 (green) — 프롬프트 3개, fixture 1개, #19·#21
 - [ ] FE 구현 (green)
