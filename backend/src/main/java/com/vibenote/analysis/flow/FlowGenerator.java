@@ -110,11 +110,13 @@ public class FlowGenerator {
                         LlmStage.FLOW,
                         analysis.getLevel(),
                         Map.of(
-                                "projectName", analysis.getProjectName(),
+                                "projectName",
+                                        ExplainPrompts.escapeDelimiters(analysis.getProjectName()),
                                 "endpoint", ExplainPrompts.escapeDelimiters(flow.getEndpoint()),
                                 "overviewSummary",
-                                        Objects.requireNonNullElse(
-                                                analysis.getOverview().summary(), ""),
+                                        ExplainPrompts.escapeDelimiters(
+                                                Objects.requireNonNullElse(
+                                                        analysis.getOverview().summary(), "")),
                                 "files",
                                         FlowContextBuilder.render(
                                                 input,

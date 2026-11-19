@@ -4,8 +4,13 @@ import com.vibenote.analysis.concept.AnalysisConceptMapper.LinkRow;
 import com.vibenote.analysis.concept.ExtractedConcept.NewConcept;
 import com.vibenote.concept.ConceptDraftService;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,10 +32,19 @@ public class ConceptLinkService {
      */
     @Transactional
     public void save(long analysisId, List<ExtractedConcept> items) {
+        // 동시에 도는 분석끼리 같은 이름들을 반대 순서로 INSERT하면 데드락이 나므로 초안은 이름 순으로 먼저 만든다
+        Map<NewConcept, Long> created = new HashMap<>();
+        items.stream()
+                .map(ExtractedConcept::draft)
+                .filter(Objects::nonNull)
+                .sorted(Comparator.comparing(d -> d.name().toLowerCase(Locale.ROOT)))
+                .forEach(d -> created.put(d, create(d)));
+
         List<LinkRow> links = new ArrayList<>();
         Set<Long> seen = new HashSet<>();
         for (ExtractedConcept item : items) {
-            long conceptId = item.conceptId() != null ? item.conceptId() : create(item.draft());
+            long conceptId =
+                    item.conceptId() != null ? item.conceptId() : created.get(item.draft());
             // 초안이 UNIQUE 충돌로 이미 연결한 카드를 가리키면 PK가 겹치므로 첫 항목만 쓴다
             if (seen.add(conceptId)) {
                 links.add(

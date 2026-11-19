@@ -140,6 +140,25 @@ class ConceptLinkServiceTest extends IntegrationTestBase {
         assertThat(links()).extracting(r -> r.get("context_note")).containsExactly("첫");
     }
 
+    /** 동시 분석끼리 잠금 순서를 맞춰 데드락을 피하도록 초안은 이름 순으로 INSERT한다. */
+    @Test
+    void AC5_새_초안은_응답_순서와_관계없이_이름_순으로_만든다() {
+        service.save(
+                analysisId,
+                List.of(
+                        draft("f08-test-다", null, null, "1"),
+                        draft("f08-test-가", null, null, "2"),
+                        draft("f08-test-나", null, null, "3")));
+
+        assertThat(
+                        jdbc.queryForList(
+                                "SELECT name FROM concepts WHERE name LIKE 'f08-test-%' ORDER BY"
+                                        + " id",
+                                String.class))
+                .containsExactly("f08-test-가", "f08-test-나", "f08-test-다");
+        assertThat(links()).hasSize(3);
+    }
+
     @Test
     void AC5_항목이_없으면_아무것도_넣지_않는다() {
         service.save(analysisId, List.of());

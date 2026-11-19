@@ -2,6 +2,7 @@ package com.vibenote.analysis.concept;
 
 import com.vibenote.analysis.domain.Analysis;
 import com.vibenote.analysis.domain.AnalysisFile;
+import com.vibenote.analysis.explain.ExplainPrompts;
 import com.vibenote.analysis.explain.LlmJsonCall;
 import com.vibenote.analysis.explain.PromptTemplates;
 import com.vibenote.common.exception.BusinessException;
@@ -50,7 +51,8 @@ public class ConceptExtractor {
                         LlmStage.CONCEPT,
                         analysis.getLevel(),
                         Map.of(
-                                "projectName", analysis.getProjectName(),
+                                "projectName",
+                                        ExplainPrompts.escapeDelimiters(analysis.getProjectName()),
                                 "catalog", input.catalog(),
                                 "fileList", input.fileList(),
                                 "files", input.files()));

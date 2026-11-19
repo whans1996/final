@@ -80,6 +80,24 @@ class ConceptResponseParserTest {
     }
 
     @Test
+    void AC4_long_범위를_넘는_정수는_그_항목만_버린다() {
+        List<ExtractedConcept> result =
+                parse(
+                        """
+                        {"concepts": [
+                          {"conceptId": 99999999999999999999},
+                          {"conceptId": 1, "fileNo": 99999999999999999999},
+                          {"conceptId": 2, "fileNo": 1}
+                        ]}
+                        """);
+
+        assertThat(result)
+                .containsExactly(
+                        new ExtractedConcept(1L, null, null, null, null),
+                        new ExtractedConcept(2L, null, 101L, null, null));
+    }
+
+    @Test
     void AC4_카드_목록_밖의_id와_정수가_아닌_id는_버린다() {
         List<ExtractedConcept> result =
                 parse(

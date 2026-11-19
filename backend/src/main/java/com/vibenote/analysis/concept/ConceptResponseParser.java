@@ -74,7 +74,8 @@ public final class ConceptResponseParser {
 
             JsonNode conceptId = item.get("conceptId");
             if (conceptId != null && conceptId.isIntegralNumber()) {
-                long id = conceptId.asLong();
+                // long 범위를 넘는 정수는 asLong()이 예외를 던져 응답 전체가 형식 오류가 되므로 그 항목만 버린다
+                long id = conceptId.canConvertToLong() ? conceptId.asLong() : -1;
                 if (input.catalogIds().contains(id) && linked.add(id)) {
                     result.add(new ExtractedConcept(id, null, fileId, lineHint, note));
                 }
@@ -105,7 +106,7 @@ public final class ConceptResponseParser {
     /** {@code fileNo}가 1..n이면 그 파일의 id. */
     private static Long fileId(JsonNode item, ConceptPrompts.Input input) {
         JsonNode no = item.get("fileNo");
-        if (no == null || !no.isIntegralNumber()) {
+        if (no == null || !no.isIntegralNumber() || !no.canConvertToLong()) {
             return null;
         }
         long n = no.asLong();
