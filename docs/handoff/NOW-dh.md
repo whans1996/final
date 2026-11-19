@@ -8,7 +8,7 @@
 
 ## 현재 기능
 
-하네스 (common) 세션 시작 배너 — `feature/common-session-banner`, PR 올림 (Codex·CI 대기)
+하네스 (common) 세션 시작 배너 — `feature/common-session-banner`, **PR #38** (Codex·CI 대기, reviewer 반드시 1건 반영)
 
 ## 진행
 
