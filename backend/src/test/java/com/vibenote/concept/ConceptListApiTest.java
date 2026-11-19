@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -170,6 +171,14 @@ class ConceptListApiTest extends IntegrationTestBase {
                 .andExpect(jsonPath("$.total").value(publishedCount()))
                 .andExpect(jsonPath("$.items[0].id").value(id))
                 .andExpect(jsonPath("$.items[0].avgRating").value(0.0));
+    }
+
+    @Test
+    void AC1_공개는_GET_목록뿐이고_POST는_토큰_없으면_401() throws Exception {
+        // SecurityConfig의 공개 목록이 "/api/concepts/**"나 메서드 무관으로 넓어지면 여기서 잡힌다.
+        mockMvc.perform(post("/api/concepts").contentType("application/json").content("{}"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("AUTH_401"));
     }
 
     // ── AC2 ──
