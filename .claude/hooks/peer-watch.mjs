@@ -2,7 +2,7 @@
 // UserPromptSubmit hook: 세션 도중에도 상대 작업 변화를 알린다 (11-19 결정, 병렬 개발).
 // 10분에 한 번만 원격을 확인한다: origin/develop 새 커밋(마이그레이션·API), 상대 NOW 갱신(원격 브랜치), 상대 PR 열림·머지·push.
 // 변화가 있을 때만 컨텍스트에 주입한다. 어떤 오류도 프롬프트를 막지 않는다 (항상 exit 0).
-import { git, localPcId, ownerKey, otherOwnerKey } from '../../scripts/lib/common.mjs';
+import { NON_INTERACTIVE_GIT_ENV, git, localPcId, ownerKey, otherOwnerKey } from '../../scripts/lib/common.mjs';
 
 try {
   const { loadPcs } = await import('../../scripts/lib/env-check.mjs');
@@ -17,7 +17,10 @@ try {
   const other = otherOwnerKey(me);
   const peerPerson = personOf(other, pcs);
 
-  git(['fetch', '--quiet'], { timeout: 4000 });
+  // 확인 시각을 먼저 남긴다: 아래가 hook 제한(15초)에 걸려 죽어도 다음 프롬프트마다 다시 느려지지 않고,
+  // 같은 PC의 두 세션이 동시에 같은 변화를 알리는 것도 줄인다
+  peer.writePeerState({ ...prev, checkedAt: Date.now() });
+  git(['fetch', '--quiet'], { timeout: 4000, env: NON_INTERACTIVE_GIT_ENV });
   const developSha = git(['rev-parse', '-q', '--verify', 'origin/develop']).out || null;
   const now = peer.latestPeerNow(other);
   const curr = {

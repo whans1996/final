@@ -7,6 +7,8 @@ import { ROOT, git, mdSection, nowFileOf, nowRelPath, readText } from './common.
 
 export const PEER_STATE_FILE = join(ROOT, '.harness', 'peer-watch.json');
 export const PEER_WATCH_INTERVAL_MS = 10 * 60 * 1000;
+// 로컬 git(log·show·branch·diff)은 보통 수십 ms다. hook 제한(15초) 안에 fetch·gh와 함께 끝나도록 짧게 자른다
+const LOCAL_GIT_TIMEOUT = 1500;
 
 /** NOW 본문의 `갱신: YYYY-MM-DD HH:mm` → epoch ms (없으면 null) */
 export function nowStampMs(text) {
@@ -45,11 +47,11 @@ export function nowHeadline(text) {
 export function latestPeerNow(key) {
   const rel = nowRelPath(key);
   const cands = [{ source: '작업 트리', text: readText(nowFileOf(key)), at: 0 }];
-  const last = git(['log', '--remotes=origin', '-1', '--format=%H%x09%ct', '--', rel], { timeout: 4000 });
+  const last = git(['log', '--remotes=origin', '-1', '--format=%H%x09%ct', '--', rel], { timeout: LOCAL_GIT_TIMEOUT });
   const [sha, ct] = last.ok ? last.out.split('\t') : [];
   if (sha) {
-    const shown = git(['show', `${sha}:${rel}`], { timeout: 4000 });
-    const branch = git(['branch', '-r', '--contains', sha, '--format=%(refname:short)'], { timeout: 4000 })
+    const shown = git(['show', `${sha}:${rel}`], { timeout: LOCAL_GIT_TIMEOUT });
+    const branch = git(['branch', '-r', '--contains', sha, '--format=%(refname:short)'], { timeout: LOCAL_GIT_TIMEOUT })
       .out.split('\n')
       .find((b) => b && !b.endsWith('/HEAD'));
     if (shown.ok) cands.push({ source: branch || sha.slice(0, 7), text: shown.out, at: Number(ct) * 1000 });
@@ -95,14 +97,14 @@ export function peerPrs(peerGithub, { timeout = 3000 } = {}) {
 /** origin/develop의 prev..curr 사이 커밋·변경 파일 */
 export function developChanges(prevSha, currSha) {
   if (!prevSha || !currSha || prevSha === currSha) return null;
-  const log = git(['log', '--format=%h%x09%an%x09%s', '-10', `${prevSha}..${currSha}`]);
+  const log = git(['log', '--format=%h%x09%an%x09%s', '-10', `${prevSha}..${currSha}`], { timeout: LOCAL_GIT_TIMEOUT });
   if (!log.ok) return null;
   return {
     commits: log.out.split('\n').filter(Boolean).map((l) => {
       const [sha, author, subject] = l.split('\t');
       return { sha, author, subject };
     }),
-    files: git(['diff', '--name-only', prevSha, currSha]).out.split('\n').filter(Boolean),
+    files: git(['diff', '--name-only', prevSha, currSha], { timeout: LOCAL_GIT_TIMEOUT }).out.split('\n').filter(Boolean),
   };
 }
 

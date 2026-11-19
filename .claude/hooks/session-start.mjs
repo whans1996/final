@@ -5,6 +5,7 @@
 // 세션 도중의 상대 변화는 peer-watch hook(UserPromptSubmit)이 여기서 남긴 스냅샷(.harness/peer-watch.json)과 비교해 알린다.
 // PC 4대의 환경이 서로 달라서 어느 PC인지, 빠른 환경 점검 결과, 그 PC의 함정, 직전 작업 PC와 다른지도 알린다.
 import {
+  NON_INTERACTIVE_GIT_ENV,
   PROTECTED_BRANCHES,
   ROOT,
   WORKLOG_FILE,
@@ -49,7 +50,7 @@ if (!isGitRepo()) {
 
   // 원격과 비교 (네트워크가 느리면 건너뜀)
   if (git(['remote']).out) {
-    git(['fetch', '--quiet'], { timeout: 5000 });
+    git(['fetch', '--quiet'], { timeout: 5000, env: NON_INTERACTIVE_GIT_ENV });
     const ab = git(['rev-list', '--left-right', '--count', 'HEAD...@{u}']);
     if (ab.ok) {
       const [ahead, behind] = ab.out.split(/\s+/).map(Number);

@@ -33,6 +33,8 @@ jobs:
           package-manager-cache: false
       - name: 메시지 만들어 보내기
         if: env.WEBHOOK != ''
+        # 알림 실패(Mattermost 장애, URL 만료)가 PR 체크를 빨간불로 만들지 않게 한다 ("CI 초록이면 머지" 판정과 분리)
+        continue-on-error: true
         run: |
           node scripts/notify-message.mjs > payload.json
           if [ -s payload.json ]; then

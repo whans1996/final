@@ -69,6 +69,9 @@
 /.githooks/                                  @whans1996
 /.github/                                    @whans1996
 /scripts/                                    @whans1996
+# 두 사람이 모두 고치는 하네스 파일: PC 등록부(자기 PC 함정 추가), 이 파일(새 도메인 폴더 추가)
+/scripts/lib/pcs.json                        @whans1996 @JoonseobKim
+/.github/CODEOWNERS                          @whans1996 @JoonseobKim
 
 # ── 사람별 NOW (상대 것은 수정 금지, guard-files가 막는다) ──
 /docs/handoff/NOW-dh.md                      @whans1996
