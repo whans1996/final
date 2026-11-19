@@ -183,7 +183,7 @@ LLM은 분석 1건당 **1회**(형식 오류 시 1회 재시도) 부른다. 추�
 | 프롬프트 파일 | `backend/src/main/resources/prompts/concept/{beginner,junior,senior}.md` |
 | 입력 | 5.2절 |
 | 출력 JSON 스키마 | 5.3절. 형식 오류 시 1회 재시도 (AC6) |
-| Mock fixture | `backend/src/main/resources/llm-fixtures/concept.json` — **dev 데이터(DS-02-01 realworld)만 보고** 작성. 시드 카드 id(로컬 DB 기준)로 연결 3개 이상 + 새 개념 1개. 목록에 없는 id는 파서가 버리므로 DB가 달라도 깨지지 않는다. `data/datasets.json` DS-06 상태 갱신. eval 데이터(DS-02-05~08, DS-03·04) 사용 금지 |
+| Mock fixture | `backend/src/main/resources/llm-fixtures/concept.json` — **dev 데이터(DS-02-01 realworld)만 보고** 작성. 시드 카드 id(로컬 DB 기준)로 연결 3개 이상 + 새 개념 1개. 목록에 없는 id는 파서가 버리므로 DB가 달라도 깨지지 않는다. (#49 이후: 시드 id가 DB마다 달라 카드가 어긋났으므로 기존 카드는 이름 `conceptName`으로 적고, `MockLlmClient`가 프롬프트 카드 목록에서 id로 바꾼다. 목록에 없는 이름은 뺀다) `data/datasets.json` DS-06 상태 갱신. eval 데이터(DS-02-05~08, DS-03·04) 사용 금지 |
 | 캐시·재사용 | 결과는 `analysis_concepts`·`concepts`에 저장하고 조회 API는 LLM을 부르지 않는다. 한 번 만든 AI 초안은 다음 분석의 카드 목록에 들어가 재사용된다 |
 | 호출 수 | 분석 1건당 1회 (재시도 포함 최대 2회). F-06과 합쳐 최대 7회 |
 
