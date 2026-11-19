@@ -20,6 +20,8 @@ effort: medium
 cd backend && gradlew.bat promptEval --console=plain -Pstage=<overview|file|flow|concept|quiz|recommend> -Plevel=<beginner|junior|senior|all> -Pfixture=<샘플 저장소 이름>
 ```
 
+Windows가 아니면 `gradlew.bat` 대신 `./gradlew`를 쓴다.
+
 - 하네스: `backend/src/test/java/com/vibenote/prompteval/PromptEvalRunner.java` (`@Tag("prompt-eval")`, `test`에서 제외). 실제 파이프라인과 같은 경로(ZIP 읽기 → 선별 → 비밀 가림 → API 탐지 → 개요 → 파일 묶음)로 돈다. 키는 앱과 같이 application.yml이 import하는 루트 `.env`에서 읽으므로 셸 환경변수가 없어도 된다(없으면 skip).
 - `-Pfixture`는 `data/datasets.json`의 저장소 id(예: `DS-02-01`. 고정 커밋을 codeload에서 받아 `.harness/prompt-eval/repos/`에 캐시) 또는 ZIP 경로. `-Pstage=file`은 수준마다 개요 1회 + 파일 묶음 `-Pbatches`(기본 1)회. `-PpauseMs`(기본 4000)는 호출 사이 대기.
 - 기본은 stage 1개 × level all × fixture 1개 (호출 3회 안팎). 그 이상은 호출 횟수를 먼저 알리고 확인받는다.
