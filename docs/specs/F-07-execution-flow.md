@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 |---|---|
-| 상태 | APPROVED <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
+| 상태 | DONE (PR #25, 머지 예정 2026-11-19) <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
 | 기능 ID | F-07 |
 | 우선순위 | P0 |
 | 영역 오너 | 팀원 A (AI·분석) |
@@ -296,7 +296,7 @@ LLM은 테스트에서 실제로 부르지 않는다. `@MockitoBean LlmClient`�
 - [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
 - [x] contract-checker 통과 (openapi 표기 2건 수정)
 - [x] ui-verifier 통과 (데스크톱·모바일)
-- [ ] reviewer 지적 사항 반영
-- [ ] 산출물 반영: `03-ERD.md`(analysis_flows), `06-화면설계서.md` SC-07 실행 흐름 탭, `conventions.md` 3절 에러 코드, F-05a spec 5.2·F-06 spec AC7 한 줄, `09-데이터셋.md`·`datasets.json` DS-06, `04-WBS.md`·`05-간트차트.md` F-07 실적
-- [ ] PR CI 초록
-- [ ] 상태 DONE (PR 머지 전 마지막 커밋)
+- [x] reviewer 지적 사항 반영 (반드시 2건·권장 4건, 이관 #23·#24, Codex P2 → #26)
+- [x] 산출물 반영: `03-ERD.md`(analysis_flows), `06-화면설계서.md` SC-07 실행 흐름 탭, `conventions.md` 3절 에러 코드, F-05a spec 5.2·F-06 spec AC7 한 줄, `09-데이터셋.md`·`datasets.json` DS-06, `04-WBS.md`·`05-간트차트.md` F-07 실적
+- [x] PR CI 초록
+- [x] 상태 DONE (PR 머지 전 마지막 커밋)

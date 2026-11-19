@@ -7,19 +7,19 @@
 
 ## 현재 기능
 
-F-07 실행 흐름 — spec APPROVED, **구현·검증 완료(AC1~AC16 green), PR 전**
+F-07 실행 흐름 — **PR #25 열림, CI 초록, Codex ✅ 1243034 (P2 1건 → #26), spec DONE 표시 완료. 머지 대기**
 
 ## 진행
 
-- ✅ BE `analysis/flow/*`, V5, #19(AC12)·#21(AC13), 프롬프트·`flow.json`, openapi.json / FE `AnalysisFlowsTab`·`AnalysisFlowCard`·`MethodBadge`, `?tab=flows`
-- ✅ contract-checker(openapi 표기 2건 수정), ui-verifier 문제 0건(1280·375, 생성 중→완료 전환 확인), 06 화면설계서 SC-07 실행 흐름 절·스크린샷
-- 결정(11-19): 흐름 ANALYSIS_500 문구 공통 "실행 흐름 생성이 중단되었습니다. 다시 요청해 주세요."
+- ✅ /pr-review: verifier 통과(BE 316+·FE 151), contract-checker 불일치 0, reviewer 반드시 2·권장 4 반영(`a8ddb15`, `1243034`)
+- ✅ 후속 이슈: #23 프롬프트 구분자 주입, #24 흐름이 분석 실행기 독점, #26 endpoint UNIQUE 대소문자
+- ✅ 완료 표시: spec DONE, WBS 3.11·간트 t311/a311 실적, 진행현황 F-07 행
 
 ## 바로 다음 할 일
 
-1. `/pr-review` (PR 본문 Closes #19, #21) → Codex 리뷰 확인
-2. 머지 전 `docs(F-07): 완료 표시`: spec 상태 DONE, `04-WBS.md` 3.11·`05-간트차트.md` t311 실적
-3. 1.4 유스케이스(마감 11/23): `docs/산출물/02-유스케이스.md`에 분석 요청·결과 조회·실행 흐름 UC
+1. 영역 오너가 GitHub에서 PR #25 머지 (Closes #19·#21). 머지 후 `git switch develop && git pull`
+2. 1.4 유스케이스(마감 11/23): `docs/산출물/02-유스케이스.md`에 분석 요청·결과 조회·실행 흐름 UC
+3. 다음 기능 `/spec`: A 영역 F-05b(URL 수집·SSRF) 또는 F-08(개념 추출)
 
 ## 막힌 점 / 결정 필요
 
