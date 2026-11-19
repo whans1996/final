@@ -4,11 +4,11 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
 
-갱신: 2026-11-19 11:22 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/common-harness-sync
+갱신: 2026-11-19 11:38 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/common-harness-sync
 
 ## 현재 기능
 
-하네스 병렬 동기화·알림·영역 경계 (common) — **PR #31 열림**, verifier 통과, reviewer 반드시 1·권장 4 반영(b24a2f6·b756765), 권장 2 → #29. CI·Codex 확인 중. Mattermost 전송 404(웹훅 URL 확인 필요)
+하네스 병렬 동기화·알림·영역 경계 (common) — **PR #31 열림** — reviewer 반영(b24a2f6·b756765, 권장 2 → #29), Codex ✅ 4a40f15 (P2 1건 수정: Actions push payload 파일 목록 없음, P2 2건 → #32), Mattermost 전송 확인(PR 열림). CI BE 대기
 
 ## 진행
 
@@ -20,8 +20,8 @@
 
 ## 바로 다음 할 일
 
-1. PR #31: `gh pr checks 31` 초록, `node scripts/codex-review.mjs 31` COMPLETE → GitHub에서 본인 머지 → `git switch develop && git pull`
-2. 사람: Mattermost 웹훅 URL 재확인(Actions 로그 `curl: (22) 404`). 로컬 curl로 시험 → secret 다시 등록 → `gh run rerun <Notify run id>`. 김준섭 PR #30(NOW-js 착수 기록) 열려 있음
+1. PR #31: `gh pr checks 31` BE 잡 초록 확인 → GitHub에서 본인 머지(Mattermost "✅ 머지됨" 확인) → `git switch develop && git pull`
+2. 김준섭 PR #30(NOW-js 착수 기록) 열려 있음. #31 머지 뒤 그쪽이 develop을 합치면 NOW push 알림도 받는다
 3. `/clear` 뒤 `/spec`으로 **공통 기반** spec (concept 도메인·Mapper·카드 DTO, ErrorCode·ActivityType 블록, 라우터·nav 분리, ConceptCard·Pagination, 관리자 레이아웃). 결정 필요: analysis_concepts·AI 초안 형식, DTO 공유, 공개 GET, ADMIN 시드, /api/users/me/challenges, 업로드 유틸, F-01~03 유지보수, 공동 산출물 분담
 4. 1.4 유스케이스(마감 11/23) `docs/산출물/02-유스케이스.md`
 
