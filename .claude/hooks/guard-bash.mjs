@@ -25,7 +25,7 @@ const ENV_FILE = /(^|[\s/\\"'=])\.env(\.(?!example\b)[\w.-]+)?(?=$|[\s"';|&)])/;
 const rules = [
   [/--no-verify\b/, 'git hook 우회(--no-verify)는 금지입니다. 테스트가 실패하면 고치거나, 교대용이면 wip(F-xx): 로 커밋하세요.'],
   [/\bgit\s+commit\b[^;&|]*\s-[a-zA-Z]*n[a-zA-Z]*\b/, 'git commit -n 은 --no-verify와 같습니다. 금지입니다.'],
-  [/\bgit\s+push\b[^;&|]*(\s--force(-with-lease)?\b|\s-[a-zA-Z]*f\b|\s\+\S)/, '강제 push는 금지입니다. 릴레이 중인 상대의 커밋이 사라질 수 있습니다.'],
+  [/\bgit\s+push\b[^;&|]*(\s--force(-with-lease)?\b|\s-[a-zA-Z]*f\b|\s\+\S)/, '강제 push는 금지입니다. 다른 PC에서 push한 커밋이 사라질 수 있습니다.'],
   [/\bgit\s+reset\b[^;&|]*--hard\b/, 'git reset --hard는 금지입니다. 미커밋 작업이 사라집니다. 필요하면 사용자에게 직접 실행을 요청하세요.'],
   [/\bgit\s+clean\b[^;&|]*\s-[a-zA-Z]*f/, 'git clean -f는 금지입니다. 추적되지 않은 파일이 영구 삭제됩니다.'],
   [/\bgit\s+(checkout|restore)\s+(--\s+)?\.(\s|$)/, '작업 트리 전체 되돌리기는 금지입니다. 파일을 지정하거나 사용자에게 확인하세요.'],

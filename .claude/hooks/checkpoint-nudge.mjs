@@ -1,20 +1,23 @@
 #!/usr/bin/env node
 // Stop hook
-// 1. 코드를 바꿨는데 NOW.md를 갱신하지 않고 턴을 끝내려 하면 한 번 막고 갱신을 지시한다.
-//    세션이 토큰 소진으로 갑자기 끊겨도 상대가 이어받을 수 있게 하기 위한 장치다.
+// 1. 코드를 바꿨는데 내 NOW 파일(docs/handoff/NOW-<dh|js>.md)을 갱신하지 않고 턴을 끝내려 하면 한 번 막고 갱신을 지시한다.
+//    세션이 토큰 소진으로 갑자기 끊겨도 내 다른 PC(또는 상대)가 이어받을 수 있게 하기 위한 장치다.
 //    루프 방지: stop_hook_active(이미 한 번 막힌 뒤의 재시도)면 통과시킨다.
 //    이 세션(서브에이전트 포함)이 건드린 파일만 본다: 같은 작업 트리에서 다른 세션이 바꾼 파일로 막지 않는다 (11-19 오탐).
 //    이전 세션이 남긴 미기록 변경은 SessionStart hook이 경고한다.
-//    계획 모드에서는 NOW.md를 고칠 수 없으므로 검사하지 않는다.
+//    계획 모드에서는 NOW 파일을 고칠 수 없으므로 검사하지 않는다.
 // 2. 체크포인트가 최신인데 컨텍스트가 200k를 넘었으면 사용자에게 /clear를 권한다 (100k마다 한 번).
 //    턴마다 컨텍스트 전체를 다시 읽으므로 비용의 대부분이 여기서 나온다 (11-18 실측: 메인 cache read 78%).
-//    NOW.md가 최신이면 /clear 후 SessionStart hook이 다시 주입하므로 이어받기 비용이 작다.
+//    NOW 파일이 최신이면 /clear 후 SessionStart hook이 다시 주입하므로 이어받기 비용이 작다.
 import { mkdirSync, readdirSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, relative, resolve } from 'node:path';
 import {
   ROOT,
   isGitRepo,
   lastContextTokens,
+  localPcId,
+  nowRelPath,
+  ownerKey,
   readStdinJson,
   readText,
   workFilesNewerThanNow,
@@ -89,7 +92,7 @@ function sessionTouched(transcriptPath, sessionId) {
   };
 }
 
-/** NOW.md보다 나중에 바뀐, 이 세션이 건드린 작업 파일 경로. 없으면 null */
+/** 내 NOW 파일보다 나중에 바뀐, 이 세션이 건드린 작업 파일 경로. 없으면 null */
 function missingCheckpoint() {
   const touched = sessionTouched(input.transcript_path, input.session_id);
   return workFilesNewerThanNow().find((p) => !touched || touched(p)) || null;
@@ -122,7 +125,7 @@ function contextNudge() {
   }
   return (
     `컨텍스트 ${Math.round(ctx / 1000)}k 토큰: 턴마다 이 전체를 다시 읽습니다. ` +
-    '작업 단위(spec 승인, PR 생성, 머지 후 정리)가 끝났다면 /clear로 새로 시작하세요. NOW.md는 최신이고 새 세션에 자동으로 주입됩니다.'
+    '작업 단위(spec 승인, PR 생성, 머지 후 정리)가 끝났다면 /clear로 새로 시작하세요. 내 NOW 파일은 최신이고 새 세션에 자동으로 주입됩니다.'
   );
 }
 
@@ -132,13 +135,14 @@ if (!isGitRepo()) process.exit(0);
 
 const missing = missingCheckpoint();
 if (missing) {
+  const nowFile = nowRelPath(ownerKey(localPcId()));
   process.stdout.write(
     JSON.stringify({
       decision: 'block',
       reason:
-        `체크포인트 누락: ${missing} 등이 docs/handoff/NOW.md보다 나중에 변경되었습니다. ` +
-        '세션이 언제 끊길지 모르니 NOW.md의 "현재 기능 / 진행 / 바로 다음 할 일 / 막힌 점 / 주의" 섹션을 지금 상태로 덮어써서 갱신한 뒤 턴을 마치세요. ' +
-        '"갱신:" 줄의 시각·작업자·PC는 지금 값으로 바꿉니다(PC는 SessionStart의 "PC·환경" id). ' +
+        `체크포인트 누락: ${missing} 등이 ${nowFile}보다 나중에 변경되었습니다. ` +
+        `세션이 언제 끊길지 모르니 ${nowFile}의 "현재 기능 / 진행 / 바로 다음 할 일 / 막힌 점 / 주의" 섹션을 지금 상태로 덮어써서 갱신한 뒤 턴을 마치세요. ` +
+        '"갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 바꿉니다(시각을 짐작해 쓰지 않는다). 상대의 NOW 파일은 건드리지 않습니다. ' +
         '"바로 다음 할 일"에는 파일·메서드·테스트 이름을 구체적으로 적습니다. 다른 설명은 덧붙이지 마세요.',
     }),
   );

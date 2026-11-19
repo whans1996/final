@@ -34,6 +34,30 @@ jobs:
             exit 1
           fi
 
+  # 몇 초짜리라 경로와 관계없이 항상 돈다. 하네스(hook·스크립트)는 BE·FE 잡이 검사하지 않고,
+  # 마이그레이션 번호 충돌은 두 PR이 각자 초록이어도 머지 뒤에야 드러나기 때문이다 (11-19 병렬 전환)
+  harness:
+    name: 하네스 스크립트·마이그레이션 번호
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      BASE_REF: ${{ github.base_ref || 'develop' }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: base 브랜치 받기 (번호 비교용)
+        if: github.event_name == 'pull_request'
+        run: git fetch --no-tags --depth=1 origin "+refs/heads/${BASE_REF}:refs/remotes/origin/${BASE_REF}"
+      - name: 스크립트 문법 검사
+        run: for f in scripts/*.mjs scripts/lib/*.mjs .claude/hooks/*.mjs .githooks/*.mjs; do node --check "$f" || exit 1; done
+      - name: 하네스 단위 테스트
+        run: node --test "scripts/test/*.test.mjs"
+      - name: Flyway 버전 번호 (중복, base 최신 이하)
+        run: node scripts/check-migrations.mjs --base "origin/${BASE_REF}"
+
   changes:
     name: 변경 영역 판별
     runs-on: ubuntu-latest

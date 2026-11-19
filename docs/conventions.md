@@ -1,6 +1,6 @@
 # 공통 컨벤션 (FE·BE 공용)
 
-> FE와 BE가 이 문서를 기준으로 맞춘다. 바꾸려면 두 사람이 합의하고 `docs/기획서.md` 결정 로그에 남긴다.
+> FE와 BE가 이 문서를 기준으로 맞춘다. 바꾸려면 두 사람이 합의하고 `docs/결정로그.md`에 남긴다.
 > `contract-checker` 에이전트가 이 문서를 기준으로 검사한다.
 
 ## 1. URL
@@ -98,10 +98,12 @@
 - **제목은 커밋 메시지와 같은 형식** `타입(F-xx): 요약` (CI가 검사한다).
 - 본문은 `.github/pull_request_template.md`를 채운다 (`/pr-review`가 생성).
 - **리뷰는 reviewer 에이전트(`/pr-review`)와 Codex 봇이 한다.** 사람 리뷰 승인은 받지 않는다.
-- **CI가 초록이고 Codex가 COMPLETE일 때만** 영역 오너가 머지한다. head 커밋에 남은 Codex 지적이 모두 P2이고 각각 `follow-up` 이슈로 넘겨 스레드에 이슈 번호를 답했으면 COMPLETE와 같게 본다(이관 완료, PR 설명 "후속 작업"에 기록). wip 커밋이 섞여 있으면 **Squash and merge**.
+- **CI가 초록이고 Codex가 COMPLETE일 때만** 영역 오너(PR 작성자 본인)가 머지한다. 예외: `docs/`만 바꾸는 주간 `/progress` PR은 Codex 재리뷰를 기다리지 않고 CI 초록이면 머지한다(자동 리뷰에 지적이 달리면 읽고 판단한다). head 커밋에 남은 Codex 지적이 모두 P2이고 각각 `follow-up` 이슈로 넘겨 스레드에 이슈 번호를 답했으면 `node scripts/codex-review.mjs <PR> --resolve`로 이관 완료를 표시한다(PR 설명 "후속 작업"에 기록). wip 커밋이 섞여 있으면 **Squash and merge**.
+- **공통 코드**(SecurityConfig, GlobalExceptionHandler, 공통 응답·ErrorCode, FE 라우터·레이아웃·공용 컴포넌트·api 클라이언트, 빌드 설정)를 바꾼 PR은 본문에서 상대를 @멘션한다 (A `@whans1996`, B `@JoonseobKim`).
+- **develop 동기화**: 상대 PR이 먼저 머지되면 `git merge origin/develop`으로 받는다 (rebase·force push 금지). 머지 전에 한 번 더 합치고 CI 초록을 확인한다. `docs/api/openapi.json`이 충돌하면 한쪽을 고른 뒤 BE 테스트(`OpenApiExportTest`)로 다시 생성한다. Flyway 번호가 겹치면(CI `check-migrations`) develop에 없는 내 파일만 `git mv`로 다음 번호로 바꾼다.
 - **리뷰 지적 처리 기준**: 같은 PR에서 고치는 것은 spec 수용 기준이나 보안 기준(인증·인가, 비밀 누출, 경로 조작, 주입, 서비스 중단)을 깨는 지적만이다. 그 밖의 지적은 `follow-up` 라벨 이슈로 넘기고 PR 댓글로 이슈 번호를 답한다. 같은 주제로 재리뷰를 2회 했는데 또 지적이 나오면 사람이 정한다.
-- **후속 작업은 GitHub Issues(`follow-up` 라벨)로 관리한다.** NOW.md·spec·PR 설명에는 이슈 번호만 적는다.
-- **완료 표시(spec DONE, WBS·간트 실적)는 머지 전 마지막 커밋으로 PR 안에서 한다.** 머지 후 정리 PR은 만들지 않는다.
+- **후속 작업은 GitHub Issues(`follow-up` 라벨)로 관리한다.** NOW 파일·spec·PR 설명에는 이슈 번호만 적는다. develop은 기본 브랜치가 아니라 `Closes #n`이 자동으로 닫지 않으므로 머지 뒤 `gh issue close`로 닫는다.
+- **완료 표시(spec DONE)는 머지 전 마지막 커밋으로 PR 안에서 한다.** 머지 후 정리 PR은 만들지 않는다. 진행현황·WBS·간트 실적은 기능 PR에서 고치지 않고 주간 `/progress` docs PR이 develop 기준으로 맞춘다 (두 PR이 같은 표를 고치면 충돌한다, 11-19 결정).
 - API를 바꾼 PR은 `docs/api/openapi.json` 변경을 포함해야 한다 (CI가 불일치를 실패 처리).
 - GitLab(lab.ssafy.com)은 최종 제출 전용이다. 개발 중에는 push하지 않는다.
 
