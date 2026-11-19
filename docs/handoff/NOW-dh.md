@@ -4,7 +4,7 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
 
-갱신: 2026-11-19 16:11 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/F-08-concept-extraction
+갱신: 2026-11-19 16:16 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/F-08-concept-extraction
 
 ## 현재 기능
 
@@ -14,16 +14,16 @@ F-08 개념 카드 추출·연결 — `docs/specs/F-08-concept-extraction.md` AP
 
 - ✅ AC1~AC6·AC10 (BE): `analysis/concept/` ConceptPrompts·ConceptResponseParser·ConceptExtractor·ConceptLinkService·AnalysisConceptMapper, 파이프라인 EXTRACTING(70), 프롬프트 3종, fixture `concept.json`(main: 시드 id 39·18·42·62·57 + GraphQL 초안, test: 빈 배열), #23 `ExplainPrompts.escapeDelimiters`
 - ✅ 공통 파일: `concept/ConceptDraftService`(새 파일, 분석 도메인이 ConceptMapper를 직접 부르지 않게), `ConceptMapper` F-08 블록(`findAllForMatching`·`insertDraft`) → PR에 @JoonseobKim 멘션
-- ⏳ AC7 `GET /api/analyses/{id}/concepts`
+- ✅ AC7 `GET /api/analyses/{id}/concepts` (`AnalysisConceptService`·DTO 2개·`AnalysisController.listConcepts`, openapi.json 갱신)
+- ⏳ FE AC8·AC9
 
 ## 바로 다음 할 일
 
-1. AC7: `analysis/AnalysisConceptApiTest#AC7_…` 작성 → `AnalysisConceptService.getConcepts(userId, id)`(AnalysisMapper.findOwned + AnalysisConceptMapper.findByAnalysis + ConceptQueryService.findPublishedSummaries), DTO `AnalysisConceptsResponse`·`AnalysisConceptItem`, `AnalysisController` `GET /{id}/concepts` + Swagger, `OpenApiExportTest`로 openapi.json 갱신
-2. FE AC8·AC9: `api/analyses.js` `fetchAnalysisConcepts`, `components/analysis/AnalysisConceptsTab.vue`, `AnalysisDetailView.vue` TABS에 concepts
+1. FE AC8·AC9: `api/analyses.js` `fetchAnalysisConcepts`, `components/analysis/AnalysisConceptsTab.vue`, `AnalysisDetailView.vue` TABS에 concepts
 
 ## 막힌 점 / 결정 필요
 
-- red를 따로 확인하지 않고 테스트와 구현을 함께 썼다 (AC1~AC6). AC7부터 red 먼저
+- red를 따로 확인하지 않고 테스트와 구현을 함께 썼다 (AC1~AC6). AC7은 red(404) 확인 후 구현
 - 사람: 이슈 #16, 노션 팀원 초대, 고아 폴더 `../final-harness` 삭제 여부
 
 ## 주의

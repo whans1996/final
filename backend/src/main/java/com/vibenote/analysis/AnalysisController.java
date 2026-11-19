@@ -1,5 +1,7 @@
 package com.vibenote.analysis;
 
+import com.vibenote.analysis.concept.AnalysisConceptService;
+import com.vibenote.analysis.concept.AnalysisConceptsResponse;
 import com.vibenote.analysis.dto.AnalysisDetailResponse;
 import com.vibenote.analysis.dto.AnalysisFileResponse;
 import com.vibenote.analysis.dto.AnalysisFileSummaryResponse;
@@ -32,16 +34,19 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-/** 분석 요청(ZIP), 내 분석 목록, 진행 상태 (F-05a), 상세·파일 조회 (F-06). 수정·삭제·공개는 F-19. */
-@Tag(name = "분석", description = "프로젝트 분석 요청, 내 분석 목록, 진행 상태, 분석 결과(개요·파일) 조회")
+/** 분석 요청(ZIP), 내 분석 목록, 진행 상태 (F-05a), 상세·파일 조회 (F-06), 개념 조회 (F-08). 수정·삭제·공개는 F-19. */
+@Tag(name = "분석", description = "프로젝트 분석 요청, 내 분석 목록, 진행 상태, 분석 결과(개요·파일·개념) 조회")
 @RestController
 @RequestMapping("/api/analyses")
 public class AnalysisController {
 
     private final AnalysisService analysisService;
+    private final AnalysisConceptService analysisConceptService;
 
-    public AnalysisController(AnalysisService analysisService) {
+    public AnalysisController(
+            AnalysisService analysisService, AnalysisConceptService analysisConceptService) {
         this.analysisService = analysisService;
+        this.analysisConceptService = analysisConceptService;
     }
 
     @Operation(
@@ -182,5 +187,25 @@ public class AnalysisController {
             @PathVariable long id,
             @PathVariable long fileId) {
         return analysisService.getFile(user.id(), id, fileId);
+    }
+
+    @Operation(
+            summary = "분석의 개념 카드",
+            description =
+                    "분석 코드에 쓰인 공개 개념 카드와 위치(파일·줄·맥락). 검수 전 AI 초안은 수(pendingCount)만 준다. 추출 전이거나"
+                            + " 연결이 없으면 빈 목록이다. LLM을 부르지 않는다.")
+    @ApiResponse(responseCode = "200", description = "조회 성공")
+    @ApiResponse(
+            responseCode = "401",
+            description = "토큰 없음·만료 (AUTH_401)",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(
+            responseCode = "404",
+            description = "없는 분석, 다른 회원의 분석, 삭제된 분석 (ANALYSIS_404)",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @GetMapping("/{id:\\d+}/concepts")
+    public AnalysisConceptsResponse listConcepts(
+            @AuthenticationPrincipal AuthUser user, @PathVariable long id) {
+        return analysisConceptService.getConcepts(user.id(), id);
     }
 }
