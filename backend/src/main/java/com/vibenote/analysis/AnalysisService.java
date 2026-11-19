@@ -110,6 +110,13 @@ public class AnalysisService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.ANALYSIS_404));
     }
 
+    /** 내 미삭제 분석인지 확인한다. 없거나 남의 것이거나 삭제됐으면 ANALYSIS_404 (F-14 퀴즈 조회). */
+    public void checkOwned(long userId, long analysisId) {
+        if (analysisMapper.findOwned(analysisId, userId).isEmpty()) {
+            throw new BusinessException(ErrorCode.ANALYSIS_404);
+        }
+    }
+
     /** 진행 중인 분석을 FAILED로 바꾼다. 커밋 이후 콜백(AFTER_COMMIT)에서도 불리므로 끝난 트랜잭션에 참여하지 않게 새 트랜잭션으로 쓴다. */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void markFailed(long analysisId, ErrorCode code, String message) {

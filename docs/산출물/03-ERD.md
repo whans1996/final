@@ -20,9 +20,9 @@
 | analysis_concepts | 분석 ↔ 개념 연결과 코드 위치(파일 `file_id`, 줄 `line_hint` 예: L12-L30, 맥락 `context_note`). EXTRACTING 단계(F-08)가 채우고, PK `(analysis_id, concept_id)`라 한 분석에서 개념 하나는 위치 하나다. 분석당 최대 15개 | analyses N:M concepts | F-08, F-10 |
 | concept_reviews | 카드 리뷰 | concepts 1:N, users 1:N | F-11 |
 | concept_wishes | 카드 찜 | concepts N:M users | F-12 |
-| quizzes, quiz_questions | 분석별 퀴즈와 문항(선택지 JSON) | analyses 1:1, concepts 1:N | F-14 |
-| quiz_attempts, quiz_answers | 풀이 기록과 답안 | users·quizzes 1:N | F-14 |
-| review_plans | 날짜별 복습 계획 | users·concepts 1:N | F-15 |
+| quizzes, quiz_questions | 분석별 퀴즈와 문항(선택지 4개 JSON 문자열 배열, 정답 위치 0부터, 해설, 관련 카드 `concept_id` NULL 가능). 분석 파이프라인 QUIZ 단계(F-14)가 분석당 1번 만들고(`analysis_id` UNIQUE, 재생성 없음) 문항 번호는 id 순서다. 생성이 실패하면 행이 없다 | analyses 1:1, concepts 1:N | F-14 |
+| quiz_attempts, quiz_answers | 풀이 기록(`score` 맞힌 수, `total` 문항 수)과 문항별 답안. 같은 퀴즈를 다시 풀면 새 풀이로 쌓인다. 분석을 soft delete해도 남는다(통계·챌린지가 읽음) | users·quizzes 1:N | F-14 |
+| review_plans | 날짜별 복습 계획. 퀴즈 제출 때 틀린 공개 개념이 `reason=WRONG`, 내일 날짜, TODO로 들어간다(그 개념의 TODO가 있으면 넣지 않음, F-14). UNIQUE `(user_id, concept_id, plan_date)` | users·concepts 1:N | F-14, F-15 |
 | recommendation_reasons | 추천 이유 캐시 | users·concepts | F-16 |
 | posts | 게시글 (board_type QNA/REVIEW/FREE, 분석·카드 첨부) | users 1:N | F-17 |
 | comments | 댓글 | posts 1:N, users 1:N | F-18 |
