@@ -18,7 +18,7 @@ SessionStart hook이 내 NOW 파일, 상대 작업 요약, git 상태를 이미 
    - 미커밋 변경이 있으면 먼저 사용자에게 알린다 (내 PC에서 하던 작업일 수 있음). 임의로 stash/삭제하지 않는다.
    - `origin`(GitHub)이 있으면 `git pull --ff-only`. 충돌·실패 시 멈추고 상황을 보고한다.
    - `gh pr status`로 내 브랜치의 PR, CI 실패를 확인한다 (gh가 없거나 원격이 없으면 건너뜀). 상대가 나를 @멘션한 PR(공통 코드 변경)이 있으면 보고에 포함한다.
-   - 내 NOW 파일의 PR이 있으면 `node scripts/codex-review.mjs <번호>`(대기 없음)로 Codex 상태를 확인한다. `STALE`이나 `FINDINGS`이면 `/pr-review` 8단계 루프로 이어 간다. `CLOSED`(이미 머지·종료)면 루프를 돌지 않는다.
+   - 내 NOW 파일의 PR이 있으면 `node scripts/codex-review.mjs <번호>`(대기 없음)로 Codex 상태를 확인한다. `STALE`이나 `FINDINGS`이면 `/pr-review` 8단계 루프로 이어 간다. `RUNNING`이면 `--wait --status`를 백그라운드로 다시 걸어 결과를 받는다. `ERROR Codex 계정 미연결`이면 `docs/환경설정.md` 8절을 사용자에게 안내한다. `CLOSED`(이미 머지·종료)면 루프를 돌지 않는다.
    - 현재 브랜치가 main/develop이면 **내 NOW 파일의 브랜치**로 `git switch` 한다 (없으면 사용자에게 확인). **상대 NOW 파일의 브랜치로는 switch하지 않는다.**
    - **내 NOW 파일의 PR이 머지되었으면** (`gh pr view <번호> --json state`가 `MERGED`) `git switch develop && git pull` 후 다음 기능을 시작한다. spec DONE은 `/pr-review` 10단계에서 PR 안에 이미 반영했다. WBS·간트·진행현황은 주간 `/progress`가 맞춘다 (PR에서 고치지 않는다, 11-19 결정).
    - SessionStart가 "develop에 이 브랜치에 없는 커밋"을 알렸고 새 마이그레이션·openapi.json 변경이 있으면, 마이그레이션·API를 추가하기 전에 `git merge origin/develop`을 제안한다.

@@ -1,0 +1,40 @@
+# Codex 리뷰 상태를 PR 체크 "Codex"로 보여 준다 (11-19 사용자 지시: Codex 리뷰를 통과할 때까지 루프).
+# private 무료 플랜이라 브랜치 보호(필수 체크)로 머지를 막을 수는 없고, PR 화면·gh pr checks에 ⏳/❌/✅로 보이게만 한다.
+# push 직후에는 대개 ⏳(리뷰 전)이다. 이후 각자의 Claude 세션이 `codex-review.mjs <PR> --request --wait --status`로 ✅/❌를 남긴다.
+# Codex 댓글(issue_comment)로는 트리거하지 않는다: issue_comment 워크플로는 기본 브랜치(main)의 파일로만 돌기 때문이다.
+name: Codex status
+
+on:
+  pull_request:
+    branches: [develop, main]
+    types: [opened, synchronize, reopened, ready_for_review]
+
+concurrency:
+  group: codex-status-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+  issues: read
+  statuses: write
+
+jobs:
+  codex-status:
+    name: Codex 리뷰 상태
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # 문서만 바뀐 커밋 판정에 리뷰 기준 커밋과 develop이 필요하다
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: 판정을 상태 체크로 남기기
+        # 판정 종료 코드(STALE 4 등)로 이 잡이 빨간불이 되지 않게 한다. 결과는 "Codex" 상태 체크에 남는다
+        run: node scripts/codex-review.mjs ${{ github.event.pull_request.number }} --status || true

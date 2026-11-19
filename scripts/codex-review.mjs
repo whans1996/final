@@ -10,32 +10,38 @@
 // develop 합치기(git merge origin/develop)로 들어온 파일은 이 PR의 변경이 아니므로 문서 판정에서 뺀다 (11-19 병렬 전환).
 // 이관 완료: 남은 지적을 follow-up 이슈로 넘긴 뒤 --resolve로 사람 댓글 마커를 달면, 그 시각까지의 지적은 해결된 것으로 본다.
 //
-// 사용법: node scripts/codex-review.mjs <PR번호> [--request] [--wait] [--resolve] [--timeout 20]
+// 설정 안내: Codex는 요청한 GitHub 계정(자동 리뷰는 PR 작성자)이 Codex에 연결돼 있어야 리뷰한다.
+//   연결이 안 된 계정의 요청에는 "create a Codex account and connect to github" 안내만 단다 (11-19 PR #30, 김준섭 계정).
+//   이 안내나 "create an environment" 안내가 마지막 요청보다 늦으면 기다려도 리뷰가 오지 않으므로 ERROR로 끝낸다.
+//
+// 사용법: node scripts/codex-review.mjs <PR번호> [--request] [--wait] [--resolve] [--status] [--timeout 20]
 //   --request  상태가 이전 커밋 기준(STALE)이면 "@codex review" 댓글을 단다.
 //              댓글에 head sha 마커를 넣어, 같은 head에 대한 요청이 이미 있으면 생략한다
 //   --wait     COMPLETE·FINDINGS가 될 때까지 30초 간격으로 확인한다 (기본 20분). Claude는 run_in_background로 실행한다
 //   --resolve  head가 FINDINGS일 때 "남은 지적을 이슈로 이관함" 마커 댓글을 달고 COMPLETE로 끝낸다 (pr-review 8-3)
+//   --status   최종 판정을 PR head 커밋의 상태 체크 "Codex"로 남긴다 (COMPLETE ✅, FINDINGS ❌, 그 밖 ⏳·ERROR).
+//              브랜치 보호를 못 쓰는 저장소라 머지를 막지는 않고 PR 화면·gh pr checks에 보이게만 한다 (codex-status.yml도 쓴다)
 //
 // 출력 첫 줄과 종료 코드:
 //   COMPLETE 0  head 커밋 리뷰 완료, 지적 없음 (또는 이관 완료, 문서만 변경)
 //   FINDINGS 2  head 커밋 리뷰 완료, 지적 있음 (지적 요약을 함께 출력)
-//   RUNNING  3  head 커밋 리뷰 중
+//   RUNNING  3  head 커밋 리뷰 중, 또는 head에 대한 재리뷰를 요청했고 시작을 기다리는 중
 //   STALE    4  리뷰 상태가 없거나 이전 커밋 기준
 //   TIMEOUT  5  --wait 시간 초과
 //   CLOSED   6  PR이 이미 머지·종료됨 (루프 불필요)
-//   ERROR    1  gh 실패, 또는 Codex가 마지막 요청 뒤 "create an environment" 안내만 남김
-//               (환경을 만든 뒤 --request로 다시 실행하면 요청을 새로 단다)
+//   ERROR    1  gh 실패, 또는 Codex가 마지막 요청 뒤 환경·계정 설정 안내만 남김
+//               (환경을 만들거나 계정을 연결한 뒤 --request로 다시 실행하면 요청을 새로 단다)
+// 첫 줄 끝에는 "(재리뷰 n회)"를 붙인다 (Stop hook codex-loop.mjs가 상한 5회를 판단한다).
 
 import { spawnSync } from 'node:child_process';
-import { git } from './lib/common.mjs';
-import { onlyDocsChanged, unresolvedFindingAt } from './lib/codex.mjs';
+import { NON_INTERACTIVE_GIT_ENV, git } from './lib/common.mjs';
+import { CODEX_BOT, REQUEST_MARK_RE, onlyDocsChanged, requestCount, setupNotice, unresolvedFindingAt } from './lib/codex.mjs';
 
 const CODE = { COMPLETE: 0, ERROR: 1, FINDINGS: 2, RUNNING: 3, STALE: 4, TIMEOUT: 5, CLOSED: 6 };
-const BOT = 'chatgpt-codex-connector';
+const BOT = CODEX_BOT;
 const STATE_RE = /<!--\s*codex-review-state:v1\s*(\{.*?\})\s*-->/s;
-const REQUEST_RE = /<!--\s*codex-review-request:\s*([0-9a-f]{40})\s*-->/;
+const REQUEST_RE = REQUEST_MARK_RE;
 const RESOLVED_RE = /<!--\s*codex-findings-resolved:\s*([0-9a-f]{40})\s*-->/;
-const ENV_RE = /create an environment for this repo\]\((https?:[^)\s]+)\)/;
 const CLEAN_RECEIPT_RE = /codex-review-receipt[\s\S]*Didn't find any major issues[\s\S]*?Reviewed commit:\*{0,2}\s*`([0-9a-f]{7,40})`/;
 
 function fail(msg) {
@@ -60,6 +66,7 @@ if (!pr) fail('PR 번호가 필요합니다. 예: node scripts/codex-review.mjs 
 const request = argv.includes('--request');
 const wait = argv.includes('--wait');
 const resolve = argv.includes('--resolve');
+const status = argv.includes('--status');
 const ti = argv.indexOf('--timeout');
 const timeoutMin = ti >= 0 ? Number(argv[ti + 1]) || 20 : 20;
 
@@ -69,8 +76,8 @@ if (!repo) fail(`origin이 GitHub 저장소가 아닙니다: ${remote || '(없�
 
 /** PR head 커밋 */
 function head() {
-  const v = ghJson(['pr', 'view', pr, '--json', 'headRefOid,headRefName,state']);
-  return { sha: v.headRefOid, ref: v.headRefName, state: v.state };
+  const v = ghJson(['pr', 'view', pr, '--json', 'headRefOid,headRefName,state,author']);
+  return { sha: v.headRefOid, ref: v.headRefName, state: v.state, author: v.author?.login };
 }
 
 /** 모든 페이지를 읽어 하나의 배열로 (댓글이 100개를 넘어도 영수증·요청 마커를 놓치지 않게, Codex 리뷰) */
@@ -148,7 +155,7 @@ function cleanBases(st, stOk, receipts, resolved, findingAt) {
 /** 로컬에 커밋이 없으면 원격에서 받아 온다 (GitHub는 sha로 fetch 가능) */
 function ensureCommit(sha, ref) {
   if (git(['cat-file', '-e', `${sha}^{commit}`]).ok) return true;
-  git(['fetch', '--quiet', 'origin', ref || sha], { timeout: 30_000 });
+  git(['fetch', '--quiet', 'origin', ref || sha], { timeout: 30_000, env: NON_INTERACTIVE_GIT_ENV });
   return git(['cat-file', '-e', `${sha}^{commit}`]).ok;
 }
 
@@ -169,7 +176,7 @@ function docsOnlySince(base, h, mb) {
 /** 문서 판정 준비: head 커밋을 받고 develop을 한 번만 fetch해 head·develop 공통 조상을 구한다. head를 못 받으면 null */
 function developMergeBase(h) {
   if (!ensureCommit(h.sha, h.ref)) return null;
-  git(['fetch', '--quiet', 'origin', 'develop'], { timeout: 30_000 });
+  git(['fetch', '--quiet', 'origin', 'develop'], { timeout: 30_000, env: NON_INTERACTIVE_GIT_ENV });
   const mb = git(['merge-base', h.sha, 'origin/develop']);
   return { mb: mb.ok ? mb.out : null };
 }
@@ -214,14 +221,19 @@ function judge() {
         return { verdict: 'COMPLETE', h, comments, msg: `head ${short} 문서만 변경 (Codex ✅ ${base.slice(0, 7)} 이후)` };
       }
     }
-    // 환경 안내가 이 head에 대한 마지막 요청보다 늦으면 기다려도 리뷰가 오지 않는다.
-    // --request로 시작하면 환경을 만든 뒤의 재시도로 보고 요청을 새로 단다 (아래, Codex 리뷰)
-    const env = envNotice(comments);
+    // 환경·계정 안내가 이 head에 대한 마지막 요청보다 늦으면 기다려도 리뷰가 오지 않는다.
+    // --request로 시작하면 설정을 마친 뒤의 재시도로 보고 요청을 새로 단다 (아래, Codex 리뷰)
+    const notice = setupNotice(comments);
     const reqAt = requestAt(comments, h.sha);
-    if (env && (!reqAt || env.at > reqAt)) {
-      const msg = `Codex 환경 없음 (${env.at}): ${env.url} 에서 만든 뒤 --request로 다시 요청`;
+    if (notice && (!reqAt || notice.at > reqAt)) {
+      const msg =
+        notice.kind === 'account'
+          ? `Codex 계정 미연결 (@${notice.who ?? h.author ?? '?'}, ${notice.at}): ${notice.url} 에서 GitHub를 연결하고 Code review를 켠 뒤 --request로 다시 요청 (docs/환경설정.md 8절)`
+          : `Codex 환경 없음 (${notice.at}): ${notice.url} 에서 만든 뒤 --request로 다시 요청`;
       return { verdict: 'ERROR', envMissing: true, h, comments, msg };
     }
+    // 이 head에 대한 요청을 이미 달았으면 Codex가 시작하기를 기다리는 중이다 (요청을 다시 달지 않는다)
+    if (reqAt) return { verdict: 'RUNNING', h, comments, msg: `head ${short} 재리뷰 요청함 (${reqAt}), 시작 대기` };
     const seen = st?.commit_sha ? `${st.commit_sha.slice(0, 7)} 기준` : '상태 댓글 없음';
     return { verdict: 'STALE', h, comments, msg: `head ${short}, Codex ${seen}` };
   }
@@ -239,23 +251,22 @@ function requestAt(comments, sha) {
   return at.length ? at.sort().at(-1) : null;
 }
 
-/** 마지막 봇 활동이 "create an environment" 안내이면 { url, at }. 그 뒤 리뷰 댓글이 갱신됐으면 null */
-function envNotice(comments) {
-  const bot = comments.filter((c) => c.user?.login?.startsWith(BOT));
-  const notices = bot.filter((c) => ENV_RE.test(c.body || ''));
-  if (!notices.length) return null;
-  const last = notices.at(-1);
-  const otherAt = bot
-    .filter((c) => !ENV_RE.test(c.body || ''))
-    .map((c) => c.updated_at || c.created_at)
-    .sort()
-    .at(-1);
-  if (otherAt && otherAt >= last.created_at) return null;
-  return { url: ENV_RE.exec(last.body)[1], at: last.created_at };
+const STATUS = { COMPLETE: 'success', FINDINGS: 'failure', ERROR: 'error' };
+
+/** --status: 판정을 head 커밋의 상태 체크 "Codex"로 남긴다. 실패해도 판정에는 영향이 없다 */
+function postStatus(r) {
+  if (!status || !r.h?.sha || r.verdict === 'CLOSED') return;
+  const state = STATUS[r.verdict] ?? 'pending';
+  const description = `${r.verdict} ${r.msg}`.slice(0, 140);
+  const fields = [`state=${state}`, 'context=Codex', `description=${description}`, `target_url=https://github.com/${repo}/pull/${pr}`];
+  const ok = gh(['api', '-X', 'POST', `repos/${repo}/statuses/${r.h.sha}`, ...fields.flatMap((x) => ['-f', x])], { soft: true });
+  if (ok == null) console.error('(Codex 상태 체크를 남기지 못함: statuses 쓰기 권한 확인)');
 }
 
 function report(r) {
-  console.log(`${r.verdict} ${r.msg}`);
+  const rounds = r.comments && r.verdict !== 'CLOSED' ? ` (재리뷰 ${requestCount(r.comments)}회)` : '';
+  console.log(`${r.verdict} ${r.msg}${rounds}`);
+  postStatus(r);
   if (r.verdict === 'FINDINGS') {
     const f = findings(r.h.sha);
     console.log(f.length ? f.join('\n') : `(인라인 지적을 찾지 못함: gh api repos/${repo}/pulls/${pr}/reviews 확인)`);
@@ -281,16 +292,14 @@ if (resolve) {
 if (request && r.envMissing) {
   // 안내가 마지막 요청보다 늦으므로 기존 요청이 있어도 다시 단다. 환경이 아직 없으면 대기 중 같은 안내가 와서 ERROR로 끝난다
   postRequest(r.h.sha);
-  console.error(`(Codex 환경 안내 뒤 재시도: @codex review 요청함, head ${r.h.sha.slice(0, 7)})`);
+  console.error(`(Codex 환경·계정 안내 뒤 재시도: @codex review 요청함, head ${r.h.sha.slice(0, 7)})`);
   // 방금 단 댓글이 목록에 바로 안 보일 수 있어 다시 판정하지 않고 대기 상태로 둔다
-  r = { ...r, verdict: 'STALE', envMissing: false, msg: `head ${r.h.sha.slice(0, 7)}, 환경 안내 뒤 재요청함` };
+  r = { ...r, verdict: 'RUNNING', envMissing: false, msg: `head ${r.h.sha.slice(0, 7)} 설정 안내 뒤 재리뷰 요청함, 시작 대기` };
 } else if (request && r.verdict === 'STALE') {
-  if (requestAt(r.comments, r.h.sha)) {
-    console.error(`(head ${r.h.sha.slice(0, 7)}에 대한 @codex review 요청이 이미 있어 생략)`);
-  } else {
-    postRequest(r.h.sha);
-    console.error(`(@codex review 요청함: head ${r.h.sha.slice(0, 7)})`);
-  }
+  // 같은 head에 대한 요청이 이미 있으면 judge가 RUNNING으로 판정하므로 여기서는 요청이 없다
+  postRequest(r.h.sha);
+  console.error(`(@codex review 요청함: head ${r.h.sha.slice(0, 7)})`);
+  r = { ...r, verdict: 'RUNNING', msg: `head ${r.h.sha.slice(0, 7)} 재리뷰 요청함, 시작 대기` };
 }
 
 const done = (v) => v === 'COMPLETE' || v === 'FINDINGS' || v === 'ERROR' || v === 'CLOSED';
@@ -303,4 +312,5 @@ while (Date.now() < deadline) {
   if (done(r.verdict)) report(r);
 }
 console.log(`TIMEOUT ${timeoutMin}분 대기, 마지막 상태 ${r.verdict} (${r.msg})`);
+postStatus(r);
 process.exit(CODE.TIMEOUT);

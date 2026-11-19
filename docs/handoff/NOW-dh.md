@@ -4,31 +4,30 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
 
-갱신: 2026-11-19 11:38 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/common-harness-sync
+갱신: 2026-11-19 11:45 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/common-codex-loop
 
 ## 현재 기능
 
-하네스 병렬 동기화·알림·영역 경계 (common) — **PR #31 열림** — reviewer 반영(b24a2f6·b756765, 권장 2 → #29), Codex ✅ 4a40f15 (P2 1건 수정: Actions push payload 파일 목록 없음, P2 2건 → #32), Mattermost 전송 확인(PR 열림). CI BE 대기
+Codex 리뷰 루프 강제 (common, 하네스) — 미커밋, reviewer 리뷰 중. PR #31(병렬 동기화)·#30은 머지됨
 
 ## 진행
 
-- ✅ 상대 NOW 원격 읽기(`lib/peer.mjs` latestPeerNow, session-start 출처 표시·스냅샷), `peer-watch` UserPromptSubmit hook(10분, develop·NOW·PR 변화)
-- ✅ Mattermost: `lib/notify.mjs`·`notify-message.mjs`·`.github/workflows/notify.yml` (secret 없으면 건너뜀)
-- ✅ `.github/CODEOWNERS`(정본), `lib/owners.mjs`·`scripts/owners.mjs`, guard-files 상대 NOW 차단, `area-notice` PostToolUse 경고
-- ✅ 스킬(implement·spec push, pr-review owners), 결정로그 3줄, conventions 9절, 환경설정 6·7절, CLAUDE.md, PR 템플릿, 라벨 area:A·B·common 생성
-- ✅ develop(PR #28 js-home macOS) 합침. 김준섭 PR #28이 peer-watch 실측에서 잡힘
+- ✅ 원인 확인: 김준섭 PR #28·#30에 Codex 자동 리뷰 없음 = JoonseobKim 계정이 Codex 미연결 (봇 "create a Codex account" 안내, 동환 계정 요청은 정상)
+- ✅ `lib/codex.mjs` setupNotice(env·account)·requestCount + 테스트, `codex-review.mjs` 계정 미연결 ERROR·요청 후 RUNNING·`--status`·`(재리뷰 n회)`
+- ✅ Stop hook `.claude/hooks/codex-loop.mjs`(settings Stop 등록), `.github/workflows/codex-status.yml`
+- ✅ 문서: pr-review 8·11단계(상한 5회), pickup, CLAUDE.md, 환경설정 8절, 결정로그. 하네스 테스트 30/30
 
 ## 바로 다음 할 일
 
-1. PR #31: `gh pr checks 31` BE 잡 초록 확인 → GitHub에서 본인 머지(Mattermost "✅ 머지됨" 확인) → `git switch develop && git pull`
-2. 김준섭 PR #30(NOW-js 착수 기록) 열려 있음. #31 머지 뒤 그쪽이 develop을 합치면 NOW push 알림도 받는다
-3. `/clear` 뒤 `/spec`으로 **공통 기반** spec (concept 도메인·Mapper·카드 DTO, ErrorCode·ActivityType 블록, 라우터·nav 분리, ConceptCard·Pagination, 관리자 레이아웃). 결정 필요: analysis_concepts·AI 초안 형식, DTO 공유, 공개 GET, ADMIN 시드, /api/users/me/challenges, 업로드 유틸, F-01~03 유지보수, 공동 산출물 분담
-4. 1.4 유스케이스(마감 11/23) `docs/산출물/02-유스케이스.md`
+1. reviewer 지적 반영 → `chore(harness): Codex 리뷰 루프 강제 (계정 미연결 감지, Stop hook, 상태 체크)` 커밋 → push → PR(base develop, @JoonseobKim 멘션: 환경설정 8절 계정 연결 요청)
+2. PR에서 `Codex status` 워크플로가 ⏳ 체크를 다는지, `node scripts/codex-review.mjs <PR> --request --wait --status`가 ✅/❌로 바꾸는지 `gh pr checks`로 확인
+3. 김준섭: chatgpt.com Codex에 GitHub 연결 + Code review·Automatic reviews 켜기 (사람)
+4. `/clear` 뒤 `/spec`으로 **공통 기반** spec. 결정 필요 목록은 결정로그 11-19 공통 기반 행 참고
+5. 1.4 유스케이스(마감 11/23) `docs/산출물/02-유스케이스.md`
 
 ## 막힌 점 / 결정 필요
 
-- 사람: 이슈 #16, 노션 팀원 초대, 고아 폴더 `../final-harness` 삭제 여부
-- 김준섭 js-home은 macOS — hook은 Node라 동작하지만 첫 세션에서 peer-watch·area-notice 출력 확인 필요
+- 사람: 이슈 #16, 노션 팀원 초대, 고아 폴더 `../final-harness` 삭제 여부, 김준섭 Codex 계정 연결
 
 ## 주의
 
