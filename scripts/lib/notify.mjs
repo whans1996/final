@@ -17,13 +17,15 @@ export function whoOf(login, pcs) {
  * push 이벤트에서 바뀐 NOW 파일의 사람 key 목록.
  * develop 합치기로 딸려 온 커밋(distinct:false)은 빼고, push한 사람을 알면 그 사람의 NOW만 남긴다
  * (머지 직전 develop을 합쳐 push하면 상대의 옛 NOW 커밋이 payload.commits에 섞인다).
+ * filesOf(commit): 커밋의 변경 파일. GitHub Actions의 push payload에는 added·modified가 없으므로
+ * notify-message.mjs가 커밋 id로 git에서 조회해 넘긴다. 기본값은 webhook payload의 added·modified.
  */
-export function changedNowKeys(payload, pcs = {}) {
+export function changedNowKeys(payload, pcs = {}, filesOf = (c) => [...(c.added || []), ...(c.modified || [])]) {
   const pusher = accountsOf(pcs)[String(payload?.sender?.login || '').toLowerCase()]?.key;
   const keys = new Set();
   for (const c of payload?.commits || []) {
     if (c.distinct === false) continue;
-    for (const f of [...(c.added || []), ...(c.modified || [])]) {
+    for (const f of filesOf(c) || []) {
       const m = NOW_PATH.exec(f);
       if (m && ownerKey(`${m[1]}-x`) && (!pusher || pusher === m[1])) keys.add(m[1]);
     }
@@ -35,7 +37,7 @@ export function changedNowKeys(payload, pcs = {}) {
  * 이벤트 → 메시지 본문 (알릴 것이 없으면 null). 순수 함수.
  * nowTexts: push 이벤트에서 바뀐 NOW 파일 본문 { dh: '...', js: '...' }
  */
-export function buildMessage(eventName, payload, { pcs = {}, nowTexts = {} } = {}) {
+export function buildMessage(eventName, payload, { pcs = {}, nowTexts = {}, filesOf } = {}) {
   if (eventName === 'pull_request') {
     const pr = payload?.pull_request;
     if (!pr) return null;
@@ -53,7 +55,7 @@ export function buildMessage(eventName, payload, { pcs = {}, nowTexts = {} } = {
 
   if (eventName === 'push') {
     const branch = String(payload?.ref || '').replace(/^refs\/heads\//, '');
-    const lines = changedNowKeys(payload, pcs)
+    const lines = changedNowKeys(payload, pcs, filesOf)
       .filter((k) => nowTexts[k])
       .map((k) => {
         const h = nowHeadline(nowTexts[k]);

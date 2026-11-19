@@ -51,6 +51,20 @@ test('NOW push는 바뀐 사람의 현재 기능과 다음 할 일', () => {
   assert.equal(buildMessage('push', { ref: 'refs/heads/x', commits: [] }, { pcs: PCS }), null);
 });
 
+test('Actions push payload에는 파일 목록이 없어 커밋 id로 조회한 파일을 쓴다 (Codex 리뷰)', () => {
+  const payload = {
+    ref: 'refs/heads/feature/F-09-cards',
+    sender: { login: 'JoonseobKim' },
+    commits: [
+      { id: 'aaa', distinct: true },
+      { id: 'bbb', distinct: false },
+    ],
+  };
+  const files = { aaa: ['docs/handoff/NOW-js.md'], bbb: ['docs/handoff/NOW-dh.md'] };
+  assert.deepEqual(changedNowKeys(payload, PCS, (c) => files[c.id]), ['js']);
+  assert.deepEqual(changedNowKeys(payload, PCS), []);
+});
+
 test('develop 합치기로 딸려 온 상대 NOW 커밋은 알리지 않는다', () => {
   const merged = {
     ref: 'refs/heads/feature/F-08-concepts',

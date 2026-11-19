@@ -26,6 +26,9 @@ jobs:
         run: echo "MATTERMOST_WEBHOOK_URL secret이 없어 알림을 건너뜁니다"
       - uses: actions/checkout@v7
         if: env.WEBHOOK != ''
+        with:
+          # push payload에 커밋별 변경 파일이 없어 커밋 id로 git show 한다 (이번 push의 커밋이 모두 필요)
+          fetch-depth: 0
       - uses: actions/setup-node@v7
         if: env.WEBHOOK != ''
         with:
