@@ -344,7 +344,7 @@
           "endpoints" : {
             "description" : "흐름을 만들 API (개요 apis에서 1~3개, 중복 불가)",
             "items" : {
-              "$ref" : "#/components/schemas/Endpoint"
+              "$ref" : "#/components/schemas/FlowEndpoint"
             },
             "maxItems" : 3,
             "minItems" : 1,
@@ -352,25 +352,6 @@
           }
         },
         "required" : [ "endpoints" ],
-        "type" : "object"
-      },
-      "Endpoint" : {
-        "description" : "API 하나 (개요 apis의 method·path 그대로)",
-        "properties" : {
-          "method" : {
-            "description" : "HTTP 메서드 (개요 apis 값, ANY 포함)",
-            "example" : "POST",
-            "minLength" : 1,
-            "type" : "string"
-          },
-          "path" : {
-            "description" : "경로",
-            "example" : "/api/todos",
-            "minLength" : 1,
-            "type" : "string"
-          }
-        },
-        "required" : [ "method", "path" ],
         "type" : "object"
       },
       "ErrorResponse" : {
@@ -397,6 +378,25 @@
             "type" : "string"
           }
         },
+        "type" : "object"
+      },
+      "FlowEndpoint" : {
+        "description" : "API 하나 (개요 apis의 method·path 그대로)",
+        "properties" : {
+          "method" : {
+            "description" : "HTTP 메서드 (개요 apis 값, ANY 포함)",
+            "example" : "POST",
+            "minLength" : 1,
+            "type" : "string"
+          },
+          "path" : {
+            "description" : "경로",
+            "example" : "/api/todos",
+            "minLength" : 1,
+            "type" : "string"
+          }
+        },
+        "required" : [ "method", "path" ],
         "type" : "object"
       },
       "FlowResponse" : {

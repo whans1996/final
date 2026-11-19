@@ -72,6 +72,9 @@ async function submit(endpoints) {
     if (hasPending(result)) polling.start({ delay: POLL_INTERVAL_MS })
   } catch (error) {
     requestError.value = errorMessage(error)
+    // 400(한도·apis에 없음)·409는 목록이 바뀌었을 수 있으므로 다시 불러 남은 개수를 맞춘다
+    const status = error.response?.status
+    if (status >= 400 && status < 500) polling.start()
   } finally {
     submitting.value = false
   }
@@ -169,7 +172,7 @@ function retryFlow(flow) {
           v-for="flow in flows"
           :key="flow.id"
           :flow="flow"
-          :busy="submitting"
+          :busy="submitting || remaining <= 0"
           @retry="retryFlow"
           @select-file="emit('select-file', $event)"
         />

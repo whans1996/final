@@ -81,16 +81,21 @@ class FlowResponseParserTest {
     void AC4_긴_필드는_잘라_저장하고_symbol은_없으면_null() {
         String json =
                 """
-                {"summary":"%s","steps":[{"path":"p","title":"%s","description":"%s","symbol":"%s"},
+                {"summary":"%s","steps":[{"path":"%s","title":"%s","description":"%s","symbol":"%s"},
                 {"path":"p","title":"t","description":"d"}]}\
                 """
                         .formatted(
-                                "가".repeat(600), "나".repeat(70), "다".repeat(700), "S".repeat(150));
+                                "가".repeat(600),
+                                "p".repeat(800),
+                                "나".repeat(70),
+                                "다".repeat(700),
+                                "S".repeat(150));
 
         FlowResult result = parse(json);
 
         assertThat(result.summary()).hasSize(500);
         FlowStep first = result.steps().get(0);
+        assertThat(first.path()).hasSize(500);
         assertThat(first.title()).hasSize(60);
         assertThat(first.description()).hasSize(600);
         assertThat(first.symbol()).hasSize(100);

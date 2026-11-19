@@ -23,7 +23,7 @@ public record CreateFlowsRequest(
                 @Size(min = 1, max = 3, message = "API는 한 번에 1~3개를 고를 수 있습니다.")
                 List<@NotNull(message = "API를 입력하세요.") @Valid Endpoint> endpoints) {
 
-    @Schema(description = "API 하나 (개요 apis의 method·path 그대로)")
+    @Schema(name = "FlowEndpoint", description = "API 하나 (개요 apis의 method·path 그대로)")
     public record Endpoint(
             @Schema(
                             requiredMode = Schema.RequiredMode.REQUIRED,

@@ -19,6 +19,9 @@ public final class FlowResponseParser {
     static final int MAX_SYMBOL = 100;
     static final int MAX_DESCRIPTION = 600;
 
+    /** {@code analysis_files.path VARCHAR(500)}와 같다. 분석 파일 경로는 잘리지 않아 fileId 매칭에 영향이 없다. */
+    static final int MAX_PATH = 500;
+
     private FlowResponseParser() {}
 
     /**
@@ -48,7 +51,7 @@ public final class FlowResponseParser {
             if (!item.isObject()) {
                 throw new InvalidResponseException("steps[]가 객체가 아님");
             }
-            String path = text(item, "path");
+            String path = cut(text(item, "path"), MAX_PATH);
             AnalysisFile file = byPath.get(path);
             steps.add(
                     new FlowStep(

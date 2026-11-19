@@ -55,25 +55,33 @@ public class FlowGenerator {
     }
 
     public void generate(long flowId) {
-        Optional<AnalysisFlow> pending = flowService.findPending(flowId);
-        if (pending.isEmpty()) {
-            return;
-        }
-        AnalysisFlow flow = pending.get();
         try {
-            Optional<FlowResult> result = call(flow);
+            Optional<AnalysisFlow> pending = flowService.findPending(flowId);
+            if (pending.isEmpty()) {
+                return;
+            }
+            Optional<FlowResult> result = call(pending.get());
             if (result.isPresent()) {
                 flowService.complete(flowId, result.get());
             } else {
                 log.warn("흐름 {}: 형식 오류가 두 번 나 FAILED", flowId);
-                flowService.markFailed(flowId, ErrorCode.LLM_502);
+                markFailed(flowId, ErrorCode.LLM_502);
             }
         } catch (BusinessException e) {
             log.warn("흐름 {}: LLM 실패로 FAILED ({})", flowId, e.getErrorCode());
-            flowService.markFailed(flowId, e.getErrorCode());
+            markFailed(flowId, e.getErrorCode());
         } catch (RuntimeException e) {
             log.error("흐름 {}: 예기치 못한 오류로 FAILED", flowId, e);
-            flowService.markFailed(flowId, ErrorCode.ANALYSIS_500);
+            markFailed(flowId, ErrorCode.ANALYSIS_500);
+        }
+    }
+
+    /** PENDING일 때만 바꾸므로 흐름을 읽기 전에 실패해도 부를 수 있다. 기록 실패는 재시작 복구(AC11)가 정리한다. */
+    private void markFailed(long flowId, ErrorCode code) {
+        try {
+            flowService.markFailed(flowId, code);
+        } catch (RuntimeException e) {
+            log.error("흐름 {}: FAILED 기록 실패 ({})", flowId, code, e);
         }
     }
 

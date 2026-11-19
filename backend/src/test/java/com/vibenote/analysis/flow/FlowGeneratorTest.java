@@ -1,7 +1,9 @@
 package com.vibenote.analysis.flow;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
@@ -28,6 +30,8 @@ class FlowGeneratorTest extends FlowTestSupport {
     @Autowired FlowGenerator generator;
 
     @MockitoSpyBean LlmClient llmClient;
+
+    @MockitoSpyBean FlowService flowService;
 
     private List<LlmRequest> requests() {
         ArgumentCaptor<LlmRequest> captor = ArgumentCaptor.forClass(LlmRequest.class);
@@ -179,6 +183,34 @@ class FlowGeneratorTest extends FlowTestSupport {
         Map<String, Object> row = flowRow(flowId);
         assertThat(row.get("status")).isEqualTo("FAILED");
         assertThat(row.get("error_code")).isEqualTo("LLM_503");
+    }
+
+    @Test
+    void AC5_흐름을_읽다가_DB_오류가_나도_PENDING으로_남기지_않는다() {
+        long userId = createUser("gen8");
+        long analysisId = analysis(userId, "DONE", "JUNIOR", List.of("POST /api/todos"));
+        long flowId = insertFlow(analysisId, "POST /api/todos", "PENDING", null);
+        doThrow(new IllegalStateException("db down")).when(flowService).findPending(flowId);
+
+        generator.generate(flowId);
+
+        assertThat(requests()).isEmpty();
+        Map<String, Object> row = flowRow(flowId);
+        assertThat(row.get("status")).isEqualTo("FAILED");
+        assertThat(row.get("error_code")).isEqualTo("ANALYSIS_500");
+    }
+
+    @Test
+    void FAILED_기록까지_실패해도_예외를_밖으로_던지지_않는다() {
+        long userId = createUser("gen9");
+        long analysisId = analysis(userId, "DONE", "JUNIOR", List.of("POST /api/todos"));
+        long flowId = insertFlow(analysisId, "POST /api/todos", "PENDING", null);
+        doThrow(new BusinessException(ErrorCode.LLM_503)).when(llmClient).complete(any());
+        doThrow(new IllegalStateException("db down"))
+                .when(flowService)
+                .markFailed(anyLong(), any());
+
+        assertThatCode(() -> generator.generate(flowId)).doesNotThrowAnyException();
     }
 
     @Test

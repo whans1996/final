@@ -249,6 +249,71 @@ describe('AnalysisFlowsTab (F-07)', () => {
     ])
   })
 
+  it('AC16 POST가 4xx로 실패하면 목록을 다시 불러 남은 개수를 맞춘다', async () => {
+    analysesApi.fetchAnalysisFlows.mockResolvedValueOnce([])
+    analysesApi.requestAnalysisFlows.mockRejectedValueOnce(
+      apiError(400, {
+        code: 'ANALYSIS_003',
+        message: '실행 흐름은 분석 하나에 3개까지 만들 수 있습니다.',
+      }),
+    )
+    const wrapper = await mountTab()
+    await checkbox(wrapper, 'POST /api/todos').setValue(true)
+    analysesApi.fetchAnalysisFlows.mockResolvedValueOnce([
+      flow({ id: 1, method: 'GET', path: '/api/todos', status: 'DONE', summary: 's', steps: [] }),
+      flow({
+        id: 2,
+        method: 'PATCH',
+        path: '/api/todos/{id}',
+        status: 'DONE',
+        summary: 's',
+        steps: [],
+      }),
+      flow({
+        id: 3,
+        method: 'DELETE',
+        path: '/api/todos/{id}',
+        status: 'DONE',
+        summary: 's',
+        steps: [],
+      }),
+    ])
+
+    await submitButton(wrapper).trigger('click')
+    await flushPromises()
+
+    expect(analysesApi.fetchAnalysisFlows).toHaveBeenCalledTimes(2)
+    expect(wrapper.find('[data-message="limit"]').exists()).toBe(true)
+    expect(wrapper.find('[role="alert"]').text()).toBe(
+      '실행 흐름은 분석 하나에 3개까지 만들 수 있습니다.',
+    )
+  })
+
+  it('AC16 남은 개수가 0이면 FAILED 카드의 다시 만들기를 막는다', async () => {
+    analysesApi.fetchAnalysisFlows.mockResolvedValue([
+      flow({ id: 1, method: 'GET', path: '/api/todos', status: 'DONE', summary: 's', steps: [] }),
+      flow({ id: 2, method: 'POST', path: '/api/todos', status: 'DONE', summary: 's', steps: [] }),
+      flow({
+        id: 3,
+        method: 'DELETE',
+        path: '/api/todos/{id}',
+        status: 'DONE',
+        summary: 's',
+        steps: [],
+      }),
+      flow({
+        id: 4,
+        method: 'PATCH',
+        path: '/api/todos/{id}',
+        status: 'FAILED',
+        errorMessage: 'x',
+      }),
+    ])
+    const wrapper = await mountTab()
+
+    expect(wrapper.find('[data-action="retry-flow"]').attributes('disabled')).toBeDefined()
+  })
+
   it('AC16 GET이 실패하면 서버 메시지와 다시 시도를 보여 준다', async () => {
     analysesApi.fetchAnalysisFlows.mockRejectedValueOnce(
       apiError(500, { code: 'COMMON_500', message: '서버에서 오류가 발생했습니다.' }),
