@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 |---|---|
-| 상태 | APPROVED <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
+| 상태 | DONE (PR #42) <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
 | 기능 ID | F-00b (인프라. 기능 목록에 없는 공통 기반, 결정로그 11-19) |
 | 우선순위 | P0 |
 | 영역 오너 | A 김동환 (공통 기반은 A가 먼저 만든다, `docs/conventions.md` 9절) |
@@ -139,10 +139,10 @@
 - [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신 (새 API 없음 → 변경 없음 확인)
 - [x] contract-checker 통과 (해당 없음이면 생략)
 - [x] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일)
-- [ ] reviewer 지적 사항 반영
+- [x] reviewer 지적 사항 반영 (반드시 수정 0, 권장 4건 `e5301af`)
 - [x] CODEOWNERS: `/frontend/src/router/routes/analysis.js`·`challenge.js` A, `community.js` B, `/frontend/src/layouts/`·`/frontend/src/views/admin/` 공통, `**/vibenote/concept/`·`mapper/concept/`는 이미 공통
 - [x] `docs/환경설정.md`에 로컬 관리자 계정 만드는 법(`ADMIN_BOOTSTRAP_EMAIL`), `.env.example`에 빈 항목, `frontend/CLAUDE.md`·`docs/conventions.md` 9절에 route 파일·`meta.nav` 규칙
 - [x] 산출물 반영 (화면 설계서 SC-20·21에 관리자 레이아웃 공통 구조 한 줄)
-- [ ] PR 본문에 `@JoonseobKim` 멘션 (공통 코드)
-- [ ] PR CI 초록
-- [ ] 상태 DONE (PR 머지 후)
+- [x] PR 본문에 `@JoonseobKim` 멘션 (공통 코드)
+- [x] PR CI 초록 (Codex ✅ e5301af)
+- [x] 상태 DONE (PR 머지 후)
