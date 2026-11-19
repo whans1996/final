@@ -112,7 +112,7 @@ export async function runChecks({ fast = false } = {}) {
   // JDK — Gradle이 쓰는 JAVA_HOME 기준(17 이상). 컴파일 JDK 21은 Gradle toolchain이 자동으로 받는다.
   //       release 파일을 읽어 java 프로세스를 띄우지 않는다. 없으면(전체 점검만) java -version
   const javaHome = (process.env.JAVA_HOME || '').replace(/[\\/]$/, '');
-  let javaMajor = javaMajorOf(/JAVA_VERSION="([^"]+)"/.exec(readText(join(javaHome, 'release')) || '')?.[1]);
+  let javaMajor = javaHome ? javaMajorOf(/JAVA_VERSION="([^"]+)"/.exec(readText(join(javaHome, 'release')) || '')?.[1]) : 0;
   if (javaHome && !javaMajor && !fast) {
     const v = await run(`"${join(javaHome, 'bin', isWin ? 'java.exe' : 'java')}" -version`, timeout);
     javaMajor = javaMajorOf(/version "([^"]+)"/.exec(v.out)?.[1]);

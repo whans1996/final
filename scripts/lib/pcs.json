@@ -1,5 +1,5 @@
 {
-  "$comment": "작업 PC 등록부. 각 PC는 `node scripts/setup.mjs --pc <id>`로 자기 id를 .harness/pc.json(커밋 안 됨)에 기록한다. github는 gh 활성 계정·git user.name 기대값(모르면 null, 첫 setup 뒤 채운다). notes는 세션 시작 때 Claude에게 주입되는 그 PC의 함정이다. 새로 알게 된 함정은 여기에 한 줄 추가한다.",
+  "$comment": "작업 PC 등록부. 각 PC는 `node scripts/setup.mjs --pc <id>`로 자기 id를 .harness/pc.json(커밋 안 됨)에 기록한다. github는 그 PC의 gh 활성 계정 기대값(다르면 세션 시작 때 경고, 모르면 null로 두고 첫 setup 뒤 채운다). notes는 세션 시작 때 Claude에게 주입되는 그 PC의 함정이다. 새로 알게 된 함정은 여기에 한 줄 추가한다.",
   "pcs": {
     "dh-ssafy": {
       "label": "김동환 SSAFY 교육장",

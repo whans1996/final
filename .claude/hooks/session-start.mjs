@@ -12,14 +12,23 @@ import {
   isGitRepo,
   readStdinJson,
   readText,
+  workFilesNewerThanNow,
 } from '../../scripts/lib/common.mjs';
-import { currentPc, icon, lastFullCheck, runChecks } from '../../scripts/lib/env-check.mjs';
+
+// env-check가 깨져도 NOW.md 주입은 살린다
+let envCheck;
+try {
+  envCheck = await import('../../scripts/lib/env-check.mjs');
+} catch (e) {
+  envCheck = { error: e.message };
+}
 
 const input = readStdinJson();
 const parts = ['# 바이브노트 세션 컨텍스트 (SessionStart hook 자동 주입)'];
 const warnings = [];
 // 외부 명령(gh·docker)은 병렬·3초 제한이라 아래 git fetch와 겹쳐 돈다
-const checksP = runChecks({ fast: true }).catch((e) => [{ status: 'warn', item: '환경 점검', detail: `실패: ${e.message}` }]);
+const checksFailed = (e) => [{ status: 'warn', item: '환경 점검', detail: `실패: ${e?.message ?? e}` }];
+const checksP = envCheck.runChecks ? envCheck.runChecks({ fast: true }).catch(checksFailed) : Promise.resolve(checksFailed(envCheck.error));
 
 if (!isGitRepo()) {
   warnings.push('git 저장소가 아닙니다.');
@@ -48,8 +57,26 @@ if (!isGitRepo()) {
 }
 
 const now = readText(NOW_FILE);
+const log = readText(WORKLOG_FILE);
+const logEntries = log ? log.split(/\r?\n(?=## )/) : [];
+const lastLog = logEntries.at(-1)?.startsWith('## ') ? logEntries.at(-1) : null;
+
+// 이전 세션이 체크포인트 없이 남긴 변경 (Stop hook은 이 세션이 건드린 파일만 보므로 여기서 알린다)
+const unrecorded = isGitRepo() ? workFilesNewerThanNow() : [];
+if (unrecorded.length) {
+  warnings.push(
+    `NOW.md보다 나중에 바뀐 미커밋 작업 파일 ${unrecorded.length}개 (${unrecorded.slice(0, 3).join(', ')}${unrecorded.length > 3 ? ' …' : ''}). ` +
+      '이전 세션이 체크포인트 없이 끝났거나 같은 작업 트리에서 다른 세션이 작업 중일 수 있습니다. /pickup에서 git diff로 실제 진행을 확인하고, 다른 세션의 파일은 건드리지 않습니다.',
+  );
+}
 
 // PC·환경 (git hooks 연결 여부도 여기서 본다)
+const {
+  currentPc = () => ({ id: null, hostname: '?' }),
+  icon = (s) => s,
+  lastFullCheck = () => null,
+  loadPcs = () => ({}),
+} = envCheck;
 const pc = currentPc();
 const rows = await checksP;
 const env = [pc.id ? `- PC: ${pc.label} (${pc.id}) · hostname ${pc.hostname}` : `- PC: 미등록 (hostname ${pc.hostname})`];
@@ -66,21 +93,24 @@ parts.splice(1, 0, `## PC·환경\n${env.join('\n')}`);
 if (!pc.id) warnings.push('이 PC가 등록되지 않아 인계 기록에 PC를 적을 수 없습니다. 사용자에게 `node scripts/setup.mjs --pc <id>` 실행을 요청하세요.');
 if (rows.some((r) => r.status === 'fail')) warnings.push('환경 점검에 ❌ 항목이 있습니다. 작업 전에 사용자와 해결하세요 (PC·환경 섹션).');
 
-// 직전 작업 PC: NOW.md 첫 줄의 "PC: <id>"
-const prevPc = /PC: ([\w-]+)/.exec(now || '')?.[1];
-if (prevPc && pc.id && prevPc !== pc.id) {
+// 직전 작업 PC: NOW.md "갱신:" 줄과 작업로그 마지막 헤더 중 더 최근 것 (자동 handoff.mjs는 작업로그에만 PC를 남긴다)
+const nowHead = /^갱신: (\d{4}-\d{2}-\d{2})(?: (\d{2}:\d{2}))?.*?\bPC: ([\w-]+)/m.exec(now || '');
+const logHead = /^## (\d{4}-\d{2}-\d{2})(?: (\d{2}:\d{2}))? · [^·\n]+ · ([\w-]+) · /.exec(lastLog || '');
+const pcIds = loadPcs();
+const prevPc = [nowHead, logHead]
+  .filter((m) => m && (m[3] === 'unknown-pc' || pcIds[m[3]]))
+  .map((m) => ({ at: `${m[1]} ${m[2] || '00:00'}`, id: m[3] }))
+  .sort((a, b) => (a.at < b.at ? 1 : -1))[0]?.id;
+if (prevPc === 'unknown-pc' && pc.id) {
+  warnings.push('직전 작업 PC를 알 수 없습니다(미등록 PC에서 인계). git pull로 최신화하고, 이 PC에서 verify.mjs가 통과하는지 먼저 봅니다.');
+} else if (prevPc && pc.id && prevPc !== pc.id) {
   warnings.push(
     `직전 작업은 다른 PC(${prevPc})에서 했습니다. git pull로 최신화했는지, 그 PC에만 있던 것(push 안 한 커밋, 로컬 DB 데이터, 환경변수 값, 설치한 도구)이 필요한지 확인하고, 이 PC에서 verify.mjs가 통과하는지 먼저 봅니다.`,
   );
 }
 parts.push(`## docs/handoff/NOW.md\n${now ? now.trim() : '(없음)'}`);
 
-const log = readText(WORKLOG_FILE);
-if (log) {
-  const entries = log.split(/\r?\n(?=## )/);
-  const last = entries[entries.length - 1];
-  if (last && last.startsWith('## ')) parts.push(`## 작업로그 마지막 항목\n${last.trim()}`);
-}
+if (lastLog) parts.push(`## 작업로그 마지막 항목\n${lastLog.trim()}`);
 
 if (warnings.length) parts.splice(1, 0, `## ⚠️ 주의\n${warnings.map((w) => `- ${w}`).join('\n')}`);
 parts.push(

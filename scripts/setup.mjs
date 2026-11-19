@@ -5,17 +5,28 @@
 import { ROOT, git, isGitRepo } from './lib/common.mjs';
 import { currentPc, icon, loadPcs, registerPc, runChecks, saveFullCheck } from './lib/env-check.mjs';
 
+// git hook 연결 (유일하게 상태를 바꾸는 단계). PC 등록과 무관하므로 먼저 한다
+const hookSet = isGitRepo() ? git(['config', 'core.hooksPath', '.githooks']) : null;
+if (hookSet && !hookSet.ok) console.error(`⚠️  git hook 연결 실패: ${hookSet.err}`);
+
 const args = process.argv.slice(2);
-const pcIdx = args.indexOf('--pc');
-const pcArg = pcIdx >= 0 ? args[pcIdx + 1] : null;
+let pcArg;
+for (let i = 0; i < args.length; i++) {
+  if (args[i] === '--pc') pcArg = args[++i] ?? '';
+  else if (args[i].startsWith('--pc=')) pcArg = args[i].slice(5);
+  else {
+    console.error(`❌ 알 수 없는 인자: ${args[i]}\n   사용법: node scripts/setup.mjs [--pc <id>]`);
+    process.exit(1);
+  }
+}
 const pcs = loadPcs();
 const pcList = Object.entries(pcs)
   .map(([id, p]) => `  ${id.padEnd(9)} ${p.label}`)
   .join('\n');
 
-if (pcIdx >= 0) {
+if (pcArg !== undefined) {
   if (!pcs[pcArg]) {
-    console.error(`❌ 알 수 없는 PC id: ${pcArg ?? '(없음)'}\n\n등록된 PC (scripts/lib/pcs.json):\n${pcList}\n`);
+    console.error(`❌ 알 수 없는 PC id: ${pcArg || '(없음)'}\n\n등록된 PC (scripts/lib/pcs.json):\n${pcList}\n`);
     process.exit(1);
   }
   registerPc(pcArg);
@@ -23,9 +34,6 @@ if (pcIdx >= 0) {
   console.error(`❌ 이 PC가 아직 등록되지 않았습니다. 어느 PC인지 지정해 다시 실행하세요.\n   node scripts/setup.mjs --pc <id>\n\n${pcList}\n`);
   process.exit(1);
 }
-
-// git hook 연결 (유일하게 상태를 바꾸는 단계)
-if (isGitRepo()) git(['config', 'core.hooksPath', '.githooks']);
 
 const pc = currentPc();
 const rows = await runChecks();

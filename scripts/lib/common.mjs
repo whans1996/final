@@ -1,6 +1,6 @@
 // 하네스 스크립트와 Claude Code hooks가 함께 쓰는 유틸리티
 import { spawnSync } from 'node:child_process';
-import { closeSync, existsSync, fstatSync, openSync, readFileSync, readSync } from 'node:fs';
+import { closeSync, existsSync, fstatSync, openSync, readFileSync, readSync, statSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -77,6 +77,43 @@ export function mdSection(md, title) {
     out.push(lines[i]);
   }
   return out.join('\n').trim();
+}
+
+// 체크포인트 대상: 실제 작업 산출물 (하네스 자체, 기획서는 제외)
+const WORK_WATCH = /^(backend\/|frontend\/|docs\/specs\/)/;
+const WORK_IGNORE = /(^|\/)(node_modules|build|dist|\.gradle)\/|(^|\/)CLAUDE\.md$/;
+
+/** NOW.md보다 1초 넘게 나중에 바뀐 미커밋 작업 파일 경로. 최근 것부터 */
+export function workFilesNewerThanNow(cwd = ROOT) {
+  const st = git(['status', '--porcelain', '-z', '--untracked-files=all'], { cwd });
+  if (!st.ok || !st.out) return [];
+
+  // -z 형식: "XY path\0" (rename/copy는 뒤에 원래 경로가 하나 더 붙음)
+  const tokens = st.out.split('\0').filter(Boolean);
+  const paths = [];
+  for (let i = 0; i < tokens.length; i++) {
+    const t = tokens[i];
+    paths.push(t.slice(3));
+    if (/[RC]/.test(t.slice(0, 2))) i++;
+  }
+
+  let nowMtime = 0;
+  try {
+    nowMtime = statSync(NOW_FILE).mtimeMs;
+  } catch {
+    // NOW.md 없음
+  }
+  const out = [];
+  for (const p of paths) {
+    if (!WORK_WATCH.test(p) || WORK_IGNORE.test(p)) continue;
+    try {
+      const m = statSync(join(cwd, p)).mtimeMs;
+      if (m > nowMtime + 1000) out.push({ path: p, mtime: m });
+    } catch {
+      // 삭제된 파일
+    }
+  }
+  return out.sort((a, b) => b.mtime - a.mtime).map((f) => f.path);
 }
 
 /** 로컬 시간 YYYY-MM-DD HH:mm */
