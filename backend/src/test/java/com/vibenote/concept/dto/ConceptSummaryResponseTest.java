@@ -3,6 +3,9 @@ package com.vibenote.concept.dto;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.vibenote.common.Level;
+import com.vibenote.concept.ConceptStatus;
+import com.vibenote.concept.domain.Concept;
+import java.math.BigDecimal;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -14,11 +17,20 @@ class ConceptSummaryResponseTest {
 
     @Test
     void AC4_요약_필드만_나오고_avgRating은_숫자다() {
-        ConceptSummaryResponse response =
-                new ConceptSummaryResponse(
-                        12L, "JWT 인증", "security", Level.JUNIOR, "토큰으로 사람을 확인한다.", 4.5, 12);
+        Concept concept = new Concept();
+        concept.setId(12L);
+        concept.setName("JWT 인증");
+        concept.setCategory("security");
+        concept.setDifficulty(Level.JUNIOR);
+        concept.setSummary("토큰으로 사람을 확인한다.");
+        concept.setBody("본문");
+        concept.setExampleCode("String token = jwt.sign(claims);");
+        concept.setStatus(ConceptStatus.PUBLISHED);
+        concept.setAvgRating(new BigDecimal("4.5"));
+        concept.setWishCount(12);
 
-        JsonNode json = mapper.readTree(mapper.writeValueAsString(response));
+        JsonNode json =
+                mapper.readTree(mapper.writeValueAsString(ConceptSummaryResponse.from(concept)));
 
         assertThat(json.propertyNames())
                 .containsExactlyInAnyOrder(

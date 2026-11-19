@@ -56,7 +56,7 @@
 | `AUTH` | 인증·토큰 (`AUTH_401` Access 토큰 없음/만료, `AUTH_403` 권한 없음, `AUTH_001` 로그인 실패, `AUTH_002` Refresh 무효·만료 → 다시 로그인) |
 | `USER` | 회원, 프로필, 팔로우 (`USER_409` 이메일·닉네임 중복, `details`에 필드 · `USER_404` 없거나 탈퇴한 회원 · `USER_001` 탈퇴 시 비밀번호 불일치, `details.password`) |
 | `ANALYSIS` | 분석 요청·파이프라인 (`ANALYSIS_413` 크기 초과, `ANALYSIS_415` 지원하지 않는 스택, `ANALYSIS_429` 일일 한도, `ANALYSIS_001` 그 분석의 파일이 아님(404), `ANALYSIS_002` 개요에 없는 API로 흐름 요청, `ANALYSIS_003` 분석당 흐름 3개 초과, `ANALYSIS_409` 분석이 끝나기 전 흐름 요청) |
-| `CONCEPT` | 개념 카드, 리뷰, 찜 |
+| `CONCEPT` | 개념 카드, 리뷰, 찜 (`CONCEPT_404` 없거나 공개되지 않은 카드) |
 | `QUIZ` | 퀴즈 |
 | `REVIEW_PLAN` | 복습 계획 |
 | `POST` | 게시글, 댓글 |

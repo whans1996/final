@@ -18,7 +18,10 @@ public interface ConceptMapper {
     /** 상태와 상관없이 읽는다. 공개 여부 판단은 호출자(ConceptQueryService 등)가 한다. */
     Optional<Concept> findById(long id);
 
-    /** ids 중 PUBLISHED 카드만 (순서는 보장하지 않는다). ids가 비면 IN ()이 SQL 오류이므로 호출하지 않는다. */
+    /**
+     * ids 중 PUBLISHED 카드만 (순서는 보장하지 않는다). ids가 비면 IN ()이 SQL 오류이므로 호출하지 않는다. 요약 컬럼만 채우므로
+     * status·body·exampleCode 등은 null이다 ({@code isPublished()}로 판단하지 않는다).
+     */
     List<Concept> findPublishedByIds(@Param("ids") List<Long> ids);
 
     // ── F-08 개념 추출 (A) ──
