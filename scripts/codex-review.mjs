@@ -23,7 +23,7 @@
 //   STALE    4  리뷰 상태가 없거나 이전 커밋 기준
 //   TIMEOUT  5  --wait 시간 초과
 //   CLOSED   6  PR이 이미 머지·종료됨 (루프 불필요)
-//   ERROR    1  gh 실패, 또는 Codex가 마지막 요청 뒤 "create an environment" 안내만 남김
+//   ERROR    1  gh 실패, 또는 Codex가 마지막 요청 뒤 "create an environment"·"create a Codex account" 안내만 남김
 //               (환경을 만든 뒤 --request로 다시 실행하면 요청을 새로 단다)
 
 import { spawnSync } from 'node:child_process';
@@ -35,7 +35,8 @@ const BOT = 'chatgpt-codex-connector';
 const STATE_RE = /<!--\s*codex-review-state:v1\s*(\{.*?\})\s*-->/s;
 const REQUEST_RE = /<!--\s*codex-review-request:\s*([0-9a-f]{40})\s*-->/;
 const RESOLVED_RE = /<!--\s*codex-findings-resolved:\s*([0-9a-f]{40})\s*-->/;
-const ENV_RE = /create an environment for this repo\]\((https?:[^)\s]+)\)/;
+// 요청한 계정에 Codex 저장소 환경이 없을 때와, 요청한 GitHub 계정이 Codex에 연결되지 않았을 때 (11-19 PR #30) 같은 방식으로 안내한다
+const ENV_RE = /(?:create an environment for this repo|create a Codex account and connect to github)\]\((https?:[^)\s]+)\)/i;
 const CLEAN_RECEIPT_RE = /codex-review-receipt[\s\S]*Didn't find any major issues[\s\S]*?Reviewed commit:\*{0,2}\s*`([0-9a-f]{7,40})`/;
 
 function fail(msg) {
@@ -219,7 +220,7 @@ function judge() {
     const env = envNotice(comments);
     const reqAt = requestAt(comments, h.sha);
     if (env && (!reqAt || env.at > reqAt)) {
-      const msg = `Codex 환경 없음 (${env.at}): ${env.url} 에서 만든 뒤 --request로 다시 요청`;
+      const msg = `Codex 환경 또는 계정 연결 없음 (${env.at}): ${env.url} 에서 설정한 뒤 --request로 다시 요청`;
       return { verdict: 'ERROR', envMissing: true, h, comments, msg };
     }
     const seen = st?.commit_sha ? `${st.commit_sha.slice(0, 7)} 기준` : '상태 댓글 없음';

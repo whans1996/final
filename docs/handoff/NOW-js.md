@@ -4,7 +4,7 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-dh.md`)은 읽기만 한다.
 
-갱신: 2026-11-19 11:20 · 작업자: JoonseobKim · PC: js-home · 브랜치: feature/common-js-home-onboarding
+갱신: 2026-11-19 11:42 · 작업자: JoonseobKim · PC: js-home · 브랜치: feature/common-codex-account-notice
 
 ## 현재 기능
 
@@ -14,12 +14,12 @@
 
 - ✅ 착수 체크리스트 js-home(macOS): setup `--pc js-home` 전부 ✅, `verify all` 통과, bootRun(local) Flyway·Swagger 확인, PR #28(pcs.json 주의 사항) 머지 (11-19)
 - 🟡 착수 체크리스트 js-ssafy: 진행 중 (교육장 PC Claude가 환경설정 6절대로 구성 중)
-- 🟡 Codex 자동 리뷰가 JoonseobKim PR에도 도는지 확인 중 (#28은 Codex 댓글 없음, 이 PR로 재확인)
+- ⛔ Codex 리뷰: JoonseobKim 계정이 Codex에 미연결 → 자동 리뷰 없음, `@codex review`에 "create a Codex account" 안내만 옴(#30). `codex-review.mjs`가 이 안내를 ERROR로 판정하도록 수정 PR 진행 중 (Mattermost 알림 확인 겸)
 
 ## 바로 다음 할 일
 
 1. js-ssafy 착수 체크리스트 마무리 → `node scripts/setup.mjs --pc js-ssafy`, `/pickup`으로 이 파일 주입 확인
-2. Codex가 내 PR에 리뷰를 안 달면 whans1996에게 Codex 연동 범위(작성자 계정) 확인 요청
+2. https://chatgpt.com/codex/cloud/settings/connectors 에서 GitHub(JoonseobKim)을 Codex에 연결 → 내 PR에 `node scripts/codex-review.mjs <번호> --request`로 리뷰가 도는지 확인
 3. 첫 기능 `/spec F-09` (카드 목록·검색, W2 11/24~30). 시드 카드 85개(`R__seed_concepts.sql`)와 `concepts` 테이블(V1)이 이미 있다
 4. W2 산출물: `docs/산출물/06-화면설계서.md` 초안 (B 담당, 11/24~28)
 
