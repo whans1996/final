@@ -22,6 +22,7 @@ import {
   previousPc,
   readStdinJson,
   readText,
+  sessionBanner,
   workFilesNewerThanNow,
   worklogEntries,
 } from '../../scripts/lib/common.mjs';
@@ -161,8 +162,28 @@ parts.push(
     : `이어서 작업하려면 /pickup 을 사용한다. 작업 단위가 끝날 때마다 ${me ? nowRelPath(me) : '내 NOW 파일'}을 갱신한다.`,
 );
 
+// additionalContext는 모델에만 간다. 사람에게는 systemMessage로 누구·어느 PC인지 바로 보여 준다
+// 배너가 깨져도 NOW 주입은 살린다
+let banner;
+try {
+  // env-check를 못 불러와도 로컬 등록이 있으면 미등록으로 보이지 않게 한다
+  const shownPc = pc.id || !localPcId() ? pc : { id: localPcId(), label: '(env-check 로드 실패)' };
+  banner = sessionBanner({
+    pc: shownPc,
+    branch: isGitRepo() ? currentBranch() || '(detached)' : null,
+    envBad: bad.map((r) => `${icon(r.status)} ${r.item}`),
+    warnings,
+    myFeature: me && now ? nowHeadline(now).feature : null,
+    peerName: other ? Object.entries(loadPcs()).find(([id]) => ownerKey(id) === other)?.[1].owner : null,
+    peerFeature: otherNow ? nowHeadline(otherNow.text).feature : null,
+  });
+} catch {
+  banner = undefined;
+}
+
 process.stdout.write(
   JSON.stringify({
+    ...(banner ? { systemMessage: banner } : {}),
     hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext: parts.join('\n\n') },
   }),
 );
