@@ -18,4 +18,11 @@ export default [
     component: () => import('@/views/AnalysisDetailView.vue'),
     meta: { requiresAuth: true },
   },
+  {
+    // SC-08 퀴즈 풀이 (F-14)
+    path: '/analyses/:id(\\d+)/quiz',
+    name: 'analysis-quiz',
+    component: () => import('@/views/QuizView.vue'),
+    meta: { requiresAuth: true },
+  },
 ]
