@@ -4,29 +4,29 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-dh.md`)은 읽기만 한다.
 
-갱신: 2026-11-19 17:40 · 작업자: JoonseobKim · PC: js-home · 브랜치: feature/F-10-concept-detail
+갱신: 2026-11-20 08:39 · 작업자: JoonseobKim · PC: js-home · 브랜치: feature/F-11-concept-review
 
 ## 현재 기능
 
-F-10 개념 카드 상세 (`docs/specs/F-10-concept-detail.md` DONE). **PR #52 머지 대기** — CI 초록, Codex ✅ `de214b3`(지적 없음), 완료 표시 커밋 push함. 사람이 GitHub에서 머지
+F-11 카드 리뷰 (`docs/specs/F-11-concept-review.md` **DRAFT, 승인 대기**). F-10은 PR #52로 머지 완료
 
 ## 진행
 
-- ✅ BE AC1~AC8, FE AC9~AC14 green. contract-checker 0건, ui-verifier 0건, SC-10 화면 설계서·스크린샷
-- ✅ /pr-review: verifier all 통과, reviewer 반드시 수정 0건. 권장 3건 반영(`de214b3`): 출처 URL http(s)만 링크(`ConceptDetailView.referenceIsLink`), 빈 title → project_name(`ConceptMapper.xml` `NULLIF(TRIM)`), `MarkdownBody.spec.js` DOM XSS 테스트
-- ✅ follow-up #51(F-13 BE reference_url http(s) 검증) 생성, PR 본문 `.harness/pr-F-10.md`(공통 파일 @whans1996 멘션)
+- ✅ spec 초안: BE AC1~AC12(목록·작성·`/me` 조회·수정·삭제, 평점 재계산, 409·404·401), FE AC13~AC18(SC-10 리뷰 절)
+- ✅ 결정(사용자 답): 수정·삭제 포함(`/reviews/me`), 내용 필수 1~200자, "더 보기" 10개씩 → 결정로그 추가
+- 마이그레이션 없음. 새 에러 코드 `CONCEPT_001`(내 리뷰 없음 404)·`CONCEPT_409`(중복)
 
 ## 바로 다음 할 일
 
-1. PR #52 머지 확인(`gh pr view 52 --json state`) → `git switch develop && git pull`
-2. 다음 B 기능 `/spec` (F-11 리뷰 or F-12 찜, `docs/기획서.md` 4절 순서 확인). F-13 spec 때 #51 흡수
-3. 남는 시간엔 #46 (F-09 범위 밖 page URL 안내)
+1. spec 검토·승인 받기 → 상태 `APPROVED`, 승인 칸 `김준섭 YYYY-MM-DD` → `docs(F-11): spec 승인` 커밋·push (브랜치는 이미 있음, 초안은 커밋됨)
+2. `/clear` 후 새 세션에서 `/implement F-11` (Opus/high). 첫 테스트: `concept/review/ConceptReviewApiTest#AC1_...`
 
 ## 막힌 점 / 결정 필요
 
-- 없음
+- 없음 (승인만 대기)
 
 ## 주의
 
-- 공통 파일 변경(SecurityConfig·ConceptMapper·concept 패키지 등)은 PR 본문에 적고 @whans1996 멘션함
-- 통합 테스트는 Docker Desktop 필요. 마이그레이션 없음
+- concept 패키지·`components/concept`·`src/api/concepts.js`·`SecurityConfig`·`ErrorCode`는 CODEOWNERS상 공통 → PR 본문에 @whans1996 멘션
+- F-04 피드는 지워진 리뷰의 REVIEW 활동을 `concept_reviews` JOIN으로 걸러야 함 (F-04 spec에 반영)
+- 이 브랜치는 develop(`c6c0c..` 이전)에서 갈라짐. 김동환 PR #53(F-08 mock fixture) 머지분은 `git merge origin/develop`으로 받음
