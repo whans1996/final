@@ -19,7 +19,8 @@
 //              댓글에 head sha 마커를 넣어, 같은 head에 대한 요청이 이미 있으면 생략한다
 //   --wait     COMPLETE·FINDINGS가 될 때까지 30초 간격으로 확인한다 (기본 20분). Claude는 run_in_background로 실행한다
 //   --resolve  head가 FINDINGS일 때 "남은 지적을 이슈로 이관함" 마커 댓글을 달고 COMPLETE로 끝낸다 (pr-review 8-3)
-//   --status   최종 판정을 PR head 커밋의 상태 체크 "Codex"로 남긴다 (COMPLETE ✅, FINDINGS ❌, 그 밖 ⏳·ERROR).
+//   --status   최종 판정을 PR head 커밋의 상태 체크 "Codex"로 남긴다 (COMPLETE ✅, FINDINGS ❌, 그 밖 ⏳·ERROR). --resolve는 항상 남긴다
+//              (FINDINGS로 ❌가 된 체크를 이관 완료 뒤 ✅로 바꾸려면, Codex 리뷰)
 //              브랜치 보호를 못 쓰는 저장소라 머지를 막지는 않고 PR 화면·gh pr checks에 보이게만 한다 (codex-status.yml도 쓴다)
 //
 // 출력 첫 줄과 종료 코드:
@@ -253,9 +254,9 @@ function requestAt(comments, sha) {
 
 const STATUS = { COMPLETE: 'success', FINDINGS: 'failure', ERROR: 'error' };
 
-/** --status: 판정을 head 커밋의 상태 체크 "Codex"로 남긴다. 실패해도 판정에는 영향이 없다 */
+/** --status(또는 --resolve): 판정을 head 커밋의 상태 체크 "Codex"로 남긴다. 실패해도 판정에는 영향이 없다 */
 function postStatus(r) {
-  if (!status || !r.h?.sha || r.verdict === 'CLOSED') return;
+  if (!(status || resolve) || !r.h?.sha || r.verdict === 'CLOSED') return;
   const state = STATUS[r.verdict] ?? 'pending';
   const description = `${r.verdict} ${r.msg}`.slice(0, 140);
   const fields = [`state=${state}`, 'context=Codex', `description=${description}`, `target_url=https://github.com/${repo}/pull/${pr}`];

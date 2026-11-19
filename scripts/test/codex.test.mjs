@@ -98,14 +98,19 @@ test('Stop hook 재확인: COMPLETE는 판정한 PR head가 로컬 HEAD일 때�
 });
 
 test('Stop hook 대기 판정은 백그라운드 Bash 호출만 본다', () => {
-  const use = (command, bg) =>
-    JSON.stringify({ message: { content: [{ type: 'tool_use', name: 'Bash', input: { command, run_in_background: bg } }] } });
+  const use = (command, bg, id = 'toolu_1') =>
+    JSON.stringify({ message: { content: [{ type: 'tool_use', id, name: 'Bash', input: { command, run_in_background: bg } }] } });
+  const done = (id) => JSON.stringify({ message: { content: `<task-notification><tool-use-id>${id}</tool-use-id><status>failed</status></task-notification>` } });
   const hookText = JSON.stringify({ type: 'tool_use_reason', text: '"tool_use" `node scripts/codex-review.mjs 7 --request --wait --status`' });
   assert.ok(waitingInTranscript(use('node scripts/codex-review.mjs 7 --request --wait --status', true), 7));
   assert.ok(!waitingInTranscript(use('node scripts/codex-review.mjs 7 --request --wait', false), 7));
   assert.ok(!waitingInTranscript(use('node scripts/codex-review.mjs 71 --wait', true), 7));
   assert.ok(!waitingInTranscript(hookText, 7));
   assert.ok(!waitingInTranscript('', 7));
+  // 이전 head의 --wait가 끝났으면 기다리는 프로세스가 아니다 (Codex 리뷰). 새로 건 것은 센다
+  const old = use('node scripts/codex-review.mjs 7 --request --wait --status', true, 'toolu_old');
+  assert.ok(!waitingInTranscript([old, done('toolu_old')].join('\n'), 7));
+  assert.ok(waitingInTranscript([old, done('toolu_old'), use('node scripts/codex-review.mjs 7 --wait', true, 'toolu_new')].join('\n'), 7));
 });
 
 test('Stop hook 동작: 판정별 차단·안내, 같은 (PR, head, 판정)은 한 번만', () => {

@@ -75,12 +75,16 @@ export function skipRecheck(prev, head, now, recheckMs) {
 }
 
 /**
- * transcript(JSONL)에 이 PR의 --wait를 백그라운드로 돌린 Bash 호출이 있는가.
+ * transcript(JSONL)에 아직 끝나지 않은, 이 PR의 --wait 백그라운드 Bash 호출이 있는가.
  * hook이 남긴 차단 문구에도 같은 명령이 들어 있으므로 tool_use의 command만 본다 (reviewer).
+ * 끝난 호출(완료 알림 <tool-use-id>가 transcript에 있음)은 세지 않는다: 이전 head의 --wait가 남아 있어도
+ * 새 리뷰를 기다리는 프로세스로 오인하지 않게 한다 (Codex 리뷰).
  */
 export function waitingInTranscript(text, pr) {
   const re = new RegExp(`codex-review\\.mjs\\s+${pr}\\b.*--wait`);
-  for (const line of (text || '').split('\n')) {
+  const raw = text || '';
+  const ids = [];
+  for (const line of raw.split('\n')) {
     if (!line.includes('"tool_use"')) continue;
     let o;
     try {
@@ -89,10 +93,10 @@ export function waitingInTranscript(text, pr) {
       continue;
     }
     for (const c of o.message?.content || []) {
-      if (c?.type === 'tool_use' && c.input?.run_in_background && re.test(c.input.command || '')) return true;
+      if (c?.type === 'tool_use' && c.input?.run_in_background && re.test(c.input.command || '')) ids.push(c.id);
     }
   }
-  return false;
+  return ids.some((id) => id && !raw.includes(`<tool-use-id>${id}</tool-use-id>`));
 }
 
 /**
