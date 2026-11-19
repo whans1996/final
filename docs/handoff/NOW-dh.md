@@ -4,11 +4,11 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
 
-갱신: 2026-11-19 10:31 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/common-harness-parallel
+갱신: 2026-11-19 10:41 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/common-harness-parallel
 
 ## 현재 기능
 
-하네스 병렬 전환 (common) — 코드 커밋 39176e3, 문서 커밋 대기 → /pr-review → PR
+하네스 병렬 전환 (common) — **PR #27 열림**, verifier 통과, reviewer 반드시 1·권장 9 반영(9b67770), CI·Codex 확인 중
 
 ## 진행
 
@@ -20,14 +20,15 @@
 
 ## 바로 다음 할 일
 
-1. 문서 묶음 커밋 → `/pr-review` (verifier·reviewer) → PR `chore(harness): 병렬 개발 전환` → CI harness 잡 초록·Codex 확인 → 본인 머지
-2. 머지 후 김준섭에게 `docs/환경설정.md` 6절 착수 체크리스트 전달, 메모리 relay-development-mode 갱신
+1. PR #27: `gh pr checks 27`(harness·backend·frontend 잡) 초록, `node scripts/codex-review.mjs 27` COMPLETE 확인 → GitHub에서 본인 머지 → `git switch develop && git pull`
+2. 김준섭에게 `docs/환경설정.md` 6절 착수 체크리스트 전달 (메모리 relay-development-mode는 갱신함)
 3. 1.4 유스케이스(마감 11/23): `docs/산출물/02-유스케이스.md`에 분석 요청·결과 조회·실행 흐름 UC
 4. 다음 A 영역 `/spec`: F-05b(URL 수집·SSRF, W2) 또는 F-08(개념 추출, W3)
 
 ## 막힌 점 / 결정 필요
 
-- 사람: 이슈 #16, 노션 팀원 초대, 고아 폴더 `../final-harness`(11-17 사본, .git 깨짐) 삭제 여부
+- 사람: 이슈 #16, 노션 팀원 초대, 고아 폴더 `../final-harness`(11-17 사본, .git 깨짐) 삭제 여부 (11-19 답이 모호해 보류)
+- 선택(reviewer 권장, 범위 밖): 상대 NOW 수정을 guard-files로 차단, 미등록 PC Stop hook block
 
 ## 주의
 
