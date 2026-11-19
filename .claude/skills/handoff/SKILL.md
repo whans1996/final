@@ -11,7 +11,8 @@ description: 릴레이 교대를 위해 NOW.md 갱신, 작업로그 기록, 커�
 ## 절차
 
 1. **NOW.md 덮어쓰기** (`docs/handoff/NOW.md`, 기존 섹션 구조 유지, 30줄 이내)
-   - 첫 줄: `갱신: YYYY-MM-DD HH:mm · 작업자: <git user.name> · 브랜치: <현재 브랜치>`
+   - 첫 줄: `갱신: YYYY-MM-DD HH:mm · 작업자: <git user.name> · PC: <PC id> · 브랜치: <현재 브랜치>`
+     - PC id는 SessionStart hook의 "PC·환경" 섹션(= `.harness/pc.json`) 값이다. 추측해 쓰지 않는다. 미등록이면 `unknown-pc`로 쓰고 사용자에게 `node scripts/setup.mjs --pc <id>`를 요청한다. 다음 세션 hook이 이 값으로 PC 전환을 감지한다.
    - `## 현재 기능`: 기능 ID, 이름, spec 경로
    - `## 진행`: AC별 ✅ / 🟡(상태 설명) / ⬜
    - `## 바로 다음 할 일`: 번호 목록. 파일 경로, 메서드, 테스트 이름까지. 첫 항목은 30분 안에 끝낼 수 있는 크기로.
@@ -21,7 +22,7 @@ description: 릴레이 교대를 위해 NOW.md 갱신, 작업로그 기록, 커�
 3. **작업로그 추가**: `docs/작업로그.md` **맨 아래**에
 
 ```
-## YYYY-MM-DD HH:mm · 작업자 · 브랜치
+## YYYY-MM-DD HH:mm · 작업자 · PC id · 브랜치
 - 한 일: (이번 세션에서 한 일, 커밋 단위로 2~5줄)
 - 다음 할 일: NOW.md 참고 (핵심 한 줄)
 - 막힌 점:

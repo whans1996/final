@@ -20,6 +20,7 @@ import {
   nowStamp,
   readText,
 } from './lib/common.mjs';
+import { currentPc } from './lib/env-check.mjs';
 
 const args = process.argv.slice(2);
 const noPush = args.includes('--no-push');
@@ -40,6 +41,7 @@ if (PROTECTED_BRANCHES.includes(branch) && hasCommits()) {
 
 const fid = featureIdFrom(branch) || 'common';
 const author = git(['config', 'user.name']).out || userInfo().username;
+const pcId = currentPc().id || 'unknown-pc';
 
 // 최근 커밋: develop 이후 커밋, 없으면 최근 8개
 const hasDevelop = git(['rev-parse', '--verify', '-q', 'develop']).ok;
@@ -61,7 +63,7 @@ const indent = (text) =>
 
 const entry = [
   '',
-  `## ${nowStamp()} · ${author} · ${branch} (자동 handoff)`,
+  `## ${nowStamp()} · ${author} · ${pcId} · ${branch} (자동 handoff)`,
   `- 한 일 (이 브랜치 커밋):`,
   commits.length ? commits.map((c) => `  - ${c}`).join('\n') : '  - (커밋 없음)',
   `- 미커밋 변경 ${changed.length}개 → 이 handoff의 wip 커밋에 포함`,

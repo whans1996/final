@@ -1,0 +1,41 @@
+{
+  "$comment": "작업 PC 등록부. 각 PC는 `node scripts/setup.mjs --pc <id>`로 자기 id를 .harness/pc.json(커밋 안 됨)에 기록한다. github는 그 PC의 gh 활성 계정 기대값(다르면 세션 시작 때 경고, 모르면 null로 두고 첫 setup 뒤 채운다). notes는 세션 시작 때 Claude에게 주입되는 그 PC의 함정이다. 새로 알게 된 함정은 여기에 한 줄 추가한다.",
+  "pcs": {
+    "dh-ssafy": {
+      "label": "김동환 SSAFY 교육장",
+      "owner": "김동환",
+      "github": "whans1996",
+      "notes": [
+        "시스템 git이 core.autocrlf=true다. .gitattributes가 LF로 고정하지만 pull 뒤 prettier가 줄바꿈으로 실패하면 `git ls-files --eol | grep w/crlf`로 확인",
+        "교육장 네트워크에서 JDK 21 자동 다운로드가 막히면 docs/환경설정.md 1절(gradle.properties)",
+        "Ollama liveTest 통과(11-18)"
+      ]
+    },
+    "dh-home": {
+      "label": "김동환 집",
+      "owner": "김동환",
+      "github": "whans1996",
+      "notes": [
+        "Windows 스마트 앱 컨트롤이 oxlint 네이티브를 막는다. lint는 Docker로 대신 돌고, Docker가 꺼져 있으면 건너뛴다(CI가 검사) → FE 작업 전에 Docker Desktop을 켠다",
+        "Ollama 구동 미확인(F-00 spec 결정 필요 2)"
+      ]
+    },
+    "js-ssafy": {
+      "label": "김준섭 SSAFY 교육장",
+      "owner": "김준섭",
+      "github": null,
+      "notes": [
+        "교육장 PC 공통: 시스템 git core.autocrlf=true일 수 있고 JDK 21 자동 다운로드가 막힐 수 있다(dh-ssafy 참고)",
+        "첫 교대 전 docs/환경설정.md 6절 체크리스트를 끝내고 scripts/lib/pcs.json의 github를 채운다"
+      ]
+    },
+    "js-home": {
+      "label": "김준섭 집",
+      "owner": "김준섭",
+      "github": null,
+      "notes": [
+        "환경 확인 기록 없음. 첫 교대 전 docs/환경설정.md 6절 체크리스트를 끝내고 scripts/lib/pcs.json의 github를 채운다"
+      ]
+    }
+  }
+}
