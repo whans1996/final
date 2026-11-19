@@ -78,7 +78,10 @@ abstract class AnalysisTestSupport extends IntegrationTestBase {
         ByteArrayOutputStream bytes = new ByteArrayOutputStream();
         try (ZipOutputStream out = new ZipOutputStream(bytes)) {
             for (Map.Entry<String, String> e : entries.entrySet()) {
-                out.putNextEntry(new ZipEntry(e.getKey()));
+                ZipEntry entry = new ZipEntry(e.getKey());
+                // 시각을 고정한다. 기본값(현재 시각, 2초 단위)이면 두 번 만든 ZIP이 2초 경계를 넘을 때 바이트가 달라진다
+                entry.setTime(1_700_000_000_000L);
+                out.putNextEntry(entry);
                 out.write(e.getValue().getBytes(StandardCharsets.UTF_8));
                 out.closeEntry();
             }
