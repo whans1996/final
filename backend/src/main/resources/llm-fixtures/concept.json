@@ -1,10 +1,10 @@
 {
   "concepts": [
-    { "conceptId": 39, "fileNo": 1, "lineHint": "L1-L20", "contextNote": "ArticlesApi에 @RestController와 @RequestMapping(path = \"/articles\")가 붙어 있어 /articles로 오는 요청을 메서드에 연결합니다." },
-    { "conceptId": 18, "fileNo": 1, "lineHint": "L20-L30", "contextNote": "ArticlesApi는 ArticleCommandService와 ArticleQueryService를 생성자로 받습니다. 스프링 컨테이너가 두 서비스 빈을 넣어 줍니다." },
-    { "conceptId": 42, "fileNo": 1, "contextNote": "글 작성 요청 본문에 @Valid를 붙여 제목·본문·설명이 비어 있지 않은지 컨트롤러에 들어오기 전에 검사합니다." },
-    { "conceptId": 62, "fileNo": 3, "contextNote": "ArticleMapper 인터페이스의 메서드가 같은 이름의 XML 매퍼 SQL과 연결되어 글을 저장하고 조회합니다." },
-    { "conceptId": 57, "contextNote": "로그인에 성공하면 JWT를 발급하고, 요청마다 Authorization 헤더의 토큰으로 사용자를 확인합니다." },
+    { "conceptName": "@RestController와 요청 매핑", "fileNo": 1, "lineHint": "L1-L20", "contextNote": "ArticlesApi에 @RestController와 @RequestMapping(path = \"/articles\")가 붙어 있어 /articles로 오는 요청을 메서드에 연결합니다." },
+    { "conceptName": "의존성 주입 (DI)", "fileNo": 1, "lineHint": "L20-L30", "contextNote": "ArticlesApi는 ArticleCommandService와 ArticleQueryService를 생성자로 받습니다. 스프링 컨테이너가 두 서비스 빈을 넣어 줍니다." },
+    { "conceptName": "Bean Validation (@Valid)", "fileNo": 1, "contextNote": "글 작성 요청 본문에 @Valid를 붙여 제목·본문·설명이 비어 있지 않은지 컨트롤러에 들어오기 전에 검사합니다." },
+    { "conceptName": "Mapper 인터페이스와 XML 매퍼", "fileNo": 3, "contextNote": "ArticleMapper 인터페이스의 메서드가 같은 이름의 XML 매퍼 SQL과 연결되어 글을 저장하고 조회합니다." },
+    { "conceptName": "JWT 기반 인증", "contextNote": "로그인에 성공하면 JWT를 발급하고, 요청마다 Authorization 헤더의 토큰으로 사용자를 확인합니다." },
     {
       "new": {
         "name": "GraphQL API (DGS)",
