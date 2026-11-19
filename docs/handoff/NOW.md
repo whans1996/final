@@ -7,20 +7,18 @@
 
 ## 현재 기능
 
-F-07 실행 흐름 설명 — `docs/specs/F-07-execution-flow.md` APPROVED, **BE·FE 구현 완료(AC1~AC16 green), 검증·산출물 남음**
+F-07 실행 흐름 — spec APPROVED, **구현·검증 완료(AC1~AC16 green), PR 전**
 
 ## 진행
 
-- ✅ V5, AC12(#19)·AC13(#21), AC2~AC5 순수 로직(`FlowContextBuilder`·`FlowResponseParser`), 프롬프트 `prompts/flow/*`
-- ✅ FE: `AnalysisFlowsTab`·`AnalysisFlowCard`·`MethodBadge`(개요 탭과 공용), 상세 `?tab=flows`, `usePolling.start({ delay })`
-- ✅ `flow/` FlowService(접수·캐시·개수·FOR UPDATE)·FlowLauncher(AFTER_COMMIT→analysisExecutor, 거부→FAILED)·FlowGenerator·FlowController(`/api/analyses/{id}/flows` POST 202·GET)·FlowMapper(.xml), `AnalysisRecovery`가 PENDING 흐름도 정리, `llm-fixtures/flow.json`, openapi.json
-- 결정(11-19): 흐름 `ANALYSIS_500` 문구는 공통 "실행 흐름 생성이 중단되었습니다. 다시 요청해 주세요." (spec AC11·결정 로그 반영)
-- MyBatis 배열 javaType은 `[Lcom...FlowStep;` (`FlowStep[]`은 못 읽음, backend/CLAUDE.md·JsonTypeHandler 주석 수정)
+- ✅ BE `analysis/flow/*`, V5, #19(AC12)·#21(AC13), 프롬프트·`flow.json`, openapi.json / FE `AnalysisFlowsTab`·`AnalysisFlowCard`·`MethodBadge`, `?tab=flows`
+- ✅ contract-checker(openapi 표기 2건 수정), ui-verifier 문제 0건(1280·375, 생성 중→완료 전환 확인), 06 화면설계서 SC-07 실행 흐름 절·스크린샷
+- 결정(11-19): 흐름 ANALYSIS_500 문구 공통 "실행 흐름 생성이 중단되었습니다. 다시 요청해 주세요."
 
 ## 바로 다음 할 일
 
-1. contract-checker, ui-verifier(BE `bootRun --spring.profiles.active=local` + FE `npm run dev`, `/analyses/{id}?tab=flows` 데스크톱·375px)
-2. `docs/산출물/06-화면설계서.md` SC-07 실행 흐름 탭, `04-WBS.md`·`05-간트차트.md` F-07 실적 → `/pr-review` (본문 Closes #19, #21)
+1. `/pr-review` (PR 본문 Closes #19, #21) → Codex 리뷰 확인
+2. 머지 전 `docs(F-07): 완료 표시`: spec 상태 DONE, `04-WBS.md` 3.11·`05-간트차트.md` t311 실적
 3. 1.4 유스케이스(마감 11/23): `docs/산출물/02-유스케이스.md`에 분석 요청·결과 조회·실행 흐름 UC
 
 ## 막힌 점 / 결정 필요
@@ -29,5 +27,5 @@ F-07 실행 흐름 설명 — `docs/specs/F-07-execution-flow.md` APPROVED, **BE
 
 ## 주의
 
-- 작업로그에 F-06 작업(11-18 19:50 이후) 항목이 없다 → 다음 handoff 때 보충
-- 통합 테스트는 Docker Desktop이 켜져 있어야 한다. V1~V5 수정 금지(V5 커밋 후)
+- 작업로그에 F-06·F-07 작업 항목이 없다 → handoff 때 보충
+- Gradle 테스트를 bootRun과 동시에 돌리지 않는다. 통합 테스트는 Docker Desktop 필요. V1~V5 수정 금지

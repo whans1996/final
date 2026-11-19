@@ -2,7 +2,6 @@ package com.vibenote.analysis.flow;
 
 import com.vibenote.common.config.ClockConfig;
 import com.vibenote.common.exception.ErrorCode;
-import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -43,12 +42,7 @@ public record FlowResponse(
                         example = "새 할 일을 등록하면 컨트롤러가 입력을 검사하고, 서비스가 저장을 맡깁니다.",
                         nullable = true)
                 String summary,
-        @ArraySchema(
-                        arraySchema =
-                                @Schema(
-                                        description = "단계 (최대 12개). DONE이 아니면 null",
-                                        nullable = true))
-                List<FlowStep> steps,
+        @Schema(description = "단계 (최대 12개). DONE이 아니면 null", nullable = true) List<FlowStep> steps,
         @Schema(
                         requiredMode = Schema.RequiredMode.REQUIRED,
                         description = "요청 시각",

@@ -19,7 +19,7 @@ public record CreateFlowsRequest(
                         minItems = 1,
                         maxItems = 3)
                 @NotEmpty(message = "실행 흐름을 만들 API를 하나 이상 고르세요.")
-                @Size(max = 3, message = "API는 한 번에 3개까지 고를 수 있습니다.")
+                @Size(min = 1, max = 3, message = "API는 한 번에 1~3개를 고를 수 있습니다.")
                 List<@Valid Endpoint> endpoints) {
 
     @Schema(description = "API 하나 (개요 apis의 method·path 그대로)")

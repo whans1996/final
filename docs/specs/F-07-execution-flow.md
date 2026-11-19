@@ -294,8 +294,8 @@ LLM은 테스트에서 실제로 부르지 않는다. `@MockitoBean LlmClient`�
 - [x] BE 구현 (green) — 프롬프트 3개, fixture 1개, #19·#21
 - [x] FE 구현 (green)
 - [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
-- [ ] contract-checker 통과
-- [ ] ui-verifier 통과 (데스크톱·모바일)
+- [x] contract-checker 통과 (openapi 표기 2건 수정)
+- [x] ui-verifier 통과 (데스크톱·모바일)
 - [ ] reviewer 지적 사항 반영
 - [ ] 산출물 반영: `03-ERD.md`(analysis_flows), `06-화면설계서.md` SC-07 실행 흐름 탭, `conventions.md` 3절 에러 코드, F-05a spec 5.2·F-06 spec AC7 한 줄, `09-데이터셋.md`·`datasets.json` DS-06, `04-WBS.md`·`05-간트차트.md` F-07 실적
 - [ ] PR CI 초록

@@ -347,7 +347,7 @@
               "$ref" : "#/components/schemas/Endpoint"
             },
             "maxItems" : 3,
-            "minItems" : 0,
+            "minItems" : 1,
             "type" : "array"
           }
         },
@@ -446,7 +446,7 @@
             "items" : {
               "$ref" : "#/components/schemas/FlowStep"
             },
-            "type" : "array"
+            "type" : [ "array", "null" ]
           },
           "summary" : {
             "description" : "전체 흐름 요약 (500자 이내). DONE이 아니면 null",
