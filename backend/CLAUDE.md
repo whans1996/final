@@ -15,7 +15,7 @@ com.vibenote
 ├─ follow          팔로우 (F-04)
 ├─ feed            활동 피드, activities 기록 (F-04, F-19)
 ├─ analysis        분석 요청, 파이프라인, 파일, 실행 흐름 (F-05~F-07, F-19)
-├─ concept         개념 카드, 리뷰, 찜, 관리자 (F-08~F-13)
+├─ concept         개념 카드, 리뷰, 찜, 관리자. 공통 기반(A) 위에 F-08(A)·F-09~13(B)
 ├─ quiz            퀴즈 생성, 풀이, 채점 (F-14)
 ├─ reviewplan      복습 계획 (F-15)
 ├─ recommendation  맞춤 추천 (F-16)

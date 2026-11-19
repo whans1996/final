@@ -29,7 +29,7 @@ argument-hint: F-xx
 2. **Green**: 테스트를 통과시키는 최소 구현. `backend/CLAUDE.md`, `frontend/CLAUDE.md`, `docs/conventions.md` 규칙을 따른다.
    - 테스트를 통과시키려고 테스트를 고치지 않는다. 테스트가 spec과 다르게 쓰였을 때만 고치고 이유를 커밋 메시지에 남긴다.
 3. **검증**: `verifier`로 해당 영역 전체 테스트 실행 (다른 테스트를 깨지 않았는지).
-4. **체크포인트**: spec 체크리스트와 내 NOW 파일 진행 상태를 갱신하고 커밋 `feat(F-xx): AC1 ...` (git hook이 테스트를 다시 돌린다).
+4. **체크포인트**: spec 체크리스트와 내 NOW 파일 진행 상태를 갱신하고 커밋 `feat(F-xx): AC1 ...` (git hook이 테스트를 다시 돌린다). 커밋 뒤 `git push -u origin <브랜치>`로 올린다. 상대의 세션 시작·peer-watch hook과 Mattermost 알림이 원격의 내 NOW 파일로 지금 하는 일을 본다 (11-19 결정).
 
 막히면(같은 실패 3회, 30분 이상 진전 없음): 멈추고 NOW 파일 막힌 점에 시도한 것을 적은 뒤 사용자에게 묻는다.
 

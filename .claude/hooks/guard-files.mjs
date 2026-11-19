@@ -2,9 +2,11 @@
 // PreToolUse(Edit|Write|MultiEdit) hook
 //  - .env 파일 수정 금지 (.env.example은 허용)
 //  - 이미 커밋된 Flyway 버전 마이그레이션(V*.sql) 수정 금지 → 새 버전 파일을 만들어야 함
+//  - 상대의 NOW 파일(docs/handoff/NOW-<상대>.md) 수정 금지
 //  - 작성 내용에 실제 키로 보이는 문자열이 있으면 차단
+//  (상대 영역 코드는 막지 않고 PostToolUse area-notice hook이 알린다)
 import { basename, isAbsolute, relative, resolve } from 'node:path';
-import { ROOT, git, hasCommits, readStdinJson } from '../../scripts/lib/common.mjs';
+import { ROOT, git, hasCommits, localPcId, nowRelPath, otherOwnerKey, ownerKey, readStdinJson } from '../../scripts/lib/common.mjs';
 
 const input = readStdinJson();
 const ti = input?.tool_input || {};
@@ -32,7 +34,13 @@ if (/(^|\/)db\/migration\/V[^/]*\.sql$/i.test(rel) && hasCommits()) {
   }
 }
 
-// 3) 비밀 키 패턴
+// 3) 상대 NOW 파일 (사람별 스냅샷은 본인만 쓴다, 11-19 결정). 미등록 PC는 판정할 수 없어 건너뛴다
+const me = ownerKey(localPcId());
+if (me && rel === nowRelPath(otherOwnerKey(me))) {
+  block(`상대의 NOW 파일입니다. 내 상태는 ${nowRelPath(me)}에만 쓰고, 상대에게 전할 말은 PR 댓글이나 Mattermost로 남기세요.`);
+}
+
+// 4) 비밀 키 패턴
 const texts = [ti.content, ti.new_string, ...(Array.isArray(ti.edits) ? ti.edits.map((e) => e?.new_string) : [])].filter(
   (t) => typeof t === 'string',
 );

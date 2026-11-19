@@ -1,0 +1,75 @@
+# 영역 경계의 정본 (11-19 결정). A 김동환 @whans1996 = AI·분석·학습 루프·공통 기반·하네스, B 김준섭 @JoonseobKim = 카드·소셜.
+# 뒤에 나온 규칙이 이긴다. 두 사람이 모두 적힌 파일은 공통이다.
+# - GitHub: 이 파일에 걸린 PR은 소유자에게 리뷰가 자동 요청된다 (승인은 필수가 아님, conventions 7절).
+# - 하네스: scripts/lib/owners.mjs가 읽어 상대 영역·공통 파일을 수정하면 Claude에게 알리고(area-notice hook),
+#   `node scripts/owners.mjs --diff origin/develop`이 PR 설명에 @멘션할 대상을 뽑는다.
+# - 새 도메인 패키지·FE 폴더를 만들면 같은 PR에서 이 파일에 한 줄 추가한다. FE views·components는 도메인 폴더(views/quiz/ 등)에 둔다.
+
+# ── 공통 (둘 다) ─────────────────────────────────────────
+/backend/build.gradle*                       @whans1996 @JoonseobKim
+/backend/settings.gradle*                    @whans1996 @JoonseobKim
+/backend/src/main/resources/application*.yml @whans1996 @JoonseobKim
+/backend/src/main/resources/db/              @whans1996 @JoonseobKim
+**/vibenote/common/                          @whans1996 @JoonseobKim
+**/vibenote/auth/                            @whans1996 @JoonseobKim
+**/vibenote/user/                            @whans1996 @JoonseobKim
+**/vibenote/feed/                            @whans1996 @JoonseobKim
+**/vibenote/concept/                         @whans1996 @JoonseobKim
+/backend/src/main/resources/mapper/auth/     @whans1996 @JoonseobKim
+/backend/src/main/resources/mapper/user/     @whans1996 @JoonseobKim
+/backend/src/main/resources/mapper/feed/     @whans1996 @JoonseobKim
+/backend/src/main/resources/mapper/concept/  @whans1996 @JoonseobKim
+/docs/api/openapi.json                       @whans1996 @JoonseobKim
+/frontend/package*.json                      @whans1996 @JoonseobKim
+/frontend/vite.config.*                      @whans1996 @JoonseobKim
+/frontend/src/App.vue                        @whans1996 @JoonseobKim
+/frontend/src/main.js                        @whans1996 @JoonseobKim
+/frontend/src/router/                        @whans1996 @JoonseobKim
+/frontend/src/api/http.js                    @whans1996 @JoonseobKim
+/frontend/src/api/auth.js                    @whans1996 @JoonseobKim
+/frontend/src/api/users.js                   @whans1996 @JoonseobKim
+/frontend/src/stores/auth.js                 @whans1996 @JoonseobKim
+/frontend/src/components/common/             @whans1996 @JoonseobKim
+/frontend/src/composables/                   @whans1996 @JoonseobKim
+/frontend/src/views/concept/                 @whans1996 @JoonseobKim
+/frontend/src/components/concept/            @whans1996 @JoonseobKim
+
+# ── A 김동환: 분석·LLM·퀴즈·복습·추천·챌린지 ───────────────
+**/vibenote/analysis/                        @whans1996
+**/vibenote/llm/                             @whans1996
+**/vibenote/quiz/                            @whans1996
+**/vibenote/reviewplan/                      @whans1996
+**/vibenote/recommendation/                  @whans1996
+**/vibenote/challenge/                       @whans1996
+**/vibenote/prompteval/                      @whans1996
+/backend/src/main/resources/mapper/analysis/ @whans1996
+/backend/src/main/resources/mapper/llm/      @whans1996
+/backend/src/main/resources/prompts/         @whans1996
+/backend/src/main/resources/llm-fixtures/    @whans1996
+/frontend/src/api/analyses.js                @whans1996
+/frontend/src/utils/analysisStatus.js        @whans1996
+/frontend/src/utils/layers.js                @whans1996
+/frontend/src/views/Analysis*                @whans1996
+/frontend/src/views/__tests__/Analysis*      @whans1996
+/frontend/src/components/analysis/           @whans1996
+/frontend/src/views/quiz/                    @whans1996
+/frontend/src/views/reviewplan/              @whans1996
+/frontend/src/views/challenge/               @whans1996
+
+# ── B 김준섭: 팔로우·커뮤니티 (카드 F-09~13은 공통 기반 위 concept 하위 폴더) ──
+**/vibenote/follow/                          @JoonseobKim
+**/vibenote/community/                       @JoonseobKim
+/backend/src/main/resources/mapper/follow/   @JoonseobKim
+/backend/src/main/resources/mapper/community/ @JoonseobKim
+/frontend/src/views/community/               @JoonseobKim
+/frontend/src/components/community/          @JoonseobKim
+
+# ── 하네스 (A가 유지보수) ─────────────────────────────────
+/.claude/                                    @whans1996
+/.githooks/                                  @whans1996
+/.github/                                    @whans1996
+/scripts/                                    @whans1996
+
+# ── 사람별 NOW (상대 것은 수정 금지, guard-files가 막는다) ──
+/docs/handoff/NOW-dh.md                      @whans1996
+/docs/handoff/NOW-js.md                      @JoonseobKim
