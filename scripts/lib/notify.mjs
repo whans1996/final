@@ -13,13 +13,19 @@ export function whoOf(login, pcs) {
   return a ? `${AREA[a.key] ?? ''} ${a.owner}`.trim() : login || '?';
 }
 
-/** push 이벤트에서 바뀐 NOW 파일의 사람 key 목록 */
-export function changedNowKeys(payload) {
+/**
+ * push 이벤트에서 바뀐 NOW 파일의 사람 key 목록.
+ * develop 합치기로 딸려 온 커밋(distinct:false)은 빼고, push한 사람을 알면 그 사람의 NOW만 남긴다
+ * (머지 직전 develop을 합쳐 push하면 상대의 옛 NOW 커밋이 payload.commits에 섞인다).
+ */
+export function changedNowKeys(payload, pcs = {}) {
+  const pusher = accountsOf(pcs)[String(payload?.sender?.login || '').toLowerCase()]?.key;
   const keys = new Set();
   for (const c of payload?.commits || []) {
+    if (c.distinct === false) continue;
     for (const f of [...(c.added || []), ...(c.modified || [])]) {
       const m = NOW_PATH.exec(f);
-      if (m && ownerKey(`${m[1]}-x`)) keys.add(m[1]);
+      if (m && ownerKey(`${m[1]}-x`) && (!pusher || pusher === m[1])) keys.add(m[1]);
     }
   }
   return [...keys];
@@ -47,7 +53,7 @@ export function buildMessage(eventName, payload, { pcs = {}, nowTexts = {} } = {
 
   if (eventName === 'push') {
     const branch = String(payload?.ref || '').replace(/^refs\/heads\//, '');
-    const lines = changedNowKeys(payload)
+    const lines = changedNowKeys(payload, pcs)
       .filter((k) => nowTexts[k])
       .map((k) => {
         const h = nowHeadline(nowTexts[k]);

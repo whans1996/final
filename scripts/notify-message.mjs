@@ -10,7 +10,7 @@ const eventName = process.env.GITHUB_EVENT_NAME;
 const payload = JSON.parse(readFileSync(process.env.GITHUB_EVENT_PATH, 'utf8'));
 
 const nowTexts = {};
-if (eventName === 'push') for (const k of changedNowKeys(payload)) nowTexts[k] = readText(nowFileOf(k));
+if (eventName === 'push') for (const k of changedNowKeys(payload, loadPcs())) nowTexts[k] = readText(nowFileOf(k));
 
 const text = buildMessage(eventName, payload, { pcs: loadPcs(), nowTexts });
 if (text) process.stdout.write(JSON.stringify({ username: 'VibeNote', text }));

@@ -50,3 +50,18 @@ test('NOW push는 바뀐 사람의 현재 기능과 다음 할 일', () => {
   );
   assert.equal(buildMessage('push', { ref: 'refs/heads/x', commits: [] }, { pcs: PCS }), null);
 });
+
+test('develop 합치기로 딸려 온 상대 NOW 커밋은 알리지 않는다', () => {
+  const merged = {
+    ref: 'refs/heads/feature/F-08-concepts',
+    sender: { login: 'whans1996' },
+    commits: [
+      { distinct: false, modified: ['docs/handoff/NOW-js.md'] },
+      { distinct: true, modified: ['docs/handoff/NOW-dh.md'] },
+    ],
+  };
+  assert.deepEqual(changedNowKeys(merged, PCS), ['dh']);
+  // distinct 표시가 없어도 push한 사람의 NOW만 본다
+  const noDistinct = { ...merged, commits: [{ modified: ['docs/handoff/NOW-js.md', 'docs/handoff/NOW-dh.md'] }] };
+  assert.deepEqual(changedNowKeys(noDistinct, PCS), ['dh']);
+});
