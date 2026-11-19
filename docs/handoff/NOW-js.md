@@ -4,33 +4,29 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-dh.md`)은 읽기만 한다.
 
-갱신: 2026-11-19 11:48 · 작업자: JoonseobKim · PC: js-home · 브랜치: feature/common-codex-account-notice
+갱신: 2026-11-19 14:37 · 작업자: JoonseobKim · PC: js-home · 브랜치: feature/F-09-concept-list
 
 ## 현재 기능
 
-없음 — 착수 전. B 영역: F-04 팔로우·피드, F-09 카드 목록·검색, F-10 카드 상세, F-11 리뷰, F-12 찜, F-13 관리자 카드, F-17 게시판, F-18 댓글
+F-09 개념 카드 목록·검색 — `docs/specs/F-09-concept-list.md` **APPROVED** (김준섭 11-19) · 브랜치 `feature/F-09-concept-list` (spec 승인 커밋만 있음, 구현 전)
 
 ## 진행
 
-- ✅ 착수 체크리스트 js-home(macOS): setup `--pc js-home` 전부 ✅, `verify all` 통과, bootRun(local) Flyway·Swagger 확인, PR #28(pcs.json 주의 사항) 머지 (11-19)
-- 🟡 착수 체크리스트 js-ssafy: 진행 중 (교육장 PC Claude가 환경설정 6절대로 구성 중)
-- ✅ Codex 리뷰: JoonseobKim 계정 연결·저장소 환경 생성(11-19) 후 PR #34 `@codex review` → Codex ✅ 4a5ca2c (지적 없음). Mattermost 알림 CI 단계 통과
-- 🟡 PR #34 `codex-review.mjs` 계정 미연결 안내 ERROR 판정 — CI 초록, Codex ✅, 머지 대기 (#33은 환경 생성 전이라 닫음)
+- ✅ PR #34(Codex 계정 미연결 ERROR 판정) 머지, js-home 착수 체크리스트 완료 (11-19)
+- 🟡 js-ssafy 착수 체크리스트: pcs.json 등록됨, 교육장 PC에서 `/pickup` 확인만 남음
+- ✅ F-09 spec 승인: AC 11개, `GET /api/concepts` 공개(PUBLISHED만), 인기순=wish_count→avg_rating→id ASC(기본), 최신순, 키워드=name+summary LIKE(`!` 이스케이프), DB 변경 없음. 목록 DTO `ConceptSummaryResponse` 계약을 spec 3절에서 확정
 
 ## 바로 다음 할 일
 
-1. js-ssafy 착수 체크리스트 마무리 → `node scripts/setup.mjs --pc js-ssafy`, `/pickup`으로 이 파일 주입 확인
-2. PR #34 머지 (하네스 변경이라 PR 본문에서 @whans1996 멘션함)
-3. 첫 기능 `/spec F-09` (카드 목록·검색, W2 11/24~30). 시드 카드 85개(`R__seed_concepts.sql`)와 `concepts` 테이블(V1)이 이미 있다
-4. W2 산출물: `docs/산출물/06-화면설계서.md` 초안 (B 담당, 11/24~28)
+1. 김동환에게 Mattermost로 공유: 공통 기반 PR의 `ConceptSummaryResponse`를 spec 3절 필드(id·name·category·difficulty·summary·wishCount·avgRating)대로 만들어 달라고
+2. 공통 기반 PR이 develop에 머지되면 `git merge origin/develop` 후 `/implement F-09` (첫 테스트 `ConceptListApiTest#AC1_...`)
+3. 그동안 W2 산출물 `docs/산출물/06-화면설계서.md` 초안 (B 담당, 11/24~28)
 
 ## 막힌 점 / 결정 필요
 
-- 없음
+- F-09 구현은 A의 concept 공통 기반 PR(결정로그 11-19) 머지 뒤 시작. 아직 시작 전
 
 ## 주의
 
-- 공통 코드(SecurityConfig, GlobalExceptionHandler, 라우터, 레이아웃, 공용 컴포넌트)를 바꾸면 PR 본문에서 @whans1996 멘션
+- 공통 코드(SecurityConfig `PUBLIC_GET_PATHS`, 라우터, nav, 공용 컴포넌트)를 바꾸면 PR 본문에서 @whans1996 멘션
 - 마이그레이션 만들기 전 `node scripts/next-migration.mjs`. 통합 테스트는 Docker Desktop 필요
-
-<!-- [임시] Codex 자동 리뷰 확인용 줄. 이 PR은 머지하지 않고 닫는다. -->
