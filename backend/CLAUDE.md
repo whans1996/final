@@ -67,7 +67,8 @@ com.vibenote
   - 문자열 안 작은따옴표는 두 번(`''`) 쓰고, **백슬래시는 쓰지 않는다** (MySQL 기본 모드에서 이스케이프 문자).
   - 출처(`reference_url`)는 `data/datasets.json` DS-01 도메인만 쓴다. `SeedConceptsTest`가 검사한다.
 - Flyway 플레이스홀더 치환은 꺼 두었다 (`spring.flyway.placeholder-replacement: false`). 시드 본문의 `${}` 예제가 그대로 들어가야 하기 때문이다. 마이그레이션에서 플레이스홀더를 쓰지 않는다.
-- 두 PC에서 버전 번호가 겹치지 않도록 새 V 파일을 만들기 전에 `git pull`로 최신 번호를 확인한다.
+- 두 사람이 병렬로 마이그레이션을 만들므로 새 V 파일을 만들기 전에 `git merge origin/develop` 후 `node scripts/next-migration.mjs`로 번호를 확인한다 (develop과 원격 feature 브랜치까지 본다). 그래도 상대가 같은 번호를 먼저 머지하면 CI `check-migrations`가 실패한다. 그때는 develop을 합친 뒤 develop에 없는 내 파일만 `git mv`로 다음 번호로 바꾼다 (내용은 그대로). 로컬 DB에 옛 번호로 적용된 기록이 남았으면 `flyway_schema_history`의 그 행을 지우거나 로컬 DB를 다시 만든다.
+- `R__seed_concepts.sql`(시드 카드)은 카드 영역(B 김준섭) 소유다. A 영역에서 고칠 일이 있으면 상대에게 알린다.
 
 ## API 문서 (Swagger, springdoc-openapi)
 

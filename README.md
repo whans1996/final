@@ -71,11 +71,11 @@ npm run dev   # http://localhost:5173 (/api는 8080으로 프록시)
 
 ## 개발 방식: Claude Code 하네스
 
-2인이 서로 다른 PC에서 AI 코딩 도구로 **릴레이 개발**하기 위해, AI가 같은 규칙으로 일하고 스스로 검증하며 실수가 기계적으로 차단되도록 개발 환경을 설계했다.
+2인이 PC 4대에서 AI 코딩 도구로 **영역별 병렬 개발**(같은 사람의 PC 사이에서는 교대)을 하기 위해, AI가 같은 규칙으로 일하고 스스로 검증하며 실수가 기계적으로 차단되도록 개발 환경을 설계했다.
 
 | 층 | 구성 |
 |---|---|
-| 컨텍스트 | [CLAUDE.md](CLAUDE.md), [docs/conventions.md](docs/conventions.md), 기능별 spec, 현재 상태 `docs/handoff/NOW.md` |
+| 컨텍스트 | [CLAUDE.md](CLAUDE.md), [docs/conventions.md](docs/conventions.md), 기능별 spec, 사람별 현재 상태 `docs/handoff/NOW-dh.md`·`NOW-js.md`, 결정 기록 `docs/결정로그.md` |
 | 워크플로 | `/pickup` → `/spec` → `/implement`(TDD) → `/pr-review` → `/handoff` |
 | 가드레일 | Claude Code hooks + git hook (보호 브랜치, 비밀 정보, 마이그레이션, 커밋 규칙, 테스트 게이트) |
 | 피드백 | 검증 스크립트, 화면 점검, Testcontainers, GitHub Actions CI, Swagger 계약 검사 |

@@ -4,7 +4,8 @@
 
 - 기능 ID: F-xx
 - spec: `docs/specs/F-xx-slug.md`
-- 영역 오너(머지): 
+- 영역 오너(머지): <!-- @whans1996 (A) 또는 @JoonseobKim (B). 본인이 머지한다 -->
+- [ ] 공통 코드(SecurityConfig, GlobalExceptionHandler, 공통 응답·ErrorCode, FE 라우터·레이아웃·공용 컴포넌트·api 클라이언트, 빌드 설정)를 바꿨으면 상대를 @멘션했다
 
 ## 변경 요약
 
