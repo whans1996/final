@@ -1,7 +1,7 @@
 // Mattermost 알림 메시지
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { buildMessage, changedNowKeys, whoOf } from '../lib/notify.mjs';
+import { buildMessage, changedNowKeys, senderKey, whoOf } from '../lib/notify.mjs';
 
 const PCS = {
   'dh-ssafy': { owner: '김동환', github: 'whans1996' },
@@ -78,4 +78,11 @@ test('develop 합치기로 딸려 온 상대 NOW 커밋은 알리지 않는다',
   // distinct 표시가 없어도 push한 사람의 NOW만 본다
   const noDistinct = { ...merged, commits: [{ modified: ['docs/handoff/NOW-js.md', 'docs/handoff/NOW-dh.md'] }] };
   assert.deepEqual(changedNowKeys(noDistinct, PCS), ['dh']);
+});
+
+test('알림은 행동한 사람의 웹훅으로 보낸다 (글쓴이 = 웹훅 만든 사람)', () => {
+  assert.equal(senderKey({ sender: { login: 'joonseobkim' } }, PCS), 'js');
+  assert.equal(senderKey({ sender: { login: 'whans1996' } }, PCS), 'dh');
+  assert.equal(senderKey({ sender: { login: 'github-actions[bot]' } }, PCS), null);
+  assert.equal(senderKey({}, PCS), null);
 });
