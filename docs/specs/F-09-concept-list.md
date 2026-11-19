@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 |---|---|
-| 상태 | APPROVED <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
+| 상태 | DONE (PR #47) <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
 | 기능 ID | F-09 |
 | 우선순위 | P0 |
 | 영역 오너 | B 김준섭 (카드·소셜) |
@@ -172,7 +172,7 @@
 - [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
 - [x] contract-checker 통과
 - [x] ui-verifier 통과 (데스크톱·모바일)
-- [ ] reviewer 지적 사항 반영
+- [x] reviewer 지적 사항 반영 (반드시 수정 0건, 권장 2건 반영, 1건 → #46)
 - [x] 산출물 반영: `06-화면설계서.md` SC-09 절 + 스크린샷(`screens/SC-09-*.png`), CODEOWNERS에 새 FE 폴더(`views/concept/`·`components/concept/`)가 없으면 추가
-- [ ] PR CI 초록 (공통 파일 변경 → 본문에서 @whans1996 멘션)
-- [ ] 상태 DONE (PR 머지 전 마지막 커밋)
+- [x] PR CI 초록 (PR #47, Codex ✅ `51fa2f3`. 공통 파일 변경 → 본문에서 @whans1996 멘션)
+- [x] 상태 DONE (PR 머지 전 마지막 커밋)
