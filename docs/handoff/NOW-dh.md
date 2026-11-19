@@ -4,11 +4,11 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
 
-갱신: 2026-11-19 11:45 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/common-codex-loop
+갱신: 2026-11-19 11:50 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/common-codex-loop
 
 ## 현재 기능
 
-Codex 리뷰 루프 강제 (common, 하네스) — 미커밋, reviewer 리뷰 중. PR #31(병렬 동기화)·#30은 머지됨
+Codex 리뷰 루프 강제 (common, 하네스) — cdb7440 push, reviewer 반드시 1·권장 7 반영, 테스트 34/34. PR 생성 전(사용자 확인 대기)
 
 ## 진행
 
@@ -19,7 +19,7 @@ Codex 리뷰 루프 강제 (common, 하네스) — 미커밋, reviewer 리뷰 �
 
 ## 바로 다음 할 일
 
-1. reviewer 지적 반영 → `chore(harness): Codex 리뷰 루프 강제 (계정 미연결 감지, Stop hook, 상태 체크)` 커밋 → push → PR(base develop, @JoonseobKim 멘션: 환경설정 8절 계정 연결 요청)
+1. PR 생성: `gh pr create --base develop --title "chore(harness): Codex 리뷰 루프 강제"` (본문에 @JoonseobKim 멘션, 환경설정 8절 계정 연결 요청) → `node scripts/codex-review.mjs <PR> --request --wait --status` 백그라운드
 2. PR에서 `Codex status` 워크플로가 ⏳ 체크를 다는지, `node scripts/codex-review.mjs <PR> --request --wait --status`가 ✅/❌로 바꾸는지 `gh pr checks`로 확인
 3. 김준섭: chatgpt.com Codex에 GitHub 연결 + Code review·Automatic reviews 켜기 (사람)
 4. `/clear` 뒤 `/spec`으로 **공통 기반** spec. 결정 필요 목록은 결정로그 11-19 공통 기반 행 참고
