@@ -5,6 +5,7 @@ import static com.vibenote.analysis.explain.FileExplainerTest.PROPS;
 import static com.vibenote.analysis.explain.FileExplainerTest.analysis;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.vibenote.analysis.concept.ConceptExtractProperties;
 import com.vibenote.analysis.concept.ConceptPrompts;
 import com.vibenote.analysis.concept.ConceptResponseParser;
 import com.vibenote.analysis.concept.ExtractedConcept;
@@ -12,13 +13,21 @@ import com.vibenote.analysis.domain.AnalysisFile;
 import com.vibenote.common.Level;
 import com.vibenote.concept.ConceptStatus;
 import com.vibenote.concept.domain.Concept;
+import com.vibenote.llm.LlmStage;
+import com.vibenote.llm.MockLlmClient;
 import com.vibenote.quiz.GeneratedQuestion;
 import com.vibenote.quiz.QuizResponseParser;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -95,27 +104,8 @@ class MainFixturesTest {
 
     @Test
     void AC10_F08_concept_fixture는_시드_카드_연결_3개_이상과_새_개념_1개를_담는다() throws Exception {
-        List<Concept> seeds = new ArrayList<>();
-        for (long id = 1; id <= 85; id++) {
-            Concept c = new Concept();
-            c.setId(id);
-            c.setName("시드 " + id);
-            c.setCategory("spring");
-            c.setStatus(ConceptStatus.PUBLISHED);
-            seeds.add(c);
-        }
-        Set<Long> catalog = Set.copyOf(seeds.stream().map(Concept::getId).toList());
-        ConceptPrompts.Input input =
-                new ConceptPrompts.Input("", "", "", catalog, List.of(1L, 2L, 3L), Set.of(1, 2, 3));
-
-        List<ExtractedConcept> result =
-                ConceptResponseParser.parse(
-                        JsonMapper.builder().build().readTree(read("concept.json")),
-                        input,
-                        seeds,
-                        Level.JUNIOR,
-                        15,
-                        5);
+        // 새 DB처럼 시드 파일 순서대로 1부터 id를 붙인다
+        List<ExtractedConcept> result = extractWithSeedIds(1);
 
         assertThat(result.stream().filter(c -> c.conceptId() != null))
                 .hasSizeGreaterThanOrEqualTo(3);
@@ -155,5 +145,96 @@ class MainFixturesTest {
                                 .distinct())
                 .hasSizeGreaterThanOrEqualTo(4);
         assertThat(result.stream().filter(q -> q.conceptId() == null)).hasSize(1);
+    }
+
+    @Test
+    void issue49_시드_id가_새_DB와_달라도_concept_fixture는_의도한_카드에_연결된다() throws Exception {
+        // 시드 적용 이력이 다른 로컬 DB처럼 id를 1000부터, 파일과 반대 순서로 붙인다
+        List<String> names = new ArrayList<>(seeds().keySet());
+        Collections.reverse(names);
+        Map<Long, String> nameById = new HashMap<>();
+        for (int i = 0; i < names.size(); i++) {
+            nameById.put(1000L + i, names.get(i));
+        }
+
+        List<ExtractedConcept> result = extract(names, 1000);
+
+        assertThat(
+                        result.stream()
+                                .filter(c -> c.conceptId() != null)
+                                .map(c -> nameById.get(c.conceptId())))
+                .containsExactly(
+                        "@RestController와 요청 매핑",
+                        "의존성 주입 (DI)",
+                        "Bean Validation (@Valid)",
+                        "Mapper 인터페이스와 XML 매퍼",
+                        "JWT 기반 인증");
+    }
+
+    /** 시드 파일 순서대로 {@code firstId}부터 id를 붙인 카드 목록으로 concept fixture를 처리한다. */
+    private static List<ExtractedConcept> extractWithSeedIds(long firstId) throws Exception {
+        return extract(new ArrayList<>(seeds().keySet()), firstId);
+    }
+
+    /**
+     * 실제 EXTRACTING 프롬프트({@link ConceptPrompts#input} + concept 템플릿)를 만들어 {@link MockLlmClient}가
+     * fixture의 카드 이름을 id로 바꾼 응답을 파싱한다.
+     */
+    private static List<ExtractedConcept> extract(List<String> names, long firstId)
+            throws Exception {
+        Map<String, String> categoryByName = seeds();
+        List<Concept> concepts = new ArrayList<>();
+        for (int i = 0; i < names.size(); i++) {
+            Concept c = new Concept();
+            c.setId(firstId + i);
+            c.setName(names.get(i));
+            c.setCategory(categoryByName.get(names.get(i)));
+            c.setStatus(ConceptStatus.PUBLISHED);
+            concepts.add(c);
+        }
+        List<AnalysisFile> files = new ArrayList<>();
+        for (int i = 1; i <= 3; i++) {
+            files.add(file(i, "src/F" + i + ".java", "service", "class F" + i + " {}"));
+        }
+        ConceptPrompts.Input input =
+                ConceptPrompts.input(
+                        concepts,
+                        files,
+                        new ConceptExtractProperties(6000, 6000, 3000, 24000, 15, 5));
+        assertThat(input.catalogIds()).hasSize(concepts.size());
+        // ConceptExtractor와 같은 방식으로 템플릿 전체를 채운다 (머리말·예시 줄이 카드 목록으로 잘못 읽히지 않는지도 본다)
+        String prompt =
+                new PromptTemplates()
+                        .render(
+                                LlmStage.CONCEPT,
+                                Level.JUNIOR,
+                                Map.of(
+                                        "projectName", "realworld",
+                                        "catalog", input.catalog(),
+                                        "fileList", input.fileList(),
+                                        "files", input.files()));
+
+        String response = MockLlmClient.linkConceptNames(read("concept.json"), prompt);
+
+        return ConceptResponseParser.parse(
+                JsonMapper.builder().build().readTree(response),
+                input,
+                concepts,
+                Level.JUNIOR,
+                15,
+                5);
+    }
+
+    /** {@code R__seed_concepts.sql}의 카드 이름 → 카테고리 (파일 순서). */
+    private static Map<String, String> seeds() throws Exception {
+        String sql =
+                Files.readString(Path.of("src/main/resources/db/migration/R__seed_concepts.sql"));
+        Matcher m = Pattern.compile("(?m)^\\('((?:[^']|'')*)', '([a-z]+)', '").matcher(sql);
+        Map<String, String> seeds = new LinkedHashMap<>();
+        while (m.find()) {
+            seeds.put(m.group(1).replace("''", "'"), m.group(2));
+        }
+        assertThat(seeds).hasSizeGreaterThanOrEqualTo(80);
+        return seeds;
     }
 }

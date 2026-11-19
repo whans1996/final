@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 |---|---|
-| 상태 | APPROVED <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
+| 상태 | DONE (PR #52) <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
 | 기능 ID | F-10 |
 | 우선순위 | P0 |
 | 영역 오너 | B 김준섭 (카드·소셜) |
@@ -39,7 +39,7 @@
 
 | ID | Given | When | Then |
 |---|---|---|---|
-| AC9 | 누구나 | `/concepts/:id`(SC-10)를 열면 | 헤더(이름, 카테고리, 난이도 배지, ♥ 찜 수, ★ 평점 소수 1자리), 요약, "쉬운 설명"(본문 Markdown 렌더링), "예제 코드"(코드 블록 + "복사" 버튼), "출처"(`referenceUrl`, `target="_blank" rel="noopener noreferrer"`)를 본다. 값이 `null`인 절(본문·예제·출처)은 제목째 숨긴다. "복사"를 누르면 예제 코드가 클립보드에 들어가고 버튼이 2초간 "복사됨"이 된다. 실패하면 "복사하지 못했습니다." |
+| AC9 | 누구나 | `/concepts/:id`(SC-10)를 열면 | 헤더(이름, 카테고리, 난이도 배지, ♥ 찜 수, ★ 평점 소수 1자리), 요약, "쉬운 설명"(본문 Markdown 렌더링), "예제 코드"(코드 블록 + "복사" 버튼), "출처"(`referenceUrl`, `target="_blank" rel="noopener noreferrer"`. `http(s)://`로 시작하지 않으면 링크 없이 글자로만 보인다, PR 리뷰 반영)를 본다. 값이 `null`인 절(본문·예제·출처)은 제목째 숨긴다. "복사"를 누르면 예제 코드가 클립보드에 들어가고 버튼이 2초간 "복사됨"이 된다. 실패하면 "복사하지 못했습니다." |
 | AC10 | 로그인 회원의 상세 응답에 `appearances`가 있을 때 | 화면을 보면 | "내 코드에서 등장한 위치" 절에 항목마다 "분석 제목 · 파일 경로 · 줄 힌트 · 맥락"이 보이고(빈 값은 건너뜀), 누르면 `fileId`가 있으면 `/analyses/{analysisId}?tab=files&file={fileId}`, 없으면 `/analyses/{analysisId}`로 간다. `appearances`가 비어 있으면(비로그인 포함) 절 전체를 숨긴다 |
 | AC11 | `related`가 있을 때 | 화면을 보면 | "관련 카드" 절에 `ConceptCard`가 최대 4개 보이고, 누르면 그 카드 상세로 간다. 같은 화면에서 `:id`만 바뀌어도 새 카드를 다시 조회하고 맨 위로 스크롤한다. `related`가 비어 있으면 절을 숨긴다 |
 | AC12 | 상세 화면에서 | "← 목록으로"를 누르면 | 직전 화면이 SC-09(`/concepts` + 쿼리)였으면 뒤로 가서 그 검색 조건을 그대로 복원하고, 아니면(직접 진입, 다른 화면에서 진입) `/concepts`로 간다 |
@@ -157,9 +157,9 @@
 | AC1, AC2 | `ConceptDetailApiTest#AC1_...`, `#AC2_...` (NULL 필드, 제외 필드, DRAFT·HIDDEN·없는 id × 비로그인·로그인) | MockMvc + Testcontainers 통합 |
 | AC3, AC4, AC5 | `ConceptDetailApiTest#AC3_...`~`#AC5_...` (회원 2명, 분석 상태·삭제·공개 조합, 연결 11개, `file_id` NULL, 깨진 토큰) | MockMvc 통합 |
 | AC6, AC7 | `ConceptDetailApiTest#AC6_...`, `#AC7_...` (함께 등장 횟수·동점 tie-break, DRAFT·삭제·미완료 분석 제외, 같은 카테고리 채우기·중복 없음·4개 미만) | MockMvc 통합 |
-| AC3 제목 대체 | `ConceptDetailServiceTest#제목_대체` | 단위 |
+| AC3 제목 대체 | `dto/ConceptAppearanceResponseTest#AC3_제목_대체` (대체는 DTO `from`이 한다) | 단위 |
 | AC8 | `ConceptDetailApiTest#AC8_...` (시드 적재, 1회 워밍업 후 측정) | MockMvc 통합 |
-| AC9~AC13 | `views/concept/__tests__/ConceptDetailView.spec.js` (`vi.mock('@/api/concepts')`, null 절 숨김, 복사 성공·실패, 등장 위치 링크 2종, `:id` 변경 시 재조회, 뒤로 가기 2종, 로딩·404·에러) | Vitest |
+| AC9~AC13 | `views/__tests__/ConceptDetailView.spec.js` (기존 화면 테스트 위치) (`vi.mock('@/api/concepts')`, null 절 숨김, 복사 성공·실패, 등장 위치 링크 2종, `:id` 변경 시 재조회, 뒤로 가기 2종, 로딩·404·에러) | Vitest |
 | AC13 반응형 | ui-verifier 375px·1280px (시드 카드 중 긴 예제 코드) | ui-verifier |
 | AC14 | `components/concept/__tests__/markdown.spec.js` (지원 문법별, 중첩 목록, 지원하지 않는 문법 글자 그대로, HTML 텍스트 처리) | Vitest 단위 |
 | API 함수 | `api/__tests__/concepts.spec.js`에 `fetchConcept` 추가 | Vitest |
@@ -184,16 +184,16 @@
 
 `/implement`가 진행하며 체크한다.
 
-- [ ] F-00b·F-09 develop 머지 확인 → `git merge origin/develop`
-- [ ] 브랜치 `feature/F-10-concept-detail`
-- [ ] Flyway 마이그레이션 (없음)
-- [ ] AC별 실패 테스트 작성 (red 확인)
-- [ ] BE 구현 (green): `ConceptController#detail`, `ConceptDetailService`(또는 `ConceptService#getDetail`), `ConceptMapper` `findAppearances`·`findCoOccurring`·`findSameCategoryPopular`, `ConceptDetailResponse`·`ConceptAppearanceResponse`, `PUBLIC_GET_PATHS`
-- [ ] FE 구현 (green): `fetchConcept`, `markdown.js`·`MarkdownBody`, `CodeBlock`, `ConceptAppearances`, `ConceptDetailView`, 라우트
-- [ ] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
-- [ ] contract-checker 통과
-- [ ] ui-verifier 통과 (데스크톱·모바일)
-- [ ] reviewer 지적 사항 반영
-- [ ] 산출물 반영: `06-화면설계서.md` SC-10 절(언어 표시 삭제, "spec에서 정할 것" 정리) + 스크린샷(`screens/SC-10-*.png`)
-- [ ] PR CI 초록 (공통 파일 변경 → 본문에서 @whans1996 멘션)
-- [ ] 상태 DONE (PR 머지 전 마지막 커밋)
+- [x] F-00b·F-09 develop 머지 확인 → `git merge origin/develop`
+- [x] 브랜치 `feature/F-10-concept-detail`
+- [x] Flyway 마이그레이션 (없음)
+- [x] AC별 실패 테스트 작성 (red 확인)
+- [x] BE 구현 (green): `ConceptController#detail`, `ConceptService#getDetail`, `ConceptMapper` `findAppearances`·`findCoOccurring`·`findSameCategoryPopular`, `ConceptDetailResponse`·`ConceptAppearanceResponse`, `PUBLIC_GET_PATHS`
+- [x] FE 구현 (green): `fetchConcept`, `markdown.js`·`MarkdownBody`, `CodeBlock`, `ConceptAppearances`, `ConceptDetailView`, 라우트
+- [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
+- [x] contract-checker 통과
+- [x] ui-verifier 통과 (데스크톱·모바일)
+- [x] reviewer 지적 사항 반영 (반드시 수정 0건, 권장 3건 반영 `de214b3`, BE URL 검증은 #51)
+- [x] 산출물 반영: `06-화면설계서.md` SC-10 절(언어 표시 삭제, "spec에서 정할 것" 정리) + 스크린샷(`screens/SC-10-*.png`)
+- [x] PR CI 초록 (공통 파일 변경 → 본문에서 @whans1996 멘션)
+- [x] 상태 DONE (PR 머지 전 마지막 커밋)

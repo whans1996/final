@@ -67,4 +67,45 @@
         <include refid="publishedSearchWhere"/>
     </select>
 
+    <!-- F-10 상세: 내 코드 등장 위치 -->
+    <select id="findAppearances" resultType="com.vibenote.concept.domain.ConceptAppearance">
+        SELECT a.id AS analysis_id, COALESCE(NULLIF(TRIM(a.title), ''), a.project_name) AS analysis_title,
+               f.id AS file_id, f.path AS file_path, ac.line_hint, ac.context_note
+        FROM analysis_concepts ac
+        JOIN analyses a ON a.id = ac.analysis_id
+        LEFT JOIN analysis_files f ON f.id = ac.file_id
+        WHERE ac.concept_id = #{conceptId}
+          AND a.user_id = #{userId}
+          AND a.status = 'DONE'
+          AND a.deleted_at IS NULL
+        ORDER BY a.created_at DESC, a.id DESC
+        LIMIT 10
+    </select>
+
+    <!-- F-10 상세: 같은 분석에 함께 연결된 공개 카드 (모든 회원 기준) -->
+    <select id="findCoOccurring" resultType="com.vibenote.concept.domain.Concept">
+        SELECT c.id, c.name, c.category, c.difficulty, c.summary, c.wish_count, c.avg_rating
+        FROM analysis_concepts me
+        JOIN analyses a ON a.id = me.analysis_id AND a.status = 'DONE' AND a.deleted_at IS NULL
+        JOIN analysis_concepts other
+          ON other.analysis_id = me.analysis_id AND other.concept_id &lt;&gt; me.concept_id
+        JOIN concepts c ON c.id = other.concept_id AND c.status = 'PUBLISHED'
+        WHERE me.concept_id = #{conceptId}
+        GROUP BY c.id, c.name, c.category, c.difficulty, c.summary, c.wish_count, c.avg_rating
+        ORDER BY COUNT(DISTINCT me.analysis_id) DESC, c.wish_count DESC, c.avg_rating DESC, c.id ASC
+        LIMIT #{limit}
+    </select>
+
+    <!-- F-10 상세: 관련 카드 빈자리를 같은 카테고리 인기순으로 -->
+    <select id="findSameCategoryPopular" resultType="com.vibenote.concept.domain.Concept">
+        SELECT <include refid="summaryColumns"/>
+        FROM concepts
+        WHERE status = 'PUBLISHED'
+          AND category = #{category}
+          AND id NOT IN
+        <foreach collection="excludeIds" item="id" open="(" separator="," close=")">#{id}</foreach>
+        ORDER BY wish_count DESC, avg_rating DESC, id ASC
+        LIMIT #{limit}
+    </select>
+
 </mapper>
