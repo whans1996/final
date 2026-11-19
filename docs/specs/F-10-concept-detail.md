@@ -157,7 +157,7 @@
 | AC1, AC2 | `ConceptDetailApiTest#AC1_...`, `#AC2_...` (NULL 필드, 제외 필드, DRAFT·HIDDEN·없는 id × 비로그인·로그인) | MockMvc + Testcontainers 통합 |
 | AC3, AC4, AC5 | `ConceptDetailApiTest#AC3_...`~`#AC5_...` (회원 2명, 분석 상태·삭제·공개 조합, 연결 11개, `file_id` NULL, 깨진 토큰) | MockMvc 통합 |
 | AC6, AC7 | `ConceptDetailApiTest#AC6_...`, `#AC7_...` (함께 등장 횟수·동점 tie-break, DRAFT·삭제·미완료 분석 제외, 같은 카테고리 채우기·중복 없음·4개 미만) | MockMvc 통합 |
-| AC3 제목 대체 | `ConceptDetailServiceTest#제목_대체` | 단위 |
+| AC3 제목 대체 | `dto/ConceptAppearanceResponseTest#AC3_제목_대체` (대체는 DTO `from`이 한다) | 단위 |
 | AC8 | `ConceptDetailApiTest#AC8_...` (시드 적재, 1회 워밍업 후 측정) | MockMvc 통합 |
 | AC9~AC13 | `views/concept/__tests__/ConceptDetailView.spec.js` (`vi.mock('@/api/concepts')`, null 절 숨김, 복사 성공·실패, 등장 위치 링크 2종, `:id` 변경 시 재조회, 뒤로 가기 2종, 로딩·404·에러) | Vitest |
 | AC13 반응형 | ui-verifier 375px·1280px (시드 카드 중 긴 예제 코드) | ui-verifier |
@@ -184,13 +184,13 @@
 
 `/implement`가 진행하며 체크한다.
 
-- [ ] F-00b·F-09 develop 머지 확인 → `git merge origin/develop`
-- [ ] 브랜치 `feature/F-10-concept-detail`
-- [ ] Flyway 마이그레이션 (없음)
+- [x] F-00b·F-09 develop 머지 확인 → `git merge origin/develop`
+- [x] 브랜치 `feature/F-10-concept-detail`
+- [x] Flyway 마이그레이션 (없음)
 - [ ] AC별 실패 테스트 작성 (red 확인)
-- [ ] BE 구현 (green): `ConceptController#detail`, `ConceptDetailService`(또는 `ConceptService#getDetail`), `ConceptMapper` `findAppearances`·`findCoOccurring`·`findSameCategoryPopular`, `ConceptDetailResponse`·`ConceptAppearanceResponse`, `PUBLIC_GET_PATHS`
+- [x] BE 구현 (green): `ConceptController#detail`, `ConceptService#getDetail`, `ConceptMapper` `findAppearances`·`findCoOccurring`·`findSameCategoryPopular`, `ConceptDetailResponse`·`ConceptAppearanceResponse`, `PUBLIC_GET_PATHS`
 - [ ] FE 구현 (green): `fetchConcept`, `markdown.js`·`MarkdownBody`, `CodeBlock`, `ConceptAppearances`, `ConceptDetailView`, 라우트
-- [ ] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
+- [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
 - [ ] contract-checker 통과
 - [ ] ui-verifier 통과 (데스크톱·모바일)
 - [ ] reviewer 지적 사항 반영

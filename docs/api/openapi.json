@@ -371,6 +371,120 @@
         "required" : [ "fileId", "method", "path" ],
         "type" : "object"
       },
+      "ConceptAppearanceResponse" : {
+        "description" : "내 코드에서 이 개념이 등장한 위치",
+        "properties" : {
+          "analysisId" : {
+            "description" : "분석 ID",
+            "example" : 31,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "analysisTitle" : {
+            "description" : "분석 제목 (없으면 프로젝트 이름, 둘 다 없으면 \"제목 없는 분석\")",
+            "example" : "쇼핑몰 과제",
+            "type" : "string"
+          },
+          "contextNote" : {
+            "description" : "이 코드에서 개념이 쓰인 맥락",
+            "example" : "로그인 성공 시 토큰을 만든다",
+            "type" : [ "string", "null" ]
+          },
+          "fileId" : {
+            "description" : "등장한 파일 ID (파일을 특정하지 못했으면 null)",
+            "example" : 412,
+            "format" : "int64",
+            "type" : [ "integer", "null" ]
+          },
+          "filePath" : {
+            "description" : "등장한 파일 경로 (fileId가 null이면 null)",
+            "example" : "src/main/java/com/shop/security/JwtProvider.java",
+            "type" : [ "string", "null" ]
+          },
+          "lineHint" : {
+            "description" : "줄 위치 힌트",
+            "example" : "L24-L40",
+            "type" : [ "string", "null" ]
+          }
+        },
+        "required" : [ "analysisId", "analysisTitle", "contextNote", "fileId", "filePath", "lineHint" ],
+        "type" : "object"
+      },
+      "ConceptDetailResponse" : {
+        "description" : "개념 카드 상세",
+        "properties" : {
+          "appearances" : {
+            "description" : "내 분석(삭제되지 않은 DONE)에서 등장한 위치, 최신순 최대 10개. 비로그인은 빈 배열",
+            "items" : {
+              "$ref" : "#/components/schemas/ConceptAppearanceResponse"
+            },
+            "type" : "array"
+          },
+          "avgRating" : {
+            "description" : "평균 별점 (0.0~5.0, 소수 1자리. 리뷰가 없으면 0.0)",
+            "example" : 4.5,
+            "format" : "double",
+            "type" : "number"
+          },
+          "body" : {
+            "description" : "쉬운 설명 본문 (Markdown 원문, 렌더링은 FE)",
+            "example" : "## 핵심\n- 서버는 **서명**과 만료만 검증한다.",
+            "type" : [ "string", "null" ]
+          },
+          "category" : {
+            "description" : "카테고리 (java, spring, security, mybatis, web, vue)",
+            "example" : "security",
+            "type" : "string"
+          },
+          "difficulty" : {
+            "description" : "난이도",
+            "enum" : [ "BEGINNER", "JUNIOR", "SENIOR" ],
+            "example" : "SENIOR",
+            "type" : "string"
+          },
+          "exampleCode" : {
+            "description" : "예제 코드 (언어 정보 없음)",
+            "example" : "String token = Jwts.builder().subject(email).compact();",
+            "type" : [ "string", "null" ]
+          },
+          "id" : {
+            "description" : "카드 ID",
+            "example" : 57,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "name" : {
+            "description" : "개념 이름",
+            "example" : "JWT 기반 인증",
+            "type" : "string"
+          },
+          "referenceUrl" : {
+            "description" : "공식 문서 출처 링크",
+            "example" : "https://docs.spring.io/spring-security/reference/servlet/oauth2/resource-server/jwt.html",
+            "type" : [ "string", "null" ]
+          },
+          "related" : {
+            "description" : "관련 카드 최대 4개 (함께 등장한 횟수순, 모자라면 같은 카테고리 인기순)",
+            "items" : {
+              "$ref" : "#/components/schemas/ConceptSummaryResponse"
+            },
+            "type" : "array"
+          },
+          "summary" : {
+            "description" : "한 줄 요약",
+            "example" : "JWT는 사용자 정보와 만료 시간을 담고 서명한 토큰이다.",
+            "type" : "string"
+          },
+          "wishCount" : {
+            "description" : "찜 수",
+            "example" : 12,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "appearances", "avgRating", "body", "category", "difficulty", "exampleCode", "id", "name", "referenceUrl", "related", "summary", "wishCount" ],
+        "type" : "object"
+      },
       "ConceptSummaryResponse" : {
         "description" : "개념 카드 요약",
         "properties" : {
@@ -1817,6 +1931,48 @@
         },
         "security" : [ ],
         "summary" : "개념 카드 목록·검색",
+        "tags" : [ "개념 카드" ]
+      }
+    },
+    "/api/concepts/{id}" : {
+      "get" : {
+        "description" : "공개(PUBLISHED) 카드의 본문·예제 코드·출처와 관련 카드(최대 4개)를 조회한다. 비로그인도 쓸 수 있고, 로그인하면 내 분석(삭제되지 않은 DONE)에서 이 개념이 등장한 위치(최신 10개)를 함께 받는다. 토큰이 깨졌거나 만료되면 비로그인과 같다.",
+        "operationId" : "detail",
+        "parameters" : [ {
+          "description" : "카드 ID",
+          "example" : 57,
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ConceptDetailResponse"
+                }
+              }
+            },
+            "description" : "조회 성공"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "없는 카드이거나 공개되지 않은 카드 (CONCEPT_404)"
+          }
+        },
+        "security" : [ ],
+        "summary" : "개념 카드 상세",
         "tags" : [ "개념 카드" ]
       }
     },

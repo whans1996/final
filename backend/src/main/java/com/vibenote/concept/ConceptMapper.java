@@ -2,6 +2,7 @@ package com.vibenote.concept;
 
 import com.vibenote.common.Level;
 import com.vibenote.concept.domain.Concept;
+import com.vibenote.concept.domain.ConceptAppearance;
 import java.util.List;
 import java.util.Optional;
 import org.apache.ibatis.annotations.Mapper;
@@ -52,4 +53,23 @@ public interface ConceptMapper {
             @Param("keyword") String keyword,
             @Param("category") String category,
             @Param("difficulty") Level difficulty);
+
+    /**
+     * 회원의 삭제되지 않은 DONE 분석에서 카드가 등장한 위치, 분석 최신순 최대 10개 (F-10 AC3·AC4). 제목은 {@code COALESCE(title,
+     * project_name)}이라 null일 수 있다.
+     */
+    List<ConceptAppearance> findAppearances(
+            @Param("conceptId") long conceptId, @Param("userId") long userId);
+
+    /**
+     * 모든 회원의 삭제되지 않은 DONE 분석에서 카드와 함께 연결된 PUBLISHED 카드. 함께 등장한 분석 수 → 찜 수 → 평점 → id 순 (F-10 AC6).
+     * 요약 컬럼만 채운다.
+     */
+    List<Concept> findCoOccurring(@Param("conceptId") long conceptId, @Param("limit") int limit);
+
+    /** 같은 카테고리의 PUBLISHED 카드 인기순. excludeIds는 비지 않아야 한다 (F-10 AC7). 요약 컬럼만 채운다. */
+    List<Concept> findSameCategoryPopular(
+            @Param("category") String category,
+            @Param("excludeIds") List<Long> excludeIds,
+            @Param("limit") int limit);
 }

@@ -2,21 +2,29 @@ package com.vibenote.concept;
 
 import com.vibenote.common.page.PageQuery;
 import com.vibenote.common.page.PageResponse;
+import com.vibenote.concept.domain.Concept;
+import com.vibenote.concept.dto.ConceptAppearanceResponse;
+import com.vibenote.concept.dto.ConceptDetailResponse;
 import com.vibenote.concept.dto.ConceptSearchRequest;
 import com.vibenote.concept.dto.ConceptSummaryResponse;
+import java.util.ArrayList;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** 개념 카드 목록·검색 (F-09). 공개(PUBLISHED) 카드만 다룬다 (NF-04). */
+/** 개념 카드 목록·검색 (F-09)·상세 (F-10). 공개(PUBLISHED) 카드만 다룬다 (NF-04). */
 @Service
 @Transactional(readOnly = true)
 public class ConceptService {
 
-    private final ConceptMapper conceptMapper;
+    static final int RELATED_LIMIT = 4;
 
-    public ConceptService(ConceptMapper conceptMapper) {
+    private final ConceptMapper conceptMapper;
+    private final ConceptQueryService conceptQueryService;
+
+    public ConceptService(ConceptMapper conceptMapper, ConceptQueryService conceptQueryService) {
         this.conceptMapper = conceptMapper;
+        this.conceptQueryService = conceptQueryService;
     }
 
     public PageResponse<ConceptSummaryResponse> search(
@@ -39,6 +47,34 @@ public class ConceptService {
                                 .map(ConceptSummaryResponse::from)
                                 .toList();
         return PageResponse.of(items, page, total);
+    }
+
+    /** 공개 카드 상세 (F-10). userId가 null(비로그인·깨진 토큰)이면 등장 위치는 빈 배열이다. 없거나 비공개 카드면 CONCEPT_404 (AC2). */
+    public ConceptDetailResponse getDetail(long id, Long userId) {
+        Concept concept = conceptQueryService.getPublished(id);
+        List<ConceptAppearanceResponse> appearances =
+                userId == null
+                        ? List.of()
+                        : conceptMapper.findAppearances(id, userId).stream()
+                                .map(ConceptAppearanceResponse::from)
+                                .toList();
+        return ConceptDetailResponse.of(concept, appearances, related(concept));
+    }
+
+    /** 함께 등장한 카드를 먼저 담고, 모자란 자리를 같은 카테고리 인기순으로 채운다 (AC6·AC7). */
+    private List<ConceptSummaryResponse> related(Concept concept) {
+        List<Concept> picked =
+                new ArrayList<>(conceptMapper.findCoOccurring(concept.getId(), RELATED_LIMIT));
+        int remaining = RELATED_LIMIT - picked.size();
+        if (remaining > 0) {
+            List<Long> excludeIds = new ArrayList<>();
+            excludeIds.add(concept.getId());
+            picked.forEach(c -> excludeIds.add(c.getId()));
+            picked.addAll(
+                    conceptMapper.findSameCategoryPopular(
+                            concept.getCategory(), excludeIds, remaining));
+        }
+        return picked.stream().map(ConceptSummaryResponse::from).toList();
     }
 
     /**
