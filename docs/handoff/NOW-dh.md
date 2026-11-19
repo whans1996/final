@@ -4,22 +4,20 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
 
-갱신: 2026-11-19 15:36 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/common-usecase
+갱신: 2026-11-19 15:59 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/F-08-concept-extraction
 
 ## 현재 기능
 
-WBS 1.4 유스케이스 산출물 — **PR #43** (develop). CI 초록, **Codex ✅ 12c2c2c**(재리뷰 1회) → 사람이 GitHub에서 머지만 남음. F-00b PR #42는 11-19 머지됨
+F-08 개념 카드 추출·연결 — `docs/specs/F-08-concept-extraction.md` **APPROVED (11-19)**, 구현 시작 전. PR #43(유스케이스)·#42(F-00b)는 11-19 머지됨
 
 ## 진행
 
-- ✅ `98b047e` puml 보정(smetana, UC16, 비회원 조회), png 렌더링, UC05~UC51 흐름 (UC 27개)
-- ✅ reviewer 반드시 2·권장 6 반영 `12c2c2c`: UC22·41 비회원 조회, UC24·UC30 실패 처리는 F-08·F-14 spec 결정으로, UC14·15 구현 기준, 01 요구사항 F-05/F-06 행·결정로그(내 분석 목록 = F-05a)
-- PlantUML jar는 저장소 밖(Maven Central `net.sourceforge.plantuml:plantuml:1.2026.8`), 명령은 02 머리
+- ✅ spec 초안 AC1~AC10: EXTRACTING(70) 1회 호출, 기존 카드 `conceptId` 연결(15개), 없는 개념 AI 초안(요약+본문, 5개), 실패면 연결 없이 DONE, `GET /api/analyses/{id}/concepts`(PUBLISHED만 + pendingCount), SC-07 개념 탭, #23 구분자 `<<<`→`‹‹‹` 흡수. Flyway 없음
+- ✅ 결정로그 1줄 추가 (F-08 결정)
 
 ## 바로 다음 할 일
 
-1. 사람: PR #43 머지 (wip 없음). 머지 전 develop이 앞서 있으면 `git merge origin/develop` → push
-2. 머지 뒤 `git switch develop && git pull`, 다음 A 기능 `/spec F-08` 개념 추출·연결 (Opus/high 새 세션). F-10 "등장 위치"(`analysis_concepts`)의 데이터 원천이고, UC24 실패 처리(단계 FAILED vs 연결 없이 완료)를 spec "결정 필요"에 올린다
+1. `/clear` 후 새 세션(Opus/high)에서 `/implement F-08` (브랜치 `feature/F-08-concept-extraction` 이미 push됨, Flyway 없음): 첫 red는 `AnalysisExtractingPipelineTest#AC1_EXPLAINING_뒤에_EXTRACTING을_거쳐_DONE이_된다`, `ConceptResponseParserTest`
 
 ## 막힌 점 / 결정 필요
 
@@ -28,5 +26,5 @@ WBS 1.4 유스케이스 산출물 — **PR #43** (develop). CI 초록, **Codex �
 
 ## 주의
 
-- Gradle 테스트를 bootRun과 동시에 돌리지 않는다. 통합 테스트는 Docker Desktop 필요. V1~V5 수정 금지
+- B 파일(`ConceptService`·`ConceptController`·`api/concepts.js`·`routes/concept.js`)과 공용 `ConceptCard.vue`는 고치지 않는다, `ConceptMapper`는 F-08 블록에만. Gradle 테스트를 bootRun과 동시에 돌리지 않는다. V1~V5 수정 금지
 - Git Bash heredoc·sed·python stdin에서 한글·`\n`·`\|`가 깨진다 → 한글·표(`|`)가 든 수정은 Edit 도구로 쓴다
