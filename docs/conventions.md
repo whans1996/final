@@ -124,4 +124,4 @@
 - **상대 테이블**은 상대 도메인의 Mapper·Service를 통해 읽는다. 쓰기(INSERT·UPDATE)는 그 테이블 주인의 Service만 한다. 필요한 메서드가 없으면 상대에게 요청하거나 PR에서 @멘션하고 최소로 추가한다.
 - **push 시점**: `/implement` 체크포인트 커밋, spec 승인 커밋, `/handoff` 뒤에 feature 브랜치를 push한다. 상대의 세션 시작·peer-watch hook과 Mattermost 알림은 원격의 NOW 파일을 본다.
 - **알림 경로**: Claude 세션 안(세션 시작 hook, 10분 간격 `peer-watch` hook), Mattermost(`.github/workflows/notify.yml`, PR 열림·머지·NOW push). 급한 합의(공통 파일 동시 수정 등)는 Mattermost에서 직접 말한다.
-- 이슈 라벨: `area:A`, `area:B`, `area:common`을 `follow-up`과 함께 단다. 이슈 담당은 라벨의 영역 오너다 (공통은 만든 사람). 만드는 명령: `gh issue create --label follow-up --label area:<A|B|common> --assignee @me`. 세션 시작 배너는 area 라벨이 없는 이슈를 "분류 필요"로 센다.
+- 이슈 라벨: `area:A`, `area:B`, `area:common`을 `follow-up`과 함께 단다. 이슈 담당은 라벨의 영역 오너다 (공통은 만든 사람). 만드는 명령: `gh issue create --label follow-up --label area:<A|B|common> --assignee @me` (내 영역 라벨은 `node scripts/stamp.mjs --area`). 세션 시작 배너는 area 라벨이 없는 이슈를 "분류 필요"로 센다.

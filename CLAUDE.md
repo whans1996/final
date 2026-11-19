@@ -93,7 +93,7 @@ SSAFY 관통 프로젝트(2026-11-17 시작, 12-24 발표). Spring Boot 4 + MyBa
 | 검증 (실패만 요약) | `node scripts/verify.mjs [be\|fe\|all] [--fix]` |
 | 화면 점검 | `node scripts/ui-check.mjs / /concepts` (FE dev 서버 실행 중일 때) |
 | AI 없이 교대 | `node scripts/handoff.mjs [-m "메모"] [--no-push]` |
-| 기록 머리 줄·내 NOW 파일 | `node scripts/stamp.mjs [--now\|--log\|--file]` |
+| 기록 머리 줄·내 NOW 파일·내 이슈 영역 라벨 | `node scripts/stamp.mjs [--now\|--log\|--file\|--area]` |
 | 다음 마이그레이션 번호 | `node scripts/next-migration.mjs` (develop·원격 feature 브랜치 포함) |
 | 하네스 단위 테스트 | `node --test "scripts/test/*.test.mjs"` |
 | PR 스크린샷 Markdown | `node scripts/pr-screens.mjs SC-18 SC-19` (`docs/산출물/screens/` 커밋·push 후) |
