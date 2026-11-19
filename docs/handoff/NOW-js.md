@@ -14,7 +14,7 @@ F-09 개념 카드 목록·검색 — **PR #47 머지 대기** (CI 초록, Codex
 
 - ✅ F-09 `/pr-review`: verifier all 통과, contract-checker 0건, reviewer 반드시 수정 0건. 권장 반영: 공개 범위 401 테스트 `ConceptListApiTest#AC1_공개는_GET_목록뿐이고_POST는_토큰_없으면_401` (`8dda4bf`), PR 본문에 F-10 spec·B 화면 초안 포함 명시. 권장 1(범위 밖 page UX) → #46
 - ✅ 사용자 결정(11-19 "다 진행해"): 헤더 nav "개념 카드" order 5, 375px "전체" select 2개는 현재 구현대로
-- ⚠️ Codex 첫 리뷰(`8dda4bf`, PR 생성 시)가 Codex 쪽 오류로 `status: failed` → `@codex review` 재요청 후 COMPLETE. `codex-review.mjs`가 `failed`를 RUNNING으로 보고 계속 기다리는 문제 있음 (follow-up 후보)
+- ⚠️ Codex 첫 리뷰(`8dda4bf`, PR 생성 시)가 Codex 쪽 오류로 `status: failed` → `@codex review` 재요청 후 COMPLETE. `codex-review.mjs`가 `failed`를 RUNNING으로 보고 계속 기다리는 문제 → #48
 
 ## 바로 다음 할 일
 
