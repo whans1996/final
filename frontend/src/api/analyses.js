@@ -46,3 +46,22 @@ export function fetchAnalysisFiles(id) {
 export function fetchAnalysisFile(id, fileId) {
   return http.get(`/analyses/${id}/files/${fileId}`).then((res) => res.data)
 }
+
+// 실행 흐름 (F-07, docs/specs/F-07-execution-flow.md 3절). 생성은 비동기라 PENDING이 있으면 목록을 다시 불러 확인한다.
+
+/**
+ * 이 분석의 흐름 전체 (id 오름차순). DONE이 아니면 summary·steps가 null.
+ * @returns {Promise<{ id: number, method: string, path: string, status: 'PENDING'|'DONE'|'FAILED', errorCode: string|null, errorMessage: string|null, summary: string|null, steps: object[]|null, createdAt: string }[]>}
+ */
+export function fetchAnalysisFlows(id) {
+  return http.get(`/analyses/${id}/flows`).then((res) => res.data)
+}
+
+/**
+ * 개요 apis에서 고른 API(1~3개)의 흐름 생성을 요청한다. 202로 흐름 전체를 돌려준다.
+ * 400 COMMON_400·ANALYSIS_002·ANALYSIS_003, 409 ANALYSIS_409, 404 ANALYSIS_404.
+ * @param {{ method: string, path: string }[]} endpoints
+ */
+export function requestAnalysisFlows(id, endpoints) {
+  return http.post(`/analyses/${id}/flows`, { endpoints }).then((res) => res.data)
+}

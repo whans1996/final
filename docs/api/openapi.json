@@ -338,6 +338,22 @@
         "required" : [ "analysisId", "status" ],
         "type" : "object"
       },
+      "CreateFlowsRequest" : {
+        "description" : "실행 흐름 요청",
+        "properties" : {
+          "endpoints" : {
+            "description" : "흐름을 만들 API (개요 apis에서 1~3개, 중복 불가)",
+            "items" : {
+              "$ref" : "#/components/schemas/FlowEndpoint"
+            },
+            "maxItems" : 3,
+            "minItems" : 1,
+            "type" : "array"
+          }
+        },
+        "required" : [ "endpoints" ],
+        "type" : "object"
+      },
       "ErrorResponse" : {
         "description" : "실패 응답 (docs/conventions.md 2절)",
         "properties" : {
@@ -362,6 +378,128 @@
             "type" : "string"
           }
         },
+        "type" : "object"
+      },
+      "FlowEndpoint" : {
+        "description" : "API 하나 (개요 apis의 method·path 그대로)",
+        "properties" : {
+          "method" : {
+            "description" : "HTTP 메서드 (개요 apis 값, ANY 포함)",
+            "example" : "POST",
+            "minLength" : 1,
+            "type" : "string"
+          },
+          "path" : {
+            "description" : "경로",
+            "example" : "/api/todos",
+            "minLength" : 1,
+            "type" : "string"
+          }
+        },
+        "required" : [ "method", "path" ],
+        "type" : "object"
+      },
+      "FlowResponse" : {
+        "description" : "실행 흐름",
+        "properties" : {
+          "createdAt" : {
+            "description" : "요청 시각",
+            "example" : "2026-12-09T10:00:00+09:00",
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "errorCode" : {
+            "description" : "실패 사유 코드. FAILED가 아니면 null",
+            "enum" : [ "ANALYSIS_500", "LLM_502", "LLM_503" ],
+            "example" : "LLM_503",
+            "type" : [ "string", "null" ]
+          },
+          "errorMessage" : {
+            "description" : "사용자에게 보여 줄 실패 사유. FAILED가 아니면 null",
+            "example" : "AI 응답을 받지 못했습니다. 잠시 후 다시 시도해 주세요.",
+            "type" : [ "string", "null" ]
+          },
+          "id" : {
+            "description" : "흐름 ID",
+            "example" : 7,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "method" : {
+            "description" : "HTTP 메서드",
+            "example" : "POST",
+            "type" : "string"
+          },
+          "path" : {
+            "description" : "경로",
+            "example" : "/api/todos",
+            "type" : "string"
+          },
+          "status" : {
+            "description" : "생성 상태",
+            "enum" : [ "PENDING", "DONE", "FAILED" ],
+            "example" : "DONE",
+            "type" : "string"
+          },
+          "steps" : {
+            "description" : "단계 (최대 12개). DONE이 아니면 null",
+            "items" : {
+              "$ref" : "#/components/schemas/FlowStep"
+            },
+            "type" : [ "array", "null" ]
+          },
+          "summary" : {
+            "description" : "전체 흐름 요약 (500자 이내). DONE이 아니면 null",
+            "example" : "새 할 일을 등록하면 컨트롤러가 입력을 검사하고, 서비스가 저장을 맡깁니다.",
+            "type" : [ "string", "null" ]
+          }
+        },
+        "required" : [ "createdAt", "id", "method", "path", "status" ],
+        "type" : "object"
+      },
+      "FlowStep" : {
+        "description" : "실행 흐름 단계",
+        "properties" : {
+          "description" : {
+            "description" : "단계 설명 (600자 이내)",
+            "example" : "@PostMapping이 붙은 create 메서드가 JSON 본문을 @RequestBody로 받습니다.",
+            "type" : "string"
+          },
+          "fileId" : {
+            "description" : "파일 ID. 분석에 없는 경로면 null",
+            "example" : 101,
+            "format" : "int64",
+            "type" : [ "integer", "null" ]
+          },
+          "layer" : {
+            "description" : "파일 layer. 분석에 없는 경로면 null",
+            "enum" : [ "controller", "service", "mapper", "vue", "js", "config", "domain", "other" ],
+            "example" : "controller",
+            "type" : [ "string", "null" ]
+          },
+          "no" : {
+            "description" : "단계 번호 (1부터)",
+            "example" : 1,
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "path" : {
+            "description" : "파일 경로",
+            "example" : "src/main/java/com/example/todo/TodoController.java",
+            "type" : "string"
+          },
+          "symbol" : {
+            "description" : "클래스.메서드 (100자 이내)",
+            "example" : "TodoController.create",
+            "type" : [ "string", "null" ]
+          },
+          "title" : {
+            "description" : "단계 이름 (60자 이내)",
+            "example" : "요청 받기",
+            "type" : "string"
+          }
+        },
+        "required" : [ "description", "no", "path", "title" ],
         "type" : "object"
       },
       "LayerRole" : {
@@ -1025,6 +1163,138 @@
           }
         },
         "summary" : "분석 파일 하나",
+        "tags" : [ "분석" ]
+      }
+    },
+    "/api/analyses/{id}/flows" : {
+      "get" : {
+        "description" : "이 분석의 흐름 전체(id 오름차순). DONE이 아니면 summary·steps는 null. 화면은 PENDING이 있으면 3초마다 다시 부른다.",
+        "operationId" : "list_1",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/FlowResponse"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "조회 성공 (흐름이 없으면 빈 배열)"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "토큰 없음·만료 (AUTH_401)"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "없는 분석, 다른 회원의 분석, 삭제된 분석 (ANALYSIS_404)"
+          }
+        },
+        "summary" : "실행 흐름 목록",
+        "tags" : [ "분석" ]
+      },
+      "post" : {
+        "description" : "개요 apis에서 고른 API(1~3개)의 실행 흐름 생성을 접수하고 바로 202와 이 분석의 흐름 전체를 준다. 생성은 백그라운드에서 진행되며 GET으로 확인한다. 이미 PENDING·DONE인 API는 다시 만들지 않고, FAILED면 다시 만든다. 분석당 FAILED가 아닌 흐름은 3개까지.",
+        "operationId" : "request",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateFlowsRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "202" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/FlowResponse"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "접수됨 (흐름 전체, 방금 요청한 것은 PENDING)"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "endpoints 0개·4개 이상·중복·빈 값 (COMMON_400), 개요에 없는 API (ANALYSIS_002), 3개 초과 (ANALYSIS_003)"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "토큰 없음·만료 (AUTH_401)"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "없는 분석, 다른 회원의 분석, 삭제된 분석 (ANALYSIS_404)"
+          },
+          "409" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "분석이 아직 DONE이 아님 (ANALYSIS_409)"
+          }
+        },
+        "summary" : "실행 흐름 요청",
         "tags" : [ "분석" ]
       }
     },

@@ -57,6 +57,12 @@ analysis:
     batch-size: 6
     max-file-chars: 6000
     overview-max-chars: 24000
+  # 실행 흐름 (docs/specs/F-07-execution-flow.md 5절): 입력 코드 합계·파일 수, 분석당 흐름 수, 저장 단계 수 상한
+  flow:
+    max-chars: 24000
+    max-files: 8
+    max-per-analysis: 3
+    max-steps: 12
 
 # LlmConfig가 provider별로 LlmClient 하나를 조립한다 (docs/specs/F-00-llm-client.md).
 # gemini는 실패(4xx·5xx·타임아웃·연결 실패·응답 형식 오류)하면 재시도 없이 ollama로 폴백한다.

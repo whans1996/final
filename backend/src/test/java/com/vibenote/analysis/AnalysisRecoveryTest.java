@@ -67,6 +67,30 @@ class AnalysisRecoveryTest extends AnalysisTestSupport {
         assertThat(stray).doesNotExist();
     }
 
+    /** F-07 AC11: 생성 중(PENDING)이던 실행 흐름도 FAILED·ANALYSIS_500으로 정리한다. */
+    @Test
+    void AC11_PENDING_실행_흐름을_FAILED_ANALYSIS_500으로_바꾼다() {
+        long userId = createUser("ac11flow", "JUNIOR");
+        long analysisId = insertAnalysis(userId, "DONE", null, false, "flows");
+        jdbc.update(
+                "INSERT INTO analysis_flows (analysis_id, endpoint, status, created_at) VALUES"
+                        + " (?, 'POST /a', 'PENDING', NOW()), (?, 'GET /a', 'DONE', NOW())",
+                analysisId,
+                analysisId);
+
+        recovery.recover();
+
+        List<Map<String, Object>> flows =
+                jdbc.queryForList(
+                        "SELECT endpoint, status, error_code FROM analysis_flows WHERE analysis_id"
+                                + " = ? ORDER BY id",
+                        analysisId);
+        assertThat(flows.get(0).get("status")).isEqualTo("FAILED");
+        assertThat(flows.get(0).get("error_code")).isEqualTo("ANALYSIS_500");
+        assertThat(flows.get(1).get("status")).isEqualTo("DONE");
+        assertThat(flows.get(1).get("error_code")).isNull();
+    }
+
     /**
      * ApplicationReadyEvent는 웹 서버가 요청을 받기 시작한 뒤에 오므로, 그 사이에 들어온 새 분석까지 "재시작"으로 FAILED 처리하고 임시 ZIP을
      * 지울 수 있다. 모든 싱글톤이 만들어진 직후(웹 서버 시작 전)에 실행되어야 한다.

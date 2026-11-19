@@ -13,16 +13,27 @@ public final class FileSelector {
             Pattern.compile("application[^/]*\\.(yml|yaml|properties)");
     private static final Set<String> DOMAIN_DIRS = Set.of("domain", "entity", "dto", "model");
 
+    /** {@code @RestControllerAdvice}·{@code @ControllerAdvice}는 단어 경계에서 걸러진다. */
+    private static final Pattern CONTROLLER_ANNOTATION =
+            Pattern.compile("@(?:\\w+\\.)*(?:Rest)?Controller\\b");
+
     private FileSelector() {}
 
-    /** 판정 순서는 선별 우선순위와 같다 (예: SecurityConfig.java는 domain/ 아래에 있어도 config). */
-    public static Layer layer(String path) {
+    /**
+     * 판정 순서는 선별 우선순위와 같다 (예: SecurityConfig.java는 domain/ 아래에 있어도 config). 파일명이 {@code
+     * *Controller.java}가 아니어도 주석 밖에 {@code @RestController}·{@code @Controller}가 있는 {@code .java}는
+     * controller다 (F-07 AC12, 예: {@code ArticlesApi.java}).
+     */
+    public static Layer layer(String path, String content) {
         int slash = path.lastIndexOf('/');
         String name = path.substring(slash + 1);
         String lower = name.toLowerCase(Locale.ROOT);
         List<String> dirs = slash < 0 ? List.of() : List.of(path.substring(0, slash).split("/"));
 
-        if (name.endsWith("Controller.java")) {
+        if (name.endsWith("Controller.java")
+                || (lower.endsWith(".java")
+                        && content != null
+                        && CONTROLLER_ANNOTATION.matcher(JavaComments.strip(content)).find())) {
             return Layer.CONTROLLER;
         }
         if (name.endsWith("Service.java") || name.endsWith("ServiceImpl.java")) {
@@ -56,7 +67,7 @@ public final class FileSelector {
     /** layer 우선순위, 같은 layer 안에서는 경로 오름차순으로 상위 limit개. */
     public static List<SelectedFile> select(List<SourceFile> files, int limit) {
         return files.stream()
-                .map(f -> new SelectedFile(f.path(), layer(f.path()), f.content()))
+                .map(f -> new SelectedFile(f.path(), layer(f.path(), f.content()), f.content()))
                 .sorted(Comparator.comparing(SelectedFile::layer).thenComparing(SelectedFile::path))
                 .limit(limit)
                 .toList();

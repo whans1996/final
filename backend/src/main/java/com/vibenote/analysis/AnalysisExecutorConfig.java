@@ -6,9 +6,9 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 /** 분석 전용 실행기 (core 2, max 2, queue 50). 큐가 차면 거절되고 AnalysisPipelineLauncher가 FAILED로 표시한다. */
 @Configuration
-class AnalysisExecutorConfig {
+public class AnalysisExecutorConfig {
 
-    static final String EXECUTOR = "analysisExecutor";
+    public static final String EXECUTOR = "analysisExecutor";
 
     @Bean(EXECUTOR)
     ThreadPoolTaskExecutor analysisExecutor() {

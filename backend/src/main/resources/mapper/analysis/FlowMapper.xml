@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.vibenote.analysis.flow.FlowMapper">
+
+    <resultMap id="flow" type="com.vibenote.analysis.flow.AnalysisFlow" autoMapping="true">
+        <result column="steps" property="steps"
+                javaType="[Lcom.vibenote.analysis.flow.FlowStep;"
+                typeHandler="com.vibenote.common.mybatis.JsonTypeHandler"/>
+    </resultMap>
+
+    <sql id="flowColumns">
+        id, analysis_id, endpoint, status, summary, steps, error_code, created_at, updated_at
+    </sql>
+
+    <!-- F-07 AC7. 같은 분석의 동시 요청을 차례로 세려고 analyses 행을 잠근다 -->
+    <select id="lockOwnedAnalysis" resultMap="com.vibenote.analysis.AnalysisMapper.analysisDetail">
+        SELECT id, user_id, source_type, source_url, project_name, title, level, status, progress, is_public,
+               error_code, error_message, created_at, updated_at, overview
+        FROM analyses
+        WHERE id = #{id} AND user_id = #{userId} AND deleted_at IS NULL
+        FOR UPDATE
+    </select>
+
+    <select id="findAnalysis" resultMap="com.vibenote.analysis.AnalysisMapper.analysisDetail">
+        SELECT id, user_id, source_type, source_url, project_name, title, level, status, progress, is_public,
+               error_code, error_message, created_at, updated_at, overview
+        FROM analyses
+        WHERE id = #{id}
+    </select>
+
+    <select id="findByAnalysis" resultMap="flow">
+        SELECT <include refid="flowColumns"/> FROM analysis_flows
+        WHERE analysis_id = #{analysisId}
+        ORDER BY id
+    </select>
+
+    <select id="findById" resultMap="flow">
+        SELECT <include refid="flowColumns"/> FROM analysis_flows WHERE id = #{id}
+    </select>
+
+    <!-- created_at·updated_at은 서비스 Clock 값(Asia/Seoul)으로 넣는다 (#17) -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO analysis_flows (analysis_id, endpoint, status, created_at, updated_at)
+        VALUES (#{analysisId}, #{endpoint}, #{status}, #{createdAt}, #{updatedAt})
+    </insert>
+
+    <update id="resetFailed">
+        UPDATE analysis_flows
+        SET status = 'PENDING', summary = NULL, steps = NULL, error_code = NULL, updated_at = #{now}
+        WHERE id = #{id} AND status = 'FAILED'
+    </update>
+
+    <update id="complete">
+        UPDATE analysis_flows
+        SET status = 'DONE', summary = #{summary},
+            steps = #{steps, javaType=[Lcom.vibenote.analysis.flow.FlowStep;,
+                      typeHandler=com.vibenote.common.mybatis.JsonTypeHandler},
+            updated_at = #{now}
+        WHERE id = #{id} AND status = 'PENDING'
+    </update>
+
+    <update id="markFailed">
+        UPDATE analysis_flows
+        SET status = 'FAILED', error_code = #{errorCode}, updated_at = #{now}
+        WHERE id = #{id} AND status = 'PENDING'
+    </update>
+
+    <update id="failAllPending">
+        UPDATE analysis_flows
+        SET status = 'FAILED', error_code = #{errorCode}, updated_at = #{now}
+        WHERE status = 'PENDING'
+    </update>
+</mapper>

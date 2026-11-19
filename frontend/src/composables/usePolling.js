@@ -10,6 +10,8 @@ import { onBeforeUnmount } from 'vue'
 export function usePolling(task, { interval = 2000 } = {}) {
   let generation = 0
   let timer = null
+  // unmount 뒤에 늦게 끝난 요청이 start()를 불러도 다시 돌지 않게 한다
+  let disposed = false
 
   async function run(gen) {
     const isCurrent = () => gen === generation
@@ -25,12 +27,22 @@ export function usePolling(task, { interval = 2000 } = {}) {
     timer = null
   }
 
-  function start() {
+  /** `delay`(ms)를 주면 첫 실행도 그만큼 기다린다 (방금 받은 응답이 최신일 때). */
+  function start({ delay = 0 } = {}) {
     stop()
-    run(generation)
+    if (disposed) return
+    const gen = generation
+    if (delay > 0) {
+      timer = setTimeout(() => run(gen), delay)
+    } else {
+      run(gen)
+    }
   }
 
-  onBeforeUnmount(stop)
+  onBeforeUnmount(() => {
+    disposed = true
+    stop()
+  })
 
   return { start, stop }
 }
