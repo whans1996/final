@@ -4,7 +4,7 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
 
-갱신: 2026-11-19 19:55 · 작업자: whans1996@naver.com · PC: dh-home · 브랜치: feature/issue-49-mock-concept-names
+갱신: 2026-11-19 20:16 · 작업자: whans1996@naver.com · PC: dh-home · 브랜치: feature/issue-49-mock-concept-names
 
 ## 현재 기능
 
@@ -16,12 +16,12 @@ follow-up #49 mock concept fixture가 시드 카드 id에 기대는 문제 — *
 - ✅ `llm-fixtures/concept.json` 기존 카드 5개를 시드 이름으로 (DI, @RestController와 요청 매핑, Bean Validation, Mapper, JWT)
 - ✅ 테스트: `MockLlmClientTest#issue49_*`, `MainFixturesTest#issue49_*`(id를 1000부터 역순으로 붙여도 의도한 카드), AC10은 실제 시드 이름 + `ConceptPrompts.input`으로 검사. red→green 확인, verify be 통과
 - ✅ F-08 spec 186행에 #49 이후 방식 한 줄 추가
+- ✅ 스크린샷 `c4d22d1` SC-07-concepts-{desktop,mobile} 다시 찍음 (dh-home 로컬 계정 `ui-49@local.test`, 로그인 상태 `.harness/ui-49.json`, `DS-02-01.zip` 분석 3번), 06 설명 수정
 
 ## 바로 다음 할 일
 
 1. `/pr-review` → PR(`Closes #49`, develop 대상). FE 변경 없음, API 변경 없음
-2. (선택) 로컬 DB로 분석을 돌려 개념 탭 카드·맥락 문장이 맞는지 확인하고 `docs/산출물/screens/SC-07-concepts-*.png` 다시 찍기 (기존 스크린샷은 어긋난 카드)
-3. 머지 뒤 다음 기능: F-14 코드 이해 퀴즈 `/spec` (Opus/high)
+2. 머지 뒤 다음 기능: F-14 코드 이해 퀴즈 `/spec` (Opus/high)
 
 ## 막힌 점 / 결정 필요
 
