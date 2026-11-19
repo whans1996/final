@@ -28,7 +28,8 @@ const NUDGE_STATE = join(ROOT, '.harness', 'context-nudge.json');
 const EDIT_TOOL = /edit|write/i;
 // 파일 이름 없이 여러 파일을 바꾸는 명령 → 이 세션이 작업 영역 전체를 건드린 것으로 본다
 // (git pull·checkout 등은 넣지 않는다: /pickup이 매번 pull하므로 넣으면 오탐 방지가 무력해진다)
-const BROAD_COMMAND = /\bnpm\s+(i|install|update|uninstall)\b|\bprettier\b.*--write|--fix\b|spotlessApply/i;
+// npm run lint·format은 frontend/package.json에서 --fix·prettier --write를 실행한다 (lint:check는 읽기 전용)
+const BROAD_COMMAND = /\bnpm\s+(i|install|update|uninstall)\b|\bnpm\s+run\s+(lint|format)(?![:\w-])|\bprettier\b.*--write|--fix\b|spotlessApply/i;
 // 명령에 이 이름만 나와서는 어느 파일인지 알 수 없다
 const GENERIC_NAMES = new Set(['index.js', 'index.ts', 'package.json', 'package-lock.json', 'build.gradle', 'readme.md', 'claude.md']);
 
