@@ -1,8 +1,10 @@
 // 사람별 NOW 파일·작업로그·PC 전환 판정 (11-19 병렬 전환)
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import {
   lastWorklogEntryOf,
+  nowFileOf,
   nowRelPath,
   otherOwnerKey,
   ownerKey,
@@ -92,7 +94,7 @@ test('세션 배너는 사람·PC·브랜치를 첫 줄에, 환경·주의(첫 �
   }).split('\n');
   assert.equal(b[0], '[바이브노트] 👤 김동환 · 🖥️ SSAFY 교육장 (dh-ssafy) · 🌿 develop');
   assert.equal(b[1], '환경 ✅');
-  assert.equal(b[2], '⚠️ 보호 브랜치(develop)에 있습니다.');
+  assert.equal(b[2], '⚠️ 보호 브랜치(develop)에 있습니다. 코드를 바꾸기 전에 브랜치를 만드세요.');
   assert.equal(b[3], '내 작업: 공통 기반 spec');
   assert.equal(b[4], '김준섭: 없음 — 착수 전');
 });
@@ -102,4 +104,18 @@ test('세션 배너: 미등록 PC는 setup 안내, 환경 문제는 항목을 �
   assert.ok(b[0].includes('미등록 PC (hostname PC1) → node scripts/setup.mjs --pc <id>'));
   assert.equal(b[1], '환경: ⚠️ Docker');
   assert.ok(b[2].length <= '내 작업: '.length + 90 && b[2].endsWith('…'));
+});
+
+test('세션 배너: label·owner가 없으면 id로, 상대 이름이 없으면 "상대"로 표시한다', () => {
+  const b = sessionBanner({ pc: { id: 'dh-x' }, branch: 'develop', warnings: ['마침표 없는 경고'], peerFeature: 'F-09' }).split('\n');
+  assert.equal(b[0], '[바이브노트] 👤 ? · 🖥️ dh-x (dh-x) · 🌿 develop');
+  assert.equal(b[2], '⚠️ 마침표 없는 경고');
+  assert.equal(b[3], '상대: F-09');
+});
+
+test('NOW 파일마다 맨 앞이 "갱신:"인 줄이 있다 (previousPc·peer-watch·handoff가 이 줄을 읽는다)', () => {
+  for (const key of ['dh', 'js']) {
+    const text = readFileSync(nowFileOf(key), 'utf8');
+    assert.match(text, /^갱신: \d{4}-\d{2}-\d{2} \d{2}:\d{2}/m, nowRelPath(key));
+  }
 });

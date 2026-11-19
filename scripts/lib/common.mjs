@@ -265,7 +265,7 @@ export function lastContextTokens(path, tailBytes = 512 * 1024) {
 
 /**
  * SessionStart 화면 배너 (systemMessage). additionalContext는 모델에만 가므로 사람에게는 이것만 보인다.
- * 누구·어느 PC·브랜치·환경·주의(첫 문장)·내/상대 현재 기능을 몇 줄로 요약한다.
+ * 누구·어느 PC·브랜치·환경·주의·내/상대 현재 기능을 몇 줄로 요약한다.
  */
 export function sessionBanner({ pc, branch, envBad = [], warnings = [], myFeature, peerName, peerFeature }) {
   const cut = (t, n = 90) => (t.length > n ? `${t.slice(0, n - 1)}…` : t);
@@ -278,7 +278,8 @@ export function sessionBanner({ pc, branch, envBad = [], warnings = [], myFeatur
   }
   const lines = [`[바이브노트] ${who} · 🌿 ${branch ?? '?'}`];
   lines.push(envBad.length ? `환경: ${envBad.join(', ')}` : '환경 ✅');
-  for (const w of warnings) lines.push(`⚠️ ${cut(w.split(/(?<=\.)\s/)[0])}`);
+  // 경고는 대개 "상태. 할 일." 순서라 첫 문장만 자르면 할 일이 빠진다 → 길이로만 자른다
+  for (const w of warnings) lines.push(`⚠️ ${cut(w, 110)}`);
   if (myFeature) lines.push(`내 작업: ${cut(myFeature)}`);
   if (peerFeature) lines.push(`${peerName ?? '상대'}: ${cut(peerFeature)}`);
   return lines.join('\n');

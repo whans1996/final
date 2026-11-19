@@ -163,19 +163,27 @@ parts.push(
 );
 
 // additionalContext는 모델에만 간다. 사람에게는 systemMessage로 누구·어느 PC인지 바로 보여 준다
-const banner = sessionBanner({
-  pc,
-  branch: isGitRepo() ? currentBranch() || '(detached)' : null,
-  envBad: bad.map((r) => `${icon(r.status)} ${r.item}`),
-  warnings,
-  myFeature: me && now ? nowHeadline(now).feature : null,
-  peerName: other ? Object.entries(loadPcs()).find(([id]) => ownerKey(id) === other)?.[1].owner : null,
-  peerFeature: otherNow ? nowHeadline(otherNow.text).feature : null,
-});
+// 배너가 깨져도 NOW 주입은 살린다
+let banner;
+try {
+  // env-check를 못 불러와도 로컬 등록이 있으면 미등록으로 보이지 않게 한다
+  const shownPc = pc.id || !localPcId() ? pc : { id: localPcId(), label: '(env-check 로드 실패)' };
+  banner = sessionBanner({
+    pc: shownPc,
+    branch: isGitRepo() ? currentBranch() || '(detached)' : null,
+    envBad: bad.map((r) => `${icon(r.status)} ${r.item}`),
+    warnings,
+    myFeature: me && now ? nowHeadline(now).feature : null,
+    peerName: other ? Object.entries(loadPcs()).find(([id]) => ownerKey(id) === other)?.[1].owner : null,
+    peerFeature: otherNow ? nowHeadline(otherNow.text).feature : null,
+  });
+} catch {
+  banner = undefined;
+}
 
 process.stdout.write(
   JSON.stringify({
-    systemMessage: banner,
+    ...(banner ? { systemMessage: banner } : {}),
     hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext: parts.join('\n\n') },
   }),
 );
