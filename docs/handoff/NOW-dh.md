@@ -4,11 +4,11 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
 
-갱신: 2026-11-19 14:18 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/common-js-harness-docs
+갱신: 2026-11-19 14:24 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/common-js-harness-docs
 
 ## 현재 기능
 
-하네스 (common) 김준섭 사용 감사 후속 — `feature/common-js-harness-docs`, **PR #41** (Codex ✅ 8edfb21, reviewer 반드시 0·권장 2 반영. CI Backend 대기)
+하네스 (common) 김준섭 사용 감사 후속 — `feature/common-js-harness-docs`, **PR #41** (Codex ✅ 8edfb21, reviewer 반드시 0·권장 2 반영. CI 초록 — Backend는 Gradle 의존성 다운로드 일시 실패 1회 후 재실행 통과)
 
 ## 진행
 
@@ -18,7 +18,7 @@
 
 ## 바로 다음 할 일
 
-1. PR #41 CI(Backend) 초록 확인 → GitHub에서 본인 머지 → `git switch develop && git pull`
+1. PR #41 GitHub에서 본인 머지 → `git switch develop && git pull`
 2. `/clear` 뒤 `/spec`으로 **공통 기반** spec (concept 도메인·Mapper·카드 DTO, ErrorCode·ActivityType 블록, 라우터·nav 분리, ConceptCard·Pagination, 관리자 레이아웃)
 3. 1.4 유스케이스(마감 11/23) `docs/산출물/02-유스케이스.md`
 
