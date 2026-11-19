@@ -17,7 +17,7 @@ description: develop에 합치기 전 현재 feature 브랜치를 verifier·revi
    - `contract-checker`: 이 기능의 API 계약 일치 여부 (API 변경이 없으면 생략)
 3. **분류**: 결과를 `반드시 수정`(spec 미충족, 보안, 테스트 실패, 계약 불일치, openapi.json 미갱신) / `권장` / `무시 가능`으로 나눠 사용자에게 보여 준다.
 4. **수정**: `반드시 수정`은 바로 고치고 커밋 (`fix(F-xx): ...`). `권장`은 사용자에게 할지 묻는다.
-   - 이번 PR에서 하지 않기로 한 지적과 spec 범위 밖 후속 작업은 GitHub 이슈로 남긴다: `gh issue create --label follow-up --label area:<A|B|common> --assignee @me --title "<F-xx> 요약" --body "<배경, 출처 PR·지적 링크, 제안, 영향 범위>"` (본문 형식은 `.github/ISSUE_TEMPLATE/follow-up.md`. 영역은 내 영역이면 `node scripts/stamp.mjs --area` 출력(김동환 area:A, 김준섭 area:B), 하네스·공통 코드면 common). PR 설명 "후속 작업"과 내 NOW 파일에는 이슈 번호만 적는다 (`docs/conventions.md` 7절).
+   - 이번 PR에서 하지 않기로 한 지적과 spec 범위 밖 후속 작업은 GitHub 이슈로 남긴다: `gh issue create --label follow-up --label area:<A|B|common> --assignee @me --title "<F-xx> 요약" --body "<배경, 출처 PR·지적 링크, 제안, 영향 범위>"` (본문 형식은 `.github/ISSUE_TEMPLATE/follow-up.md`. 영역은 내 영역이면 `node scripts/stamp.mjs --area` 출력(김동환 `area:A`, 김준섭 `area:B`), 하네스·공통 코드면 `area:common`). PR 설명 "후속 작업"과 내 NOW 파일에는 이슈 번호만 적는다 (`docs/conventions.md` 7절).
    - 이 PR이 열린 follow-up 이슈를 해결하면 PR 설명 "해결 이슈"에 `Closes #n`을 이슈마다 적는다. develop에 머지되면 `close-issues` 워크플로가 닫는다.
 5. **PR 설명 생성**: `.github/pull_request_template.md` 형식으로 채워 `.harness/pr-F-xx.md`에 저장하고 요약을 보여 준다.
    - 수용 기준 표: AC별 테스트 이름과 결과
