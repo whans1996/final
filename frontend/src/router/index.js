@@ -1,50 +1,25 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import HomeView from '@/views/HomeView.vue'
+import adminRoutes from './routes/admin'
+import analysisRoutes from './routes/analysis'
+import authRoutes from './routes/auth'
+import challengeRoutes from './routes/challenge'
+import communityRoutes from './routes/community'
+import conceptRoutes from './routes/concept'
+import userRoutes from './routes/user'
 
+// 라우트는 도메인 파일(routes/*.js)에 두고 여기서는 합치기만 한다 (F-00b). 기능 PR은 자기 도메인 파일만 고친다.
+// 헤더 메뉴는 route의 meta.nav, 관리자 사이드 메뉴는 /admin 자식의 meta.adminNav로 정한다 (utils/navItems.js)
 export const routes = [
   { path: '/', name: 'home', component: HomeView },
-  {
-    path: '/login',
-    name: 'login',
-    component: () => import('@/views/LoginView.vue'),
-    meta: { guestOnly: true },
-  },
-  {
-    path: '/signup',
-    name: 'signup',
-    component: () => import('@/views/SignupView.vue'),
-    meta: { guestOnly: true },
-  },
-  {
-    path: '/users/:id(\\d+)',
-    name: 'user-profile',
-    component: () => import('@/views/UserProfileView.vue'),
-  },
-  {
-    path: '/me/settings',
-    name: 'my-settings',
-    component: () => import('@/views/MySettingsView.vue'),
-    meta: { requiresAuth: true },
-  },
-  {
-    path: '/analyses',
-    name: 'analyses',
-    component: () => import('@/views/AnalysisListView.vue'),
-    meta: { requiresAuth: true },
-  },
-  {
-    path: '/analyses/new',
-    name: 'analysis-new',
-    component: () => import('@/views/AnalysisRequestView.vue'),
-    meta: { requiresAuth: true },
-  },
-  {
-    path: '/analyses/:id(\\d+)',
-    name: 'analysis-detail',
-    component: () => import('@/views/AnalysisDetailView.vue'),
-    meta: { requiresAuth: true },
-  },
+  ...authRoutes,
+  ...userRoutes,
+  ...analysisRoutes,
+  ...conceptRoutes,
+  ...communityRoutes,
+  ...challengeRoutes,
+  ...adminRoutes,
   {
     path: '/:pathMatch(.*)*',
     name: 'not-found',

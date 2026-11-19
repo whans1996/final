@@ -1,11 +1,13 @@
 <script setup>
 // SC-06 내 분석 목록 (F-05a AC16). 수정·삭제·공개 설정은 F-19에서 붙는다.
-import { computed, onMounted, ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { fetchAnalyses } from '@/api/analyses'
 import { errorMessage } from '@/api/http'
 import { LEVELS } from '@/utils/authValidation'
 import AnalysisStatusBadge from '@/components/analysis/AnalysisStatusBadge.vue'
+import EmptyState from '@/components/common/EmptyState.vue'
+import PageNav from '@/components/common/PageNav.vue'
 
 const PAGE_SIZE = 20
 
@@ -14,8 +16,6 @@ const page = ref(1)
 const total = ref(0)
 const loading = ref(true)
 const loadError = ref('')
-
-const lastPage = computed(() => Math.max(1, Math.ceil(total.value / PAGE_SIZE)))
 
 function levelLabel(level) {
   return LEVELS.find((l) => l.value === level)?.label ?? level
@@ -60,12 +60,16 @@ onMounted(() => load(1))
     <p v-if="loading" class="hint">불러오는 중…</p>
     <p v-else-if="loadError" class="form-error" role="alert">{{ loadError }}</p>
 
-    <div v-else-if="items.length === 0" class="empty">
-      <p>아직 분석이 없습니다. AI로 만든 프로젝트를 올려 코드를 이해해 보세요.</p>
-      <RouterLink :to="{ name: 'analysis-new' }" class="new" data-action="first-request">
-        첫 분석 요청하기
-      </RouterLink>
-    </div>
+    <EmptyState
+      v-else-if="items.length === 0"
+      message="아직 분석이 없습니다. AI로 만든 프로젝트를 올려 코드를 이해해 보세요."
+    >
+      <template #action>
+        <RouterLink :to="{ name: 'analysis-new' }" class="new" data-action="first-request">
+          첫 분석 요청하기
+        </RouterLink>
+      </template>
+    </EmptyState>
 
     <template v-else>
       <ul class="cards">
@@ -84,20 +88,7 @@ onMounted(() => load(1))
         </li>
       </ul>
 
-      <nav v-if="total > PAGE_SIZE" class="pager" aria-label="페이지 이동">
-        <button type="button" data-action="prev" :disabled="page <= 1" @click="load(page - 1)">
-          이전
-        </button>
-        <span>{{ page }} / {{ lastPage }}</span>
-        <button
-          type="button"
-          data-action="next"
-          :disabled="page >= lastPage"
-          @click="load(page + 1)"
-        >
-          다음
-        </button>
-      </nav>
+      <PageNav :page="page" :size="PAGE_SIZE" :total="total" @change="load" />
     </template>
   </section>
 </template>
@@ -134,18 +125,6 @@ onMounted(() => load(1))
   white-space: nowrap;
 }
 
-.empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-4);
-  margin-top: var(--space-6);
-  padding: var(--space-8) var(--space-4);
-  border: 1px dashed var(--color-border);
-  border-radius: var(--radius);
-  text-align: center;
-}
-
 .cards {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -179,27 +158,5 @@ onMounted(() => load(1))
 .meta {
   color: var(--color-text-muted);
   font-size: 0.9em;
-}
-
-.pager {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-4);
-  margin-top: var(--space-6);
-}
-
-.pager button {
-  padding: var(--space-2) var(--space-4);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  background: var(--color-surface);
-  font: inherit;
-  cursor: pointer;
-}
-
-.pager button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 </style>

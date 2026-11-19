@@ -5,6 +5,9 @@ app:
     secret: ${JWT_SECRET:local-dev-only-jwt-secret-do-not-use-in-production}
     # http://localhost로 띄우므로 Secure 쿠키를 끈다
     refresh-cookie-secure: false
+  admin:
+    # 기동할 때 ADMIN으로 승격할 가입 회원 이메일 (F-00b). 저장소에 이메일을 두지 않고 .env의 ADMIN_BOOTSTRAP_EMAIL로 받는다
+    bootstrap-email: ${ADMIN_BOOTSTRAP_EMAIL:}
 
 logging:
   level:

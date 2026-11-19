@@ -4,28 +4,28 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
 
-갱신: 2026-11-19 14:24 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/common-js-harness-docs
+갱신: 2026-11-19 15:10 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/F-00b-common-foundation
 
 ## 현재 기능
 
-하네스 (common) 김준섭 사용 감사 후속 — `feature/common-js-harness-docs`, **PR #41** (Codex ✅ 8edfb21, reviewer 반드시 0·권장 2 반영. CI 초록 — Backend는 Gradle 의존성 다운로드 일시 실패 1회 후 재실행 통과)
+F-00b 공통 기반 — **PR #42** (develop, `@JoonseobKim` 멘션). CI 초록, **Codex ✅ e5301af**(재리뷰 0회), spec DONE 표시 완료 → 사람이 GitHub에서 머지만 남음
 
 ## 진행
 
-- ✅ PR #40(이슈 순환) 머지됨
-- ✅ 감사: js 입력으로 사람 판별·영역·이슈·peer-watch·notify 함수 확인, macOS 분기 정상, 실깨짐 없음
-- ✅ `stamp.mjs --area`(내 이슈 영역 라벨) + handoff·pr-review 스킬·conventions 9절·CLAUDE.md 안내, prompt-evaluator `./gradlew` 안내, develop에 잘못 머지된 `scripts/tmp-codex-probe.mjs` 삭제. 하네스 테스트 43/43
+- ✅ BE AC1~6 (`a637dbd`), FE AC7~11 (`58b4a28`), 문서 (`fd38f99`), AC12 ui-verifier, F-05a 간헐 실패 수정 (`48ac033`)
+- ✅ /pr-review: verifier(BE 330·FE 175), contract-checker 불일치 0(F-09 spec 3절 필드 일치), reviewer 반드시 수정 0 → 권장 4건 반영 `e5301af` (AC4 from() 테스트, findPublishedByIds Javadoc, 관리자 승격 안내, CONCEPT_404 표), 화면 설계서 SC-20·21 스크린샷
+- ✅ CI 초록, Codex COMPLETE `e5301af`, `docs(F-00b): 완료 표시 (spec DONE)` 커밋
 
 ## 바로 다음 할 일
 
-1. PR #41 GitHub에서 본인 머지 → `git switch develop && git pull`
-2. `/clear` 뒤 `/spec`으로 **공통 기반** spec (concept 도메인·Mapper·카드 DTO, ErrorCode·ActivityType 블록, 라우터·nav 분리, ConceptCard·Pagination, 관리자 레이아웃)
-3. 1.4 유스케이스(마감 11/23) `docs/산출물/02-유스케이스.md`
+1. 사람: GitHub에서 PR #42 머지 (wip 없음, 일반 머지 가능). 머지 전 develop이 앞서 있으면 `git merge origin/develop` → push → CI 재확인. 머지 뒤 Mattermost로 김준섭에게 F-09 시작 알림
+2. 머지 뒤 `git checkout develop && git pull`, 1.4 유스케이스(마감 11/23) `docs/산출물/02-유스케이스.md` (Opus/medium 새 세션)
 
 ## 막힌 점 / 결정 필요
 
-- 김준섭: PR #37("머지 금지")이 14:13 develop에 머지됨 → NOW-js.md 끝 `<!-- [임시] ... -->` 줄은 본인이 지울 것. 무료 private 저장소라 브랜치 보호 없음(403) — "머지 금지" 가드 필요 여부 결정
-- 사람: 이슈 #16, 노션 팀원 초대, 고아 폴더 `../final-harness` 삭제 여부, 이 PC `node scripts/setup.mjs` 전체 점검 1회
+- ui 점검 계정 `ui-admin@vibe.dev`/`vibe1234`(로컬 DB에만, ADMIN). storageState `.harness/ui-admin.json`
+- 김준섭: F-09는 F-00b 머지 뒤 시작. 비로그인용 "개념 카드" 메뉴는 F-09에서 `meta.nav.show: 'all'` 추가가 필요할 수 있음 (PR #42 본문에 적음)
+- 사람: 이슈 #16, 노션 팀원 초대, 고아 폴더 `../final-harness` 삭제 여부
 
 ## 주의
 

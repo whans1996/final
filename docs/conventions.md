@@ -56,7 +56,7 @@
 | `AUTH` | 인증·토큰 (`AUTH_401` Access 토큰 없음/만료, `AUTH_403` 권한 없음, `AUTH_001` 로그인 실패, `AUTH_002` Refresh 무효·만료 → 다시 로그인) |
 | `USER` | 회원, 프로필, 팔로우 (`USER_409` 이메일·닉네임 중복, `details`에 필드 · `USER_404` 없거나 탈퇴한 회원 · `USER_001` 탈퇴 시 비밀번호 불일치, `details.password`) |
 | `ANALYSIS` | 분석 요청·파이프라인 (`ANALYSIS_413` 크기 초과, `ANALYSIS_415` 지원하지 않는 스택, `ANALYSIS_429` 일일 한도, `ANALYSIS_001` 그 분석의 파일이 아님(404), `ANALYSIS_002` 개요에 없는 API로 흐름 요청, `ANALYSIS_003` 분석당 흐름 3개 초과, `ANALYSIS_409` 분석이 끝나기 전 흐름 요청) |
-| `CONCEPT` | 개념 카드, 리뷰, 찜 |
+| `CONCEPT` | 개념 카드, 리뷰, 찜 (`CONCEPT_404` 없거나 공개되지 않은 카드) |
 | `QUIZ` | 퀴즈 |
 | `REVIEW_PLAN` | 복습 계획 |
 | `POST` | 게시글, 댓글 |
@@ -120,7 +120,8 @@
 - **영역 정본은 `.github/CODEOWNERS`**다. 한 사람만 적힌 경로는 그 사람 영역, 두 사람이 적힌 경로는 공통이다. 새 도메인 패키지나 FE 폴더를 만들면 같은 PR에서 한 줄 추가한다. FE views·components는 도메인 폴더(`views/quiz/`, `components/community/` 등)에 둔다.
 - 파일 영역 확인: `node scripts/owners.mjs <경로...>`, PR 전 `node scripts/owners.mjs --diff origin/develop`. Claude가 상대 영역·공통 파일을 고치면 `area-notice` hook이 알리고(차단하지 않음), 상대 NOW 파일은 `guard-files`가 막는다.
 - **공통 기반은 A가 먼저 만든다** (결정로그 11-19): concept 도메인·Mapper·카드 응답 DTO, ErrorCode·ActivityType 도메인 블록, 라우터·nav 영역별 분리, 공용 컴포넌트, 관리자 레이아웃. B는 공통 기반 PR이 develop에 머지된 뒤 그 위에서 작업한다.
-- **공통 enum·배열은 도메인 블록 안에만 추가한다** (ErrorCode, ActivityType, `PUBLIC_GET_PATHS`, routes, nav). 파일 끝에 이어 붙이면 두 사람의 추가가 같은 줄에서 충돌한다.
+- **공통 enum·배열은 도메인 블록 안에만 추가한다** (ErrorCode, ActivityType, `PUBLIC_GET_PATHS`, `ConceptMapper` Java·XML). 블록은 `// ── 도메인 (영역 기능) ──` 주석으로 나누고 모든 항목 끝에 쉼표를 단다(enum의 `;`는 맨 아래 단독 줄). 파일 끝에 이어 붙이면 두 사람의 추가가 같은 줄에서 충돌한다.
+- **FE 라우트·메뉴는 도메인 파일과 route 메타로 나눈다** (F-00b): route는 `frontend/src/router/routes/<도메인>.js`, 헤더 메뉴는 `meta.nav`, 관리자 메뉴는 `/admin` 자식의 `meta.adminNav`. 상세는 `frontend/CLAUDE.md`.
 - **상대 테이블**은 상대 도메인의 Mapper·Service를 통해 읽는다. 쓰기(INSERT·UPDATE)는 그 테이블 주인의 Service만 한다. 필요한 메서드가 없으면 상대에게 요청하거나 PR에서 @멘션하고 최소로 추가한다.
 - **push 시점**: `/implement` 체크포인트 커밋, spec 승인 커밋, `/handoff` 뒤에 feature 브랜치를 push한다. 상대의 세션 시작·peer-watch hook과 Mattermost 알림은 원격의 NOW 파일을 본다.
 - **알림 경로**: Claude 세션 안(세션 시작 hook, 10분 간격 `peer-watch` hook), Mattermost(`.github/workflows/notify.yml`, PR 열림·머지·NOW push). 급한 합의(공통 파일 동시 수정 등)는 Mattermost에서 직접 말한다.

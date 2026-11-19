@@ -42,4 +42,10 @@ public interface UserMapper {
 
     /** 탈퇴 처리: status·withdrawn_at을 채우고 개인정보를 마스킹한다 (F-03 AC6). 활성 회원만 바꾸며 바뀐 행 수를 돌려준다. */
     int withdraw(long id);
+
+    /**
+     * 활성 회원의 role을 ADMIN으로 바꾼다 (F-00b AC6 AdminBootstrap). 맞는 행 수를 돌려주며 이미 ADMIN이어도 1이다
+     * (Connector/J 기본 useAffectedRows=false는 바뀐 행이 아니라 찾은 행 수를 준다). 회원이 없거나 탈퇴했으면 0.
+     */
+    int promoteToAdmin(String email);
 }
