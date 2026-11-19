@@ -53,9 +53,23 @@ test('직전 PC는 내 NOW 갱신 줄과 내 작업로그 중 최근 것', () =>
   // 작업로그가 더 최근이면 작업로그 PC
   const older = nowText.replace('12:00', '08:00');
   assert.equal(previousPc({ nowText: older, entry, knownIds }), 'dh-ssafy');
-  // 상대가 develop에 남긴 작업로그는 판정에 쓰지 않는다 (병렬 작업 오탐 방지)
-  assert.equal(previousPc({ nowText: null, entry: lastWorklogEntryOf(worklogEntries(LOG), 'dh'), knownIds }), 'dh-ssafy');
+  // 상대 PC 항목이 들어와도 내 key로 걸러 판정에 쓰지 않는다 (병렬 작업 오탐 방지)
+  const theirs = lastWorklogEntryOf(worklogEntries(LOG), 'js');
+  assert.equal(previousPc({ nowText: null, entry: theirs, knownIds, key: 'dh' }), null);
   assert.equal(previousPc({ nowText: null, entry: null, knownIds }), null);
+});
+
+test('unknown-pc 항목은 작업자 계정이 내 PC 계정일 때만 내 것, 시각이 가장 늦은 항목을 고른다', () => {
+  const log = `## 2026-11-19 12:00 · JoonseobKim · unknown-pc · feature/F-09-b
+- 미등록 PC
+## 2026-11-19 08:00 · whans1996 · dh-home · feature/F-08-a
+- 늦게 union 머지됐지만 이른 항목
+`;
+  const pcs = { 'dh-ssafy': { github: 'whans1996' }, 'js-ssafy': { github: 'JoonseobKim' } };
+  const entries = [...worklogEntries(LOG), ...worklogEntries(log)];
+  assert.equal(lastWorklogEntryOf(entries, 'dh', pcs).at, '2026-11-19 09:00');
+  assert.equal(lastWorklogEntryOf(entries, 'js', pcs).pcId, 'unknown-pc');
+  assert.equal(entries.at(-1).author, 'whans1996');
 });
 
 test('다른 사람 PC에서 쓴 내 NOW 갱신 줄은 PC 전환으로 보지 않는다', () => {

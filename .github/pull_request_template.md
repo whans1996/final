@@ -5,6 +5,7 @@
 - 기능 ID: F-xx
 - spec: `docs/specs/F-xx-slug.md`
 - 영역 오너(머지): <!-- @whans1996 (A) 또는 @JoonseobKim (B). 본인이 머지한다 -->
+- [ ] 머지 직전 `git merge origin/develop` 후 push해 CI 초록을 다시 확인했다 (상대 PR이 먼저 머지된 경우. 마이그레이션 번호·openapi.json 충돌은 머지 뒤에야 드러난다)
 - [ ] 공통 코드(SecurityConfig, GlobalExceptionHandler, 공통 응답·ErrorCode, FE 라우터·레이아웃·공용 컴포넌트·api 클라이언트, 빌드 설정)를 바꿨으면 상대를 @멘션했다
 
 ## 변경 요약

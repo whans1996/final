@@ -5,8 +5,8 @@
 // 사용법: node scripts/check-migrations.mjs [--base <ref>]   (기본 origin/develop, ref가 없으면 중복만 검사)
 import { readdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { ROOT } from './lib/common.mjs';
-import { MIGRATION_DIR, migrationFilesAt, migrationProblems } from './lib/migrations.mjs';
+import { ROOT, git } from './lib/common.mjs';
+import { MIGRATION_DIR, migrationFilesAt, migrationProblems, versionOf } from './lib/migrations.mjs';
 
 const args = process.argv.slice(2);
 const bi = args.indexOf('--base');
@@ -23,11 +23,18 @@ const base = migrationFilesAt(baseRef);
 if (!base) console.log(`(base ${baseRef}를 찾지 못해 중복만 검사합니다)`);
 
 const problems = migrationProblems(head, base ?? head);
+// base에 머지된 V 파일의 내용이 바뀌었는가 (CLAUDE.md 절대 규칙 4)
+for (const f of base ?? []) {
+  if (versionOf(f) && head.includes(f) && !git(['diff', '--quiet', baseRef, '--', `${MIGRATION_DIR}/${f}`]).ok) {
+    problems.push(`${f}: base에 머지된 마이그레이션의 내용이 바뀌었습니다 (새 버전 파일로 고칠 것)`);
+  }
+}
 if (problems.length) {
   for (const p of problems) console.log(`::error::${p}`);
   console.log(
-    '\n상대 PR이 먼저 같은 번호를 썼을 가능성이 큽니다. `git merge origin/develop` 후 ' +
-      '`node scripts/next-migration.mjs`로 번호를 확인하고 `git mv`로 내 파일 이름만 바꾸세요 (내용 수정 금지).',
+    '\n번호 중복·역순이면 상대 PR이 먼저 같은 번호를 썼을 가능성이 큽니다. `git merge origin/develop` 후 ' +
+      '`node scripts/next-migration.mjs`로 번호를 확인하고 develop에 없는 내 파일만 `git mv`로 이름을 바꾸세요. ' +
+      'develop에 머지된 파일은 이름·내용을 바꾸지 말고 되돌리세요.',
   );
   process.exit(1);
 }

@@ -29,12 +29,18 @@ export function maxVersion(files) {
 
 /**
  * PR 검사: head(PR 적용 후) 파일 목록과 base 파일 목록으로 문제를 찾는다.
+ * - base에 있던 V 파일이 head에서 사라짐 (이미 적용된 마이그레이션의 이름 변경·삭제 → Flyway validate 실패)
  * - 같은 버전을 쓰는 파일이 둘 이상
  * - PR이 새로 추가한 파일의 버전이 base 최댓값 이하 (상대 PR이 먼저 머지되어 번호가 밀린 경우)
+ * 내용 변경은 git이 필요해 check-migrations.mjs가 따로 본다.
  * 반환: 문제 문장 배열 (없으면 [])
  */
 export function migrationProblems(headFiles, baseFiles) {
   const problems = [];
+  const headSet = new Set(headFiles);
+  for (const f of baseFiles) {
+    if (versionOf(f) && !headSet.has(f)) problems.push(`${f}: base에 머지된 마이그레이션이 없어졌습니다 (이름 변경·삭제 금지)`);
+  }
   const byVersion = new Map();
   for (const f of headFiles) {
     const v = versionOf(f);

@@ -120,12 +120,11 @@ function cleanReceipts(comments) {
     .filter((r) => r.sha);
 }
 
-/** Codex 인라인 지적 중 아직 이관되지 않은 마지막 시각 (없으면 ''). --resolve 마커보다 이른 지적은 해결된 것으로 본다 */
-function lastFindingAt(comments) {
-  const times = ghList(`repos/${repo}/pulls/${pr}/comments`)
+/** Codex 인라인 지적(스레드 첫 댓글) 시각 목록 */
+function findingTimes() {
+  return ghList(`repos/${repo}/pulls/${pr}/comments`)
     .filter((c) => c.user?.login?.startsWith(BOT) && !c.in_reply_to_id)
     .map((c) => c.created_at);
-  return unresolvedFindingAt(times, resolvedMarks(comments).map((m) => m.at));
 }
 
 /** 사람이 단 "지적을 이슈로 이관함" 마커 [{ sha, at }] */
@@ -157,17 +156,22 @@ function ensureCommit(sha, ref) {
  * base 이후 head까지 문서만 바뀌었는가. base가 head의 조상이 아니거나(force push) 커밋을 못 받으면 false.
  * develop 합치기로 들어온 파일(head의 내용이 head·develop 공통 조상의 내용과 같은 파일)은 이 PR의 변경이 아니어서 뺀다.
  */
-function docsOnlySince(base, h) {
-  if (!ensureCommit(h.sha, h.ref)) return false;
+function docsOnlySince(base, h, mb) {
   // 짧은 sha(영수증)도 받는다
   const full = git(['rev-parse', '--verify', '-q', `${base}^{commit}`]);
   if (!full.ok && !ensureCommit(base)) return false;
   if (!git(['merge-base', '--is-ancestor', base, h.sha]).ok) return false;
   const files = git(['diff', '--no-renames', '--name-only', base, h.sha]).out.split('\n').filter(Boolean);
+  const fromDevelop = (f) => !!mb && git(['diff', '--quiet', mb, h.sha, '--', f]).ok;
+  return onlyDocsChanged(files, fromDevelop);
+}
+
+/** 문서 판정 준비: head 커밋을 받고 develop을 한 번만 fetch해 head·develop 공통 조상을 구한다. head를 못 받으면 null */
+function developMergeBase(h) {
+  if (!ensureCommit(h.sha, h.ref)) return null;
   git(['fetch', '--quiet', 'origin', 'develop'], { timeout: 30_000 });
   const mb = git(['merge-base', h.sha, 'origin/develop']);
-  const fromDevelop = (f) => mb.ok && git(['diff', '--quiet', mb.out, h.sha, '--', f]).ok;
-  return onlyDocsChanged(files, fromDevelop);
+  return { mb: mb.ok ? mb.out : null };
 }
 
 function judge() {
@@ -180,8 +184,13 @@ function judge() {
   const resolved = resolvedMarks(comments);
   const clean = receipts.some((r) => h.sha.startsWith(r.sha));
   const stClean = st?.status === 'completed' && !st.has_any_findings;
-  // 지적이 있었지만 그 커밋의 남은 지적을 모두 이슈로 넘긴 상태 (pr-review 8-3 이관 완료)
-  const stResolved = st?.status === 'completed' && resolved.some((m) => m.sha === st.commit_sha);
+  // 지적이 있었지만 그 커밋의 남은 지적을 모두 이슈로 넘긴 상태 (pr-review 8-3 이관 완료).
+  // 마커 뒤에 새 지적이 달렸으면 이관 완료가 아니다. 인라인 지적 조회는 필요할 때만 한다
+  let times;
+  const allFindings = () => (times ??= findingTimes());
+  const lastAny = () => [...allFindings()].sort().at(-1) ?? '';
+  const stMarks = resolved.filter((m) => m.sha === st?.commit_sha);
+  const stResolved = st?.status === 'completed' && stMarks.length > 0 && stMarks.some((m) => m.at > lastAny());
   if (st?.commit_sha === h.sha && stClean) {
     return { verdict: 'COMPLETE', h, comments, msg: `head ${short} 지적 없음 (상태 댓글)` };
   }
@@ -197,8 +206,10 @@ function judge() {
     // 영수증·상태 댓글 뒤에 미해결 인라인 지적이 달렸으면 그것은 마지막 리뷰가 아니므로 쓰지 않는다.
     // 상태 댓글도 갱신이 늦을 수 있어 같은 기준을 적용한다 (Codex 리뷰)
     if (!st || stClean || stResolved) {
-      const bases = cleanBases(st, stClean || stResolved, receipts, resolved, lastFindingAt(comments));
-      const base = bases.find((b) => docsOnlySince(b, h));
+      const findingAt = unresolvedFindingAt(allFindings(), resolved.map((m) => m.at));
+      const bases = cleanBases(st, stClean || stResolved, receipts, resolved, findingAt);
+      const dev = bases.length ? developMergeBase(h) : null;
+      const base = dev && bases.find((b) => docsOnlySince(b, h, dev.mb));
       if (base) {
         return { verdict: 'COMPLETE', h, comments, msg: `head ${short} 문서만 변경 (Codex ✅ ${base.slice(0, 7)} 이후)` };
       }

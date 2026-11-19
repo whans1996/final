@@ -5,12 +5,14 @@
 // PC 4대의 환경이 서로 달라서 어느 PC인지, 빠른 환경 점검 결과, 그 PC의 함정, 직전 작업 PC와 다른지도 알린다.
 import {
   PROTECTED_BRANCHES,
+  ROOT,
   WORKLOG_FILE,
   currentBranch,
   git,
   hasCommits,
   isGitRepo,
   lastWorklogEntryOf,
+  localPcId,
   mdSection,
   nowFileOf,
   nowRelPath,
@@ -100,18 +102,19 @@ const full = lastFullCheck();
 if (pc.id && full?.pcId !== pc.id) env.push('- 전체 점검(setup.mjs) 기록 없음 → 사용자에게 `node scripts/setup.mjs` 실행을 요청');
 if (pc.notes?.length) env.push(`- 이 PC의 주의 사항 (scripts/lib/pcs.json):\n${pc.notes.map((n) => `  - ${n}`).join('\n')}`);
 parts.splice(1, 0, `## PC·환경\n${env.join('\n')}`);
-if (!pc.id) warnings.push('이 PC가 등록되지 않아 인계 기록에 PC를 적을 수 없습니다. 사용자에게 `node scripts/setup.mjs --pc <id>` 실행을 요청하세요.');
+if (!pc.id) warnings.push('이 PC가 등록되지 않아 내 NOW 파일을 정할 수 없습니다 (NOW 주입·Stop hook 체크포인트 검사가 꺼지고 인계 기록에 PC를 적을 수 없음). 작업 전에 사용자에게 `node scripts/setup.mjs --pc <id>` 실행을 요청하세요.');
 if (rows.some((r) => r.status === 'fail')) warnings.push('환경 점검에 ❌ 항목이 있습니다. 작업 전에 사용자와 해결하세요 (PC·환경 섹션).');
 
 // 사람별 NOW 파일: 내 것은 전문, 상대 것은 갱신 줄과 현재 기능 첫 줄만
-const me = ownerKey(pc.id);
+// env-check를 못 불러와도(pc.id null) 로컬 등록(.harness/pc.json)으로 NOW 주입은 살린다
+const me = ownerKey(pc.id ?? localPcId());
 const now = me ? readText(nowFileOf(me)) : null;
 const other = me ? otherOwnerKey(me) : null;
 const otherNow = other ? readText(nowFileOf(other)) : null;
-const myEntry = me ? lastWorklogEntryOf(worklogEntries(readText(WORKLOG_FILE)), me) : null;
+const myEntry = me ? lastWorklogEntryOf(worklogEntries(readText(WORKLOG_FILE)), me, loadPcs()) : null;
 
 // 이전 세션이 체크포인트 없이 남긴 변경 (Stop hook은 이 세션이 건드린 파일만 보므로 여기서 알린다)
-const unrecorded = isGitRepo() ? workFilesNewerThanNow() : [];
+const unrecorded = isGitRepo() && me ? workFilesNewerThanNow(ROOT, nowFileOf(me)) : [];
 if (unrecorded.length) {
   warnings.push(
     `${nowRelPath(me)}보다 나중에 바뀐 미커밋 작업 파일 ${unrecorded.length}개 (${unrecorded.slice(0, 3).join(', ')}${unrecorded.length > 3 ? ' …' : ''}). ` +

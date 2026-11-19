@@ -156,21 +156,31 @@ export function recordStamp({ date = new Date(), author, pcId, branch }) {
   return `${nowStamp(date)} · ${author || '?'} · ${pcId || 'unknown-pc'} · ${branch || '(detached)'}`;
 }
 
-/** 작업로그 항목 [{ at: 'YYYY-MM-DD HH:mm', pcId, text }] (문서 순서). 헤더 "## 날짜 [시각] · 작업자 · PC id · 브랜치" */
+/** 작업로그 항목 [{ at: 'YYYY-MM-DD HH:mm', author, pcId, text }] (문서 순서). 헤더 "## 날짜 [시각] · 작업자 · PC id · 브랜치" */
 export function worklogEntries(log) {
   if (!log) return [];
   return log
     .split(/\r?\n(?=## )/)
     .filter((e) => e.startsWith('## '))
     .map((text) => {
-      const m = /^## (\d{4}-\d{2}-\d{2})(?: (\d{2}:\d{2}))? · [^·\n]+ · ([\w-]+) · /.exec(text);
-      return m ? { at: `${m[1]} ${m[2] || '00:00'}`, pcId: m[3], text } : { at: null, pcId: null, text };
+      const m = /^## (\d{4}-\d{2}-\d{2})(?: (\d{2}:\d{2}))? · ([^·\n]+?) · ([\w-]+) · /.exec(text);
+      return m ? { at: `${m[1]} ${m[2] || '00:00'}`, author: m[3], pcId: m[4], text } : { at: null, author: null, pcId: null, text };
     });
 }
 
-/** 이 사람(key)의 마지막 작업로그 항목. 병렬 작업이라 상대 항목은 건너뛴다. unknown-pc 항목은 누구 것인지 몰라 포함한다 */
-export function lastWorklogEntryOf(entries, key) {
-  return entries.findLast((e) => e.pcId && (ownerKey(e.pcId) === key || e.pcId === 'unknown-pc')) ?? null;
+/**
+ * 이 사람(key)의 가장 최근 작업로그 항목. 병렬 작업이라 상대 항목은 건너뛴다.
+ * unknown-pc 항목(미등록 PC의 handoff.mjs)은 작업자가 이 사람 PC의 github 계정일 때만 넣는다 (pcs: pcs.json의 pcs).
+ * union 머지 뒤에는 문서 순서가 시간순이 아닐 수 있어 시각으로 고른다 (같으면 뒤의 것).
+ */
+export function lastWorklogEntryOf(entries, key, pcs = {}) {
+  const accounts = new Set(
+    Object.entries(pcs)
+      .filter(([id, p]) => ownerKey(id) === key && p?.github)
+      .map(([, p]) => p.github),
+  );
+  const mine = entries.filter((e) => e.pcId && (ownerKey(e.pcId) === key || (e.pcId === 'unknown-pc' && accounts.has(e.author))));
+  return mine.reduce((best, e) => (!best || e.at >= best.at ? e : best), null);
 }
 
 /**

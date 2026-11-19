@@ -26,6 +26,13 @@ test('같은 번호가 둘이면 실패 (상대 PR이 먼저 V6을 머지)', () 
   assert.match(problems[1], /V6__card\.sql: base의 최신 버전 V6 이하/);
 });
 
+test('base에 머지된 파일의 이름을 바꾸거나 지우면 실패', () => {
+  const renamed = ['R__seed.sql', 'V1__init.sql', 'V7__flow.sql'];
+  const problems = migrationProblems(renamed, BASE);
+  assert.match(problems[0], /V5__flow\.sql: base에 머지된 마이그레이션이 없어졌습니다/);
+  assert.match(migrationProblems(['R__seed.sql', 'V1__init.sql'], BASE)[0], /V5__flow\.sql/);
+});
+
 test('base보다 낮은 번호를 새로 추가하면 실패 (V7 머지 뒤 V6 추가)', () => {
   const base = [...BASE, 'V6__a.sql', 'V7__b.sql'];
   assert.match(migrationProblems([...base, 'V6_1__c.sql'], base)[0], /V6_1__c\.sql: base의 최신 버전 V7 이하/);

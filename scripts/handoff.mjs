@@ -59,6 +59,14 @@ const commits = hasCommits() ? git(logArgs).out.split('\n').filter(Boolean) : []
 
 const changed = git(['status', '--porcelain', '--untracked-files=all']).out.split('\n').filter(Boolean);
 
+// 커밋할 새 파일: 작업 폴더 아래 것만. 비밀 파일로 보이는 것이 있으면 아무것도 쓰기 전에 멈춘다 (다시 실행해도 작업로그가 중복되지 않게)
+const untracked = git(['ls-files', '--others', '--exclude-standard']).out.split('\n').filter(Boolean);
+const newFiles = untracked.filter((f) => NEW_FILE_DIRS.test(f));
+const skipped = untracked.filter((f) => !NEW_FILE_DIRS.test(f));
+const tracked = git(['diff', '--name-only', 'HEAD']).out.split('\n').filter(Boolean);
+const secret = [...newFiles, ...tracked].find((f) => SECRET_FILE.test(f));
+if (secret) die(`비밀 파일로 보이는 ${secret} 이(가) 커밋 대상에 있어 중단했습니다. .gitignore를 확인하세요.`);
+
 const nowFile = key ? nowFileOf(key) : null;
 const nowMd = (nowFile && readText(nowFile)) || '';
 const nowName = key ? nowRelPath(key) : 'NOW 파일';
@@ -107,14 +115,13 @@ if (nowFile && nowMd) {
   console.warn('⚠️  PC가 등록되지 않아 NOW 파일을 정할 수 없습니다. node scripts/setup.mjs --pc <id>');
 }
 
-// 스테이징: 추적 중인 파일 변경 + 작업 폴더 아래 새 파일. 비밀 파일로 보이는 것이 있으면 아무것도 커밋하지 않는다
-const untracked = git(['ls-files', '--others', '--exclude-standard']).out.split('\n').filter(Boolean);
-const newFiles = untracked.filter((f) => NEW_FILE_DIRS.test(f));
-const skipped = untracked.filter((f) => !NEW_FILE_DIRS.test(f));
-const secret = newFiles.find((f) => SECRET_FILE.test(f));
-if (secret) die(`비밀 파일로 보이는 ${secret} 이(가) 새 파일 목록에 있어 중단했습니다. .gitignore를 확인하세요.`);
-git(['add', '-u']);
-if (newFiles.length) git(['add', '--', ...newFiles]);
+// 스테이징: 추적 중인 파일 변경 + 작업 폴더 아래 새 파일 (위에서 비밀 파일 검사를 마쳤다)
+const addTracked = git(['add', '-u']);
+if (!addTracked.ok) die(`git add -u 실패 (작업로그·NOW 변경은 커밋되지 않고 남아 있음):\n${addTracked.err}`);
+if (newFiles.length) {
+  const addNew = git(['add', '--', ...newFiles]);
+  if (!addNew.ok) die(`새 파일 스테이징 실패 (작업로그·NOW 변경은 커밋되지 않고 남아 있음):\n${addNew.err}`);
+}
 const staged = git(['diff', '--cached', '--name-only']).out.split('\n').filter(Boolean);
 const stagedSecret = staged.filter((f) => SECRET_FILE.test(f));
 if (stagedSecret.length) {

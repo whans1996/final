@@ -11,7 +11,7 @@
       "Bash(node scripts/check-migrations.mjs:*)",
       "Bash(node scripts/pr-screens.mjs:*)",
       "Bash(node scripts/token-report.mjs:*)",
-      "Bash(node --test:*)",
+      "Bash(node --test \"scripts/test/*.test.mjs\")",
       "Bash(./gradlew:*)",
       "Bash(gradlew.bat:*)",
       "Bash(npm run:*)",
