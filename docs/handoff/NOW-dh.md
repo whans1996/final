@@ -4,30 +4,30 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
 
-갱신: 2026-11-19 15:10 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/F-00b-common-foundation
+갱신: 2026-11-19 15:28 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/common-usecase
 
 ## 현재 기능
 
-F-00b 공통 기반 — **PR #42** (develop, `@JoonseobKim` 멘션). CI 초록, **Codex ✅ e5301af**(재리뷰 0회), spec DONE 표시 완료 → 사람이 GitHub에서 머지만 남음
+WBS 1.4 유스케이스 산출물 (`docs/산출물/02-유스케이스.md`, 마감 11/23). F-00b PR #42는 11-19 머지됨
 
 ## 진행
 
-- ✅ BE AC1~6 (`a637dbd`), FE AC7~11 (`58b4a28`), 문서 (`fd38f99`), AC12 ui-verifier, F-05a 간헐 실패 수정 (`48ac033`)
-- ✅ /pr-review: verifier(BE 330·FE 175), contract-checker 불일치 0(F-09 spec 3절 필드 일치), reviewer 반드시 수정 0 → 권장 4건 반영 `e5301af` (AC4 from() 테스트, findPublishedByIds Javadoc, 관리자 승격 안내, CONCEPT_404 표), 화면 설계서 SC-20·21 스크린샷
-- ✅ CI 초록, Codex COMPLETE `e5301af`, `docs(F-00b): 완료 표시 (spec DONE)` 커밋
+- ✅ `diagrams/usecase.puml` 보정: `!pragma layout smetana`(Graphviz 불필요), UC16 내 분석 목록 추가, 비회원→UC03, UC31→UC30 extend 방향 수정
+- ✅ `diagrams/usecase.png` 렌더링 (PlantUML 1.2026.8 jar는 scratchpad, 저장소에 넣지 않음. 명령은 02 머리)
+- ✅ UC05~UC51 흐름 작성 (UC 27개, 표·흐름·puml ID 일치 확인). spec 있는 UC10~16·20·21은 spec AC 기준, 나머지는 "(기획 기준)" 표시
+- 🟡 커밋 → push → `/pr-review`(docs만: verifier 생략, reviewer로 기획서·spec 대조) → PR(develop)
 
 ## 바로 다음 할 일
 
-1. 사람: GitHub에서 PR #42 머지 (wip 없음, 일반 머지 가능). 머지 전 develop이 앞서 있으면 `git merge origin/develop` → push → CI 재확인. 머지 뒤 Mattermost로 김준섭에게 F-09 시작 알림
-2. 머지 뒤 `git checkout develop && git pull`, 1.4 유스케이스(마감 11/23) `docs/산출물/02-유스케이스.md` (Opus/medium 새 세션)
+1. `/pr-review` → PR 본문에 `@JoonseobKim` 확인 요청 (B 영역 UC20~23·40~42·51 흐름을 기획서·F-09/F-10 spec 기준으로 씀). CI·Codex COMPLETE 뒤 사람이 머지
+2. 머지 뒤 다음 A 기능 `/spec` (F-08 개념 추출이 F-10 "등장 위치"의 데이터 원천, Opus/high 새 세션)
 
 ## 막힌 점 / 결정 필요
 
 - ui 점검 계정 `ui-admin@vibe.dev`/`vibe1234`(로컬 DB에만, ADMIN). storageState `.harness/ui-admin.json`
-- 김준섭: F-09는 F-00b 머지 뒤 시작. 비로그인용 "개념 카드" 메뉴는 F-09에서 `meta.nav.show: 'all'` 추가가 필요할 수 있음 (PR #42 본문에 적음)
-- 사람: 이슈 #16, 노션 팀원 초대, 고아 폴더 `../final-harness` 삭제 여부
+- 사람: 이슈 #16, 노션 팀원 초대, 고아 폴더 `../final-harness` 삭제 여부, 김준섭에게 F-00b 머지 알림(Mattermost)
 
 ## 주의
 
 - Gradle 테스트를 bootRun과 동시에 돌리지 않는다. 통합 테스트는 Docker Desktop 필요. V1~V5 수정 금지
-- Git Bash heredoc·sed에서 `\n`·`\s`·`\|`가 깨진다 → 정규식·이스케이프·표(`|`)가 든 수정은 Edit 도구로 쓴다
+- Git Bash heredoc·sed·python stdin에서 한글·`\n`·`\|`가 깨진다 → 한글·표(`|`)가 든 수정은 Edit 도구로 쓴다

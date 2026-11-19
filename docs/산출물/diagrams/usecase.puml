@@ -1,5 +1,7 @@
 @startuml usecase
-' 바이브노트 Use-Case Diagram (소스). 이미지는 제출 단계에서 렌더링한다: docs/산출물/diagrams/usecase.png
+' 바이브노트 Use-Case Diagram (소스). 렌더링 명령은 02-유스케이스.md 머리에 있다 → docs/산출물/diagrams/usecase.png
+' smetana 배치 엔진이라 Graphviz 없이 JDK만으로 렌더링된다
+!pragma layout smetana
 left to right direction
 skinparam packageStyle rectangle
 skinparam actorStyle awesome
@@ -24,12 +26,13 @@ rectangle "바이브노트" {
   }
 
   package "코드 분석" {
-    usecase "분석 요청\n(URL / ZIP)" as UC10
+    usecase "분석 요청\n(ZIP 업로드 / 공개 저장소 URL)" as UC10
     usecase "개요·파일 설명 보기" as UC11
     usecase "실행 흐름 설명 요청" as UC12
     usecase "분석 수정·삭제·공개 설정" as UC13
     usecase "코드 수집" as UC14
     usecase "AI 설명 생성" as UC15
+    usecase "내 분석 목록 보기" as UC16
   }
 
   package "개념 카드" {
@@ -62,10 +65,10 @@ rectangle "바이브노트" {
 Guest --> UC01
 Guest --> UC02
 Guest --> UC20
+Guest --> UC03
 Guest --> UC21
 Guest --> UC40
 
-Member --> UC03
 Member --> UC04
 Member --> UC05
 Member --> UC06
@@ -73,6 +76,7 @@ Member --> UC10
 Member --> UC11
 Member --> UC12
 Member --> UC13
+Member --> UC16
 Member --> UC22
 Member --> UC23
 Member --> UC30
@@ -89,7 +93,7 @@ UC10 ..> UC15 : <<include>>
 UC10 ..> UC24 : <<include>>
 UC12 ..> UC15 : <<include>>
 UC40 <.. UC42 : <<extend>>
-UC30 ..> UC31 : <<extend>>\n오답 → 복습
+UC30 <.. UC31 : <<extend>>\n오답 → 복습
 
 UC14 --> Repo
 UC15 --> LLM
