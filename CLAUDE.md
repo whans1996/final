@@ -99,7 +99,7 @@ SSAFY 관통 프로젝트(2026-11-17 시작, 12-24 발표). Spring Boot 4 + MyBa
 | 파일 영역·PR @멘션 대상 | `node scripts/owners.mjs [--diff origin/develop | <경로...>]` |
 | 토큰 사용량 (메인·에이전트별) | `node scripts/token-report.mjs [latest|<세션 ID>] [--list]` |
 | PR 상태·CI 확인 | `gh pr status`, `gh pr checks` |
-| Codex 리뷰 판정·재요청·이관 | `node scripts/codex-review.mjs <PR> [--request --wait \| --resolve]` (COMPLETE/FINDINGS/RUNNING/STALE/TIMEOUT/CLOSED/ERROR) |
+| Codex 리뷰 판정·재요청·이관 | `node scripts/codex-review.mjs <PR> [--request --wait --status \| --resolve]` (COMPLETE/FINDINGS/RUNNING/STALE/TIMEOUT/CLOSED/ERROR). 열린 PR이 COMPLETE가 될 때까지 Stop hook `codex-loop`이 루프를 이어 가게 한다 |
 | BE 실행 (mock LLM) | `cd backend && ./gradlew bootRun --args='--spring.profiles.active=local'` |
 | FE 실행 | `cd frontend && npm run dev` |
 
