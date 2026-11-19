@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 |---|---|
-| 상태 | APPROVED <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
+| 상태 | DONE (PR #50) <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
 | 기능 ID | F-08 |
 | 우선순위 | P0 |
 | 영역 오너 | A 김동환 (AI·분석·학습 루프) |
@@ -228,8 +228,8 @@ LLM은 테스트에서 실제로 부르지 않는다. 파이프라인 통합 테
 - [x] FE 구현 (green)
 - [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
 - [x] contract-checker 통과 (nullable 표기 1건 반영)
-- [ ] ui-verifier 통과 (데스크톱·모바일)
-- [ ] reviewer 지적 사항 반영
+- [x] ui-verifier 통과 (데스크톱·모바일, ui-check 스크린샷 SC-07-concepts)
+- [x] reviewer 지적 사항 반영 (반드시 수정 1건, 권장 3건)
 - [x] 산출물 반영 (06 스크린샷은 ui-verifier 뒤): `02-유스케이스.md` UC24 대안 흐름 확정, `03-ERD.md` analysis_concepts·concepts 설명, `06-화면설계서.md` SC-07 개념 탭, `08-외부API-생성형AI-활용.md` F-08 행, `09-데이터셋.md`·`datasets.json` DS-06
-- [ ] PR CI 초록 (본문 `Closes #23`)
-- [ ] 상태 DONE (PR 머지 전 마지막 커밋)
+- [x] PR CI 초록 (본문 `Closes #23`), Codex ✅ 2a55ced
+- [x] 상태 DONE (PR 머지 전 마지막 커밋)

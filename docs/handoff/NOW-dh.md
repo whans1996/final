@@ -4,11 +4,11 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
 
-갱신: 2026-11-19 16:46 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/F-08-concept-extraction
+갱신: 2026-11-19 16:50 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/F-08-concept-extraction
 
 ## 현재 기능
 
-F-08 개념 카드 추출·연결 — `docs/specs/F-08-concept-extraction.md` APPROVED, 구현·리뷰 반영 완료. PR 생성 단계 (PR 설명 `.harness/pr-F-08.md`)
+F-08 개념 카드 추출·연결 — **PR #50 머지 대기** (CI 초록, Codex ✅ `2a55ced`, spec DONE). 사람이 GitHub에서 머지
 
 ## 진행
 
@@ -19,9 +19,8 @@ F-08 개념 카드 추출·연결 — `docs/specs/F-08-concept-extraction.md` AP
 
 ## 바로 다음 할 일
 
-1. PR 생성 → `gh pr checks`
-2. Codex 루프: `node scripts/codex-review.mjs <PR> --request --wait --status` (백그라운드)
-3. COMPLETE·CI 초록 뒤 `docs(F-08): 완료 표시 (spec DONE)` (spec 헤더 `DONE (PR #n)`, 체크리스트 ui-verifier·reviewer·CI·DONE)
+1. PR #50 머지 확인(`gh pr view 50 --json state`) → `git switch develop && git pull`, #23은 close-issues 워크플로가 닫는지 확인
+2. 다음 기능: 내 영역(A)에서 `/spec` (F-14 퀴즈 등, `docs/기획서.md` 일정 확인) 또는 follow-up #24·#26·#49
 
 ## 막힌 점 / 결정 필요
 
