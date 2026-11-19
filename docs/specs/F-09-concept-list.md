@@ -164,12 +164,12 @@
 `/implement`가 진행하며 체크한다.
 
 - [x] A 공통 기반 PR develop 머지 확인 → `git merge origin/develop` (PR #42, 11-19)
-- [ ] 브랜치 `feature/F-09-concept-list`
-- [ ] Flyway 마이그레이션 (없음)
-- [ ] AC별 실패 테스트 작성 (red 확인)
-- [ ] BE 구현 (green): `ConceptController#list`, `ConceptService#search`, `ConceptMapper` `findPublished`·`countPublished`, `ConceptSearchRequest`(검증), `PUBLIC_GET_PATHS`
+- [x] 브랜치 `feature/F-09-concept-list`
+- [x] Flyway 마이그레이션 (없음)
+- [ ] AC별 실패 테스트 작성 (red 확인) — BE AC1~8 ✅, FE AC9~11 남음
+- [x] BE 구현 (green): `ConceptController#list`, `ConceptService#search`, `ConceptMapper` `findPublished`·`countPublished`, `ConceptSearchRequest`(검증), `PUBLIC_GET_PATHS`
 - [ ] FE 구현 (green): `fetchConcepts`, `ConceptListView`, `ConceptFilterBar`, 라우트 `meta.nav`, `navItems.js` `show: "all"`
-- [ ] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
+- [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
 - [ ] contract-checker 통과
 - [ ] ui-verifier 통과 (데스크톱·모바일)
 - [ ] reviewer 지적 사항 반영

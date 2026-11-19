@@ -43,11 +43,13 @@ public class SecurityConfig {
      */
     static final String[] PUBLIC_GET_PATHS = {
         // ── USER (공통 F-03). 숫자 id만 맞춰 /api/users/me는 계속 인증이 필요하다 ──
-        "/api/users/{id:\\d+}", "/api/users/{id:\\d+}/stats",
+        "/api/users/{id:\\d+}",
+        "/api/users/{id:\\d+}/stats",
 
         // ── ANALYSIS (A F-19 공개 분석) ──
 
         // ── CONCEPT (B F-09~11) ──
+        "/api/concepts",
 
         // ── POST (B F-17·F-18) ──
 
