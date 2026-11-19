@@ -7,6 +7,12 @@ export default [
     component: () => import('@/views/concept/ConceptListView.vue'),
     meta: { nav: { label: '개념 카드', order: 5, show: 'all' } },
   },
+  {
+    // 숫자가 아닌 id는 여기 걸리지 않고 not-found로 간다 (F-10 3절)
+    path: '/concepts/:id(\\d+)',
+    name: 'concept-detail',
+    component: () => import('@/views/concept/ConceptDetailView.vue'),
+  },
 ]
 
 export const adminChildren = []

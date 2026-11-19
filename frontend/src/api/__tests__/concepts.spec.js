@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import http from '@/api/http'
-import { fetchConcepts } from '@/api/concepts'
+import { fetchConcept, fetchConcepts } from '@/api/concepts'
 
 // API 계약(docs/specs/F-09-concept-list.md 3절)과 URL·파라미터 이름이 같은지 확인한다
 function capture(data = {}) {
@@ -51,5 +51,21 @@ describe('api/concepts (F-09)', () => {
     await fetchConcepts({ keyword: '', category: null, difficulty: undefined, page: 1, size: 20 })
 
     expect(calls[0].params).toEqual({ page: 1, size: 20 })
+  })
+})
+
+describe('api/concepts (F-10)', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
+  it('fetchConcept는 GET /api/concepts/{id}로 상세를 받는다', async () => {
+    const detail = { id: 57, name: 'JWT', appearances: [], related: [] }
+    const calls = capture(detail)
+
+    await expect(fetchConcept(57)).resolves.toEqual(detail)
+
+    expect(calls[0].method).toBe('get')
+    expect(calls[0].url).toBe('/concepts/57')
   })
 })

@@ -50,6 +50,7 @@ public class SecurityConfig {
 
         // ── CONCEPT (B F-09~11) ──
         "/api/concepts",
+        "/api/concepts/{id:\\d+}",
 
         // ── POST (B F-17·F-18) ──
 
