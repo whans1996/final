@@ -8,7 +8,7 @@
 
 ## 현재 기능
 
-F-00b 공통 기반 — `docs/specs/F-00b-common-foundation.md` APPROVED, `/implement` 중. AC1~11 green·커밋, AC12 ui-verifier 진행 중
+F-00b 공통 기반 — `docs/specs/F-00b-common-foundation.md` APPROVED, `/implement` 중. AC1~12 모두 green (AC12 ui-verifier 1440·375px 문제 0건)
 
 ## 진행
 
@@ -19,12 +19,12 @@ F-00b 공통 기반 — `docs/specs/F-00b-common-foundation.md` APPROVED, `/impl
 
 ## 바로 다음 할 일
 
-1. AC12 ui-verifier 결과 반영 (점검 계정 `ui-admin@vibe.dev`/`vibe1234`, 로컬 DB에만 있음, `ADMIN_BOOTSTRAP_EMAIL` 환경변수로 BE 기동)
-2. `/pr-review` → PR 본문에 `@JoonseobKim` 멘션 (공통 코드 전부. `node scripts/owners.mjs --diff origin/develop`)
-3. 1.4 유스케이스(마감 11/23) `docs/산출물/02-유스케이스.md`
+1. `/clear` 뒤 `/pr-review` (Opus/high) → PR 본문에 `@JoonseobKim` 멘션 (공통 코드 전부. `node scripts/owners.mjs --diff origin/develop`)
+2. 1.4 유스케이스(마감 11/23) `docs/산출물/02-유스케이스.md`
 
 ## 막힌 점 / 결정 필요
 
+- ui 점검 계정 `ui-admin@vibe.dev`/`vibe1234`(로컬 DB에만, ADMIN). storageState `.harness/ui-admin.json`. 분석 0건이라 PageNav 실화면은 단위 테스트로만 확인
 - 김준섭: F-09는 F-00b 머지 뒤 시작. `ConceptSummaryResponse` 필드 = F-09 spec 3절. 헤더 메뉴 `show`는 guest·user·admin 3종뿐이라 비로그인에게도 보일 "개념 카드" 메뉴는 F-09에서 `show: 'all'` 추가가 필요할 수 있음
 - 사람: 이슈 #16, 노션 팀원 초대, 고아 폴더 `../final-harness` 삭제 여부
 

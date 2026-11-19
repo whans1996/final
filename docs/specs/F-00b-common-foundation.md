@@ -138,7 +138,7 @@
   - [x] `ConceptCard`, `PageNav`, `EmptyState`, `AnalysisListView` 적용
 - [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신 (새 API 없음 → 변경 없음 확인)
 - [x] contract-checker 통과 (해당 없음이면 생략)
-- [ ] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일)
+- [x] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일)
 - [ ] reviewer 지적 사항 반영
 - [x] CODEOWNERS: `/frontend/src/router/routes/analysis.js`·`challenge.js` A, `community.js` B, `/frontend/src/layouts/`·`/frontend/src/views/admin/` 공통, `**/vibenote/concept/`·`mapper/concept/`는 이미 공통
 - [x] `docs/환경설정.md`에 로컬 관리자 계정 만드는 법(`ADMIN_BOOTSTRAP_EMAIL`), `.env.example`에 빈 항목, `frontend/CLAUDE.md`·`docs/conventions.md` 9절에 route 파일·`meta.nav` 규칙
