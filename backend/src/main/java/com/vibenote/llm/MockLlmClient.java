@@ -6,6 +6,7 @@ import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.springframework.core.io.ClassPathResource;
@@ -33,9 +34,21 @@ public class MockLlmClient implements LlmClient {
 
     private static final JsonMapper JSON = JsonMapper.builder().build();
 
+    /** fixture 경로({@code llm-fixtures/<stage>.json}) → 내용. */
+    private final Function<String, String> fixtures;
+
+    public MockLlmClient() {
+        this(MockLlmClient::read);
+    }
+
+    /** 테스트용: classpath 대신 주어진 함수로 fixture를 읽는다. */
+    MockLlmClient(Function<String, String> fixtures) {
+        this.fixtures = fixtures;
+    }
+
     @Override
     public LlmResponse complete(LlmRequest request) {
-        String content = read("llm-fixtures/" + request.stage().key() + ".json");
+        String content = fixtures.apply("llm-fixtures/" + request.stage().key() + ".json");
         if (request.stage() == LlmStage.CONCEPT) {
             content = linkConceptNames(content, request.prompt());
         }

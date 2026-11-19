@@ -13,6 +13,7 @@ import com.vibenote.analysis.domain.AnalysisFile;
 import com.vibenote.common.Level;
 import com.vibenote.concept.ConceptStatus;
 import com.vibenote.concept.domain.Concept;
+import com.vibenote.llm.LlmStage;
 import com.vibenote.llm.MockLlmClient;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -150,8 +151,8 @@ class MainFixturesTest {
     }
 
     /**
-     * 실제 EXTRACTING 프롬프트({@link ConceptPrompts#input})를 만들어 {@link MockLlmClient}가 fixture의 카드 이름을
-     * id로 바꾼 응답을 파싱한다.
+     * 실제 EXTRACTING 프롬프트({@link ConceptPrompts#input} + concept 템플릿)를 만들어 {@link MockLlmClient}가
+     * fixture의 카드 이름을 id로 바꾼 응답을 파싱한다.
      */
     private static List<ExtractedConcept> extract(List<String> names, long firstId)
             throws Exception {
@@ -175,8 +176,19 @@ class MainFixturesTest {
                         files,
                         new ConceptExtractProperties(6000, 6000, 3000, 24000, 15, 5));
         assertThat(input.catalogIds()).hasSize(concepts.size());
+        // ConceptExtractor와 같은 방식으로 템플릿 전체를 채운다 (머리말·예시 줄이 카드 목록으로 잘못 읽히지 않는지도 본다)
+        String prompt =
+                new PromptTemplates()
+                        .render(
+                                LlmStage.CONCEPT,
+                                Level.JUNIOR,
+                                Map.of(
+                                        "projectName", "realworld",
+                                        "catalog", input.catalog(),
+                                        "fileList", input.fileList(),
+                                        "files", input.files()));
 
-        String response = MockLlmClient.linkConceptNames(read("concept.json"), input.catalog());
+        String response = MockLlmClient.linkConceptNames(read("concept.json"), prompt);
 
         return ConceptResponseParser.parse(
                 JsonMapper.builder().build().readTree(response),

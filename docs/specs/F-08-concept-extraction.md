@@ -34,7 +34,7 @@ LLM은 분석 1건당 **1회**(형식 오류 시 1회 재시도) 부른다. 추�
 | AC7 | 내 분석에 연결이 저장되어 있을 때 | `GET /api/analyses/{id}/concepts` 하면 | 200과 3절 응답. `items`는 연결된 카드 중 `PUBLISHED`만, `file_id`가 있는 것 먼저 `file_id ASC`, 그다음 `concept_id ASC`. `pendingCount`는 연결된 `DRAFT` 카드 수. `HIDDEN`은 둘 다에서 빠진다. 추출 전·연결 0개면 `{"items": [], "pendingCount": 0}`. 토큰 없으면 401 `AUTH_401`, 없는 id·다른 회원·soft delete면 404 `ANALYSIS_404` |
 | AC8 | 로그인한 회원이 `DONE` 분석의 | SC-07에서 "개념" 탭(`?tab=concepts`, 실행 흐름 탭 다음)을 열면 | 개념 목록을 1회 불러와 항목마다 `ConceptCard`(누르면 `/concepts/{id}`)와 그 아래 위치("파일 경로 · L12-L30", 빈 값은 건너뜀)·맥락 문장을 보여 준다. 위치를 누르면 `?tab=files&file={fileId}`로 간다(`fileId`가 없으면 위치 줄을 그리지 않는다). `pendingCount > 0`이면 "새 개념 {n}개는 관리자 검수 후 카드로 공개됩니다." 안내를, `items`가 비면 "이 분석에서 연결된 개념 카드가 없습니다."를 보여 준다 |
 | AC9 | 개념 API가 | 로딩 중이거나 실패하면 | 로딩 문구 → 실패 시 서버 `message`와 "다시 시도" 버튼(누르면 재요청). 375px에서 페이지 가로 스크롤이 없다(긴 파일 경로는 줄바꿈) |
-| AC10 | 저장소의 Mock fixture `llm-fixtures/concept.json`이 | 파서로 읽으면 | 5.3절 스키마를 통과한다(`MainFixturesTest`). 기존 카드 연결 3개 이상(시드 카드 id) + 새 개념 1개를 담고, dev 데이터(DS-02-01)만 보고 쓴다. `llm.provider=mock`으로 로컬 분석을 돌리면 개념 탭에 카드가 1개 이상 보인다 |
+| AC10 | 저장소의 Mock fixture `llm-fixtures/concept.json`이 | `MockLlmClient`가 프롬프트 카드 목록에서 카드 이름을 id로 바꾼 뒤 파서로 읽으면 | 5.3절 스키마를 통과한다(`MainFixturesTest`). 기존 카드 연결 3개 이상(시드 카드 이름 `conceptName`, #49) + 새 개념 1개를 담고, dev 데이터(DS-02-01)만 보고 쓴다. `llm.provider=mock`으로 로컬 분석을 돌리면 개념 탭에 카드가 1개 이상 보인다 |
 
 ## 3. API 계약
 
@@ -183,7 +183,7 @@ LLM은 분석 1건당 **1회**(형식 오류 시 1회 재시도) 부른다. 추�
 | 프롬프트 파일 | `backend/src/main/resources/prompts/concept/{beginner,junior,senior}.md` |
 | 입력 | 5.2절 |
 | 출력 JSON 스키마 | 5.3절. 형식 오류 시 1회 재시도 (AC6) |
-| Mock fixture | `backend/src/main/resources/llm-fixtures/concept.json` — **dev 데이터(DS-02-01 realworld)만 보고** 작성. 시드 카드 id(로컬 DB 기준)로 연결 3개 이상 + 새 개념 1개. 목록에 없는 id는 파서가 버리므로 DB가 달라도 깨지지 않는다. (#49 이후: 시드 id가 DB마다 달라 카드가 어긋났으므로 기존 카드는 이름 `conceptName`으로 적고, `MockLlmClient`가 프롬프트 카드 목록에서 id로 바꾼다. 목록에 없는 이름은 뺀다) `data/datasets.json` DS-06 상태 갱신. eval 데이터(DS-02-05~08, DS-03·04) 사용 금지 |
+| Mock fixture | `backend/src/main/resources/llm-fixtures/concept.json` — **dev 데이터(DS-02-01 realworld)만 보고** 작성. 기존 카드 연결 3개 이상 + 새 개념 1개. 기존 카드는 DB id 대신 시드 카드 이름(`conceptName`)으로 적고, `MockLlmClient`가 프롬프트 카드 목록(`id | 이름 | 카테고리`)에서 id로 바꿔 돌려준다. 목록에 없는 이름은 뺀다 (#49: 시드 id가 DB마다 달라 카드가 어긋났음) `data/datasets.json` DS-06 상태 갱신. eval 데이터(DS-02-05~08, DS-03·04) 사용 금지 |
 | 캐시·재사용 | 결과는 `analysis_concepts`·`concepts`에 저장하고 조회 API는 LLM을 부르지 않는다. 한 번 만든 AI 초안은 다음 분석의 카드 목록에 들어가 재사용된다 |
 | 호출 수 | 분석 1건당 1회 (재시도 포함 최대 2회). F-06과 합쳐 최대 7회 |
 

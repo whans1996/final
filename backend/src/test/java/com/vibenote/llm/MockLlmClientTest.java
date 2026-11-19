@@ -67,6 +67,53 @@ class MockLlmClientTest {
     }
 
     @Test
+    void issue49_이름에_구분자가_들어간_카드도_마지막_구분자_앞까지를_이름으로_읽는다() throws Exception {
+        String fixture =
+                """
+                { "concepts": [ { "conceptName": "A | B 패턴", "contextNote": "구분자 포함" } ] }
+                """;
+        String prompt =
+                """
+                120 | A | B 패턴 | spring
+                121 | A | web
+                """;
+
+        JsonNode concepts =
+                new ObjectMapper()
+                        .readTree(MockLlmClient.linkConceptNames(fixture, prompt))
+                        .path("concepts");
+
+        assertThat(concepts).hasSize(1);
+        assertThat(concepts.get(0).path("conceptId").asLong()).isEqualTo(120L);
+    }
+
+    @Test
+    void issue49_complete는_CONCEPT_단계에서만_conceptName을_id로_바꾼다() throws Exception {
+        String fixture =
+                """
+                { "concepts": [ { "conceptName": "의존성 주입 (DI)", "contextNote": "생성자 주입" } ] }
+                """;
+        MockLlmClient fixed = new MockLlmClient(path -> fixture);
+        String prompt = "118 | 의존성 주입 (DI) | spring\n";
+
+        JsonNode concept =
+                new ObjectMapper()
+                        .readTree(
+                                fixed.complete(
+                                                new LlmRequest(
+                                                        LlmStage.CONCEPT, Level.JUNIOR, prompt))
+                                        .content())
+                        .path("concepts")
+                        .get(0);
+        String overview =
+                fixed.complete(new LlmRequest(LlmStage.OVERVIEW, Level.JUNIOR, prompt)).content();
+
+        assertThat(concept.path("conceptId").asLong()).isEqualTo(118L);
+        assertThat(concept.has("conceptName")).isFalse();
+        assertThat(overview).isEqualTo(fixture);
+    }
+
+    @Test
     void fixture가_없는_단계는_명확한_오류() {
         // 분석 파이프라인 spec에서 main fixture를 추가하면 이 테스트의 대상 단계를 바꾼다
         assertThatThrownBy(
