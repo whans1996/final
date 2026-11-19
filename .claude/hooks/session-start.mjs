@@ -26,6 +26,7 @@ import {
   workFilesNewerThanNow,
   worklogEntries,
 } from '../../scripts/lib/common.mjs';
+import { followUpIssues, issueBannerLine, issueContext, summarizeIssues } from '../../scripts/lib/issues.mjs';
 import { latestPeerNow, nowHeadline, readPeerState, writePeerState } from '../../scripts/lib/peer.mjs';
 
 // env-check가 깨져도 NOW 주입은 살린다
@@ -42,6 +43,8 @@ const warnings = [];
 // 외부 명령(gh·docker)은 병렬·3초 제한이라 아래 git fetch와 겹쳐 돈다
 const checksFailed = (e) => [{ status: 'warn', item: '환경 점검', detail: `실패: ${e?.message ?? e}` }];
 const checksP = envCheck.runChecks ? envCheck.runChecks({ fast: true }).catch(checksFailed) : Promise.resolve(checksFailed(envCheck.error));
+// 만들기만 하고 다시 안 보던 follow-up 이슈를 세션마다 보여 준다 (gh가 없거나 느리면 건너뜀)
+const issuesP = followUpIssues().catch(() => null);
 
 if (!isGitRepo()) {
   warnings.push('git 저장소가 아닙니다.');
@@ -155,6 +158,16 @@ if (me) {
 }
 if (myEntry) parts.push(`## 내 작업로그 마지막 항목\n${myEntry.text.trim()}`);
 
+const issues = me ? await issuesP : null;
+const issueSummary = issues ? summarizeIssues(issues, { key: me, github: pc.github }) : null;
+const issueList = issueSummary ? issueContext(issueSummary) : null;
+if (issueList) {
+  parts.push(
+    `## 열린 follow-up 이슈 (내 영역·공통)\n${issueList}\n` +
+      '- 기능 사이 남는 시간에 내 영역 이슈를 처리하고, /spec 때 이 기능에 흡수할 이슈를 spec "관련 이슈"에 적는다 (docs/conventions.md 7절)',
+  );
+}
+
 if (warnings.length) parts.splice(1, 0, `## ⚠️ 주의\n${warnings.map((w) => `- ${w}`).join('\n')}`);
 parts.push(
   input.source === 'compact'
@@ -173,6 +186,7 @@ try {
     branch: isGitRepo() ? currentBranch() || '(detached)' : null,
     envBad: bad.map((r) => `${icon(r.status)} ${r.item}`),
     warnings,
+    issueLine: issueSummary ? issueBannerLine(issueSummary) : null,
     myFeature: me && now ? nowHeadline(now).feature : null,
     peerName: other ? Object.entries(loadPcs()).find(([id]) => ownerKey(id) === other)?.[1].owner : null,
     peerFeature: otherNow ? nowHeadline(otherNow.text).feature : null,

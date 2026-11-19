@@ -88,6 +88,7 @@ test('세션 배너는 사람·PC·브랜치를 첫 줄에, 환경·주의·내/
     pc,
     branch: 'develop',
     warnings: ['보호 브랜치(develop)에 있습니다. 코드를 바꾸기 전에 브랜치를 만드세요.'],
+    issueLine: '📌 이슈: 내 4 · 공통 3 (#16 설정 마스킹 외)',
     myFeature: '공통 기반 spec',
     peerName: '김준섭',
     peerFeature: '없음 — 착수 전',
@@ -95,8 +96,9 @@ test('세션 배너는 사람·PC·브랜치를 첫 줄에, 환경·주의·내/
   assert.equal(b[0], '[바이브노트] 👤 김동환 · 🖥️ SSAFY 교육장 (dh-ssafy) · 🌿 develop');
   assert.equal(b[1], '환경 ✅');
   assert.equal(b[2], '⚠️ 보호 브랜치(develop)에 있습니다. 코드를 바꾸기 전에 브랜치를 만드세요.');
-  assert.equal(b[3], '내 작업: 공통 기반 spec');
-  assert.equal(b[4], '김준섭: 없음 — 착수 전');
+  assert.equal(b[3], '📌 이슈: 내 4 · 공통 3 (#16 설정 마스킹 외)');
+  assert.equal(b[4], '내 작업: 공통 기반 spec');
+  assert.equal(b[5], '김준섭: 없음 — 착수 전');
 });
 
 test('세션 배너: 미등록 PC는 setup 안내, 환경 문제는 항목을 나열, 긴 기능명은 자른다', () => {

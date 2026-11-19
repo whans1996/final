@@ -79,7 +79,7 @@ const REASON = {
   fix:
     `재리뷰 ${act.rounds}/${MAX_REVIEW_ROUNDS}회. \`node scripts/codex-review.mjs ${n}\`로 지적을 확인하고 /pr-review 8-3대로 처리하세요: ` +
     'P1과 spec 수용 기준·보안 기준을 깨는 지적은 실패하는 테스트부터 써서 고치고 push한 뒤 ' +
-    `\`${waitCmd}\`를 백그라운드로 다시 실행합니다. 그 밖의 P2는 follow-up 이슈로 넘기고 --resolve합니다(Codex 체크도 ✅로 바뀝니다). ` +
+    `\`${waitCmd}\`를 백그라운드로 다시 실행합니다. 그 밖의 P2는 follow-up 이슈(area 라벨·담당자 포함)로 넘기고 --resolve합니다(Codex 체크도 ✅로 바뀝니다). ` +
     '지적이 타당하지 않거나 같은 주제로 2회 재지적되면 멈추고 사용자에게 보고합니다.',
 };
 const NOTICE = {

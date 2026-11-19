@@ -17,6 +17,7 @@ description: 기능 spec 상태, 관통 필수 요구사항 13개와 명세서 �
    - git·GitHub: `git branch -a`, `git log origin/develop --oneline`(없으면 `develop`), `gh pr list --state all --limit 50 --json number,title,state,headRefName,mergedAt` (gh가 없거나 원격이 없으면 생략). 실적 날짜는 PR의 `mergedAt`을 쓴다
    - 두 사람의 NOW 파일(`docs/handoff/NOW-dh.md`·`NOW-js.md`)의 현재 기능
    - `docs/산출물/` 각 파일의 존재와 "작성 상태" 표시, `docs/api/openapi.json` 존재
+   - follow-up 이슈: `gh issue list --label follow-up --state all --limit 100 --json number,title,state,labels,assignees,createdAt,closedAt`. 영역(area:A·B·common)별 열림 수, 이번 주 닫힘 수, 7일 넘게 열린 것, area 라벨 없는 것
    - 오늘 날짜로 현재 주차(W1~W5, 버퍼)를 계산한다.
 2. **판정**: 기능 상태는 다음 중 하나로 정한다.
    - ⬜ 미착수 (spec 없음) · 📝 spec 작성 · 🔨 구현 중 (APPROVED + 체크 일부) · 🔍 PR 열림 · ✅ 완료 (develop에 머지)
@@ -30,6 +31,7 @@ description: 기능 spec 상태, 관통 필수 요구사항 13개와 명세서 �
 - 이번 주 목표(W?) 대비: 정상 / 지연 (지연 기능 나열)
 - 판단: (12/07 기준 등 일정 판단 기준에 비춘 결론 한 줄)
 - 제출 산출물: 완료 n/13 · 다음 마감: (항목, 날짜)
+- follow-up 이슈: 열림 n (A n · B n · 공통 n) · 이번 주 닫힘 n · 7일 넘음 n
 
 ## 필수 요구사항 13개
 | # | 요구사항 | 기능 | 상태 |
@@ -57,11 +59,19 @@ description: 기능 spec 상태, 관통 필수 요구사항 13개와 명세서 �
 | 결과 | 발표 자료 | (PPT/PDF) | | 버퍼 |
 | 결과 | 외부 API·생성형 AI 활용 | docs/산출물/08-외부API-생성형AI-활용.md | | W5 |
 
+## follow-up 이슈
+| 영역 | 열림 | 이번 주 닫힘 | 7일 넘음 (번호) |
+|---|---|---|---|
+| A 김동환 | | | |
+| B 김준섭 | | | |
+| 공통 | | | |
+| 분류 필요 (area 라벨 없음) | | | |
+
 ## 이번 주 남은 일 / 리스크
 ```
 
 4. **WBS·간트 동기화**: `docs/산출물/04-WBS.md`의 상태·실적 열과 `05-간트차트.md`의 `done`/`active` 태그를 2단계 판정에 맞춘다. 계획 기간(기준선)은 고치지 않는다. 계획과 실제 날짜가 다른 완료 작업은 간트 `실적` 섹션에 막대를 추가한다.
    - 재계획(계획 날짜 변경)은 지연으로 마일스톤(M1 12/07, M2 12/14)이 위험할 때만 **사용자에게 제안**하고, 승인받으면 두 문서를 고치고 `docs/결정로그.md`에 한 줄 추가한다.
-5. **보고**: 요약 섹션만 채팅으로 보여 준다. 사람(영역)별 진척도 한 줄씩 적는다. 지연이면 기획서의 일정 판단 기준(예: 12/07에 핵심 흐름 미완성 → P1 포기)을 근거로 무엇을 줄일지 제안한다. 산출물 마감이 지난 항목은 따로 강조한다.
+5. **보고**: 요약 섹션만 채팅으로 보여 준다. 사람(영역)별 진척도 한 줄씩 적는다. 지연이면 기획서의 일정 판단 기준(예: 12/07에 핵심 흐름 미완성 → P1 포기)을 근거로 무엇을 줄일지 제안한다. 산출물 마감이 지난 항목은 따로 강조한다. 7일 넘은 follow-up 이슈는 다음 주에 흡수할 기능(spec "관련 이슈")이나 기능 사이 처리, 닫기(wontfix) 중 하나를 사람별로 제안한다.
 6. **노션 대시보드 (선택)**: Notion MCP를 쓸 수 있으면 `docs/notion.md`에 적힌 대시보드 페이지의 "진행 현황" 섹션(기준 날짜 callout, 요약 4줄, 상태별 기능 표)을 3단계 요약으로 바꾼다(`notion-update-page`의 `update_content`, 다른 섹션과 하위 DB는 건드리지 않는다). MCP가 없으면 건너뛰었다고 보고한다. 노션은 사람용 요약이고 정본은 `docs/진행현황.md`다.
 7. 커밋: `docs: 진행현황 갱신 (W?)` (WBS·간트 변경 포함) → push → 사용자 확인 후 `gh pr create --base develop --title "docs: 진행현황 갱신 (W?)"`. docs만 바뀌므로 Codex 재리뷰 루프는 생략하고(자동 리뷰 지적이 달리면 읽고 판단) CI 초록이면 실행한 사람이 머지한다 (`docs/conventions.md` 7절 예외). 기능 브랜치에 섞지 않는다.

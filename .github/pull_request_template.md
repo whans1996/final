@@ -8,6 +8,11 @@
 - [ ] 머지 직전 `git merge origin/develop` 후 push해 CI 초록을 다시 확인했다 (상대 PR이 먼저 머지된 경우. 마이그레이션 번호·openapi.json 충돌은 머지 뒤에야 드러난다)
 - [ ] 상대 영역·공통 파일(`node scripts/owners.mjs --diff origin/develop`, `.github/CODEOWNERS`)을 바꿨으면 이유를 적고 상대를 @멘션했다
 
+## 해결 이슈
+
+<!-- 이 PR이 해결하는 follow-up 이슈. develop에 머지되면 close-issues 워크플로가 닫는다. 이슈마다 키워드를 붙인다. 없으면 "없음" -->
+- Closes #
+
 ## 변경 요약
 
 - 
@@ -36,3 +41,5 @@
 ## 리뷰어가 특히 볼 곳
 
 ## 결정 필요 / 후속 작업
+
+<!-- 후속 작업은 follow-up 이슈로 만들고(area 라벨·담당자 포함) 여기에는 이슈 번호만 적는다 -->

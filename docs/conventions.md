@@ -81,7 +81,7 @@
 | Vue 컴포넌트 | PascalCase, 화면은 `XxxView.vue` | `ConceptCard.vue`, `ConceptDetailView.vue` |
 | FE API 함수 | 동사 + 리소스, camelCase | `fetchConcepts`, `createReview` |
 | Pinia store | `useXxxStore`, 파일은 `xxx.js` | `useAuthStore` in `stores/auth.js` |
-| 브랜치 | `feature/F-xx-slug`, `fix/F-xx-slug` | `feature/F-05-analysis-request` |
+| 브랜치 | `feature/F-xx-slug`, `fix/F-xx-slug`, follow-up 이슈만 처리하면 `feature/issue-<번호>-slug` | `feature/F-05-analysis-request`, `feature/issue-26-endpoint-case` |
 
 ## 6. 커밋 메시지
 
@@ -102,7 +102,9 @@
 - **공통 코드**(SecurityConfig, GlobalExceptionHandler, 공통 응답·ErrorCode, FE 라우터·레이아웃·공용 컴포넌트·api 클라이언트, 빌드 설정)를 바꾼 PR은 본문에서 상대를 @멘션한다 (A `@whans1996`, B `@JoonseobKim`).
 - **develop 동기화**: 상대 PR이 먼저 머지되면 `git merge origin/develop`으로 받는다 (rebase·force push 금지). 머지 전에 한 번 더 합치고 CI 초록을 확인한다. `docs/api/openapi.json`이 충돌하면 한쪽을 고른 뒤 BE 테스트(`OpenApiExportTest`)로 다시 생성한다. Flyway 번호가 겹치면(CI `check-migrations`) develop에 없는 내 파일만 `git mv`로 다음 번호로 바꾼다.
 - **리뷰 지적 처리 기준**: 같은 PR에서 고치는 것은 spec 수용 기준이나 보안 기준(인증·인가, 비밀 누출, 경로 조작, 주입, 서비스 중단)을 깨는 지적만이다. 그 밖의 지적은 `follow-up` 라벨 이슈로 넘기고 PR 댓글로 이슈 번호를 답한다. 같은 주제로 재리뷰를 2회 했는데 또 지적이 나오면 사람이 정한다.
-- **후속 작업은 GitHub Issues(`follow-up` 라벨)로 관리한다.** NOW 파일·spec·PR 설명에는 이슈 번호만 적는다. develop은 기본 브랜치가 아니라 `Closes #n`이 자동으로 닫지 않으므로 머지 뒤 `gh issue close`로 닫는다.
+- **후속 작업은 GitHub Issues(`follow-up` 라벨)로 관리한다.** NOW 파일·spec·PR 설명에는 이슈 번호만 적는다. 만들 때 `area:*` 라벨과 담당자를 함께 단다(9절, 본문 형식은 `.github/ISSUE_TEMPLATE/follow-up.md`).
+  - **순환**: 세션 시작 배너와 `/pickup`이 내 영역·공통·분류 필요 이슈를 보여 주고, `/spec`은 그 기능에 흡수할 이슈를 spec "관련 이슈"에 적고, `/progress`는 영역별 열림·7일 넘음을 점검한다. 기능 사이 남는 시간에는 내 영역 이슈를 `feature/issue-<번호>-slug` 브랜치에서 처리한다.
+  - **닫기**: 해결 PR 본문 "해결 이슈"에 이슈마다 `Closes #n`을 적는다. develop은 기본 브랜치가 아니라 GitHub가 닫지 않으므로 `close-issues` 워크플로가 develop 머지 때 닫는다. 고치지 않기로 하면 이유를 댓글로 남기고 `gh issue close <n> --reason "not planned"`.
 - **완료 표시(spec DONE)는 머지 전 마지막 커밋으로 PR 안에서 한다.** 머지 후 정리 PR은 만들지 않는다. 진행현황·WBS·간트 실적은 기능 PR에서 고치지 않고 주간 `/progress` docs PR이 develop 기준으로 맞춘다 (두 PR이 같은 표를 고치면 충돌한다, 11-19 결정).
 - API를 바꾼 PR은 `docs/api/openapi.json` 변경을 포함해야 한다 (CI가 불일치를 실패 처리).
 - GitLab(lab.ssafy.com)은 최종 제출 전용이다. 개발 중에는 push하지 않는다.
@@ -122,4 +124,4 @@
 - **상대 테이블**은 상대 도메인의 Mapper·Service를 통해 읽는다. 쓰기(INSERT·UPDATE)는 그 테이블 주인의 Service만 한다. 필요한 메서드가 없으면 상대에게 요청하거나 PR에서 @멘션하고 최소로 추가한다.
 - **push 시점**: `/implement` 체크포인트 커밋, spec 승인 커밋, `/handoff` 뒤에 feature 브랜치를 push한다. 상대의 세션 시작·peer-watch hook과 Mattermost 알림은 원격의 NOW 파일을 본다.
 - **알림 경로**: Claude 세션 안(세션 시작 hook, 10분 간격 `peer-watch` hook), Mattermost(`.github/workflows/notify.yml`, PR 열림·머지·NOW push). 급한 합의(공통 파일 동시 수정 등)는 Mattermost에서 직접 말한다.
-- 이슈 라벨: `area:A`, `area:B`, `area:common`을 `follow-up`과 함께 단다. 이슈 담당은 라벨의 영역 오너다.
+- 이슈 라벨: `area:A`, `area:B`, `area:common`을 `follow-up`과 함께 단다. 이슈 담당은 라벨의 영역 오너다 (공통은 만든 사람). 만드는 명령: `gh issue create --label follow-up --label area:<A|B|common> --assignee @me`. 세션 시작 배너는 area 라벨이 없는 이슈를 "분류 필요"로 센다.
