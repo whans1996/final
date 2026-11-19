@@ -7,28 +7,34 @@
 // head 커밋이면 상태 댓글이 늦게 갱신되어도 COMPLETE로 본다. 자동 리뷰 뒤의 👍 반응은 커밋 정보가 없어 쓰지 않는다.
 // 문서만 바뀐 커밋: Codex가 마지막으로 지적 없이 끝낸 커밋 이후 docs/ 아래(openapi.json 제외)만 바뀌었으면
 // 재리뷰를 요청하지 않고 COMPLETE로 본다 (11-18 사용자 지시). 마지막 리뷰에 지적이 있으면 적용하지 않는다.
+// develop 합치기(git merge origin/develop)로 들어온 파일은 이 PR의 변경이 아니므로 문서 판정에서 뺀다 (11-19 병렬 전환).
+// 이관 완료: 남은 지적을 follow-up 이슈로 넘긴 뒤 --resolve로 사람 댓글 마커를 달면, 그 시각까지의 지적은 해결된 것으로 본다.
 //
-// 사용법: node scripts/codex-review.mjs <PR번호> [--request] [--wait] [--timeout 20]
+// 사용법: node scripts/codex-review.mjs <PR번호> [--request] [--wait] [--resolve] [--timeout 20]
 //   --request  상태가 이전 커밋 기준(STALE)이면 "@codex review" 댓글을 단다.
 //              댓글에 head sha 마커를 넣어, 같은 head에 대한 요청이 이미 있으면 생략한다
 //   --wait     COMPLETE·FINDINGS가 될 때까지 30초 간격으로 확인한다 (기본 20분). Claude는 run_in_background로 실행한다
+//   --resolve  head가 FINDINGS일 때 "남은 지적을 이슈로 이관함" 마커 댓글을 달고 COMPLETE로 끝낸다 (pr-review 8-3)
 //
 // 출력 첫 줄과 종료 코드:
-//   COMPLETE 0  head 커밋 리뷰 완료, 지적 없음
+//   COMPLETE 0  head 커밋 리뷰 완료, 지적 없음 (또는 이관 완료, 문서만 변경)
 //   FINDINGS 2  head 커밋 리뷰 완료, 지적 있음 (지적 요약을 함께 출력)
 //   RUNNING  3  head 커밋 리뷰 중
 //   STALE    4  리뷰 상태가 없거나 이전 커밋 기준
 //   TIMEOUT  5  --wait 시간 초과
+//   CLOSED   6  PR이 이미 머지·종료됨 (루프 불필요)
 //   ERROR    1  gh 실패, 또는 Codex가 마지막 요청 뒤 "create an environment" 안내만 남김
 //               (환경을 만든 뒤 --request로 다시 실행하면 요청을 새로 단다)
 
 import { spawnSync } from 'node:child_process';
 import { git } from './lib/common.mjs';
+import { onlyDocsChanged, unresolvedFindingAt } from './lib/codex.mjs';
 
-const CODE = { COMPLETE: 0, ERROR: 1, FINDINGS: 2, RUNNING: 3, STALE: 4, TIMEOUT: 5 };
+const CODE = { COMPLETE: 0, ERROR: 1, FINDINGS: 2, RUNNING: 3, STALE: 4, TIMEOUT: 5, CLOSED: 6 };
 const BOT = 'chatgpt-codex-connector';
 const STATE_RE = /<!--\s*codex-review-state:v1\s*(\{.*?\})\s*-->/s;
 const REQUEST_RE = /<!--\s*codex-review-request:\s*([0-9a-f]{40})\s*-->/;
+const RESOLVED_RE = /<!--\s*codex-findings-resolved:\s*([0-9a-f]{40})\s*-->/;
 const ENV_RE = /create an environment for this repo\]\((https?:[^)\s]+)\)/;
 const CLEAN_RECEIPT_RE = /codex-review-receipt[\s\S]*Didn't find any major issues[\s\S]*?Reviewed commit:\*{0,2}\s*`([0-9a-f]{7,40})`/;
 
@@ -53,6 +59,7 @@ const pr = argv.find((a) => /^\d+$/.test(a));
 if (!pr) fail('PR 번호가 필요합니다. 예: node scripts/codex-review.mjs 6 --request --wait');
 const request = argv.includes('--request');
 const wait = argv.includes('--wait');
+const resolve = argv.includes('--resolve');
 const ti = argv.indexOf('--timeout');
 const timeoutMin = ti >= 0 ? Number(argv[ti + 1]) || 20 : 20;
 
@@ -62,8 +69,8 @@ if (!repo) fail(`origin이 GitHub 저장소가 아닙니다: ${remote || '(없�
 
 /** PR head 커밋 */
 function head() {
-  const v = ghJson(['pr', 'view', pr, '--json', 'headRefOid,state']);
-  return { sha: v.headRefOid, state: v.state };
+  const v = ghJson(['pr', 'view', pr, '--json', 'headRefOid,headRefName,state']);
+  return { sha: v.headRefOid, ref: v.headRefName, state: v.state };
 }
 
 /** 모든 페이지를 읽어 하나의 배열로 (댓글이 100개를 넘어도 영수증·요청 마커를 놓치지 않게, Codex 리뷰) */
@@ -113,33 +120,54 @@ function cleanReceipts(comments) {
     .filter((r) => r.sha);
 }
 
-/** Codex 인라인 지적 중 가장 늦은 시각 (없으면 '') */
-function lastFindingAt() {
-  return ghList(`repos/${repo}/pulls/${pr}/comments`)
+/** Codex 인라인 지적 중 아직 이관되지 않은 마지막 시각 (없으면 ''). --resolve 마커보다 이른 지적은 해결된 것으로 본다 */
+function lastFindingAt(comments) {
+  const times = ghList(`repos/${repo}/pulls/${pr}/comments`)
     .filter((c) => c.user?.login?.startsWith(BOT) && !c.in_reply_to_id)
-    .map((c) => c.created_at)
-    .sort()
-    .at(-1) ?? '';
+    .map((c) => c.created_at);
+  return unresolvedFindingAt(times, resolvedMarks(comments).map((m) => m.at));
 }
 
-/** 문서만 변경 판정의 기준 후보 커밋 (늦은 영수증부터). 마지막 인라인 지적(findingAt)보다 늦은 "지적 없음" 결과만 */
-function cleanBases(st, receipts, findingAt) {
-  const stClean = st?.status === 'completed' && !st.has_any_findings;
-  const fresh = receipts.filter((r) => r.at > findingAt).map((r) => r.sha);
-  const stFresh = stClean && st.at > findingAt ? [st.commit_sha] : [];
-  return [...new Set([...fresh.reverse(), ...stFresh])];
+/** 사람이 단 "지적을 이슈로 이관함" 마커 [{ sha, at }] */
+function resolvedMarks(comments) {
+  return comments
+    .filter((c) => !c.user?.login?.startsWith(BOT))
+    .map((c) => ({ sha: RESOLVED_RE.exec(c.body || '')?.[1], at: c.created_at }))
+    .filter((m) => m.sha);
 }
 
-/** 재리뷰 없이 넘어가도 되는 문서 경로. openapi.json은 API 계약이라 제외 */
-const isDocPath = (p) => !!p && p.startsWith('docs/') && p !== 'docs/api/openapi.json';
+/** 문서만 변경 판정의 기준 후보 커밋 (늦은 영수증부터). 마지막 미해결 인라인 지적(findingAt)보다 늦은 "지적 없음"(또는 이관 완료) 결과만 */
+function cleanBases(st, stOk, receipts, resolved, findingAt) {
+  const fresh = [...receipts, ...resolved]
+    .filter((r) => r.at > findingAt)
+    .sort((a, b) => (a.at < b.at ? 1 : -1))
+    .map((r) => r.sha);
+  const stFresh = stOk && st.at > findingAt ? [st.commit_sha] : [];
+  return [...new Set([...fresh, ...stFresh])];
+}
 
-/** base 이후 head까지 문서만 바뀌었는가. base가 head의 조상이 아니거나(force push) 조회 실패면 false */
-function docsOnlySince(base, headSha) {
-  const cmp = ghJson(['api', `repos/${repo}/compare/${base}...${headSha}`], { soft: true });
-  const files = cmp?.files;
-  // compare API는 파일을 300개까지만 준다. 넘으면 확신할 수 없다
-  if (cmp?.status !== 'ahead' || !Array.isArray(files) || !files.length || files.length >= 300) return false;
-  return files.every((f) => isDocPath(f.filename) && (!f.previous_filename || isDocPath(f.previous_filename)));
+/** 로컬에 커밋이 없으면 원격에서 받아 온다 (GitHub는 sha로 fetch 가능) */
+function ensureCommit(sha, ref) {
+  if (git(['cat-file', '-e', `${sha}^{commit}`]).ok) return true;
+  git(['fetch', '--quiet', 'origin', ref || sha], { timeout: 30_000 });
+  return git(['cat-file', '-e', `${sha}^{commit}`]).ok;
+}
+
+/**
+ * base 이후 head까지 문서만 바뀌었는가. base가 head의 조상이 아니거나(force push) 커밋을 못 받으면 false.
+ * develop 합치기로 들어온 파일(head의 내용이 head·develop 공통 조상의 내용과 같은 파일)은 이 PR의 변경이 아니어서 뺀다.
+ */
+function docsOnlySince(base, h) {
+  if (!ensureCommit(h.sha, h.ref)) return false;
+  // 짧은 sha(영수증)도 받는다
+  const full = git(['rev-parse', '--verify', '-q', `${base}^{commit}`]);
+  if (!full.ok && !ensureCommit(base)) return false;
+  if (!git(['merge-base', '--is-ancestor', base, h.sha]).ok) return false;
+  const files = git(['diff', '--no-renames', '--name-only', base, h.sha]).out.split('\n').filter(Boolean);
+  git(['fetch', '--quiet', 'origin', 'develop'], { timeout: 30_000 });
+  const mb = git(['merge-base', h.sha, 'origin/develop']);
+  const fromDevelop = (f) => mb.ok && git(['diff', '--quiet', mb.out, h.sha, '--', f]).ok;
+  return onlyDocsChanged(files, fromDevelop);
 }
 
 function judge() {
@@ -147,23 +175,30 @@ function judge() {
   const comments = issueComments();
   const st = codexState(comments);
   const short = h.sha.slice(0, 7);
+  if (h.state !== 'OPEN') return { verdict: 'CLOSED', h, comments, msg: `PR #${pr}이 ${h.state} 상태 (Codex 루프 불필요)` };
   const receipts = cleanReceipts(comments);
+  const resolved = resolvedMarks(comments);
   const clean = receipts.some((r) => h.sha.startsWith(r.sha));
   const stClean = st?.status === 'completed' && !st.has_any_findings;
+  // 지적이 있었지만 그 커밋의 남은 지적을 모두 이슈로 넘긴 상태 (pr-review 8-3 이관 완료)
+  const stResolved = st?.status === 'completed' && resolved.some((m) => m.sha === st.commit_sha);
   if (st?.commit_sha === h.sha && stClean) {
     return { verdict: 'COMPLETE', h, comments, msg: `head ${short} 지적 없음 (상태 댓글)` };
+  }
+  if (st?.commit_sha === h.sha && stResolved) {
+    return { verdict: 'COMPLETE', h, comments, msg: `head ${short} 남은 지적 이관 완료 (--resolve)` };
   }
   if (clean && !(st?.commit_sha === h.sha && st.status === 'completed')) {
     return { verdict: 'COMPLETE', h, comments, msg: `head ${short} 지적 없음 (영수증 댓글)` };
   }
   if (!st || st.commit_sha !== h.sha) {
-    // 마지막 리뷰가 지적 없이 끝났을 때만(상태 댓글이 없으면 영수증으로) 기준 커밋을 잡는다.
-    // 지적이 있거나 리뷰 중이면 영수증으로 건너뛰어 그 결과를 덮지 않는다.
-    // 영수증·상태 댓글 뒤에 인라인 지적이 달렸으면 그것은 마지막 리뷰가 아니므로 쓰지 않는다.
+    // 마지막 리뷰가 지적 없이(또는 이관 완료로) 끝났을 때만(상태 댓글이 없으면 영수증으로) 기준 커밋을 잡는다.
+    // 지적이 남았거나 리뷰 중이면 영수증으로 건너뛰어 그 결과를 덮지 않는다.
+    // 영수증·상태 댓글 뒤에 미해결 인라인 지적이 달렸으면 그것은 마지막 리뷰가 아니므로 쓰지 않는다.
     // 상태 댓글도 갱신이 늦을 수 있어 같은 기준을 적용한다 (Codex 리뷰)
-    if (!st || stClean) {
-      const bases = cleanBases(st, receipts, lastFindingAt());
-      const base = bases.find((b) => docsOnlySince(b, h.sha));
+    if (!st || stClean || stResolved) {
+      const bases = cleanBases(st, stClean || stResolved, receipts, resolved, lastFindingAt(comments));
+      const base = bases.find((b) => docsOnlySince(b, h));
       if (base) {
         return { verdict: 'COMPLETE', h, comments, msg: `head ${short} 문서만 변경 (Codex ✅ ${base.slice(0, 7)} 이후)` };
       }
@@ -218,9 +253,19 @@ function report(r) {
 }
 
 let r = judge();
-if (r.h.state !== 'OPEN' && (request || wait)) fail(`PR #${pr}이 ${r.h.state} 상태입니다`);
+if (r.verdict === 'CLOSED') report(r);
 
 const postRequest = (sha) => gh(['pr', 'comment', pr, '--body', `@codex review\n\n<!-- codex-review-request: ${sha} -->`]);
+
+if (resolve) {
+  if (r.verdict !== 'FINDINGS') {
+    console.error(`(--resolve는 head가 FINDINGS일 때만 쓴다. 지금은 ${r.verdict})`);
+    report(r);
+  }
+  // 남은 지적을 follow-up 이슈로 넘긴 뒤에만 실행한다 (pr-review 8-3). 이후 문서만 바꾼 커밋은 이 커밋을 기준으로 본다
+  gh(['pr', 'comment', pr, '--body', `Codex 남은 지적을 follow-up 이슈로 이관했습니다 (head ${r.h.sha.slice(0, 7)}).\n\n<!-- codex-findings-resolved: ${r.h.sha} -->`]);
+  report({ ...r, verdict: 'COMPLETE', msg: `head ${r.h.sha.slice(0, 7)} 남은 지적 이관 완료 (--resolve 마커 댓글)` });
+}
 
 if (request && r.envMissing) {
   // 안내가 마지막 요청보다 늦으므로 기존 요청이 있어도 다시 단다. 환경이 아직 없으면 대기 중 같은 안내가 와서 ERROR로 끝난다
@@ -237,7 +282,7 @@ if (request && r.envMissing) {
   }
 }
 
-const done = (v) => v === 'COMPLETE' || v === 'FINDINGS' || v === 'ERROR';
+const done = (v) => v === 'COMPLETE' || v === 'FINDINGS' || v === 'ERROR' || v === 'CLOSED';
 if (!wait || done(r.verdict)) report(r);
 
 const deadline = Date.now() + timeoutMin * 60_000;

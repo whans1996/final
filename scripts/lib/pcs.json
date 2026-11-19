@@ -23,18 +23,18 @@
     "js-ssafy": {
       "label": "김준섭 SSAFY 교육장",
       "owner": "김준섭",
-      "github": null,
+      "github": "JoonseobKim",
       "notes": [
         "교육장 PC 공통: 시스템 git core.autocrlf=true일 수 있고 JDK 21 자동 다운로드가 막힐 수 있다(dh-ssafy 참고)",
-        "첫 교대 전 docs/환경설정.md 6절 체크리스트를 끝내고 scripts/lib/pcs.json의 github를 채운다"
+        "첫 작업 전 docs/환경설정.md 6절 착수 체크리스트를 끝낸다"
       ]
     },
     "js-home": {
       "label": "김준섭 집",
       "owner": "김준섭",
-      "github": null,
+      "github": "JoonseobKim",
       "notes": [
-        "환경 확인 기록 없음. 첫 교대 전 docs/환경설정.md 6절 체크리스트를 끝내고 scripts/lib/pcs.json의 github를 채운다"
+        "환경 확인 기록 없음. 첫 작업 전 docs/환경설정.md 6절 착수 체크리스트를 끝낸다"
       ]
     }
   }
