@@ -82,7 +82,7 @@ test('다른 사람 PC에서 쓴 내 NOW 갱신 줄은 PC 전환으로 보지 �
   assert.equal(previousPc({ nowText, entry: null, knownIds, key: 'dh' }), 'dh-ssafy');
 });
 
-test('세션 배너는 사람·PC·브랜치를 첫 줄에, 환경·주의(첫 문장)·내/상대 작업을 다음 줄에 보여 준다', () => {
+test('세션 배너는 사람·PC·브랜치를 첫 줄에, 환경·주의·내/상대 작업을 다음 줄에 보여 준다', () => {
   const pc = { id: 'dh-ssafy', label: '김동환 SSAFY 교육장', owner: '김동환', hostname: 'h' };
   const b = sessionBanner({
     pc,
