@@ -9,7 +9,7 @@ description: develop에 합치기 전 현재 feature 브랜치를 verifier·revi
 
 ## 절차
 
-1. **범위 파악**: `git fetch` 후 `git diff --stat origin/develop...HEAD` (원격이 없으면 `develop...HEAD`). 브랜치 이름에서 F-xx를 뽑아 spec을 찾는다.
+1. **범위 파악**: `git fetch` 후 `git diff --stat origin/develop...HEAD` (원격이 없으면 `develop...HEAD`). 브랜치 이름에서 F-xx를 뽑아 spec을 찾는다. `feature/issue-<번호>-slug`이면 spec 대신 그 이슈 본문(`gh issue view <번호>`)을 기준으로 삼고 PR 설명 파일은 `.harness/pr-issue-<번호>.md`, 본문 "해결 이슈"에 `Closes #<번호>`를 적는다 (`docs/conventions.md` 7절).
    - develop에 이 브랜치에 없는 커밋이 있으면(`git rev-list --count HEAD..origin/develop`) 먼저 `git merge origin/develop`으로 합친다 (rebase·force push 금지). openapi.json이 충돌하면 한쪽을 고른 뒤 BE 테스트로 다시 생성하고, 마이그레이션 번호는 `node scripts/check-migrations.mjs`로 확인한다.
 2. **병렬 점검** — 세 에이전트를 한 번에 실행한다:
    - `verifier`: 전체(`all`) 검증
@@ -17,7 +17,8 @@ description: develop에 합치기 전 현재 feature 브랜치를 verifier·revi
    - `contract-checker`: 이 기능의 API 계약 일치 여부 (API 변경이 없으면 생략)
 3. **분류**: 결과를 `반드시 수정`(spec 미충족, 보안, 테스트 실패, 계약 불일치, openapi.json 미갱신) / `권장` / `무시 가능`으로 나눠 사용자에게 보여 준다.
 4. **수정**: `반드시 수정`은 바로 고치고 커밋 (`fix(F-xx): ...`). `권장`은 사용자에게 할지 묻는다.
-   - 이번 PR에서 하지 않기로 한 지적과 spec 범위 밖 후속 작업은 GitHub 이슈로 남긴다: `gh issue create --label follow-up --title "<F-xx> 요약" --body "<배경, 출처 PR·지적 링크, 제안>"`. PR 설명 "후속 작업"과 내 NOW 파일에는 이슈 번호만 적는다 (`docs/conventions.md` 7절).
+   - 이번 PR에서 하지 않기로 한 지적과 spec 범위 밖 후속 작업은 GitHub 이슈로 남긴다: `gh issue create --label follow-up --label area:<A|B|common> --assignee @me --title "<F-xx> 요약" --body "<배경, 출처 PR·지적 링크, 제안, 영향 범위>"` (본문 형식은 `.github/ISSUE_TEMPLATE/follow-up.md`. 영역은 내 영역이면 A·B, 하네스·공통 코드면 common). PR 설명 "후속 작업"과 내 NOW 파일에는 이슈 번호만 적는다 (`docs/conventions.md` 7절).
+   - 이 PR이 열린 follow-up 이슈를 해결하면 PR 설명 "해결 이슈"에 `Closes #n`을 이슈마다 적는다. develop에 머지되면 `close-issues` 워크플로가 닫는다.
 5. **PR 설명 생성**: `.github/pull_request_template.md` 형식으로 채워 `.harness/pr-F-xx.md`에 저장하고 요약을 보여 준다.
    - 수용 기준 표: AC별 테스트 이름과 결과
    - FE 변경이 있으면 스크린샷을 **직접 첨부한다** (사람에게 넘기지 않는다):
@@ -43,7 +44,7 @@ description: develop에 합치기 전 현재 feature 브랜치를 verifier·revi
       - **같은 주제**(예: 설정 마스킹)로 재리뷰를 2회 했는데 또 지적이 나오면 멈추고 사람이 정한다(이슈로 넘길지, 설계를 바꿀지). PR #14에서 형식 변형을 쫓다 한도를 소진한 데서 나온 규칙이다.
    4. 재리뷰가 **5회**에 이르렀는데도 지적이 남거나(11-19, 3→5회) `TIMEOUT`이면 멈추고 현재 상태를 보고한다. `ERROR Codex 환경 없음`이면 사람에게 출력된 링크에서 Codex 환경을 만들어 달라고 요청하고, 준비되면 1을 다시 실행한다 (11-18 PR #7에서 발생). `ERROR Codex 계정 미연결 (@아이디)`이면 그 사람에게 `docs/환경설정.md` 8절대로 계정 연결을 요청하고, 연결되면 1을 다시 실행한다 (11-19 PR #30에서 발생).
 9. **머지는 하지 않는다.** `gh pr merge`는 하네스가 차단한다. CI가 초록이면 영역 오너(= 이 PR 작성자)가 GitHub에서 머지한다 (wip 커밋이 있으면 Squash and merge). PR을 연 뒤 상대 PR이 develop에 먼저 머지됐으면, 머지 전에 `git merge origin/develop` → push로 CI를 다시 돌려 초록을 확인한다 (마이그레이션 번호·openapi.json은 머지 뒤에야 충돌이 드러난다).
-   - 머지 뒤 PR 본문의 `Closes #n` 이슈가 열려 있으면(develop은 기본 브랜치가 아니라 자동으로 닫히지 않는다) `gh issue close <n> --comment "PR #<번호>로 해결"`을 사용자에게 제안한다.
+   - 머지되면 PR 본문의 `Closes #n` 이슈는 `close-issues` 워크플로가 닫는다 (develop은 기본 브랜치가 아니라 GitHub가 자동으로 닫지 않아서 둔 워크플로). 다음 `/pickup`에서 아직 열려 있으면 워크플로 실행 기록을 확인하고 `gh issue close <n> --comment "PR #<번호>로 해결"`을 제안한다.
 10. **완료 표시는 PR 안에서 한다 (정리 PR 없음)**: Codex가 COMPLETE(또는 8-3 이관 완료)이고 CI가 초록이 되면, 머지 전 마지막 커밋 `docs(F-xx): 완료 표시 (spec DONE)`에 **내 spec만** 넣는다. `docs/` 아래만 바뀌므로 Codex 재리뷰는 돌지 않는다.
     - spec 헤더 `DONE (PR #n)`, 구현 체크리스트 마지막 칸
     - `docs/산출물/04-WBS.md`·`05-간트차트.md`·`docs/진행현황.md`는 **고치지 않는다.** 두 PR이 같은 표를 고치면 충돌하므로 주간 `/progress` docs PR이 develop 기준으로 한 번에 맞춘다 (11-19 결정).

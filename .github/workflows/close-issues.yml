@@ -1,0 +1,43 @@
+# follow-up 이슈 순환 (11-19 결정): develop은 기본 브랜치가 아니라서 PR 본문의 `Closes #n`이 머지 때 이슈를 닫지 않는다.
+# develop에 머지된 PR 본문에서 닫는 키워드(close·fix·resolve 계열)를 찾아 그 이슈를 닫고 PR 번호를 댓글로 남긴다.
+# 파싱은 scripts/lib/issues.mjs closingRefs()이고 scripts/test/issues.test.mjs가 검사한다.
+name: Close issues
+
+on:
+  pull_request:
+    branches: [develop]
+    types: [closed]
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  close:
+    name: 해결 이슈 닫기
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: PR 본문의 Closes #n 이슈 닫기
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          REFS=$(node --input-type=module -e "import { closingRefs } from './scripts/lib/issues.mjs'; console.log(closingRefs(process.env.PR_BODY).join(' '))")
+          if [ -z "$REFS" ]; then echo "닫을 이슈 없음"; exit 0; fi
+          for n in $REFS; do
+            # gh issue view·close는 PR 번호도 받아 PR을 닫는다. REST issues API의 pull_request 키로 PR을 거른다 (GitHub 기본 동작도 PR은 안 닫음)
+            STATE=$(gh api "repos/$GITHUB_REPOSITORY/issues/$n" --jq 'if .pull_request then "PR" else .state end' 2>/dev/null || echo MISSING)
+            if [ "$STATE" = "open" ]; then
+              gh issue close "$n" --repo "$GITHUB_REPOSITORY" --comment "PR #$PR_NUMBER 이 develop에 머지되어 닫습니다."
+            else
+              echo "#$n: $STATE, 건너뜀"
+            fi
+          done

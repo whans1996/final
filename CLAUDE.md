@@ -22,7 +22,7 @@ SSAFY 관통 프로젝트(2026-11-17 시작, 12-24 발표). Spring Boot 4 + MyBa
 | API 응답·에러 코드·네이밍·커밋·PR 규칙 | `docs/conventions.md` |
 | 현재 구현된 API (정본) | `docs/api/openapi.json` (테스트가 생성), 실행 중이면 http://localhost:8080/swagger-ui/index.html |
 | 제출 산출물 (요구사항 정의서, 유스케이스, ERD, WBS, 간트, 화면 설계서, API 명세, AI 활용, 데이터 셋, 보고서) | `docs/산출물/` (제출 허브는 루트 `README.md`) |
-| 후속 작업 (기능 밖으로 미룬 것) | GitHub Issues `follow-up` 라벨 (`gh issue list --label follow-up`) |
+| 후속 작업 (기능 밖으로 미룬 것) | GitHub Issues `follow-up` + `area:*` 라벨 (`gh issue list --label follow-up`, 세션 시작 배너 📌 줄). 순환·닫기 규칙은 `docs/conventions.md` 7절 |
 | 팀 대시보드·AI 활용 사례 (노션, 사람용 요약이며 정본 아님) | `docs/notion.md` |
 | 영역 경계 (어느 파일이 누구 것인가) | `.github/CODEOWNERS`, `docs/conventions.md` 9절 (`node scripts/owners.mjs <경로>`) |
 | 백엔드 규칙 | `backend/CLAUDE.md` |
@@ -39,6 +39,7 @@ SSAFY 관통 프로젝트(2026-11-17 시작, 12-24 발표). Spring Boot 4 + MyBa
 - 새 세션은 `/pickup`으로 상태를 확인하고 시작한다. 기능은 **내 영역**에서 고른다. 상대 브랜치·상대 NOW 파일은 건드리지 않는다.
 - 상대가 develop에 머지한 것은 `git merge origin/develop`으로 받는다 (rebase·force push 금지). 마이그레이션은 `node scripts/next-migration.mjs`로 번호를 확인하고, openapi.json 충돌은 BE 테스트로 다시 생성한다.
 - 진행현황·WBS·간트는 기능 PR에서 고치지 않는다. 주간 `/progress`가 별도 docs PR로 맞춘다.
+- 미룬 작업은 `follow-up` 이슈(area 라벨·담당자)로 남기고, `/spec` 때 흡수하거나 기능 사이에 `feature/issue-<번호>-slug`로 처리한다. 해결 PR에 `Closes #n`을 적으면 develop 머지 때 워크플로가 닫는다.
 - 기능 구현은 상태가 `APPROVED`인 spec이 있어야 시작한다. 없으면 `/spec`부터 한다.
 - 구현은 **수용 기준(AC)별로 실패하는 테스트를 먼저** 쓰고 통과시키는 순서로 한다.
 - 테스트·빌드 결과는 긴 로그를 직접 읽지 말고 `verifier` 에이전트나 `node scripts/verify.mjs`의 요약으로 확인한다.

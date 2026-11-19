@@ -20,18 +20,19 @@ SessionStart hook이 내 NOW 파일, 상대 작업 요약, git 상태를 이미 
    - `gh pr status`로 내 브랜치의 PR, CI 실패를 확인한다 (gh가 없거나 원격이 없으면 건너뜀). 상대가 나를 @멘션한 PR(공통 코드 변경)이 있으면 보고에 포함한다.
    - 내 NOW 파일의 PR이 있으면 `node scripts/codex-review.mjs <번호>`(대기 없음)로 Codex 상태를 확인한다. `STALE`이나 `FINDINGS`이면 `/pr-review` 8단계 루프로 이어 간다. `RUNNING`이면 `--wait --status`를 백그라운드로 다시 걸어 결과를 받는다. `ERROR Codex 계정 미연결`이면 `docs/환경설정.md` 8절을 사용자에게 안내한다. `CLOSED`(이미 머지·종료)면 루프를 돌지 않는다.
    - 현재 브랜치가 main/develop이면 **내 NOW 파일의 브랜치**로 `git switch` 한다 (없으면 사용자에게 확인). **상대 NOW 파일의 브랜치로는 switch하지 않는다.**
-   - **내 NOW 파일의 PR이 머지되었으면** (`gh pr view <번호> --json state`가 `MERGED`) `git switch develop && git pull` 후 다음 기능을 시작한다. spec DONE은 `/pr-review` 10단계에서 PR 안에 이미 반영했다. WBS·간트·진행현황은 주간 `/progress`가 맞춘다 (PR에서 고치지 않는다, 11-19 결정).
+   - **내 NOW 파일의 PR이 머지되었으면** (`gh pr view <번호> --json state,body`가 `MERGED`) `git switch develop && git pull` 후 다음 기능을 시작한다. PR 본문의 `Closes #n` 이슈가 아직 열려 있으면 `close-issues` 워크플로가 실패한 것이니 보고에 적는다. spec DONE은 `/pr-review` 10단계에서 PR 안에 이미 반영했다. WBS·간트·진행현황은 주간 `/progress`가 맞춘다 (PR에서 고치지 않는다, 11-19 결정).
    - SessionStart가 "develop에 이 브랜치에 없는 커밋"을 알렸고 새 마이그레이션·openapi.json 변경이 있으면, 마이그레이션·API를 추가하기 전에 `git merge origin/develop`을 제안한다.
 2. **상태 읽기**
    - 내 NOW 파일 (pull 후 바뀌었을 수 있으니 다시 읽는다). 상대 NOW 파일은 hook 요약 두 줄로 충분하다.
    - `docs/작업로그.md`의 **내 마지막 항목**(hook이 주입)
    - 내 NOW 파일의 현재 기능 spec(`docs/specs/F-xx-*.md`)에서 수용 기준 표, 결정 필요, 구현 체크리스트
+   - 열린 follow-up 이슈 (hook이 "열린 follow-up 이슈" 섹션에 주입. 없으면 이슈 없음이거나 gh 실패). 분류 필요(area 라벨 없음)가 있으면 라벨·담당자 안을 보여 주고 사용자 확인 뒤 `gh issue edit <n> --add-label area:<..> --add-assignee <영역 오너>`로 붙인다. 지금 기능과 관련된 내 이슈는 이번 작업에 흡수할지 묻는다.
    - 마지막 커밋이 `wip(...)` 이면 `git show --stat HEAD`로 무엇이 중간 상태인지 확인한다.
    - **NOW 파일 본문이 마지막 커밋보다 오래되었으면**(갱신 줄에 `자동 handoff, 본문 미갱신`, 갑작스러운 종료) `git diff HEAD~3 --stat` 등으로 실제 진행을 추정하고, NOW 파일을 믿지 말아야 할 부분을 표시한다.
 3. **검증 상태**
    - `verifier` 에이전트로 현재 기능 영역의 테스트를 돌린다 (backend/frontend 미생성이면 건너뜀).
    - 실패 테스트가 "의도된 red(TDD 진행 중)"인지 "깨진 것"인지 spec 체크리스트와 대조해 구분한다.
-4. **보고** (아래 형식, 10줄 이내)
+4. **보고** (아래 형식, 11줄 이내)
 
 ```
 📍 김동환 @dh-ssafy · F-08 개념 추출 · feature/F-08-concepts · 마지막 작업: @dh-home (11/20 22:10, wip)
@@ -41,6 +42,7 @@ SessionStart hook이 내 NOW 파일, 상대 작업 요약, git 상태를 이미 
 ⛔ 막힌 점: 없음 / ⚠️ 주의: develop에 상대 V6 머지됨 → 내 마이그레이션은 V7
 👥 상대: F-09 카드 목록 (feature/F-09-card-list, PR #31 열림)
 🔀 PR: #30 F-08 — CI ✅, Codex FINDINGS 1건(P2)
+📌 이슈: 내 4 · 공통 3 (7일 넘음 2: #16, #17) / 분류 필요 1 → 라벨 제안
 ➡️ 다음: ConceptExtractor.link()에서 기존 카드 매칭 → AC3 테스트 green
 ```
 

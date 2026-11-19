@@ -32,7 +32,7 @@ description: PC를 옮기거나 세션을 마칠 때 내 NOW 파일 갱신, 작�
 
    - `AI 활용` 줄은 기록할 만한 사례가 있을 때만 쓴다. 최종 산출물 "외부 API·생성형 AI 활용" 문서의 소재가 된다.
    - `AI 활용` 줄을 썼고 Notion MCP(`notion-create-pages`)를 쓸 수 있으면 `docs/notion.md`의 "AI 활용·트러블슈팅 사례" DB에 행을 하나 추가한다(제목 한 줄, 날짜, 분류, 기능, 브랜치·PR, 내용). 없으면 건너뛴다. 정본은 작업로그다.
-   - 막힌 점 중 이번 기능 밖으로 미루는 후속 작업은 `gh issue create --label follow-up`으로 등록하고 NOW 파일에는 이슈 번호만 적는다.
+   - 막힌 점 중 이번 기능 밖으로 미루는 후속 작업은 `gh issue create --label follow-up --label area:<A|B|common> --assignee @me`로 등록하고 (본문은 `.github/ISSUE_TEMPLATE/follow-up.md` 형식) NOW 파일에는 이슈 번호만 적는다.
 
 4. **커밋과 push**
    - 보호 브랜치(main/develop)면 멈추고 사용자에게 알린다.
