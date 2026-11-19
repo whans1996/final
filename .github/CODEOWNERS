@@ -33,6 +33,8 @@
 /frontend/src/composables/                   @whans1996 @JoonseobKim
 /frontend/src/views/concept/                 @whans1996 @JoonseobKim
 /frontend/src/components/concept/            @whans1996 @JoonseobKim
+/frontend/src/layouts/                       @whans1996 @JoonseobKim
+/frontend/src/views/admin/                   @whans1996 @JoonseobKim
 
 # ── A 김동환: 분석·LLM·퀴즈·복습·추천·챌린지 ───────────────
 **/vibenote/analysis/                        @whans1996
@@ -55,6 +57,8 @@
 /frontend/src/views/quiz/                    @whans1996
 /frontend/src/views/reviewplan/              @whans1996
 /frontend/src/views/challenge/               @whans1996
+/frontend/src/router/routes/analysis.js      @whans1996
+/frontend/src/router/routes/challenge.js     @whans1996
 
 # ── B 김준섭: 팔로우·커뮤니티 (카드 F-09~13은 공통 기반 위 concept 하위 폴더) ──
 **/vibenote/follow/                          @JoonseobKim
@@ -63,6 +67,7 @@
 /backend/src/main/resources/mapper/community/ @JoonseobKim
 /frontend/src/views/community/               @JoonseobKim
 /frontend/src/components/community/          @JoonseobKim
+/frontend/src/router/routes/community.js     @JoonseobKim
 
 # ── 하네스 (A가 유지보수) ─────────────────────────────────
 /.claude/                                    @whans1996

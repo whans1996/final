@@ -37,8 +37,23 @@ public class SecurityConfig {
         "/error"
     };
 
-    /** 로그인 없이 볼 수 있는 GET API. 숫자 id만 맞춰 {@code /api/users/me}는 계속 인증이 필요하다 (F-03). */
-    static final String[] PUBLIC_GET_PATHS = {"/api/users/{id:\\d+}", "/api/users/{id:\\d+}/stats"};
+    /**
+     * 로그인 없이 볼 수 있는 GET API. 각 기능은 <b>자기 도메인 블록 안에만</b> 추가하고 모든 항목 끝에 쉼표를 단다 (docs/conventions.md
+     * 9절).
+     */
+    static final String[] PUBLIC_GET_PATHS = {
+        // ── USER (공통 F-03). 숫자 id만 맞춰 /api/users/me는 계속 인증이 필요하다 ──
+        "/api/users/{id:\\d+}", "/api/users/{id:\\d+}/stats",
+
+        // ── ANALYSIS (A F-19 공개 분석) ──
+
+        // ── CONCEPT (B F-09~11) ──
+
+        // ── POST (B F-17·F-18) ──
+
+        // ── CHALLENGE (A F-25) ──
+
+    };
 
     @Bean
     public SecurityFilterChain securityFilterChain(

@@ -6,8 +6,12 @@ import org.springframework.http.HttpStatus;
  * 에러 코드 목록. 형식은 {@code <도메인>_<HTTP 상태 또는 3자리 번호>} (docs/conventions.md 3절).
  *
  * <p>새 코드는 spec의 "API 계약 &gt; 에러" 표에 먼저 적고 여기에 추가한다. message는 사용자에게 그대로 보여 줄 수 있는 한국어 문장이다.
+ *
+ * <p>두 사람이 병렬로 추가하므로 <b>자기 도메인 블록 안에만</b> 넣고, 모든 항목 끝에 쉼표를 단다({@code ;}는 맨 아래 단독 줄). 파일 끝에 이어 붙이면
+ * 같은 줄에서 충돌한다 (docs/conventions.md 9절, F-00b).
  */
 public enum ErrorCode {
+    // ── COMMON (공통) ──
     COMMON_400(HttpStatus.BAD_REQUEST, "요청 값이 올바르지 않습니다."),
     COMMON_404(HttpStatus.NOT_FOUND, "요청한 주소를 찾을 수 없습니다."),
     COMMON_405(HttpStatus.METHOD_NOT_ALLOWED, "지원하지 않는 요청 방식입니다."),
@@ -15,6 +19,7 @@ public enum ErrorCode {
     COMMON_415(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "지원하지 않는 요청 형식입니다."),
     COMMON_500(HttpStatus.INTERNAL_SERVER_ERROR, "서버에서 오류가 발생했습니다. 잠시 후 다시 시도해 주세요."),
 
+    // ── AUTH (공통 F-02) ──
     AUTH_401(HttpStatus.UNAUTHORIZED, "로그인이 필요합니다."),
     AUTH_403(HttpStatus.FORBIDDEN, "접근 권한이 없습니다."),
     /** 로그인 실패. 이메일 없음·비밀번호 불일치·탈퇴 회원을 구분하지 않는다 (F-02). */
@@ -22,6 +27,7 @@ public enum ErrorCode {
     /** Refresh 토큰 없음·무효·만료·회전됨. FE는 재시도하지 않고 로그인 화면으로 보낸다 (F-02). */
     AUTH_002(HttpStatus.UNAUTHORIZED, "로그인이 만료되었습니다. 다시 로그인하세요."),
 
+    // ── USER (공통 F-01·F-03) ──
     /** 이메일·닉네임 중복. details에 해당 필드를 담는다 (F-01). */
     USER_409(HttpStatus.CONFLICT, "이미 사용 중인 정보가 있습니다."),
     /** 없는 회원 또는 탈퇴 회원의 공개 프로필·통계 (F-03). */
@@ -29,6 +35,7 @@ public enum ErrorCode {
     /** 탈퇴 시 비밀번호 재확인 실패. details.password에 사유를 담는다 (F-03). */
     USER_001(HttpStatus.BAD_REQUEST, "비밀번호가 올바르지 않습니다."),
 
+    // ── ANALYSIS (A F-05~07·F-19) ──
     /** 없는 분석, 다른 회원의 분석, soft delete된 분석. 존재 여부를 드러내지 않으려고 403 대신 404 (F-05a). */
     ANALYSIS_404(HttpStatus.NOT_FOUND, "분석을 찾을 수 없습니다."),
     /** 일일 분석 한도 초과. {limit}은 AnalysisService가 설정값(analysis.daily-limit)으로 바꾼다 (F-05a). */
@@ -54,10 +61,25 @@ public enum ErrorCode {
     /** 분석이 DONE이 아닐 때 실행 흐름 요청 (F-07 AC9). */
     ANALYSIS_409(HttpStatus.CONFLICT, "분석이 끝난 뒤에 실행 흐름을 요청할 수 있습니다."),
 
+    // ── CONCEPT (A F-08 · B F-09~13) ──
+    /** 없는 카드, 또는 PUBLISHED가 아닌 카드(DRAFT·HIDDEN)를 일반 사용자가 조회 (F-00b, NF-04). */
+    CONCEPT_404(HttpStatus.NOT_FOUND, "개념 카드를 찾을 수 없습니다."),
+
+    // ── QUIZ (A F-14) ──
+
+    // ── REVIEW_PLAN (A F-15) ──
+
+    // ── POST (B F-17·F-18) ──
+
+    // ── LLM (A) ──
     /** 개요 응답이 1회 재시도 후에도 스키마 위반. 파이프라인 FAILED 사유다 (F-06 AC5). */
     LLM_502(HttpStatus.BAD_GATEWAY, "AI 응답 형식이 올바르지 않아 설명을 만들지 못했습니다. 다시 요청해 주세요."),
     /** 설정된 LLM이 폴백까지 모두 응답하지 못함. 호출자는 파이프라인 단계를 FAILED로 표시한다 (F-00). */
-    LLM_503(HttpStatus.SERVICE_UNAVAILABLE, "AI 응답을 받지 못했습니다. 잠시 후 다시 시도해 주세요.");
+    LLM_503(HttpStatus.SERVICE_UNAVAILABLE, "AI 응답을 받지 못했습니다. 잠시 후 다시 시도해 주세요."),
+
+// ── CHALLENGE (A F-24·F-25) ──
+
+;
 
     private final HttpStatus status;
     private final String message;
