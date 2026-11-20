@@ -1,9 +1,10 @@
 // 병렬 개발 중 상대 작업을 보는 도구. SessionStart hook(상대 NOW 요약)과 UserPromptSubmit hook(peer-watch, 세션 중 변화 알림)이 쓴다.
-// 상대 NOW 파일은 상대 PR이 develop에 머지되기 전까지 내 작업 트리에 오지 않으므로, 원격 브랜치 중 가장 최근 것을 읽는다.
+// 상대 NOW 파일은 상대 PR이 develop에 머지되기 전까지 내 작업 트리에 오지 않으므로, 원격 브랜치마다 읽어 갱신 시각이 가장 늦은 것을 고른다.
+// 내 NOW도 PC마다 다른 브랜치에서 갈라질 수 있어(#54), develop에 머지 안 된 브랜치 중 내 NOW를 바꾼 것을 따로 모은다.
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { ROOT, git, mdSection, nowFileOf, nowRelPath, readText } from './common.mjs';
+import { PROTECTED_BRANCHES, ROOT, git, mdSection, nowRelPath, readText } from './common.mjs';
 
 export const PEER_STATE_FILE = join(ROOT, '.harness', 'peer-watch.json');
 export const PEER_WATCH_INTERVAL_MS = 10 * 60 * 1000;
@@ -43,20 +44,115 @@ export function nowHeadline(text) {
   return { stamp, feature, next };
 }
 
-/** 사람 key의 NOW 중 가장 최근 것: 원격 브랜치(가장 최근 커밋)와 작업 트리 비교 → { source, text } | null */
-export function latestPeerNow(key) {
+/** origin 원격 브랜치 [{ branch: 'origin/x', name: 'x', at }] (최근 커밋 순, HEAD 제외). noMerged를 주면 그 ref에 머지 안 된 것만 */
+function remoteBranches(cwd, { noMerged } = {}) {
+  const args = ['for-each-ref', '--sort=-committerdate', '--format=%(refname:lstrip=3)%09%(committerdate:unix)'];
+  if (noMerged) args.push(`--no-merged=${noMerged}`);
+  const r = git([...args, 'refs/remotes/origin/'], { cwd, timeout: LOCAL_GIT_TIMEOUT });
+  if (!r.ok) return [];
+  return r.out
+    .split('\n')
+    .map((l) => l.split('\t'))
+    .filter(([name]) => name && name !== 'HEAD')
+    .map(([name, ct]) => ({ branch: `origin/${name}`, name, at: Number(ct) * 1000 }));
+}
+
+/** `<rev>:<path>` 여러 개를 git 한 번으로 읽는다 (원격 브랜치가 많아도 hook 제한 안에 끝나게). 없는 것은 null */
+function readBlobs(specs, cwd) {
+  if (!specs.length) return [];
+  const r = spawnSync('git', ['cat-file', '--batch'], { cwd, input: specs.join('\n') + '\n', windowsHide: true, timeout: LOCAL_GIT_TIMEOUT });
+  if (r.status !== 0 || !r.stdout) return specs.map(() => null);
+  const buf = r.stdout;
+  let pos = 0;
+  return specs.map(() => {
+    const nl = buf.indexOf(0x0a, pos);
+    if (nl < 0) return null;
+    const header = buf.subarray(pos, nl).toString('utf8');
+    pos = nl + 1;
+    // 없으면 "<spec> missing" 한 줄뿐이다
+    const m = /^[0-9a-f]+ (\w+) (\d+)$/.exec(header);
+    if (!m) return null;
+    const size = Number(m[2]);
+    const text = m[1] === 'blob' ? buf.subarray(pos, pos + size).toString('utf8') : null;
+    pos += size + 1;
+    return text;
+  });
+}
+
+/**
+ * 사람 key의 NOW 중 가장 최근 것: 작업 트리와 원격 브랜치마다의 NOW를 갱신 시각으로 비교 → { source, text } | null.
+ * NOW를 바꾼 커밋 1개만 보면 나중에 머지된 옛 브랜치의 NOW가 다른 브랜치의 새 NOW를 가린다 (#32)
+ */
+export function latestPeerNow(key, { cwd = ROOT } = {}) {
   const rel = nowRelPath(key);
-  const cands = [{ source: '작업 트리', text: readText(nowFileOf(key)), at: 0 }];
-  const last = git(['log', '--remotes=origin', '-1', '--format=%H%x09%ct', '--', rel], { timeout: LOCAL_GIT_TIMEOUT });
-  const [sha, ct] = last.ok ? last.out.split('\t') : [];
-  if (sha) {
-    const shown = git(['show', `${sha}:${rel}`], { timeout: LOCAL_GIT_TIMEOUT });
-    const branch = git(['branch', '-r', '--contains', sha, '--format=%(refname:short)'], { timeout: LOCAL_GIT_TIMEOUT })
+  const branches = remoteBranches(cwd);
+  const texts = readBlobs(
+    branches.map((b) => `${b.branch}:${rel}`),
+    cwd,
+  );
+  return pickLatestNow([
+    { source: '작업 트리', text: readText(join(cwd, rel)), at: 0 },
+    ...branches.map((b, i) => ({ source: b.branch, text: texts[i], at: b.at })),
+  ]);
+}
+
+/**
+ * base(develop)에 머지 안 된 원격 브랜치 중 base 밖의 커밋으로 key의 NOW를 바꾼 것 → [{ branch, at, text }] (최근 커밋 순).
+ * 같은 사람이 PC마다 다른 브랜치를 진행하면 develop의 NOW가 다른 브랜치의 진행을 가린다 (#54).
+ * 상대 브랜치가 develop을 합쳐 들여온 내 NOW는 develop 쪽 부모와 같아 log에 나오지 않는다
+ */
+export function myBranchNows(key, { cwd = ROOT, base = 'origin/develop' } = {}) {
+  const rel = nowRelPath(key);
+  const touched = remoteBranches(cwd, { noMerged: base }).filter(
+    (b) => !PROTECTED_BRANCHES.includes(b.name) && git(['log', '-1', '--format=%H', `${base}..${b.branch}`, '--', rel], { cwd, timeout: LOCAL_GIT_TIMEOUT }).out,
+  );
+  const texts = readBlobs(
+    touched.map((b) => `${b.branch}:${rel}`),
+    cwd,
+  );
+  return touched.map((b, i) => ({ branch: b.branch, at: b.at, text: texts[i] })).filter((b) => b.text);
+}
+
+/**
+ * /spec 가드 (#54): base(develop)에 머지 안 된 원격 브랜치 중 기능 fid(F-14, F-05a)를 진행 중인 것 → [{ branch, specs }] (최근 커밋 순).
+ * 브랜치 이름에 `F-14-`가 있거나, base에 없는 `docs/specs/F-14-*.md`가 있으면 해당한다
+ */
+export function featureOnRemotes(fid, { cwd = ROOT, base = 'origin/develop' } = {}) {
+  const prefix = `${fid}-`.toLowerCase();
+  const specsOf = (ref) =>
+    git(['ls-tree', '--name-only', ref, 'docs/specs/'], { cwd, timeout: LOCAL_GIT_TIMEOUT })
       .out.split('\n')
-      .find((b) => b && !b.endsWith('/HEAD'));
-    if (shown.ok) cands.push({ source: branch || sha.slice(0, 7), text: shown.out, at: Number(ct) * 1000 });
+      .filter((p) => p.split('/').at(-1).toLowerCase().startsWith(prefix));
+  const onBase = new Set(specsOf(base));
+  const found = [];
+  for (const b of remoteBranches(cwd, { noMerged: base })) {
+    if (PROTECTED_BRANCHES.includes(b.name)) continue;
+    const specs = specsOf(b.branch).filter((p) => !onBase.has(p));
+    const named = b.name.split('/').some((part) => part.toLowerCase().startsWith(prefix));
+    if (named || specs.length) found.push({ branch: b.branch, specs });
   }
-  return pickLatestNow(cands);
+  return found;
+}
+
+/** `갱신: 2026-11-19 17:55 · … · PC: dh-ssafy · …` → `11-19 17:55 dh-ssafy` */
+function stampBrief(stamp) {
+  const m = /\d{4}-(\d{2}-\d{2})\s+(\d{2}:\d{2})/.exec(stamp);
+  const pc = /PC:\s*([^\s·]+)/.exec(stamp)?.[1];
+  return [m ? `${m[1]} ${m[2]}` : '갱신 ?', pc].filter(Boolean).join(' ');
+}
+
+/** myBranchNows 결과 → 표시 줄과 지금 브랜치가 아닌 것 목록. 순수 함수 */
+export function myBranchLines(list, current) {
+  const cut = (t, n = 100) => (t.length > n ? `${t.slice(0, n - 1)}…` : t);
+  const lines = [];
+  const others = [];
+  for (const b of list) {
+    const h = nowHeadline(b.text);
+    const here = b.branch === `origin/${current}`;
+    if (!here) others.push(b.branch);
+    lines.push(`- ${here ? '(지금 브랜치)' : '⚠️'} ${b.branch} · ${stampBrief(h.stamp)} · ${cut(h.feature)}`);
+  }
+  return { lines, others };
 }
 
 export function readPeerState() {
@@ -94,17 +190,17 @@ export function peerPrs(peerGithub, { timeout = 3000 } = {}) {
   }
 }
 
-/** origin/develop의 prev..curr 사이 커밋·변경 파일 */
-export function developChanges(prevSha, currSha) {
+/** origin/develop의 prev..curr 사이 커밋(전부)·변경 파일. 잘라서 보면 앞쪽 상대 커밋이 "전부 내 커밋" 판정에서 빠진다 (#32) */
+export function developChanges(prevSha, currSha, { cwd = ROOT } = {}) {
   if (!prevSha || !currSha || prevSha === currSha) return null;
-  const log = git(['log', '--format=%h%x09%an%x09%s', '-10', `${prevSha}..${currSha}`], { timeout: LOCAL_GIT_TIMEOUT });
+  const log = git(['log', '--format=%h%x09%an%x09%s', `${prevSha}..${currSha}`], { cwd, timeout: LOCAL_GIT_TIMEOUT });
   if (!log.ok) return null;
   return {
     commits: log.out.split('\n').filter(Boolean).map((l) => {
       const [sha, author, subject] = l.split('\t');
       return { sha, author, subject };
     }),
-    files: git(['diff', '--name-only', prevSha, currSha], { timeout: LOCAL_GIT_TIMEOUT }).out.split('\n').filter(Boolean),
+    files: git(['diff', '--name-only', prevSha, currSha], { cwd, timeout: LOCAL_GIT_TIMEOUT }).out.split('\n').filter(Boolean),
   };
 }
 

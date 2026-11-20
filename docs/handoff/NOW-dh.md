@@ -4,23 +4,23 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
 
-갱신: 2026-11-20 16:57 · 작업자: whans1996@naver.com · PC: dh-home · 브랜치: feature/issue-67-issue-priority
+갱신: 2026-11-20 17:22 · 작업자: whans1996@naver.com · PC: dh-home · 브랜치: feature/issue-54-my-branches
 
 ## 현재 기능
 
-하네스 PR **#69** — 이슈 #67 (+ #48·#39 Closes). Codex ✅ 00458c1 (재리뷰 3회), CI는 Backend 검증 진행 중이었음 (나머지 초록). 머지 대기
+하네스 이슈 **#54** (+ #32 흡수, 사용자 결정 11-20) — 내 다른 PC 브랜치 진행 표시·`/spec` 중복 가드. 브랜치 `feature/issue-54-my-branches`. 구현 완료, `/pr-review` 전
 
 ## 진행
 
-- ✅ 구현 1~5단계 (이슈 조회 실패 줄, blocker 라벨, Codex 실패·정체 재요청·#39, 로컬 develop·main FF, 문구 통일)
-- ✅ /pr-review: reviewer 반드시 1 + 권장·작은 지적 반영(be50c75·1ef3d59), 2건 → #44 댓글
-- ✅ Codex: P2 2건(같은 주제) → 사용자 결정으로 "재시도를 대기 프로세스에 맡김"(R3) 되돌림 00458c1. 지적 스레드 2개에 답글
+- ✅ PR #69 머지(#67·#48·#39 닫힘), 원격 브랜치 정리·자동 삭제 설정 완료(사람)
+- ✅ `scripts/lib/peer.mjs`: `myBranchNows`(develop 미머지 + base 밖 커밋으로 내 NOW 변경), `myBranchLines`, `featureOnRemotes`(/spec 가드), `latestPeerNow`를 원격 브랜치마다 비교(#32-1, `cat-file --batch` 한 번), `developChanges` 10개 절단 제거(#32-2). 모두 `cwd` 옵션
+- ✅ `peer.test.mjs` 임시 저장소 테스트 5개 (11-19 F-14 사례 재현 포함), 하네스 전체 81/81
+- ✅ session-start: ⚠️ 경고 + "내 원격 브랜치" 섹션, `scripts/branches.mjs [F-xx]` CLI, spec·pickup SKILL, CLAUDE.md 명령 표
 
 ## 바로 다음 할 일
 
-1. `gh pr checks 69`로 Backend 검증 초록 확인 → 사람이 GitHub에서 PR #69 머지 (wip 없음, 일반 머지). 그 전에 develop에 새 머지가 있으면 `git merge origin/develop` → push → CI 재확인
-2. 머지 후 사람: 원격 브랜치 41개 삭제 (`git branch -r --merged origin/develop`, `git push origin --delete ...`), 저장소 설정 "머지 후 브랜치 자동 삭제" 켜기 (PR #69 본문 후속 작업)
-3. 그 뒤 #54 → #55·#17 → F-05b `/spec`
+1. `/pr-review` (PR 설명 `.harness/pr-issue-54.md`, 본문 `Closes #54`, `Closes #32`). 커밋 범위 `harness`
+2. 그 뒤 #55·#17 → F-05b `/spec` (먼저 `node scripts/branches.mjs F-05b`)
 
 ## 막힌 점 / 결정 필요
 
@@ -29,3 +29,4 @@
 ## 주의
 
 - 리뷰 지적은 '무시 가능'도 직접 확인한다 (11-20 사용자 지시)
+- 하네스 가드는 Bash 명령 문자열의 `core.hooksPath`를 막는다 → 테스트 파일 편집은 Edit 도구로

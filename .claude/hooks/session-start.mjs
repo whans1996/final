@@ -27,7 +27,7 @@ import {
   worklogEntries,
 } from '../../scripts/lib/common.mjs';
 import { followUpIssues, issueBannerLine, issueContext, issueFailureLine, summarizeIssues } from '../../scripts/lib/issues.mjs';
-import { latestPeerNow, nowHeadline, readPeerState, writePeerState } from '../../scripts/lib/peer.mjs';
+import { latestPeerNow, myBranchLines, myBranchNows, nowHeadline, readPeerState, writePeerState } from '../../scripts/lib/peer.mjs';
 import { autoSync } from '../../scripts/lib/sync.mjs';
 
 // env-check가 깨져도 NOW 주입은 살린다
@@ -125,6 +125,14 @@ const me = ownerKey(pc.id ?? localPcId());
 const now = me ? readText(nowFileOf(me)) : null;
 const other = me ? otherOwnerKey(me) : null;
 const otherNow = other ? latestPeerNow(other) : null;
+// 같은 사람의 다른 PC가 진행 중인 브랜치 (#54): develop의 내 NOW가 그 진행을 가려 이미 한 일(/spec 등)을 다시 할 수 있다
+const myBranches = me && isGitRepo() ? myBranchLines(myBranchNows(me), currentBranch()) : { lines: [], others: [] };
+if (myBranches.others.length) {
+  warnings.push(
+    `develop에 머지 안 된 내 다른 브랜치에 진행이 있습니다: ${myBranches.others.map((b) => b.replace(/^origin\//, '')).join(', ')}. ` +
+      '내 NOW와 다른 일이면 /pickup에서 그 브랜치로 switch할지 확인합니다 (같은 기능을 새로 시작하지 않는다).',
+  );
+}
 const myEntry = me ? lastWorklogEntryOf(worklogEntries(readText(WORKLOG_FILE)), me, loadPcs()) : null;
 
 // 이전 세션이 체크포인트 없이 남긴 변경 (Stop hook은 이 세션이 건드린 파일만 보므로 여기서 알린다)
@@ -147,6 +155,12 @@ if (prevPc === 'unknown-pc' && pc.id) {
 }
 if (me) {
   parts.push(`## ${nowRelPath(me)} (내 작업)\n${now ? now.trim() : '(없음)'}`);
+  if (myBranches.others.length) {
+    parts.push(
+      `## 내 원격 브랜치 (develop 미머지 · ${nowRelPath(me)}을 바꾼 것)\n${myBranches.lines.join('\n')}\n` +
+        '- ⚠️ 브랜치의 NOW가 위 내 NOW와 엇갈리면 /pickup 보고에 넣고, 어느 쪽을 이어 갈지 사용자에게 묻는다',
+    );
+  }
   if (otherNow) {
     const h = nowHeadline(otherNow.text);
     parts.push(
