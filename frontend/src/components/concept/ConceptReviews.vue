@@ -30,6 +30,8 @@ const total = ref(0)
 // 서버가 한 쪽보다 적게 돌려주면 끝까지 받은 것이다. 그사이 맨 위에 새 리뷰가 생겨 total이 커져도 버튼을 숨긴다
 const reachedEnd = ref(false)
 const loadingList = ref(true)
+// 처음 /me 조회 중. 목록·내 리뷰를 다 받기 전에는 쓰기를 막아, 늦게 온 쓰기 전 응답이 저장 결과를 덮지 않게 한다
+const loadingMine = ref(false)
 const loadingMore = ref(false)
 const listError = ref('')
 const moreError = ref('')
@@ -43,6 +45,7 @@ const boxError = ref('')
 // 삭제 후 빈 폼을 새로 그리기 위한 키
 const formKey = ref(0)
 
+const busy = computed(() => submitting.value || loadingList.value || loadingMine.value)
 const hasMore = computed(() => !reachedEnd.value && items.value.length < total.value)
 
 // :id가 빠르게 바뀔 때 늦게 도착한 이전 카드의 응답은 버린다
@@ -50,8 +53,6 @@ let generation = 0
 // 서버 최신순 목록에서 받은 위치 수. 화면 항목 수와 따로 센다: 내가 쓰면 맨 위에 하나 붙어 +1, 불러온 내 리뷰를 지우면 -1.
 // 다른 회원이 그사이 쓰면 같은 항목이 다시 오는데 id로 거른다
 let offset = 0
-// 내 리뷰를 쓰거나 고치거나 지울 때마다 올린다. 그 전에 보낸 /me 조회의 응답은 버린다
-let mineVersion = 0
 
 function resetForm() {
   formErrors.value = {}
@@ -72,6 +73,7 @@ async function load(conceptId) {
   submitting.value = false
   resetForm()
   loadingList.value = true
+  loadingMine.value = auth.isLoggedIn
 
   const list = fetchReviews(conceptId, { page: 1, size: PAGE_SIZE })
     .then((result) => {
@@ -89,15 +91,18 @@ async function load(conceptId) {
       if (current === generation) loadingList.value = false
     })
 
-  const mine = auth.isLoggedIn ? loadMine(conceptId, current) : Promise.resolve()
+  const mine = auth.isLoggedIn
+    ? loadMine(conceptId, current).finally(() => {
+        if (current === generation) loadingMine.value = false
+      })
+    : Promise.resolve()
   await Promise.all([list, mine])
 }
 
 async function loadMine(conceptId, current = generation) {
-  const version = mineVersion
   try {
     const result = await fetchMyReview(conceptId)
-    if (current === generation && version === mineVersion) myReview.value = result
+    if (current === generation) myReview.value = result
   } catch {
     // 내 리뷰를 못 불러와도 목록은 보인다. 작성하면 409로 다시 불러온다
   }
@@ -133,7 +138,6 @@ async function loadMore() {
 }
 
 function applySaved(saved) {
-  mineVersion += 1
   myReview.value = saved.review
   total.value = saved.reviewCount
   emit('rating-change', { avgRating: saved.avgRating, reviewCount: saved.reviewCount })
@@ -204,7 +208,6 @@ async function onDelete() {
     if (current !== generation) return
     if (items.value.some((r) => r.id === id)) offset -= 1
     items.value = items.value.filter((r) => r.id !== id)
-    mineVersion += 1
     total.value = rating.reviewCount
     myReview.value = null
     formKey.value += 1
@@ -237,7 +240,7 @@ watch(() => props.conceptId, load, { immediate: true })
         :initial="myReview"
         submit-label="저장"
         cancellable
-        :submitting="submitting"
+        :submitting="busy"
         :errors="formErrors"
         :error="formError"
         data-role="edit-form"
@@ -252,10 +255,8 @@ watch(() => props.conceptId, load, { immediate: true })
         </div>
         <p class="content">{{ myReview.content }}</p>
         <div class="my-actions">
-          <button type="button" data-action="edit" :disabled="submitting" @click="startEdit">
-            수정
-          </button>
-          <button type="button" data-action="delete" :disabled="submitting" @click="onDelete">
+          <button type="button" data-action="edit" :disabled="busy" @click="startEdit">수정</button>
+          <button type="button" data-action="delete" :disabled="busy" @click="onDelete">
             삭제
           </button>
         </div>
@@ -266,7 +267,7 @@ watch(() => props.conceptId, load, { immediate: true })
         v-else
         :key="formKey"
         submit-label="등록"
-        :submitting="submitting"
+        :submitting="busy"
         :errors="formErrors"
         :error="formError"
         data-role="create-form"

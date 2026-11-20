@@ -276,21 +276,39 @@ describe('ConceptReviews (F-11 AC13~AC17)', () => {
     expect(wrapper.find('[data-role="create-form"]').exists()).toBe(true)
   })
 
-  it('AC15 처음 내 리뷰 조회가 작성보다 늦게 와도 방금 쓴 리뷰가 내 리뷰 상자로 남는다', async () => {
-    let answerMine
-    conceptsApi.fetchReviews.mockResolvedValue(page([], 0))
-    conceptsApi.fetchMyReview.mockReturnValue(new Promise((resolve) => (answerMine = resolve)))
-    const mine = review(1, { authorId: 9, rating: 5, content: '새 리뷰' })
-    conceptsApi.createReview.mockResolvedValue({ review: mine, avgRating: 5.0, reviewCount: 1 })
-    const { wrapper } = await mountReviews({ loggedIn: true })
+  it.each(['list', 'mine'])(
+    'AC15 처음 %s 조회가 끝나기 전에는 등록하지 않아 늦은 응답이 저장 결과를 덮지 않는다',
+    async (slow) => {
+      let answer
+      const pending = new Promise((resolve) => (answer = resolve))
+      if (slow === 'list') {
+        conceptsApi.fetchReviews.mockReturnValue(pending)
+        conceptsApi.fetchMyReview.mockResolvedValue(null)
+      } else {
+        conceptsApi.fetchReviews.mockResolvedValue(page([], 0))
+        conceptsApi.fetchMyReview.mockReturnValue(pending)
+      }
+      const mine = review(1, { authorId: 9, rating: 5, content: '새 리뷰' })
+      conceptsApi.createReview.mockResolvedValue({ review: mine, avgRating: 5.0, reviewCount: 1 })
+      const { wrapper } = await mountReviews({ loggedIn: true })
 
-    await writeReview(wrapper, 5, '새 리뷰')
-    answerMine(null) // 작성 전 기준의 204
-    await flushPromises()
+      await writeReview(wrapper, 5, '새 리뷰')
+      expect(conceptsApi.createReview).not.toHaveBeenCalled()
+      expect(wrapper.find('[data-role="create-form"] button[type="submit"]').element.disabled).toBe(
+        true,
+      )
 
-    expect(wrapper.find('[data-role="my-review"]').exists()).toBe(true)
-    expect(wrapper.find('[data-role="create-form"]').exists()).toBe(false)
-  })
+      answer(slow === 'list' ? page([], 0) : null) // 작성 전 기준의 응답
+      await flushPromises()
+      await wrapper.find('form').trigger('submit')
+      await flushPromises()
+
+      expect(conceptsApi.createReview).toHaveBeenCalledTimes(1)
+      expect(wrapper.find('[data-role="my-review"]').exists()).toBe(true)
+      expect(listed(wrapper)).toEqual(['1'])
+      expect(lastRating(wrapper)).toEqual({ avgRating: 5.0, reviewCount: 1 })
+    },
+  )
 
   it('AC15 409면 서버 message를 보여 주고 내 리뷰를 다시 불러온다', async () => {
     conceptsApi.fetchReviews.mockResolvedValue(page([], 0))
