@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 |---|---|
-| 상태 | APPROVED <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
+| 상태 | DONE (PR #61) <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
 | 기능 ID | F-17 |
 | 우선순위 | P0 |
 | 영역 오너 | B 김준섭 (카드·소셜) |
@@ -231,7 +231,7 @@ AI로 코딩하는 학습자가 **코드 이해 Q&A·학습 후기·자유** 게
 - [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
 - [x] contract-checker 통과 (불일치 0, 참고 2: openapi `$ref`+`type:null` 형제, edit 진입 시 조회수 +1)
 - [x] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일) — 12개 라우트, 콘솔 에러·375px 가로 스크롤 없음
-- [ ] reviewer 지적 사항 반영
-- [x] 산출물 반영 (follow-up 이슈는 PR 때): `06-화면설계서.md` SC-14·15·16의 "spec에서 정할 것" 정리 + 스크린샷, SC-10에 글쓰기 버튼, `docs/conventions.md` 3절 POST 코드, follow-up 이슈(SC-07 질문하기 버튼)
-- [ ] PR CI 초록
-- [ ] 상태 DONE (PR 머지 후)
+- [x] reviewer 지적 사항 반영 — 반드시 수정 0, 권장 2 반영(수정 화면의 볼 수 없는 첨부 빼고 열기, backend/CLAUDE.md 패키지명), Codex P2 1 반영(미리 채우기 중 폼 로딩)
+- [x] 산출물 반영 (follow-up 이슈는 PR 때): `06-화면설계서.md` SC-14·15·16의 "spec에서 정할 것" 정리 + 스크린샷, SC-10에 글쓰기 버튼, `docs/conventions.md` 3절 POST 코드, follow-up 이슈 #60(SC-07 질문하기 버튼)
+- [x] PR CI 초록 — PR #61, Codex ✅ 77ce03d
+- [x] 상태 DONE (PR #61)
