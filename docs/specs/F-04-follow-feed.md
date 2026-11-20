@@ -196,7 +196,7 @@ AC11 종류별 문장 (SC-17):
 - [x] FE 구현 (green)
 - [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
 - [x] contract-checker 통과 (불일치 0, 11-20)
-- [ ] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일)
+- [x] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일) — 11-20, `/feed`(빈·항목)·`/users/:id`·`/users/:id/follows` 1280·375 문제 0, 스크린샷 SC-17·SC-18 8장
 - [ ] reviewer 지적 사항 반영
 - [ ] 산출물 반영: 유스케이스 UC05(멱등으로 대안 흐름 수정)·UC06, 화면 설계서 SC-17("spec에서 정할 것" 정리, 스크린샷)·SC-18(팔로우 영역, 팔로우 목록 화면), REST API 명세
 - [ ] 공통 파일 변경(`ErrorCode`, `SecurityConfig`, `feed` 패키지, `routes/user.js`, `UserProfileView`) PR 본문에 @whans1996 멘션
