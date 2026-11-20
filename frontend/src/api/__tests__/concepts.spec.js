@@ -1,14 +1,22 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import http from '@/api/http'
-import { fetchConcept, fetchConcepts } from '@/api/concepts'
+import {
+  createReview,
+  deleteReview,
+  fetchConcept,
+  fetchConcepts,
+  fetchMyReview,
+  fetchReviews,
+  updateReview,
+} from '@/api/concepts'
 
 // API 계약(docs/specs/F-09-concept-list.md 3절)과 URL·파라미터 이름이 같은지 확인한다
-function capture(data = {}) {
+function capture(data = {}, status = 200) {
   const calls = []
   http.defaults.adapter = async (config) => {
     calls.push(config)
-    return { data, status: 200, statusText: 'OK', headers: {}, config }
+    return { data, status, statusText: 'OK', headers: {}, config }
   }
   return calls
 }
@@ -67,5 +75,72 @@ describe('api/concepts (F-10)', () => {
 
     expect(calls[0].method).toBe('get')
     expect(calls[0].url).toBe('/concepts/57')
+  })
+})
+
+describe('api/concepts (F-11)', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
+  const review = {
+    id: 301,
+    rating: 5,
+    content: '좋아요',
+    authorId: 7,
+    authorNickname: '감자',
+    createdAt: '2026-12-02T21:14:03+09:00',
+  }
+
+  it('fetchReviews는 GET /api/concepts/{id}/reviews에 page·size를 보낸다', async () => {
+    const page = { items: [review], page: 2, size: 10, total: 11 }
+    const calls = capture(page)
+
+    await expect(fetchReviews(57, { page: 2, size: 10 })).resolves.toEqual(page)
+
+    expect(calls[0].method).toBe('get')
+    expect(calls[0].url).toBe('/concepts/57/reviews')
+    expect(calls[0].params).toEqual({ page: 2, size: 10 })
+  })
+
+  it('fetchMyReview는 GET .../reviews/me로 내 리뷰를 받고 204면 null이다', async () => {
+    const calls = capture(review)
+    await expect(fetchMyReview(57)).resolves.toEqual(review)
+    expect(calls[0].method).toBe('get')
+    expect(calls[0].url).toBe('/concepts/57/reviews/me')
+
+    capture('', 204)
+    await expect(fetchMyReview(57)).resolves.toBeNull()
+  })
+
+  it('createReview는 POST .../reviews에 rating·content를 보낸다', async () => {
+    const saved = { review, avgRating: 4.3, reviewCount: 13 }
+    const calls = capture(saved, 201)
+
+    await expect(createReview(57, { rating: 5, content: '좋아요' })).resolves.toEqual(saved)
+
+    expect(calls[0].method).toBe('post')
+    expect(calls[0].url).toBe('/concepts/57/reviews')
+    expect(JSON.parse(calls[0].data)).toEqual({ rating: 5, content: '좋아요' })
+  })
+
+  it('updateReview는 PUT .../reviews/me에 rating·content를 보낸다', async () => {
+    const saved = { review, avgRating: 4.5, reviewCount: 2 }
+    const calls = capture(saved)
+
+    await expect(updateReview(57, { rating: 5, content: '좋아요' })).resolves.toEqual(saved)
+
+    expect(calls[0].method).toBe('put')
+    expect(calls[0].url).toBe('/concepts/57/reviews/me')
+    expect(JSON.parse(calls[0].data)).toEqual({ rating: 5, content: '좋아요' })
+  })
+
+  it('deleteReview는 DELETE .../reviews/me로 바뀐 평점을 받는다', async () => {
+    const calls = capture({ avgRating: 4.2, reviewCount: 12 })
+
+    await expect(deleteReview(57)).resolves.toEqual({ avgRating: 4.2, reviewCount: 12 })
+
+    expect(calls[0].method).toBe('delete')
+    expect(calls[0].url).toBe('/concepts/57/reviews/me')
   })
 })
