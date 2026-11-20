@@ -1,6 +1,192 @@
 {
   "components" : {
     "schemas" : {
+      "AdminConceptDetailResponse" : {
+        "description" : "관리자 카드 상세",
+        "properties" : {
+          "avgRating" : {
+            "description" : "평균 별점 (0.0~5.0, 리뷰가 없으면 0.0)",
+            "example" : 0.0,
+            "format" : "double",
+            "type" : "number"
+          },
+          "body" : {
+            "description" : "본문 (Markdown 원문)",
+            "example" : "## 핵심\n- 엔티티에 버전 컬럼을 두고 UPDATE 조건에 넣는다.",
+            "type" : [ "string", "null" ]
+          },
+          "category" : {
+            "description" : "카테고리 (java, spring, web, security, mybatis, vue)",
+            "example" : "spring",
+            "type" : "string"
+          },
+          "createdAt" : {
+            "description" : "작성 시각",
+            "example" : "2026-11-20T14:20:00+09:00",
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "difficulty" : {
+            "description" : "난이도",
+            "enum" : [ "BEGINNER", "JUNIOR", "SENIOR" ],
+            "example" : "SENIOR",
+            "type" : "string"
+          },
+          "exampleCode" : {
+            "description" : "예제 코드",
+            "example" : "UPDATE orders SET status = ?, version = version + 1 WHERE id = ? AND version = ?",
+            "type" : [ "string", "null" ]
+          },
+          "id" : {
+            "description" : "카드 ID",
+            "example" : 91,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "linkedAnalysisCount" : {
+            "description" : "이 카드가 연결된 분석 수 (삭제된 분석은 연결이 지워져 빠진다)",
+            "example" : 2,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "name" : {
+            "description" : "개념 이름",
+            "example" : "낙관적 락",
+            "type" : "string"
+          },
+          "referenceUrl" : {
+            "description" : "공식 문서 출처 링크",
+            "example" : "https://docs.spring.io/spring-data/jpa/reference/jpa/locking.html",
+            "type" : [ "string", "null" ]
+          },
+          "reviewCount" : {
+            "description" : "리뷰 수",
+            "example" : 0,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "source" : {
+            "description" : "출처 (SEED 시드, AI 분석 초안, ADMIN 관리자 작성)",
+            "enum" : [ "SEED", "AI", "ADMIN" ],
+            "example" : "AI",
+            "type" : "string"
+          },
+          "status" : {
+            "description" : "상태 (DRAFT 검수 대기, PUBLISHED 공개, HIDDEN 숨김)",
+            "enum" : [ "DRAFT", "PUBLISHED", "HIDDEN" ],
+            "example" : "DRAFT",
+            "type" : "string"
+          },
+          "summary" : {
+            "description" : "한 줄 요약",
+            "example" : "충돌이 드물다고 보고 저장 시점에 버전으로 충돌을 확인하는 동시성 제어 방식이다.",
+            "type" : "string"
+          },
+          "updatedAt" : {
+            "description" : "수정 시각",
+            "example" : "2026-11-20T14:20:00+09:00",
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "wishCount" : {
+            "description" : "찜 수",
+            "example" : 0,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "avgRating", "body", "category", "createdAt", "difficulty", "exampleCode", "id", "linkedAnalysisCount", "name", "referenceUrl", "reviewCount", "source", "status", "summary", "updatedAt", "wishCount" ],
+        "type" : "object"
+      },
+      "AdminConceptStatusCountsResponse" : {
+        "description" : "상태별 카드 수",
+        "properties" : {
+          "DRAFT" : {
+            "description" : "검수 대기",
+            "example" : 3,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "HIDDEN" : {
+            "description" : "숨김",
+            "example" : 2,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "PUBLISHED" : {
+            "description" : "공개",
+            "example" : 85,
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "DRAFT", "HIDDEN", "PUBLISHED" ],
+        "type" : "object"
+      },
+      "AdminConceptSummaryResponse" : {
+        "description" : "관리자 카드 목록 항목",
+        "properties" : {
+          "avgRating" : {
+            "description" : "평균 별점 (0.0~5.0, 리뷰가 없으면 0.0)",
+            "example" : 0.0,
+            "format" : "double",
+            "type" : "number"
+          },
+          "category" : {
+            "description" : "카테고리 (java, spring, web, security, mybatis, vue)",
+            "example" : "spring",
+            "type" : "string"
+          },
+          "difficulty" : {
+            "description" : "난이도",
+            "enum" : [ "BEGINNER", "JUNIOR", "SENIOR" ],
+            "example" : "SENIOR",
+            "type" : "string"
+          },
+          "id" : {
+            "description" : "카드 ID",
+            "example" : 91,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "name" : {
+            "description" : "개념 이름",
+            "example" : "낙관적 락",
+            "type" : "string"
+          },
+          "source" : {
+            "description" : "출처 (SEED 시드, AI 분석 초안, ADMIN 관리자 작성)",
+            "enum" : [ "SEED", "AI", "ADMIN" ],
+            "example" : "AI",
+            "type" : "string"
+          },
+          "status" : {
+            "description" : "상태 (DRAFT 검수 대기, PUBLISHED 공개, HIDDEN 숨김)",
+            "enum" : [ "DRAFT", "PUBLISHED", "HIDDEN" ],
+            "example" : "DRAFT",
+            "type" : "string"
+          },
+          "summary" : {
+            "description" : "한 줄 요약",
+            "example" : "충돌이 드물다고 보고 저장 시점에 버전으로 충돌을 확인하는 동시성 제어 방식이다.",
+            "type" : "string"
+          },
+          "updatedAt" : {
+            "description" : "수정 시각",
+            "example" : "2026-11-20T14:20:00+09:00",
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "wishCount" : {
+            "description" : "찜 수",
+            "example" : 0,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "avgRating", "category", "difficulty", "id", "name", "source", "status", "summary", "updatedAt", "wishCount" ],
+        "type" : "object"
+      },
       "AnalysisConceptItem" : {
         "description" : "분석 코드에 쓰인 개념 카드와 위치",
         "properties" : {
@@ -1221,6 +1407,37 @@
         "required" : [ "createdAt", "email", "id", "level", "nickname", "role" ],
         "type" : "object"
       },
+      "PageResponseAdminConceptSummaryResponse" : {
+        "description" : "페이지 응답",
+        "properties" : {
+          "items" : {
+            "description" : "현재 페이지 항목",
+            "items" : {
+              "$ref" : "#/components/schemas/AdminConceptSummaryResponse"
+            },
+            "type" : "array"
+          },
+          "page" : {
+            "description" : "페이지 번호 (1부터)",
+            "example" : 1,
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "size" : {
+            "description" : "페이지 크기",
+            "example" : 20,
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "total" : {
+            "description" : "전체 항목 수",
+            "example" : 134,
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
       "PageResponseAnalysisSummaryResponse" : {
         "description" : "페이지 응답",
         "properties" : {
@@ -2254,6 +2471,226 @@
   },
   "openapi" : "3.1.0",
   "paths" : {
+    "/api/admin/concepts" : {
+      "get" : {
+        "description" : "상태와 상관없이 모든 카드를 상태·출처·키워드(이름·요약 부분 일치)로 거르고 수정일 최신순으로 페이지 조회한다.",
+        "operationId" : "list_6",
+        "parameters" : [ {
+          "description" : "상태 (없으면 전체)",
+          "example" : "DRAFT",
+          "in" : "query",
+          "name" : "status",
+          "required" : false,
+          "schema" : {
+            "description" : "상태 (없으면 전체)",
+            "enum" : [ "DRAFT", "PUBLISHED", "HIDDEN" ],
+            "example" : "DRAFT",
+            "pattern" : "DRAFT|PUBLISHED|HIDDEN",
+            "type" : "string"
+          }
+        }, {
+          "description" : "출처 (없으면 전체)",
+          "example" : "AI",
+          "in" : "query",
+          "name" : "source",
+          "required" : false,
+          "schema" : {
+            "description" : "출처 (없으면 전체)",
+            "enum" : [ "SEED", "AI", "ADMIN" ],
+            "example" : "AI",
+            "pattern" : "SEED|AI|ADMIN",
+            "type" : "string"
+          }
+        }, {
+          "description" : "이름·요약 부분 일치 검색어 (trim 후 50자 이하, 대소문자 무시)",
+          "example" : "락",
+          "in" : "query",
+          "name" : "keyword",
+          "required" : false,
+          "schema" : {
+            "description" : "이름·요약 부분 일치 검색어 (trim 후 50자 이하, 대소문자 무시)",
+            "example" : "락",
+            "maxLength" : 50,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        }, {
+          "description" : "페이지 번호 (1부터)",
+          "example" : 1,
+          "in" : "query",
+          "name" : "page",
+          "required" : false,
+          "schema" : {
+            "default" : 1,
+            "description" : "페이지 번호 (1부터)",
+            "example" : 1,
+            "format" : "int32",
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        }, {
+          "description" : "페이지 크기 (최대 100)",
+          "example" : 20,
+          "in" : "query",
+          "name" : "size",
+          "required" : false,
+          "schema" : {
+            "default" : 20,
+            "description" : "페이지 크기 (최대 100)",
+            "example" : 20,
+            "format" : "int32",
+            "maximum" : 100,
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PageResponseAdminConceptSummaryResponse"
+                }
+              }
+            },
+            "description" : "조회 성공"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "조건·페이지 값 오류 (COMMON_400, details에 필드별 사유)"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "토큰 없음·만료 (AUTH_401)"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "ADMIN이 아님 (AUTH_403)"
+          }
+        },
+        "summary" : "관리자 카드 목록",
+        "tags" : [ "관리자" ]
+      }
+    },
+    "/api/admin/concepts/status-counts" : {
+      "get" : {
+        "description" : "검수 대기·공개·숨김 카드 수. 카드가 없는 상태도 0으로 준다.",
+        "operationId" : "statusCounts",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AdminConceptStatusCountsResponse"
+                }
+              }
+            },
+            "description" : "조회 성공"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "토큰 없음·만료 (AUTH_401)"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "ADMIN이 아님 (AUTH_403)"
+          }
+        },
+        "summary" : "상태별 카드 수",
+        "tags" : [ "관리자" ]
+      }
+    },
+    "/api/admin/concepts/{id}" : {
+      "get" : {
+        "description" : "상태와 상관없이 카드의 모든 내용과 연결된 분석 수·리뷰 수를 조회한다.",
+        "operationId" : "detail_2",
+        "parameters" : [ {
+          "description" : "카드 ID",
+          "example" : 91,
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AdminConceptDetailResponse"
+                }
+              }
+            },
+            "description" : "조회 성공"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "토큰 없음·만료 (AUTH_401)"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "ADMIN이 아님 (AUTH_403)"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "없는 카드 (CONCEPT_404)"
+          }
+        },
+        "summary" : "관리자 카드 상세",
+        "tags" : [ "관리자" ]
+      }
+    },
     "/api/analyses" : {
       "get" : {
         "description" : "삭제하지 않은 내 분석을 요청 시각 최신순으로 준다.",
@@ -5282,6 +5719,9 @@
   }, {
     "description" : "공개 개념 카드 목록·검색·상세·리뷰·찜",
     "name" : "개념 카드"
+  }, {
+    "description" : "관리자 전용 기능 (개념 카드 검수·관리)",
+    "name" : "관리자"
   }, {
     "description" : "분석한 코드로 만든 객관식 퀴즈 조회, 풀이 제출·채점",
     "name" : "퀴즈"

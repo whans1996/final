@@ -214,7 +214,7 @@ ALTER TABLE concepts
 
 `/implement`가 진행하며 체크한다.
 
-- [ ] 브랜치 `feature/F-13-admin-concepts`
+- [x] 브랜치 `feature/F-13-admin-concepts`
 - [ ] Flyway `V7__concept_source_admin.sql` + `R__seed_concepts.sql` status 보존
 - [ ] AC별 실패 테스트 작성 (red 확인)
 - [ ] BE 구현 (green)
