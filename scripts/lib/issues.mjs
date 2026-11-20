@@ -8,24 +8,39 @@ export const COMMON_AREA = 'area:common';
 export const STALE_DAYS = 7;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-/** 열린 follow-up 이슈 목록. gh가 없거나 느리면 null (세션 시작을 막지 않도록 비동기·제한 시간) */
-export function followUpIssues({ timeout = 3000 } = {}) {
+/**
+ * 열린 follow-up 이슈 목록 → { ok: true, issues } | { ok: false, reason }.
+ * 세션 시작을 막지 않도록 비동기·제한 시간. 실패를 조용히 삼키지 않고 이유를 돌려준다 (#67: 이슈 16개가 경고 없이 빠졌다).
+ * 주의: 띄운 뒤 동기 작업으로 이벤트 루프를 막으면 제한 시간 타이머가 먼저 터져 출력이 버려진다 → 동기 git이 끝난 뒤 부른다.
+ */
+export function followUpIssues({ timeout = 4000, exec = execFile } = {}) {
   return new Promise((resolve) => {
-    execFile(
+    exec(
       'gh',
       ['issue', 'list', '--label', 'follow-up', '--state', 'open', '--limit', '50', '--json', 'number,title,labels,assignees,createdAt'],
       { cwd: ROOT, encoding: 'utf8', windowsHide: true, timeout },
-      (err, stdout) => {
-        if (err) return resolve(null);
+      (err, stdout, stderr) => {
+        if (err?.code === 'ENOENT') return resolve({ ok: false, reason: 'gh 없음' });
+        if (err?.killed) return resolve({ ok: false, reason: `${timeout / 1000}초 안에 응답 없음` });
+        if (err) {
+          const reason = `gh 실패: ${String(stderr || err.message).trim().split('\n')[0]}`;
+          return resolve({ ok: false, reason: reason.length > 80 ? `${reason.slice(0, 79)}…` : reason });
+        }
+        if (!String(stdout ?? '').trim()) return resolve({ ok: false, reason: '빈 응답' });
         try {
           const issues = JSON.parse(stdout);
-          resolve(Array.isArray(issues) ? issues : null);
+          resolve(Array.isArray(issues) ? { ok: true, issues } : { ok: false, reason: '응답 형식 오류' });
         } catch {
-          resolve(null);
+          resolve({ ok: false, reason: '응답 형식 오류' });
         }
       },
     );
   });
+}
+
+/** 이슈 조회 실패 줄 (배너·모델 컨텍스트 공용). 빠진 줄과 "이슈 없음"을 구분하려고 실패하면 항상 낸다 */
+export function issueFailureLine(reason) {
+  return `⚠️ 이슈 조회 실패 (${reason}) → gh issue list --label follow-up`;
 }
 
 /**

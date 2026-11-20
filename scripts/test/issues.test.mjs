@@ -1,7 +1,43 @@
 // follow-up 이슈 분류·배너·PR 본문의 닫는 키워드 (gh 호출 없는 부분)
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
-import { closingRefs, issueBannerLine, issueContext, summarizeIssues } from '../lib/issues.mjs';
+import { closingRefs, followUpIssues, issueBannerLine, issueContext, issueFailureLine, summarizeIssues } from '../lib/issues.mjs';
+
+// execFile 대역: (file, args, opts, cb) → cb(err, stdout)
+const fakeExec = (err, stdout = '') => (file, args, opts, cb) => cb(err, stdout, '');
+
+test('이슈 조회는 성공·실패를 null이 아닌 {ok, issues, reason}으로 알린다 (#67)', async () => {
+  assert.deepEqual(await followUpIssues({ exec: fakeExec(null, '[{"number":1}]') }), { ok: true, issues: [{ number: 1 }] });
+  assert.deepEqual(await followUpIssues({ exec: fakeExec(Object.assign(new Error('x'), { code: 'ENOENT' })) }), { ok: false, reason: 'gh 없음' });
+  assert.deepEqual(await followUpIssues({ exec: fakeExec(Object.assign(new Error('x'), { killed: true }), ''), timeout: 4000 }), {
+    ok: false,
+    reason: '4초 안에 응답 없음',
+  });
+  const failed = await followUpIssues({ exec: (f, a, o, cb) => cb(Object.assign(new Error('x'), { code: 1 }), '', 'HTTP 401: Bad credentials\nmore') });
+  assert.deepEqual(failed, { ok: false, reason: 'gh 실패: HTTP 401: Bad credentials' });
+  // gh가 응답 본문까지 한 줄에 붙여 내는 경우 배너가 넘치지 않게 자른다
+  const long = await followUpIssues({ exec: (f, a, o, cb) => cb(Object.assign(new Error('x'), { code: 1 }), '', `401 body: "${'x'.repeat(200)}"`) });
+  assert.equal(long.reason.length, 80);
+  assert.ok(long.reason.endsWith('…'));
+  // 이벤트 루프가 막혀 제한 시간 타이머가 먼저 터지면 종료 코드 0에 빈 출력이 온다 (11-20 재현)
+  assert.deepEqual(await followUpIssues({ exec: fakeExec(null, '') }), { ok: false, reason: '빈 응답' });
+  assert.deepEqual(await followUpIssues({ exec: fakeExec(null, '{"a":1}') }), { ok: false, reason: '응답 형식 오류' });
+  assert.deepEqual(await followUpIssues({ exec: fakeExec(null, 'not json') }), { ok: false, reason: '응답 형식 오류' });
+});
+
+test('이슈 조회 실패 줄은 이유와 직접 확인할 명령을 담는다', () => {
+  assert.equal(issueFailureLine('빈 응답'), '⚠️ 이슈 조회 실패 (빈 응답) → gh issue list --label follow-up');
+});
+
+test('session-start는 동기 git(fetch·autoSync)이 끝난 뒤 gh·docker 조회를 시작한다 (#67)', () => {
+  // 동기 git이 이벤트 루프를 막는 동안 제한 시간 타이머가 터져 결과가 사라진다
+  const src = readFileSync(new URL('../../.claude/hooks/session-start.mjs', import.meta.url), 'utf8');
+  const syncAt = src.indexOf('autoSync()');
+  assert.ok(syncAt > 0);
+  assert.ok(src.indexOf('followUpIssues(') > syncAt, 'followUpIssues는 autoSync 뒤에 시작');
+  assert.ok(src.indexOf('runChecks(') > syncAt, 'runChecks는 autoSync 뒤에 시작');
+});
 
 const NOW = Date.parse('2026-11-19T12:00:00Z');
 const issue = (number, labels, { days = 1, assignees = [], title = `이슈 ${number}` } = {}) => ({

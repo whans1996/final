@@ -27,7 +27,7 @@ SessionStart hook이 내 NOW 파일, 상대 작업 요약, git 상태를 이미 
    - 내 NOW 파일 (pull 후 바뀌었을 수 있으니 다시 읽는다). 상대 NOW 파일은 hook 요약 두 줄로 충분하다.
    - `docs/작업로그.md`의 **내 마지막 항목**(hook이 주입)
    - 내 NOW 파일의 현재 기능 spec(`docs/specs/F-xx-*.md`)에서 수용 기준 표, 결정 필요, 구현 체크리스트
-   - 열린 follow-up 이슈 (hook이 "열린 follow-up 이슈" 섹션에 주입. 없으면 이슈 없음이거나 gh 실패). 분류 필요(area 라벨 없음)가 있으면 라벨·담당자 안을 보여 주고 사용자 확인 뒤 `gh issue edit <n> --add-label area:<..> --add-assignee <영역 오너>`로 붙인다. 지금 기능과 관련된 내 이슈는 이번 작업에 흡수할지 묻는다.
+   - 열린 follow-up 이슈 (hook이 "열린 follow-up 이슈" 섹션에 주입. 섹션이 없으면 볼 이슈가 없는 것이고, "⚠️ 이슈 조회 실패"면 그 줄의 `gh issue list --label follow-up`으로 직접 확인한다. 실패를 "이슈 없음"으로 보고하지 않는다). 분류 필요(area 라벨 없음)가 있으면 라벨·담당자 안을 보여 주고 사용자 확인 뒤 `gh issue edit <n> --add-label area:<..> --add-assignee <영역 오너>`로 붙인다. 지금 기능과 관련된 내 이슈는 이번 작업에 흡수할지 묻는다.
    - 마지막 커밋이 `wip(...)` 이면 `git show --stat HEAD`로 무엇이 중간 상태인지 확인한다.
    - **NOW 파일 본문이 마지막 커밋보다 오래되었으면**(갱신 줄에 `자동 handoff, 본문 미갱신`, 갑작스러운 종료) `git diff HEAD~3 --stat` 등으로 실제 진행을 추정하고, NOW 파일을 믿지 말아야 할 부분을 표시한다.
 3. **검증 상태**
