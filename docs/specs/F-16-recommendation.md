@@ -232,9 +232,9 @@ ALTER TABLE recommendation_reasons
 - [x] BE 구현 (green): ConceptMapper F-16 블록, recommendation 패키지, 프롬프트 3종, mock fixture·`MockLlmClient`
 - [x] FE 구현 (green): api, route·nav·`redirectTarget`, SC-04, 추천 컴포넌트, SC-11 빈 상태, CODEOWNERS
 - [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
-- [ ] contract-checker 통과
-- [ ] ui-verifier 통과 (데스크톱·모바일)
+- [x] contract-checker 통과 (불일치 0)
+- [x] ui-verifier 통과 (데스크톱·모바일)
 - [ ] reviewer 지적 사항 반영
-- [ ] 산출물 반영: 화면 설계서 SC-04 절·스크린샷과 SC-11 빈 상태, ERD `recommendation_reasons.signal_key`, 유스케이스(추천·대시보드), AI 활용 문서(08)에 추천 이유 생성
+- [x] 산출물 반영: 화면 설계서 SC-04 절·스크린샷과 SC-11 빈 상태, ERD `recommendation_reasons.signal_key`, 유스케이스(추천·대시보드), AI 활용 문서(08)에 추천 이유 생성
 - [ ] PR CI 초록 (공통 파일 변경 @JoonseobKim 멘션)
 - [ ] 상태 DONE (PR 머지 후)

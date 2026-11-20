@@ -4,22 +4,23 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
 
-갱신: 2026-11-20 13:58 · 작업자: whans1996@naver.com · PC: dh-home · 브랜치: feature/F-16-recommendation
+갱신: 2026-11-20 14:04 · 작업자: whans1996@naver.com · PC: dh-home · 브랜치: feature/F-16-recommendation
 
 ## 현재 기능
 
-F-16 맞춤 개념 카드 추천 — spec `docs/specs/F-16-recommendation.md` APPROVED, `/implement` 진행 중. 이번 세션 목표: BE AC1~AC7 → FE AC8~AC10
+F-16 맞춤 개념 카드 추천 — spec `docs/specs/F-16-recommendation.md` APPROVED, **AC1~AC10 구현·테스트 green**, `/pr-review` 전
 
 ## 진행
 
-- ✅ BE AC1~AC7 (bf9fa54), FE AC8~AC10: api·RecommendationCard·List·DashboardView·SC-11 빈 상태 추천·`/dashboard` route·`redirectTarget` 기본 `/dashboard`, verify fe 통과(320) → 커밋
-- ⏳ 기능 마무리: contract-checker, ui-verifier(SC-04 데스크톱·375px, SC-11 빈 상태), 산출물 반영
+- ✅ BE AC1~AC7 (bf9fa54), FE AC8~AC10 (cfcb696), verify be·fe 통과
+- ✅ contract-checker 불일치 0, ui-verifier 통과(SC-04·SC-11 빈 상태 데스크톱·375px, 로그인 후 `/dashboard`, 기간 이동 시 추천 재호출 없음), 스크린샷 4장
+- ✅ 산출물 01·02(UC32)·03(signal_key)·06(SC-04 절 신설, SC-11)·08 반영, mock fixture를 근거와 무관한 일반 문장으로 교체
 
 ## 바로 다음 할 일
 
-1. `contract-checker`로 spec 3절 ↔ `docs/api/openapi.json` ↔ `frontend/src/api/recommendations.js` 확인
-2. BE(local)·FE dev 띄우고 `ui-verifier`: `/dashboard`, `/review-plans`(빈 상태) 데스크톱·375px
-3. 산출물: 화면 설계서 SC-04·SC-11, ERD `recommendation_reasons.signal_key`, 유스케이스, 08 AI 활용 → `/pr-review`
+1. `/clear` 후 `/pr-review` (Opus/high): verifier → reviewer → PR. 직전에 `git rev-list --count HEAD..origin/develop` 확인 (B PR #61 F-17이 열려 있음, 먼저 머지되면 openapi.json 태그 순서 재생성)
+2. PR 본문: 공통 파일(ConceptMapper·XML·ConceptQueryService, router/index.js, V6, CODEOWNERS) @JoonseobKim 멘션, 실제 LLM 품질은 사용자에게 prompt-evaluator(RECOMMEND) 제안
+3. 참고: SC-04 스크린샷의 이유 문장은 fixture 교체 전 문장이다 (레이아웃은 같음)
 
 ## 막힌 점 / 결정 필요
 

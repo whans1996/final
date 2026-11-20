@@ -37,9 +37,9 @@ import org.springframework.test.web.servlet.ResultActions;
 class RecommendationApiTest extends RecommendationTestSupport {
 
     /** main {@code llm-fixtures/recommend.json}의 첫 이유 (Mock은 프롬프트 카드 순서대로 붙인다). */
-    static final String FIXTURE_FIRST = "지금 다시 보면 내 코드에서 이 개념이 어떻게 쓰였는지 더 분명히 보일 거예요.";
+    static final String FIXTURE_FIRST = "지금 공부해 두면 AI가 쓴 코드에서 이 개념을 만났을 때 바로 알아볼 수 있어요.";
 
-    static final String FIXTURE_SECOND = "헷갈렸던 부분을 정리해 두면 다음 분석에서 같은 실수를 줄일 수 있어요.";
+    static final String FIXTURE_SECOND = "핵심만 짧게 정리된 카드라 다음 분석 전에 가볍게 읽어 두기 좋아요.";
 
     @MockitoSpyBean LlmClient llmClient;
 
