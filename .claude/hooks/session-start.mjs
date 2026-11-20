@@ -103,7 +103,8 @@ const {
   loadPcs = () => ({}),
 } = envCheck;
 const pc = currentPc();
-const rows = await checksP;
+// 둘 다 여기서 받는다. 이슈를 아래 동기 git(상대 NOW·작업 파일·peer 상태) 뒤에 받으면 같은 경합으로 사라진다 (reviewer)
+const [rows, issuesRes] = await Promise.all([checksP, issuesP]);
 const env = [pc.id ? `- PC: ${pc.label} (${pc.id}) · hostname ${pc.hostname}` : `- PC: 미등록 (hostname ${pc.hostname})`];
 const bad = rows.filter((r) => r.status !== 'ok');
 env.push(
@@ -170,7 +171,7 @@ let issueSummary = null;
 let issueList = null;
 let issueFailure = null;
 try {
-  const res = me ? await issuesP : null;
+  const res = me ? issuesRes : null;
   if (res && !res.ok) issueFailure = issueFailureLine(res.reason);
   issueSummary = res?.ok ? summarizeIssues(res.issues, { key: me, github: pc.github }) : null;
   issueList = issueSummary ? issueContext(issueSummary) : null;

@@ -54,12 +54,15 @@ export function saveFullCheck(pcId, rows) {
 
 /**
  * 외부 명령 실행 → { ok, out, timedOut }. timedOut이면 "꺼짐·로그인 안 됨"이 아니라 "응답 없음"으로 알린다.
- * 주의: 띄운 뒤 동기 작업으로 이벤트 루프를 막으면 타이머가 먼저 터져 출력이 버려진 채 ok가 될 수 있다 (#67) → 동기 git이 끝난 뒤 부른다.
+ * 주의: 띄운 뒤 동기 작업으로 이벤트 루프를 막으면 타이머가 먼저 터져 출력이 버려진 채 err 없이 끝난다 (#67) → 동기 git이 끝난 뒤 부른다.
+ * 그래도 콜백이 제한 시간 뒤에 오면 출력을 믿을 수 없으므로 시간 초과로 본다 (거짓 ✅ 방지, reviewer).
  */
 export function run(command, timeout) {
+  const start = Date.now();
   return new Promise((resolve) => {
     exec(command, { encoding: 'utf8', windowsHide: true, timeout }, (err, stdout, stderr) => {
-      resolve({ ok: !err, out: ((stdout || '') + (stderr || '')).trim(), timedOut: !!err?.killed });
+      const timedOut = !!err?.killed || (!!timeout && Date.now() - start >= timeout);
+      resolve({ ok: !err && !timedOut, out: ((stdout || '') + (stderr || '')).trim(), timedOut });
     });
   });
 }

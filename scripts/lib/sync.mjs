@@ -147,8 +147,8 @@ function syncLocalRefs(cwd) {
   const done = [];
   const lines = [];
   for (const { name, behind } of ff) {
-    // '+' 없는 refspec이라 fast-forward가 아니면 git이 거부한다
-    const r = git(['fetch', '--quiet', '.', `refs/remotes/origin/${name}:refs/heads/${name}`], { cwd, timeout: MERGE_TIMEOUT });
+    // '+' 없는 refspec이라 fast-forward가 아니면 git이 거부한다. 사람이 받아 둔 FETCH_HEAD는 덮지 않는다
+    const r = git(['fetch', '--quiet', '--no-write-fetch-head', '.', `refs/remotes/origin/${name}:refs/heads/${name}`], { cwd, timeout: MERGE_TIMEOUT });
     if (r.ok) done.push(`${name} +${behind}`);
     else lines.push(`- ⚠️ 로컬 ${name}을 origin/${name}으로 최신화하지 못했습니다 (${firstLine(r)}).`);
   }

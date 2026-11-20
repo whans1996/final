@@ -37,6 +37,12 @@ test('session-start는 동기 git(fetch·autoSync)이 끝난 뒤 gh·docker 조�
   assert.ok(syncAt > 0);
   assert.ok(src.indexOf('followUpIssues(') > syncAt, 'followUpIssues는 autoSync 뒤에 시작');
   assert.ok(src.indexOf('runChecks(') > syncAt, 'runChecks는 autoSync 뒤에 시작');
+  // 받기 전에 다른 동기 git(상대 NOW·작업 파일·peer 상태)을 하면 같은 경합이 생긴다 (reviewer)
+  const awaitAt = src.indexOf('await Promise.all([checksP, issuesP])');
+  assert.ok(awaitAt > 0, '환경 점검과 이슈 조회를 함께 받는다');
+  for (const sync of ['latestPeerNow(', 'workFilesNewerThanNow(', 'writePeerState(']) {
+    assert.ok(src.indexOf(sync) > awaitAt, `${sync}은 gh·docker 결과를 받은 뒤에 한다`);
+  }
 });
 
 const NOW = Date.parse('2026-11-19T12:00:00Z');

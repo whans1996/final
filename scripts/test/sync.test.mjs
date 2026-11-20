@@ -1,7 +1,7 @@
 // 자동 동기화: 할 일 고르기(순수 함수)와 임시 저장소에서의 실제 병합·충돌·보류
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, test } from 'node:test';
@@ -224,11 +224,14 @@ test('상대가 develop·main에 머지하면 체크아웃 안 된 로컬 develo
   // 작업 중인 파일: feature 병합은 미루지만 로컬 develop·main은 작업 트리와 무관하므로 갱신한다
   writeFileSync(join(me, 'shared.txt'), 'wip\n');
   sh(me, 'fetch', '-q');
+  const fetchHead = readFileSync(join(me, '.git', 'FETCH_HEAD'), 'utf8');
 
   const lines = autoSync({ cwd: me });
 
   assert.match(lines[0], /⏸️/);
   assert.ok(lines.some((l) => /^- 📥 로컬 develop \+1 · main \+1/.test(l)), lines.join('\n'));
+  // 로컬 갱신(git fetch .)이 사람이 받은 FETCH_HEAD를 덮지 않는다 (reviewer)
+  assert.equal(readFileSync(join(me, '.git', 'FETCH_HEAD'), 'utf8'), fetchHead);
   assert.equal(sh(me, 'rev-parse', 'develop'), sh(me, 'rev-parse', 'origin/develop'));
   assert.equal(sh(me, 'rev-parse', 'main'), sh(me, 'rev-parse', 'origin/main'));
   assert.equal(sh(me, 'rev-parse', '--abbrev-ref', 'HEAD'), 'feature/F-09-x');
