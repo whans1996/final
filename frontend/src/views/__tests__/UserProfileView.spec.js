@@ -4,11 +4,13 @@ import App from '@/App.vue'
 import UserProfileView from '@/views/UserProfileView.vue'
 import * as usersApi from '@/api/users'
 import * as conceptsApi from '@/api/concepts'
+import * as followsApi from '@/api/follows'
 import { useAuthStore } from '@/stores/auth'
 import { apiError, mountAt } from './viewTestUtils'
 
 vi.mock('@/api/users')
 vi.mock('@/api/concepts')
+vi.mock('@/api/follows')
 
 const PROFILE = {
   id: 3,
@@ -28,6 +30,12 @@ function login(id) {
 describe('UserProfileView (F-03 AC9)', () => {
   beforeEach(() => {
     vi.resetAllMocks()
+    // F-04 팔로우 영역 기본값
+    followsApi.fetchFollowStatus.mockResolvedValue({
+      following: false,
+      followerCount: 0,
+      followingCount: 0,
+    })
     // F-12 찜 절 기본값 (0건)
     conceptsApi.fetchUserWishes.mockResolvedValue({ items: [], page: 1, size: 12, total: 0 })
   })
@@ -174,6 +182,12 @@ describe('UserProfileView (F-03 AC9)', () => {
 describe('UserProfileView 찜한 카드 절 (F-12 AC15)', () => {
   beforeEach(() => {
     vi.resetAllMocks()
+    // F-04 팔로우 영역 기본값
+    followsApi.fetchFollowStatus.mockResolvedValue({
+      following: false,
+      followerCount: 0,
+      followingCount: 0,
+    })
     conceptsApi.fetchUserWishes.mockResolvedValue({ items: [], page: 1, size: 12, total: 4 })
     usersApi.fetchUserStats.mockResolvedValue({
       analysisCount: 0,
@@ -202,5 +216,60 @@ describe('UserProfileView 찜한 카드 절 (F-12 AC15)', () => {
 
     expect(wrapper.find('[data-section="wishes"]').exists()).toBe(false)
     expect(conceptsApi.fetchUserWishes).not.toHaveBeenCalled()
+  })
+})
+
+describe('UserProfileView 팔로우 영역 (F-04 AC9)', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+    conceptsApi.fetchUserWishes.mockResolvedValue({ items: [], page: 1, size: 12, total: 0 })
+    usersApi.fetchUser.mockResolvedValue(PROFILE)
+    usersApi.fetchUserStats.mockResolvedValue({
+      analysisCount: 0,
+      learnedConceptCount: 0,
+      quizAccuracy: null,
+    })
+    followsApi.fetchFollowStatus.mockResolvedValue({
+      following: false,
+      followerCount: 12,
+      followingCount: 3,
+    })
+  })
+
+  it('AC9 남의 프로필이면 닉네임 아래에 수와 팔로우 버튼이 보인다', async () => {
+    const { wrapper } = await mountAt(UserProfileView, '/users/3', {
+      beforeNavigate: () => login(9),
+    })
+    await flushPromises()
+
+    expect(followsApi.fetchFollowStatus).toHaveBeenCalledWith(3)
+    const follow = wrapper.find('.profile-head [data-section="follow"]')
+    expect(follow.find('[data-link="followers"]').text()).toBe('팔로워 12')
+    expect(follow.find('[data-link="followings"]').text()).toBe('팔로잉 3')
+    expect(follow.find('[data-action="follow"]').text()).toBe('팔로우')
+  })
+
+  it('AC9 내 프로필이면 수만 보이고 팔로우 버튼은 없다', async () => {
+    const { wrapper } = await mountAt(UserProfileView, '/users/3', {
+      beforeNavigate: () => login(3),
+    })
+    await flushPromises()
+
+    expect(wrapper.find('[data-link="followers"]').exists()).toBe(true)
+    expect(wrapper.find('[data-action="follow"]').exists()).toBe(false)
+  })
+
+  it('AC9 팔로우 영역만 실패하면 프로필은 그대로 보인다', async () => {
+    followsApi.fetchFollowStatus.mockRejectedValue(
+      apiError(500, { code: 'COMMON_500', message: '서버에서 오류가 발생했습니다.' }),
+    )
+
+    const { wrapper } = await mountAt(UserProfileView, '/users/3')
+    await flushPromises()
+
+    expect(wrapper.find('h1').text()).toBe('코딩초보')
+    expect(wrapper.find('[data-section="follow"] [role="alert"]').text()).toBe(
+      '서버에서 오류가 발생했습니다.',
+    )
   })
 })

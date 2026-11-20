@@ -1,5 +1,5 @@
 <script setup>
-// SC-18 프로필 (F-03 AC9, F-12 찜한 카드 절 AC15). 누구나 볼 수 있다. 팔로우·참여 챌린지 영역은 F-04·F-25에서 더한다.
+// SC-18 프로필 (F-03 AC9, F-12 찜한 카드 절 AC15, F-04 팔로우 영역 AC9). 누구나 볼 수 있다. 참여 챌린지 영역은 F-25에서 더한다.
 import { computed, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
@@ -7,6 +7,7 @@ import { fetchUser, fetchUserStats } from '@/api/users'
 import { errorCode, errorMessage } from '@/api/http'
 import { LEVELS } from '@/utils/authValidation'
 import UserWishes from '@/components/concept/UserWishes.vue'
+import FollowSummary from '@/components/follow/FollowSummary.vue'
 
 const route = useRoute()
 const auth = useAuthStore()
@@ -71,6 +72,7 @@ watch(userId, load, { immediate: true })
           <h1>{{ profile.nickname }}</h1>
           <span class="level-badge">{{ levelLabel }}</span>
         </div>
+        <FollowSummary :user-id="userId" :is-me="isMe" />
         <p class="joined">{{ joinedAt }} 가입</p>
         <p v-if="profile.bio" class="bio">{{ profile.bio }}</p>
         <RouterLink v-if="isMe" :to="{ name: 'my-settings' }" class="edit-link">

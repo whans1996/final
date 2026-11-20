@@ -71,7 +71,8 @@ describe('WishButton (F-12 AC12~AC14)', () => {
     await flushPromises()
 
     expect(conceptsApi.wishConcept).not.toHaveBeenCalled()
-    expect(router.currentRoute.value.path).toBe('/login')
+    // 로그인 화면 컴포넌트를 지연 로드하므로 이동이 끝날 때까지 기다린다
+    await vi.waitFor(() => expect(router.currentRoute.value.path).toBe('/login'))
     expect(router.currentRoute.value.query.redirect).toBe('/concepts/57')
   })
 

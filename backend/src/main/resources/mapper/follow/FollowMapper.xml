@@ -2,6 +2,50 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.vibenote.follow.FollowMapper">
 
+    <insert id="insertIgnore">
+        INSERT IGNORE INTO follows (follower_id, following_id, created_at)
+        VALUES (#{followerId}, #{followingId}, #{createdAt})
+    </insert>
+
+    <delete id="delete">
+        DELETE FROM follows WHERE follower_id = #{followerId} AND following_id = #{followingId}
+    </delete>
+
+    <select id="exists" resultType="boolean">
+        SELECT EXISTS (
+            SELECT 1 FROM follows WHERE follower_id = #{followerId} AND following_id = #{followingId}
+        )
+    </select>
+
+    <!-- 탈퇴 시 follows를 양방향으로 지우지만(F-03), 목록 total과 같도록 활성 회원만 센다 -->
+    <select id="countFollowers" resultType="long">
+        SELECT COUNT(*)
+        FROM follows f JOIN users u ON u.id = f.follower_id AND u.status = 'ACTIVE'
+        WHERE f.following_id = #{userId}
+    </select>
+
+    <select id="countFollowings" resultType="long">
+        SELECT COUNT(*)
+        FROM follows f JOIN users u ON u.id = f.following_id AND u.status = 'ACTIVE'
+        WHERE f.follower_id = #{userId}
+    </select>
+
+    <select id="findFollowers" resultType="com.vibenote.follow.domain.FollowUser">
+        SELECT u.id, u.nickname, u.level, f.created_at AS followed_at
+        FROM follows f JOIN users u ON u.id = f.follower_id AND u.status = 'ACTIVE'
+        WHERE f.following_id = #{userId}
+        ORDER BY f.created_at DESC, u.id DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="findFollowings" resultType="com.vibenote.follow.domain.FollowUser">
+        SELECT u.id, u.nickname, u.level, f.created_at AS followed_at
+        FROM follows f JOIN users u ON u.id = f.following_id AND u.status = 'ACTIVE'
+        WHERE f.follower_id = #{userId}
+        ORDER BY f.created_at DESC, u.id DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
     <delete id="deleteAllOf">
         DELETE FROM follows WHERE follower_id = #{userId} OR following_id = #{userId}
     </delete>
