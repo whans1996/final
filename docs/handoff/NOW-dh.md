@@ -4,34 +4,33 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
 
-갱신: 2026-11-20 11:28 · 작업자: whans1996@naver.com · PC: dh-home · 브랜치: feature/F-15-review-plan
+갱신: 2026-11-20 12:30 · 작업자: whans1996@naver.com · PC: dh-home · 브랜치: feature/F-15-review-plan
 
 ## 현재 기능
 
-F-15 복습 계획 — spec `docs/specs/F-15-review-plan.md` APPROVED, **AC1~AC12 구현·테스트 green**, 마무리 검증 전
+F-15 복습 계획 — spec APPROVED, AC1~AC12 green, **PR #59 열림 (develop 대상), CI·Codex 루프 진행 중**
 
 ## 진행
 
-- ✅ BE AC1~AC8: `ReviewPlanController`(GET·POST·PATCH·DELETE `/api/review-plans`), `ReviewPlanService.list·addManual·changeStatus·delete·addWish`, Mapper 6개 쿼리, DTO 4개, ErrorCode `REVIEW_PLAN_404/409`. `ReviewPlanApiTest` 20 · `ReviewPlanServiceTest` 5 · Concurrency 1 green. openapi.json 재생성
-- ✅ FE AC9~AC12: `api/reviewPlans.js`, `routes/reviewplan.js`(nav 복습 30), `views/reviewplan/ReviewPlanView.vue`, `components/reviewplan/ReviewPlanItem·ReviewPlanAddButton.vue`, SC-10 버튼 한 줄, SC-08 링크. 관련 vitest 8파일 67개 green
-- ✅ CODEOWNERS 4줄, conventions 3절 REVIEW_PLAN 코드
-- 참고: AC8은 `addWrongAnswers` 리팩터링 때 `addWish`를 먼저 써서 red 없이 통과, FE 테스트는 구현과 함께 작성(red 미확인)
+- ✅ /pr-review: verify all 통과(BE 489·FE 260), contract-checker 불일치 0, ui-verifier `/review-plans`·`/concepts/1` 데스크톱·375px 통과 → `docs/산출물/screens/SC-11-review-plan-*.png`
+- ✅ reviewer: 반드시 수정 0, 권장 3건 반영 `3363727` (다시 시도가 실패한 기간 유지, `updateStatus`에 user_id, 테스트 상수 PLAN_DATE), '무시 가능' 10건 직접 확인(조치 불필요, PR 본문 기록)
+- ✅ PR #58(F-11) 먼저 머지 → `git merge origin/develop`(06 화면설계서 SC-10 충돌 해결 `2d409d2`), openapi.json 태그 순서 재생성 `cceb16c`
+- Codex: f747ef8 COMPLETE(지적 없음). head cceb16c 재리뷰 대기 중
 
 ## 바로 다음 할 일
 
-1. (완료) 커밋 6dd1841(BE)·b31a233(FE) push됨. FE 커밋 때 App.spec 헤더 메뉴 기대값에 복습 추가
-2. `contract-checker`로 spec 3절 ↔ openapi.json ↔ `src/api/reviewPlans.js` 비교
-3. BE(local)·FE dev 띄우고 `ui-verifier`: `/review-plans` 데스크톱·375px, `/concepts/{id}` 복습에 추가 버튼
-4. 산출물 글은 반영함(화면 설계서 SC-11 절·SC-10·SC-08, UC31, ERD). ui-verifier 스크린샷을 `docs/산출물/screens/SC-11-*.png`로 넣고 SC-11 절에 표 추가 → `/pr-review`
+1. `node scripts/codex-review.mjs 59 --request --wait --status` 결과 확인 (COMPLETE면 여기 `Codex ✅ <sha>`, FINDINGS면 `/pr-review` 8단계)
+2. `gh pr checks 59` 초록 확인
+3. 둘 다 끝나면 `docs(F-15): 완료 표시 (spec DONE)` 커밋: spec 헤더 `DONE (PR #59)`, 체크리스트 "PR CI 초록"·"상태 DONE" 체크 → push → GitHub에서 Squash and merge (머지 전 develop 확인)
 
 ## 막힌 점 / 결정 필요
 
 - 사람: 이슈 #16, 노션 팀원 초대, 고아 폴더 `../final-harness` 삭제 여부
 - F-12(B) 연동은 이슈 #57 → B의 `/spec F-12`가 `addWish` 호출. F-15 PR 머지가 선행
-- 이 PC에서 BE 테스트가 매우 느림(Spring 컨텍스트 기동 447초 사례). Gradle과 vitest를 동시에 돌리지 않는다
+- 이 세션에서 프로젝트 서브에이전트(verifier 등)가 등록되지 않음 → general-purpose에 `.claude/agents/*.md`를 따르게 해서 대신함. Claude Code 재시작으로 확인
+- ui-check 로그인 상태는 `.harness/auth-quiz.json`이 유효(`auth.json`은 refresh 만료)
 
 ## 주의
 
-- 공통 파일 변경 → PR에 @JoonseobKim 멘션: `views/concept/ConceptDetailView.vue`(요약 아래 버튼 한 줄·import), `router/index.js`(import 한 줄), `router/__tests__/routes.spec.js`, `utils/__tests__/navItems.spec.js`, `ErrorCode.java`(REVIEW_PLAN 블록), `openapi.json`, `.github/CODEOWNERS`
-- B PR #58(F-11)이 `ConceptDetailView.vue`를 고치는 중 → 머지 순서에 따라 충돌 확인
+- B는 F-17(커뮤니티) 진행 중, SC-10에 글쓰기 버튼을 추가함 → 내 PR보다 늦게 머지되면 B가 06·ConceptDetailView 충돌 확인
 - 리뷰 지적은 '무시 가능'도 직접 확인한다 (11-20 사용자 지시)
