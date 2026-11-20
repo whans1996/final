@@ -4,7 +4,7 @@
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { PROTECTED_BRANCHES, ROOT, git, mdSection, nowRelPath, readText } from './common.mjs';
+import { PROTECTED_BRANCHES, ROOT, git, mdSection, nowRelPath, nowStamp, readText } from './common.mjs';
 
 export const PEER_STATE_FILE = join(ROOT, '.harness', 'peer-watch.json');
 export const PEER_WATCH_INTERVAL_MS = 10 * 60 * 1000;
@@ -57,7 +57,7 @@ function remoteBranches(cwd, { noMerged } = {}) {
     .map(([name, ct]) => ({ branch: `origin/${name}`, name, at: Number(ct) * 1000 }));
 }
 
-/** `<rev>:<path>` 여러 개를 git 한 번으로 읽는다 (원격 브랜치가 많아도 hook 제한 안에 끝나게). 없는 것은 null */
+/** `<rev>:<path>` 여러 개를 git 한 번으로 읽는다 (원격 브랜치가 많아도 hook 제한 안에 끝나게) → [{ sha, text }]. 없는 것은 null */
 function readBlobs(specs, cwd) {
   if (!specs.length) return [];
   const r = spawnSync('git', ['cat-file', '--batch'], { cwd, input: specs.join('\n') + '\n', windowsHide: true, timeout: LOCAL_GIT_TIMEOUT });
@@ -70,12 +70,12 @@ function readBlobs(specs, cwd) {
     const header = buf.subarray(pos, nl).toString('utf8');
     pos = nl + 1;
     // 없으면 "<spec> missing" 한 줄뿐이다
-    const m = /^[0-9a-f]+ (\w+) (\d+)$/.exec(header);
+    const m = /^([0-9a-f]+) (\w+) (\d+)$/.exec(header);
     if (!m) return null;
-    const size = Number(m[2]);
-    const text = m[1] === 'blob' ? buf.subarray(pos, pos + size).toString('utf8') : null;
+    const size = Number(m[3]);
+    const blob = m[2] === 'blob' ? { sha: m[1], text: buf.subarray(pos, pos + size).toString('utf8') } : null;
     pos += size + 1;
-    return text;
+    return blob;
   });
 }
 
@@ -86,52 +86,86 @@ function readBlobs(specs, cwd) {
 export function latestPeerNow(key, { cwd = ROOT } = {}) {
   const rel = nowRelPath(key);
   const branches = remoteBranches(cwd);
-  const texts = readBlobs(
+  const blobs = readBlobs(
     branches.map((b) => `${b.branch}:${rel}`),
     cwd,
   );
   return pickLatestNow([
     { source: '작업 트리', text: readText(join(cwd, rel)), at: 0 },
-    ...branches.map((b, i) => ({ source: b.branch, text: texts[i], at: b.at })),
+    ...branches.map((b, i) => ({ source: b.branch, text: blobs[i]?.text ?? null, at: b.at })),
   ]);
 }
 
+/** 세션 시작 hook 제한(15초) 안에서 내 브랜치 조회에 쓰는 시간 */
+export const MY_BRANCH_BUDGET_MS = 3000;
+
 /**
- * base(develop)에 머지 안 된 원격 브랜치 중 base 밖의 커밋으로 key의 NOW를 바꾼 것 → [{ branch, at, text }] (최근 커밋 순).
+ * base(develop)에 머지 안 된 원격 브랜치 중 base 밖의 커밋으로 key의 NOW를 바꾼 것 → { branches: [{ branch, at, text }], truncated } (최근 커밋 순).
  * 같은 사람이 PC마다 다른 브랜치를 진행하면 develop의 NOW가 다른 브랜치의 진행을 가린다 (#54).
- * 상대 브랜치가 develop을 합쳐 들여온 내 NOW는 develop 쪽 부모와 같아 log에 나오지 않는다
+ * - 상대 브랜치가 develop을 합쳐 들여온 내 NOW는 develop 쪽 부모와 같아 log에 나오지 않는다
+ * - squash 머지 뒤 남은 원격 브랜치는 --no-merged에 걸리지만, 그 NOW 내용(blob)이 develop 이력에 있으므로 뺀다
+ * - 브랜치마다 git을 한 번씩 부르므로 budgetMs를 넘기면 남은 브랜치는 보지 않고 truncated로 알린다
  */
-export function myBranchNows(key, { cwd = ROOT, base = 'origin/develop' } = {}) {
+export function myBranchNows(key, { cwd = ROOT, base = 'origin/develop', budgetMs = MY_BRANCH_BUDGET_MS } = {}) {
   const rel = nowRelPath(key);
-  const touched = remoteBranches(cwd, { noMerged: base }).filter(
-    (b) => !PROTECTED_BRANCHES.includes(b.name) && git(['log', '-1', '--format=%H', `${base}..${b.branch}`, '--', rel], { cwd, timeout: LOCAL_GIT_TIMEOUT }).out,
+  const started = Date.now();
+  const touched = [];
+  let truncated = false;
+  for (const b of remoteBranches(cwd, { noMerged: base })) {
+    if (PROTECTED_BRANCHES.includes(b.name)) continue;
+    if (Date.now() - started > budgetMs) {
+      truncated = true;
+      break;
+    }
+    if (git(['log', '-1', '--format=%H', `${base}..${b.branch}`, '--', rel], { cwd, timeout: LOCAL_GIT_TIMEOUT }).out) touched.push(b);
+  }
+  if (!touched.length) return { branches: [], truncated };
+  const onBase = new Set(
+    git(['log', '--format=', '--raw', '--no-abbrev', base, '--', rel], { cwd, timeout: LOCAL_GIT_TIMEOUT })
+      .out.split('\n')
+      .map((l) => l.split(/\s+/)[3])
+      .filter(Boolean),
   );
-  const texts = readBlobs(
+  const blobs = readBlobs(
     touched.map((b) => `${b.branch}:${rel}`),
     cwd,
   );
-  return touched.map((b, i) => ({ branch: b.branch, at: b.at, text: texts[i] })).filter((b) => b.text);
+  return {
+    branches: touched
+      .map((b, i) => ({ branch: b.branch, at: b.at, blob: blobs[i] }))
+      .filter((b) => b.blob && !onBase.has(b.blob.sha))
+      .map(({ branch, at, blob }) => ({ branch, at, text: blob.text })),
+    truncated,
+  };
 }
 
 /**
- * /spec 가드 (#54): base(develop)에 머지 안 된 원격 브랜치 중 기능 fid(F-14, F-05a)를 진행 중인 것 → [{ branch, specs }] (최근 커밋 순).
- * 브랜치 이름에 `F-14-`가 있거나, base에 없는 `docs/specs/F-14-*.md`가 있으면 해당한다.
+ * /spec 가드 (#54): base(develop)에 머지 안 된 원격 브랜치 중 기능 fid(F-14, F-05a)를 진행 중인 것 → [{ branch, specs, here, merged }] (최근 커밋 순).
+ * 브랜치 이름에 `F-14-`가 있거나, base와 내용이 다른(base에 없거나 고친) `docs/specs/F-14-*.md`가 있으면 해당한다.
+ * - here: current(지금 브랜치)와 같은 브랜치. 승인 뒤 같은 브랜치에서 /spec을 다시 실행하는 것은 막지 않는다
+ * - merged: 이름만 맞고 그 기능 spec이 base와 똑같다 → squash 머지 뒤 남은 원격 브랜치로 본다 (멈출 대상 아님)
  * base를 못 찾으면 null(판정 불가): 빈 목록이면 가드가 거짓 통과(✅)를 낸다
  */
-export function featureOnRemotes(fid, { cwd = ROOT, base = 'origin/develop' } = {}) {
+export function featureOnRemotes(fid, { cwd = ROOT, base = 'origin/develop', current = null } = {}) {
   if (!git(['rev-parse', '--verify', '-q', `${base}^{commit}`], { cwd, timeout: LOCAL_GIT_TIMEOUT }).ok) return null;
   const prefix = `${fid}-`.toLowerCase();
+  // "<mode> blob <sha>\t<path>" → Map(path → sha)
   const specsOf = (ref) =>
-    git(['ls-tree', '--name-only', ref, 'docs/specs/'], { cwd, timeout: LOCAL_GIT_TIMEOUT })
-      .out.split('\n')
-      .filter((p) => p.split('/').at(-1).toLowerCase().startsWith(prefix));
-  const onBase = new Set(specsOf(base));
+    new Map(
+      git(['ls-tree', ref, 'docs/specs/'], { cwd, timeout: LOCAL_GIT_TIMEOUT })
+        .out.split('\n')
+        .map((l) => /^\d+ blob ([0-9a-f]+)\t(.+)$/.exec(l))
+        .filter((m) => m && m[2].split('/').at(-1).toLowerCase().startsWith(prefix))
+        .map((m) => [m[2], m[1]]),
+    );
+  const onBase = specsOf(base);
   const found = [];
   for (const b of remoteBranches(cwd, { noMerged: base })) {
     if (PROTECTED_BRANCHES.includes(b.name)) continue;
-    const specs = specsOf(b.branch).filter((p) => !onBase.has(p));
+    const mine = specsOf(b.branch);
+    const specs = [...mine].filter(([p, sha]) => onBase.get(p) !== sha).map(([p]) => p);
     const named = b.name.split('/').some((part) => part.toLowerCase().startsWith(prefix));
-    if (named || specs.length) found.push({ branch: b.branch, specs });
+    if (named || specs.length) found.push({ branch: b.branch, specs, here: b.name === current, merged: !specs.length && mine.size > 0 });
   }
   return found;
 }
@@ -143,18 +177,20 @@ function stampBrief(stamp) {
   return [m ? `${m[1]} ${m[2]}` : '갱신 ?', pc].filter(Boolean).join(' ');
 }
 
-/** myBranchNows 결과 → 표시 줄과 지금 브랜치가 아닌 것 목록. 순수 함수 */
-export function myBranchLines(list, current) {
+/** myBranchNows 결과 → 표시 줄과 지금 브랜치가 아닌 것 목록. NOW 갱신 시각과 브랜치 마지막 커밋 시각을 함께 보인다 (NOW 뒤에 코드만 더 push했을 수 있다). 순수 함수 */
+export function myBranchLines({ branches, truncated }, current) {
   const cut = (t, n = 100) => (t.length > n ? `${t.slice(0, n - 1)}…` : t);
   const lines = [];
   const others = [];
-  for (const b of list) {
+  for (const b of branches) {
     const h = nowHeadline(b.text);
     const here = b.branch === `origin/${current}`;
     if (!here) others.push(b.branch);
-    lines.push(`- ${here ? '(지금 브랜치)' : '⚠️'} ${b.branch} · ${stampBrief(h.stamp)} · ${cut(h.feature)}`);
+    const commit = b.at ? ` · 커밋 ${nowStamp(new Date(b.at)).slice(5)}` : '';
+    lines.push(`- ${here ? '(지금 브랜치)' : '⚠️'} ${b.branch} · NOW ${stampBrief(h.stamp)}${commit} · ${cut(h.feature)}`);
   }
-  return { lines, others };
+  if (truncated) lines.push('- … 시간 제한으로 일부 생략 → 전체는 node scripts/branches.mjs');
+  return { lines, others, truncated: Boolean(truncated) };
 }
 
 export function readPeerState() {

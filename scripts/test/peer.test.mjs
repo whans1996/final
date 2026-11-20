@@ -5,6 +5,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { after, test } from 'node:test';
+import { nowStamp } from '../lib/common.mjs';
 import { developChanges, featureOnRemotes, latestPeerNow, myBranchLines, myBranchNows, nowHeadline, peerDigest, pickLatestNow } from '../lib/peer.mjs';
 
 // git hook(커밋 테스트 게이트) 안에서 돌면 GIT_DIR 등이 실제 저장소를 가리킨다 → 임시 저장소용 git이 실제 저장소를 건드리지 않게 지운다 (sync.test.mjs와 같음)
@@ -138,8 +139,19 @@ function myClone(origin) {
   return me;
 }
 
+function squashToDevelop(work, branch) {
+  sh(work, 'fetch', '-q');
+  sh(work, 'switch', '-q', '-C', 'develop', 'origin/develop');
+  sh(work, 'merge', '-q', '--squash', `origin/${branch}`);
+  sh(work, '-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-q', '-m', `${branch} (#1)`);
+  sh(work, 'push', '-q', 'origin', 'develop');
+}
+
 test('develop에 머지 안 된 브랜치 중 내 NOW를 바꾼 것만 고른다 (#54: 11-19 F-14 중복 spec)', () => {
   const { origin, work } = setup();
+  // squash 머지됐는데 원격 브랜치가 남은 것: --no-merged에 걸리지만 그 NOW는 develop 이력에 있어 고르지 않는다 (reviewer R5)
+  branchWith(work, 'feature/issue-40-old', DH, MY('2026-11-18 15:00', 'dh-home', '#40 옛 일'));
+  squashToDevelop(work, 'feature/issue-40-old');
   // 상대 브랜치: 상대 NOW만 바꾼다
   branchWith(work, 'feature/F-04-follow', JS, NOW('2026-11-20 16:55', 'F-04 팔로우'), 'JoonseobKim');
   // dh-ssafy: F-14 진행 → push (머지 전)
@@ -154,17 +166,20 @@ test('develop에 머지 안 된 브랜치 중 내 NOW를 바꾼 것만 고른다
   const me = myClone(origin);
 
   const mine = myBranchNows('dh', { cwd: me });
+  assert.equal(mine.truncated, false);
   assert.deepEqual(
-    mine.map((b) => b.branch),
+    mine.branches.map((b) => b.branch),
     ['origin/feature/F-14-code-quiz'],
   );
-  assert.match(mine[0].text, /F-14 코드 퀴즈/);
+  assert.match(mine.branches[0].text, /F-14 코드 퀴즈/);
   assert.deepEqual(
-    myBranchNows('js', { cwd: me }).map((b) => b.branch),
+    myBranchNows('js', { cwd: me }).branches.map((b) => b.branch),
     ['origin/feature/F-04-follow'],
   );
   // 기준 브랜치가 없으면 빈 목록
-  assert.deepEqual(myBranchNows('dh', { cwd: me, base: 'origin/nope' }), []);
+  assert.deepEqual(myBranchNows('dh', { cwd: me, base: 'origin/nope' }).branches, []);
+  // 시간 상한을 넘기면 남은 브랜치는 보지 않고 생략을 알린다 (세션 시작 hook 제한, reviewer R2)
+  assert.deepEqual(myBranchNows('dh', { cwd: me, budgetMs: -1 }), { branches: [], truncated: true });
 });
 
 test('/spec 가드: develop 밖에서 같은 기능을 진행 중인 원격 브랜치 (#54 제안 2)', () => {
@@ -176,29 +191,50 @@ test('/spec 가드: develop 밖에서 같은 기능을 진행 중인 원격 브�
   // F-1·F-140은 F-14가 아니다. develop에 이미 있는 spec(다른 브랜치가 물려받은 것)도 아니다
   branchWith(work, 'feature/F-1-x', 'docs/specs/F-140-y.md', '# F-140');
   branchWith(work, 'feature/F-05a-zip', 'docs/specs/F-05a-zip.md', '# F-05a');
+  // squash 머지됐는데 원격 브랜치가 남은 F-20: spec이 develop과 같으면 "머지됨"으로 표시만 한다 (reviewer R5)
+  branchWith(work, 'feature/F-20-done', 'docs/specs/F-20-done.md', '# F-20 DONE');
+  squashToDevelop(work, 'feature/F-20-done');
+  // develop의 F-20 spec을 물려받기만 한 브랜치는 F-20 진행이 아니다 (reviewer R4)
+  branchWith(work, 'feature/issue-70-z', 'z.txt', 'z');
+  // develop에 있는 F-20 spec을 고치는 브랜치는 진행 중이다
+  branchWith(work, 'feature/issue-71-w', 'docs/specs/F-20-done.md', '# F-20 고침');
   const me = myClone(origin);
 
   assert.deepEqual(featureOnRemotes('F-14', { cwd: me }), [
-    { branch: 'origin/feature/issue-49-mock', specs: ['docs/specs/F-14-quiz-dup.md'] },
-    { branch: 'origin/feature/F-14-code-quiz', specs: [] },
+    { branch: 'origin/feature/issue-49-mock', specs: ['docs/specs/F-14-quiz-dup.md'], here: false, merged: false },
+    { branch: 'origin/feature/F-14-code-quiz', specs: [], here: false, merged: false },
   ]);
-  assert.deepEqual(featureOnRemotes('F-05a', { cwd: me }), [{ branch: 'origin/feature/F-05a-zip', specs: ['docs/specs/F-05a-zip.md'] }]);
+  assert.deepEqual(featureOnRemotes('F-05a', { cwd: me }), [{ branch: 'origin/feature/F-05a-zip', specs: ['docs/specs/F-05a-zip.md'], here: false, merged: false }]);
   assert.deepEqual(featureOnRemotes('F-05', { cwd: me }), []);
   assert.deepEqual(featureOnRemotes('F-99', { cwd: me }), []);
+  assert.deepEqual(featureOnRemotes('F-20', { cwd: me }), [
+    { branch: 'origin/feature/issue-71-w', specs: ['docs/specs/F-20-done.md'], here: false, merged: false },
+    { branch: 'origin/feature/F-20-done', specs: [], here: false, merged: true },
+  ]);
+  // 지금 브랜치(승인 뒤 같은 브랜치에서 /spec 다시 실행)는 표시만 하고 멈출 대상이 아니다 (reviewer R1)
+  assert.equal(featureOnRemotes('F-14', { cwd: me, current: 'feature/F-14-code-quiz' })[1].here, true);
   // 기준 브랜치를 못 찾으면 "없음"(✅)이 아니라 판정 불가(null) — 가드가 거짓 통과를 내지 않게 (reviewer)
   assert.equal(featureOnRemotes('F-14', { cwd: me, base: 'origin/nope' }), null);
 });
 
 test('내 다른 브랜치 목록: 지금 브랜치가 아닌 것만 ⚠️', () => {
-  const list = [
-    { branch: 'origin/feature/F-14-code-quiz', text: MY('2026-11-19 17:55', 'dh-ssafy', 'F-14 코드 퀴즈 — AC1~AC11 구현') },
-    { branch: 'origin/feature/issue-54-x', text: MY('2026-11-20 18:00', 'dh-home', '#54') },
+  const at1 = Date.parse('2026-11-19T09:10:00Z');
+  const at2 = Date.parse('2026-11-20T09:05:00Z');
+  const branches = [
+    { branch: 'origin/feature/F-14-code-quiz', at: at1, text: MY('2026-11-19 17:55', 'dh-ssafy', 'F-14 코드 퀴즈 — AC1~AC11 구현') },
+    { branch: 'origin/feature/issue-54-x', at: at2, text: MY('2026-11-20 18:00', 'dh-home', '#54') },
   ];
-  const r = myBranchLines(list, 'feature/issue-54-x');
+  const r = myBranchLines({ branches, truncated: false }, 'feature/issue-54-x');
   assert.deepEqual(r.others, ['origin/feature/F-14-code-quiz']);
-  assert.equal(r.lines[0], '- ⚠️ origin/feature/F-14-code-quiz · 11-19 17:55 dh-ssafy · F-14 코드 퀴즈 — AC1~AC11 구현');
-  assert.equal(r.lines[1], '- (지금 브랜치) origin/feature/issue-54-x · 11-20 18:00 dh-home · #54');
-  assert.deepEqual(myBranchLines([], 'develop'), { lines: [], others: [] });
+  // NOW 갱신 시각과 브랜치 마지막 커밋 시각을 함께 (NOW 뒤에 코드만 더 push했을 수 있다, #54 제안 형식, reviewer R3)
+  const c = (at) => nowStamp(new Date(at)).slice(5);
+  assert.equal(r.lines[0], `- ⚠️ origin/feature/F-14-code-quiz · NOW 11-19 17:55 dh-ssafy · 커밋 ${c(at1)} · F-14 코드 퀴즈 — AC1~AC11 구현`);
+  assert.equal(r.lines[1], `- (지금 브랜치) origin/feature/issue-54-x · NOW 11-20 18:00 dh-home · 커밋 ${c(at2)} · #54`);
+  assert.deepEqual(myBranchLines({ branches: [], truncated: false }, 'develop'), { lines: [], others: [], truncated: false });
+  // 시간 상한으로 생략했으면 마지막 줄에 알린다 (본 브랜치가 0개여도)
+  assert.match(myBranchLines({ branches, truncated: true }, 'develop').lines.at(-1), /일부 생략.*node scripts\/branches\.mjs/);
+  assert.deepEqual(myBranchLines({ branches: [], truncated: true }, 'develop').truncated, true);
+  assert.equal(myBranchLines({ branches: [], truncated: true }, 'develop').lines.length, 1);
 });
 
 test('상대 NOW는 원격 브랜치마다 보고 갱신 시각이 늦은 것을 고른다 (#32-1: 나중에 머지된 옛 NOW)', () => {
