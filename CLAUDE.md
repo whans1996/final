@@ -33,7 +33,7 @@ SSAFY 관통 프로젝트(2026-11-17 시작, 12-24 발표). Spring Boot 4 + MyBa
 ## 작업 흐름
 
 ```
-/pickup → /spec F-xx → (사람이 spec 승인) → /implement F-xx → /pr-review → (CI 초록 → 영역 오너가 머지) → /handoff
+/pickup → /spec F-xx → (사람이 spec 승인) → /implement F-xx → /pr-review → (CI 초록 + Codex COMPLETE → 영역 오너가 머지) → /handoff
 ```
 
 - 새 세션은 `/pickup`으로 상태를 확인하고 시작한다. 기능은 **내 영역**에서 고른다. 상대 브랜치·상대 NOW 파일은 건드리지 않는다.
@@ -63,7 +63,7 @@ SSAFY 관통 프로젝트(2026-11-17 시작, 12-24 발표). Spring Boot 4 + MyBa
 
 ## 절대 규칙
 
-1. **main·develop에 직접 커밋하지 않는다.** `feature/F-xx-slug` 브랜치에서 작업하고 develop에는 **PR**로 합친다. 머지는 CI가 초록일 때 영역 오너(PR 작성자 본인)가 GitHub에서 한다 (`gh pr merge`는 차단됨). 공통 코드를 바꾼 PR은 상대를 @멘션한다.
+1. **main·develop에 직접 커밋하지 않는다.** `feature/F-xx-slug` 브랜치에서 작업하고 develop에는 **PR**로 합친다. 머지는 CI가 초록이고 Codex가 COMPLETE일 때 영역 오너(PR 작성자 본인)가 GitHub에서 한다 (`gh pr merge`는 차단됨, 예외는 `docs/conventions.md` 7절). 공통 코드를 바꾼 PR은 상대를 @멘션한다.
 2. **커밋 메시지는 `타입(범위): 요약`** 형식으로 쓴다. 상세 규칙은 `docs/conventions.md` 6절. git hook이 검사한다.
 3. `wip`가 아닌 커밋은 git hook이 변경된 영역의 테스트를 돌리고, 실패하면 거부한다. **`--no-verify`로 우회하지 않는다.**
 4. **이미 커밋된 Flyway 파일(`V*__*.sql`)은 수정하지 않는다.** 고칠 내용은 새 버전 파일로 추가한다. 예외: develop에 아직 머지되지 않은 내 파일은 번호가 겹칠 때 `git mv`로 **이름(번호)만** 바꿀 수 있다 (CI `check-migrations`가 알린다).

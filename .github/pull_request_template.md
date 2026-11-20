@@ -25,7 +25,7 @@
 
 ## 확인 체크리스트
 
-- [ ] **CI 초록** (GitHub Actions) — 초록일 때만 머지
+- [ ] **CI 초록** (GitHub Actions) + **Codex COMPLETE** (PR 체크 `Codex` ✅) — 둘 다일 때만 머지
 - [ ] `node scripts/verify.mjs all` 로컬 통과
 - [ ] API 변경 시 `docs/api/openapi.json` 갱신 커밋 (CI가 불일치를 잡음)
 - [ ] contract-checker: spec ↔ openapi.json(BE) ↔ FE `src/api` 일치
