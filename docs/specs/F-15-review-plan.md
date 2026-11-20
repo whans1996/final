@@ -211,9 +211,9 @@
 - [x] BE 구현 (green): ErrorCode 블록, Mapper·Service·Controller·DTO
 - [x] FE 구현 (green): api, route·nav, SC-11, SC-10 버튼, SC-08 링크, CODEOWNERS
 - [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신, conventions 3절 에러 코드
-- [ ] contract-checker 통과
-- [ ] ui-verifier 통과 (데스크톱·모바일)
-- [ ] reviewer 지적 사항 반영
-- [ ] 산출물 반영: 화면 설계서 SC-11 절·스크린샷과 SC-10·SC-08 변경, 유스케이스 UC31(기획 기준 → 구현), ERD `review_plans` 설명(F-15 추가 경로)
+- [x] contract-checker 통과 (불일치 0)
+- [x] ui-verifier 통과 (데스크톱·모바일)
+- [x] reviewer 지적 사항 반영 (권장 3건)
+- [x] 산출물 반영: 화면 설계서 SC-11 절·스크린샷과 SC-10·SC-08 변경, 유스케이스 UC31(기획 기준 → 구현), ERD `review_plans` 설명(F-15 추가 경로)
 - [ ] PR CI 초록 (공통 파일 변경 @JoonseobKim 멘션)
 - [ ] 상태 DONE (PR 머지 후)
