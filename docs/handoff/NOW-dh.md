@@ -4,7 +4,7 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
 
-갱신: 2026-11-20 13:52 · 작업자: whans1996@naver.com · PC: dh-home · 브랜치: feature/F-16-recommendation
+갱신: 2026-11-20 13:58 · 작업자: whans1996@naver.com · PC: dh-home · 브랜치: feature/F-16-recommendation
 
 ## 현재 기능
 
@@ -12,13 +12,14 @@ F-16 맞춤 개념 카드 추천 — spec `docs/specs/F-16-recommendation.md` AP
 
 ## 진행
 
-- ✅ BE AC1~AC7 green (RecommendationApiTest 10, Scorer·RuleReasons·Parser 단위, MockLlmClient linkRecommendIds), verify be 통과, openapi.json 갱신 → 커밋
-- ⏳ FE AC8~AC10: 테스트 작성됨(api/recommendations, RecommendationCard·List, DashboardView spec), 컴포넌트 구현 전
+- ✅ BE AC1~AC7 (bf9fa54), FE AC8~AC10: api·RecommendationCard·List·DashboardView·SC-11 빈 상태 추천·`/dashboard` route·`redirectTarget` 기본 `/dashboard`, verify fe 통과(320) → 커밋
+- ⏳ 기능 마무리: contract-checker, ui-verifier(SC-04 데스크톱·375px, SC-11 빈 상태), 산출물 반영
 
 ## 바로 다음 할 일
 
-1. FE 구현: `src/api/recommendations.js`, `components/recommendation/RecommendationCard.vue`·`RecommendationList.vue`(props title·size·hideOnEmptyOrError), `views/dashboard/DashboardView.vue`, `router/routes/dashboard.js`(nav order 1) + `router/index.js` import·`redirectTarget` 기본 `/dashboard`
-2. 기존 테스트 갱신: authGuard.spec(기본 `/dashboard`), LoginView.spec "redirect 없으면", navItems.spec(대시보드 맨 앞), routes.spec; ReviewPlanView 빈 상태 아래 추천 3개(AC10, 처음 빈 상태일 때 한 번만 마운트)
+1. `contract-checker`로 spec 3절 ↔ `docs/api/openapi.json` ↔ `frontend/src/api/recommendations.js` 확인
+2. BE(local)·FE dev 띄우고 `ui-verifier`: `/dashboard`, `/review-plans`(빈 상태) 데스크톱·375px
+3. 산출물: 화면 설계서 SC-04·SC-11, ERD `recommendation_reasons.signal_key`, 유스케이스, 08 AI 활용 → `/pr-review`
 
 ## 막힌 점 / 결정 필요
 

@@ -1,12 +1,14 @@
 <script setup>
 // SC-11 복습 계획 (F-15 AC9·AC10). 오늘부터 7일의 복습 카드와 밀린 복습을 보고 완료를 체크한다.
 // 기간 이동은 서버가 준 today·from을 기준으로 ±7일을 계산한다 (브라우저 시계를 쓰지 않는다).
-import { computed, ref } from 'vue'
+// 빈 상태 아래에는 맞춤 추천 3개를 보여 준다 (F-16 AC10).
+import { computed, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { deleteReviewPlan, fetchReviewPlans, updateReviewPlanStatus } from '@/api/reviewPlans'
 import { errorMessage } from '@/api/http'
 import EmptyState from '@/components/common/EmptyState.vue'
 import ReviewPlanItem from '@/components/reviewplan/ReviewPlanItem.vue'
+import RecommendationList from '@/components/recommendation/RecommendationList.vue'
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
 const PERIOD_DAYS = 7
@@ -63,6 +65,17 @@ const groups = computed(() => {
 })
 
 const isEmpty = computed(() => overdue.value.length === 0 && groups.value.length === 0)
+
+/** 빈 상태가 보이는 중인지 (불러오기·에러가 아닐 때) */
+const showingEmpty = computed(
+  () => !loading.value && !loadError.value && !!data.value && isEmpty.value,
+)
+
+// 추천은 처음 빈 상태가 될 때 한 번만 부른다. 이후에는 숨기기만 해서 기간을 옮겨도 다시 부르지 않는다 (F-16 AC10)
+const recommendationsStarted = ref(false)
+watch(showingEmpty, (empty) => {
+  if (empty) recommendationsStarted.value = true
+})
 
 // 다시 시도가 실패한 그 기간을 다시 부르도록 마지막 요청 기간을 기억한다 (undefined = 오늘부터)
 let lastPeriod
@@ -209,6 +222,15 @@ load()
         </ul>
       </section>
     </template>
+
+    <div
+      v-if="recommendationsStarted"
+      v-show="showingEmpty"
+      class="empty-recommendations"
+      data-section="empty-recommendations"
+    >
+      <RecommendationList title="이런 카드부터 시작해 보세요" :size="3" hide-on-empty-or-error />
+    </div>
   </section>
 </template>
 
@@ -279,6 +301,10 @@ h1 {
   gap: var(--space-3);
   margin: 0;
   padding: 0;
+}
+
+.empty-recommendations {
+  margin-top: var(--space-6);
 }
 
 .link-button {

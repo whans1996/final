@@ -40,6 +40,16 @@ describe('routes (F-00b AC7)', () => {
     })
   })
 
+  it('F-16 AC9 /dashboard는 로그인이 필요하고 헤더 메뉴 맨 앞(order 1)이다', () => {
+    const dashboard = routes.find((r) => r.name === 'dashboard')
+
+    expect(dashboard.path).toBe('/dashboard')
+    expect(dashboard.meta).toMatchObject({
+      requiresAuth: true,
+      nav: { label: '대시보드', order: 1, show: 'user' },
+    })
+  })
+
   it('AC9 /admin은 관리자 전용이고 자식 route를 가진다', () => {
     const admin = routes.find((r) => r.path === '/admin')
 

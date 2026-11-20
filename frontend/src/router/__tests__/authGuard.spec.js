@@ -58,7 +58,7 @@ describe('redirectTarget (F-02 AC8)', () => {
     ['역슬래시', '/\\evil.com'],
     ['상대 경로', 'evil.com'],
     ['배열 쿼리', ['/a', '/b']],
-  ])('AC8 %s이면 홈(/)으로 보낸다', (_, redirect) => {
-    expect(redirectTarget({ redirect })).toBe('/')
+  ])('AC8 %s이면 대시보드(/dashboard)로 보낸다 (F-16 AC9)', (_, redirect) => {
+    expect(redirectTarget({ redirect })).toBe('/dashboard')
   })
 })

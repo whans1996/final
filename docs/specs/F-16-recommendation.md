@@ -228,9 +228,9 @@ ALTER TABLE recommendation_reasons
 
 - [x] 브랜치 `feature/F-16-recommendation`
 - [x] Flyway `V6__recommendation_signal_key.sql`
-- [ ] AC별 실패 테스트 작성 (red 확인)
+- [x] AC별 실패 테스트 작성 (red 확인)
 - [x] BE 구현 (green): ConceptMapper F-16 블록, recommendation 패키지, 프롬프트 3종, mock fixture·`MockLlmClient`
-- [ ] FE 구현 (green): api, route·nav·`redirectTarget`, SC-04, 추천 컴포넌트, SC-11 빈 상태, CODEOWNERS
+- [x] FE 구현 (green): api, route·nav·`redirectTarget`, SC-04, 추천 컴포넌트, SC-11 빈 상태, CODEOWNERS
 - [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
 - [ ] contract-checker 통과
 - [ ] ui-verifier 통과 (데스크톱·모바일)

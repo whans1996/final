@@ -1,5 +1,5 @@
 <script setup>
-// SC-02 로그인 (F-02). 성공하면 redirect 쿼리 또는 홈으로 이동한다.
+// SC-02 로그인 (F-02). 성공하면 redirect 쿼리 또는 대시보드(F-16)로 이동한다.
 import { reactive, ref } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
