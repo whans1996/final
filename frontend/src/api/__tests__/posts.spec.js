@@ -1,7 +1,17 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import http from '@/api/http'
-import { createPost, deletePost, fetchPost, fetchPosts, updatePost } from '@/api/posts'
+import {
+  createComment,
+  createPost,
+  deleteComment,
+  deletePost,
+  fetchComments,
+  fetchPost,
+  fetchPosts,
+  updateComment,
+  updatePost,
+} from '@/api/posts'
 
 // API 계약(docs/specs/F-17-community-board.md 3절)과 URL·메서드·필드 이름이 같은지 확인한다
 function capture(data = {}, status = 200) {
@@ -79,5 +89,43 @@ describe('api/posts (F-17)', () => {
     await deletePost(42)
     expect(calls[0].method).toBe('delete')
     expect(calls[0].url).toBe('/posts/42')
+  })
+})
+
+// F-18 댓글 (docs/specs/F-18-comments.md 3절)
+describe('api/posts 댓글 (F-18)', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
+  it('AC11 fetchComments는 GET /api/posts/{postId}/comments이고 {items, total}을 돌려준다', async () => {
+    const list = { items: [], total: 0 }
+    const calls = capture(list)
+
+    await expect(fetchComments(42)).resolves.toEqual(list)
+    expect(calls[0].method).toBe('get')
+    expect(calls[0].url).toBe('/posts/42/comments')
+  })
+
+  it('AC12 createComment는 POST /api/posts/{postId}/comments에 content만 보낸다', async () => {
+    const calls = capture({ id: 101 }, 201)
+
+    await expect(createComment(42, { content: '답글', extra: 1 })).resolves.toEqual({ id: 101 })
+    expect(calls[0].method).toBe('post')
+    expect(calls[0].url).toBe('/posts/42/comments')
+    expect(JSON.parse(calls[0].data)).toEqual({ content: '답글' })
+  })
+
+  it('AC13 updateComment는 PUT, deleteComment는 DELETE /api/posts/{postId}/comments/{commentId}', async () => {
+    const calls = capture({ id: 101 })
+
+    await updateComment(42, 101, { content: '고침' })
+    expect(calls[0].method).toBe('put')
+    expect(calls[0].url).toBe('/posts/42/comments/101')
+    expect(JSON.parse(calls[0].data)).toEqual({ content: '고침' })
+
+    await expect(deleteComment(42, 101)).resolves.toBeUndefined()
+    expect(calls[1].method).toBe('delete')
+    expect(calls[1].url).toBe('/posts/42/comments/101')
   })
 })

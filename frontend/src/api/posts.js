@@ -65,3 +65,49 @@ export function updatePost(id, { boardType, title, content, analysisId, conceptI
 export function deletePost(id) {
   return http.delete(`/posts/${id}`).then(() => undefined)
 }
+
+// ── 댓글 (F-18, docs/specs/F-18-comments.md 3절). 목록은 로그인 없이 부를 수 있다 ──
+
+/**
+ * @typedef {{ id: number, content: string, authorId: number|null, authorNickname: string, edited: boolean, createdAt: string, updatedAt: string }} PostComment
+ */
+
+/**
+ * 글의 댓글 (오래된순 최대 200개). total이 items 수보다 크면 200개만 온 것이다. 없는 글이면 404 POST_404.
+ * @param {number} postId
+ * @returns {Promise<{ items: PostComment[], total: number }>}
+ */
+export function fetchComments(postId) {
+  return http.get(`/posts/${postId}/comments`).then((res) => res.data)
+}
+
+/**
+ * 댓글 작성 (201). 400 COMMON_400(details.content), 404 POST_404.
+ * @param {number} postId
+ * @param {{ content: string }} body
+ * @returns {Promise<PostComment>}
+ */
+export function createComment(postId, { content }) {
+  return http.post(`/posts/${postId}/comments`, { content }).then((res) => res.data)
+}
+
+/**
+ * 내 댓글 수정. 400 COMMON_400(details.content), 403 POST_004, 404 POST_404·POST_003.
+ * @param {number} postId
+ * @param {number} commentId
+ * @param {{ content: string }} body
+ * @returns {Promise<PostComment>}
+ */
+export function updateComment(postId, commentId, { content }) {
+  return http.put(`/posts/${postId}/comments/${commentId}`, { content }).then((res) => res.data)
+}
+
+/**
+ * 내 댓글 삭제 (204). 403 POST_004, 404 POST_404·POST_003.
+ * @param {number} postId
+ * @param {number} commentId
+ * @returns {Promise<void>}
+ */
+export function deleteComment(postId, commentId) {
+  return http.delete(`/posts/${postId}/comments/${commentId}`).then(() => undefined)
+}

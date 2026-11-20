@@ -90,6 +90,10 @@ public enum ErrorCode {
     POST_001(HttpStatus.BAD_REQUEST, "첨부할 수 없는 분석입니다."),
     /** PUBLISHED가 아니거나 없는 카드 (F-17 AC8). */
     POST_002(HttpStatus.BAD_REQUEST, "첨부할 수 없는 개념 카드입니다."),
+    /** 없는 댓글이거나 경로의 글에 속하지 않는 댓글 (F-18 AC9). */
+    POST_003(HttpStatus.NOT_FOUND, "댓글을 찾을 수 없습니다."),
+    /** 남의 댓글 수정·삭제 (F-18 AC9). 글 작성자여도 같고, 형식 검증(400)보다 먼저 판단한다. */
+    POST_004(HttpStatus.FORBIDDEN, "본인이 쓴 댓글만 수정·삭제할 수 있습니다."),
 
     // ── LLM (A) ──
     /** 개요 응답이 1회 재시도 후에도 스키마 위반. 파이프라인 FAILED 사유다 (F-06 AC5). */

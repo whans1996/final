@@ -1,5 +1,5 @@
 <script setup>
-// SC-15 게시글 상세 (F-17 AC15·AC16). 공개 화면. 열 때마다 서버가 조회수를 1 올린다.
+// SC-15 게시글 상세 (F-17 AC15·AC16, 댓글 절 F-18 AC11~AC13). 공개 화면. 열 때마다 서버가 조회수를 1 올린다.
 // 본문은 텍스트 보간 + pre-wrap으로 글자 그대로 보여 준다 (v-html·마크다운 금지, spec 5절).
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -7,6 +7,7 @@ import { deletePost, fetchPost } from '@/api/posts'
 import { errorCode, errorMessage } from '@/api/http'
 import { useAuthStore } from '@/stores/auth'
 import PostAttachment from '@/components/community/PostAttachment.vue'
+import PostComments from '@/components/community/PostComments.vue'
 import { authorName, boardChip, formatDateTime } from '@/components/community/boardTypes'
 
 const route = useRoute()
@@ -122,6 +123,8 @@ async function onDelete() {
         </button>
       </div>
       <p v-if="actionError" class="form-error" role="alert">{{ actionError }}</p>
+
+      <PostComments :post-id="post.id" />
     </template>
   </article>
 </template>

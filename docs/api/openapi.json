@@ -371,6 +371,86 @@
         "required" : [ "fileId", "method", "path" ],
         "type" : "object"
       },
+      "CommentListResponse" : {
+        "description" : "댓글 목록",
+        "properties" : {
+          "items" : {
+            "description" : "오래된순(작성 시각, id 오름차순) 최대 200개",
+            "items" : {
+              "$ref" : "#/components/schemas/CommentResponse"
+            },
+            "type" : "array"
+          },
+          "total" : {
+            "description" : "그 글의 전체 댓글 수 (items 수보다 크면 200개만 보낸 것)",
+            "example" : 2,
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "items", "total" ],
+        "type" : "object"
+      },
+      "CommentRequest" : {
+        "description" : "댓글 작성·수정 요청",
+        "properties" : {
+          "content" : {
+            "description" : "내용 (앞뒤 공백 제외 1~500자, 글자 그대로 저장)",
+            "example" : "같은 클래스 안에서 호출하면 프록시를 거치지 않아서 트랜잭션이 안 걸려요.",
+            "maxLength" : 500,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "content" ],
+        "type" : "object"
+      },
+      "CommentResponse" : {
+        "description" : "댓글",
+        "properties" : {
+          "authorId" : {
+            "description" : "작성자 ID (탈퇴한 회원이면 null)",
+            "example" : 9,
+            "format" : "int64",
+            "type" : [ "integer", "null" ]
+          },
+          "authorNickname" : {
+            "description" : "작성자 현재 닉네임 (탈퇴한 회원이면 \"탈퇴한 사용자\")",
+            "example" : "스프링러버",
+            "type" : "string"
+          },
+          "content" : {
+            "description" : "내용 (글자 그대로. 화면은 HTML로 해석하지 않는다)",
+            "example" : "같은 클래스 안에서 호출하면 프록시를 거치지 않아서 트랜잭션이 안 걸려요.\n별도 빈으로 빼 보세요.",
+            "type" : "string"
+          },
+          "createdAt" : {
+            "description" : "작성 시각",
+            "example" : "2026-11-20T14:10:05+09:00",
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "edited" : {
+            "description" : "수정한 적이 있는지 (updatedAt이 createdAt보다 뒤)",
+            "example" : false,
+            "type" : "boolean"
+          },
+          "id" : {
+            "description" : "댓글 ID",
+            "example" : 101,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "updatedAt" : {
+            "description" : "마지막 수정 시각 (수정한 적 없으면 작성 시각)",
+            "example" : "2026-11-20T14:10:05+09:00",
+            "format" : "date-time",
+            "type" : "string"
+          }
+        },
+        "required" : [ "authorId", "authorNickname", "content", "createdAt", "edited", "id", "updatedAt" ],
+        "type" : "object"
+      },
       "ConceptAppearanceResponse" : {
         "description" : "내 코드에서 이 개념이 등장한 위치",
         "properties" : {
@@ -1988,7 +2068,7 @@
     "/api/analyses" : {
       "get" : {
         "description" : "삭제하지 않은 내 분석을 요청 시각 최신순으로 준다.",
-        "operationId" : "list_2",
+        "operationId" : "list_3",
         "parameters" : [ {
           "description" : "페이지 번호 (1부터)",
           "example" : 1,
@@ -2056,7 +2136,7 @@
       },
       "post" : {
         "description" : "ZIP을 접수하고 바로 202를 준다. 코드 수집·필터·선별은 백그라운드에서 진행되며 상태는 /api/analyses/{id}/status로 확인한다. 하루(Asia/Seoul) 5회까지이며 FAILED는 세지 않는다.",
-        "operationId" : "create_2",
+        "operationId" : "create_3",
         "requestBody" : {
           "content" : {
             "multipart/form-data" : {
@@ -2349,7 +2429,7 @@
     "/api/analyses/{id}/flows" : {
       "get" : {
         "description" : "이 분석의 흐름 전체(id 오름차순). DONE이 아니면 summary·steps는 null. 화면은 PENDING이 있으면 3초마다 다시 부른다.",
-        "operationId" : "list_3",
+        "operationId" : "list_4",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -2760,7 +2840,7 @@
     "/api/concepts" : {
       "get" : {
         "description" : "공개(PUBLISHED) 카드를 키워드(이름·요약 부분 일치)·카테고리·난이도로 거르고 인기순(찜 수→평점) 또는 최신순으로 페이지 조회한다. 비로그인도 쓸 수 있다.",
-        "operationId" : "list_4",
+        "operationId" : "list_5",
         "parameters" : [ {
           "description" : "이름·요약 부분 일치 검색어 (trim 후 50자 이하, 대소문자 무시)",
           "example" : "jwt",
@@ -2874,7 +2954,7 @@
     "/api/concepts/{conceptId}/reviews" : {
       "get" : {
         "description" : "공개 카드의 리뷰를 최신순(작성 시각 내림차순)으로 페이지 조회한다. 비로그인도 쓸 수 있다.",
-        "operationId" : "list_1",
+        "operationId" : "list_2",
         "parameters" : [ {
           "description" : "카드 ID",
           "example" : 57,
@@ -2953,7 +3033,7 @@
       },
       "post" : {
         "description" : "별점(1~5)과 내용(앞뒤 공백 제외 1~200자)으로 리뷰를 쓴다. 카드당 한 번만 쓸 수 있고, 카드 평균 별점을 다시 계산해 함께 돌려준다.",
-        "operationId" : "create_1",
+        "operationId" : "create_2",
         "parameters" : [ {
           "description" : "카드 ID",
           "example" : 57,
@@ -3034,7 +3114,7 @@
     "/api/concepts/{conceptId}/reviews/me" : {
       "delete" : {
         "description" : "내 리뷰를 지우고 다시 계산한 카드 평균 별점·리뷰 수를 돌려준다 (반올림된 평균을 화면이 다시 계산할 수 없어 200).",
-        "operationId" : "delete_1",
+        "operationId" : "delete_2",
         "parameters" : [ {
           "description" : "카드 ID",
           "example" : 57,
@@ -3135,7 +3215,7 @@
       },
       "put" : {
         "description" : "내 리뷰의 별점·내용을 바꾼다. 작성 시각과 목록 순서는 그대로이고, 카드 평균 별점을 다시 계산해 돌려준다.",
-        "operationId" : "update_1",
+        "operationId" : "update_2",
         "parameters" : [ {
           "description" : "카드 ID",
           "example" : 57,
@@ -3650,6 +3730,270 @@
           }
         },
         "summary" : "게시글 수정",
+        "tags" : [ "커뮤니티" ]
+      }
+    },
+    "/api/posts/{postId}/comments" : {
+      "get" : {
+        "description" : "한 글의 댓글을 오래된순(작성 시각, id 오름차순)으로 최대 200개 돌려준다. total은 전체 댓글 수. 비로그인도 쓸 수 있다.",
+        "operationId" : "list_1",
+        "parameters" : [ {
+          "description" : "글 ID",
+          "example" : 42,
+          "in" : "path",
+          "name" : "postId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CommentListResponse"
+                }
+              }
+            },
+            "description" : "조회 성공"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "없는 글 (POST_404)"
+          }
+        },
+        "security" : [ ],
+        "summary" : "댓글 목록",
+        "tags" : [ "커뮤니티" ]
+      },
+      "post" : {
+        "description" : "글에 댓글(앞뒤 공백 제외 1~500자)을 쓴다. 남의 글·자기 글 모두 쓸 수 있고, 피드 활동은 남기지 않는다.",
+        "operationId" : "create_1",
+        "parameters" : [ {
+          "description" : "글 ID",
+          "example" : 42,
+          "in" : "path",
+          "name" : "postId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CommentRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CommentResponse"
+                }
+              }
+            },
+            "description" : "작성 성공"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "검증 실패 (COMMON_400, details.content)"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "로그인 필요 (AUTH_401)"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "없는 글 (POST_404)"
+          }
+        },
+        "summary" : "댓글 작성",
+        "tags" : [ "커뮤니티" ]
+      }
+    },
+    "/api/posts/{postId}/comments/{commentId}" : {
+      "delete" : {
+        "description" : "내 댓글을 지운다.",
+        "operationId" : "delete_1",
+        "parameters" : [ {
+          "description" : "글 ID",
+          "example" : 42,
+          "in" : "path",
+          "name" : "postId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "description" : "댓글 ID",
+          "example" : 101,
+          "in" : "path",
+          "name" : "commentId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "삭제 성공"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "로그인 필요 (AUTH_401)"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "남의 댓글 (POST_004, 글 작성자여도)"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "없는 글 (POST_404) 또는 없는 댓글·그 글의 댓글이 아님 (POST_003)"
+          }
+        },
+        "summary" : "댓글 삭제",
+        "tags" : [ "커뮤니티" ]
+      },
+      "put" : {
+        "description" : "내 댓글의 내용을 바꾼다. 같은 내용이면 바꾸지 않는다(edited 유지). 글(404) → 댓글(404) → 작성자(403)를 본 뒤 내용을 검증한다.",
+        "operationId" : "update_1",
+        "parameters" : [ {
+          "description" : "글 ID",
+          "example" : 42,
+          "in" : "path",
+          "name" : "postId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "description" : "댓글 ID",
+          "example" : 101,
+          "in" : "path",
+          "name" : "commentId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CommentRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CommentResponse"
+                }
+              }
+            },
+            "description" : "수정 성공"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "검증 실패 (COMMON_400, details.content)"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "로그인 필요 (AUTH_401)"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "남의 댓글 (POST_004, 글 작성자여도)"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "없는 글 (POST_404) 또는 없는 댓글·그 글의 댓글이 아님 (POST_003)"
+          }
+        },
+        "summary" : "댓글 수정",
         "tags" : [ "커뮤니티" ]
       }
     },
@@ -4331,6 +4675,9 @@
     "description" : "프로필 조회·수정, 학습 통계, 회원 탈퇴",
     "name" : "회원"
   }, {
+    "description" : "게시판(코드 이해 Q&A·학습 후기·자유) 글 목록·검색·상세·작성·수정·삭제와 댓글",
+    "name" : "커뮤니티"
+  }, {
     "description" : "프로젝트 분석 요청, 내 분석 목록, 진행 상태, 분석 결과(개요·파일·개념) 조회",
     "name" : "분석"
   }, {
@@ -4342,9 +4689,6 @@
   }, {
     "description" : "날짜별 복습 계획 조회, 직접 추가, 완료 체크, 삭제",
     "name" : "복습 계획"
-  }, {
-    "description" : "게시판(코드 이해 Q&A·학습 후기·자유) 글 목록·검색·상세·작성·수정·삭제",
-    "name" : "커뮤니티"
   }, {
     "description" : "퀴즈 오답·내 코드·찜한 분야·수준으로 고른 맞춤 개념 카드와 AI 추천 이유",
     "name" : "추천"
