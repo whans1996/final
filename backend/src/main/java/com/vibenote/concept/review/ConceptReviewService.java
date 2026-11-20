@@ -101,9 +101,14 @@ public class ConceptReviewService {
         return refreshRating(conceptId);
     }
 
+    /**
+     * 카드 행을 먼저 잠그고(FOR UPDATE) 공개 여부를 본다. 순서를 바꾸면 첫 일반 SELECT가 REPEATABLE READ 스냅샷을 잠금 전에 잡아, 잠금을
+     * 기다린 트랜잭션이 앞 트랜잭션이 커밋한 리뷰를 보지 못한다 ({@code ConceptReviewConcurrencyTest}). 없는 id면 잠글 행이 없고 아래에서
+     * 404다.
+     */
     private void lockPublished(long conceptId) {
-        conceptQueryService.getPublished(conceptId);
         reviewMapper.lockConcept(conceptId);
+        conceptQueryService.getPublished(conceptId);
     }
 
     private ConceptReview getMine(long conceptId, long userId) {
