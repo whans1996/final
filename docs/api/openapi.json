@@ -928,6 +928,60 @@
         "required" : [ "description", "no", "path", "title" ],
         "type" : "object"
       },
+      "FollowStatusResponse" : {
+        "description" : "팔로우 여부와 대상 회원의 팔로워·팔로잉 수",
+        "properties" : {
+          "followerCount" : {
+            "description" : "대상 회원을 팔로우하는 사람 수",
+            "example" : 12,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "following" : {
+            "description" : "로그인한 내가 대상 회원을 팔로우 중인지. 비로그인·내 프로필이면 false",
+            "example" : true,
+            "type" : "boolean"
+          },
+          "followingCount" : {
+            "description" : "대상 회원이 팔로우하는 사람 수",
+            "example" : 3,
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "followerCount", "following", "followingCount" ],
+        "type" : "object"
+      },
+      "FollowUserResponse" : {
+        "description" : "팔로워·팔로잉 목록 항목",
+        "properties" : {
+          "followedAt" : {
+            "description" : "팔로우한 시각 (follows.created_at)",
+            "example" : "2026-11-20T15:02:11",
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "id" : {
+            "description" : "회원 ID",
+            "example" : 7,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "level" : {
+            "description" : "학습 수준",
+            "enum" : [ "BEGINNER", "JUNIOR", "SENIOR" ],
+            "example" : "JUNIOR",
+            "type" : "string"
+          },
+          "nickname" : {
+            "description" : "닉네임",
+            "example" : "java러버",
+            "type" : "string"
+          }
+        },
+        "required" : [ "followedAt", "id", "level", "nickname" ],
+        "type" : "object"
+      },
       "LastAttemptResponse" : {
         "description" : "내 가장 최근 풀이",
         "properties" : {
@@ -1163,6 +1217,37 @@
             "description" : "현재 페이지 항목",
             "items" : {
               "$ref" : "#/components/schemas/ConceptSummaryResponse"
+            },
+            "type" : "array"
+          },
+          "page" : {
+            "description" : "페이지 번호 (1부터)",
+            "example" : 1,
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "size" : {
+            "description" : "페이지 크기",
+            "example" : 20,
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "total" : {
+            "description" : "전체 항목 수",
+            "example" : 134,
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "PageResponseFollowUserResponse" : {
+        "description" : "페이지 응답",
+        "properties" : {
+          "items" : {
+            "description" : "현재 페이지 항목",
+            "items" : {
+              "$ref" : "#/components/schemas/FollowUserResponse"
             },
             "type" : "array"
           },
@@ -4542,6 +4627,328 @@
         "tags" : [ "회원" ]
       }
     },
+    "/api/users/{id}/follow" : {
+      "delete" : {
+        "description" : "팔로우를 푼다. 팔로우하지 않은 회원이어도 200(멱등)이다. 수는 대상 회원 기준이다.",
+        "operationId" : "unfollow",
+        "parameters" : [ {
+          "description" : "언팔로우할 회원 ID",
+          "example" : 7,
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/FollowStatusResponse"
+                }
+              }
+            },
+            "description" : "팔로우 상태"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "자기 자신 (USER_002)"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "로그인 필요, 만료·깨진 토큰, 탈퇴한 회원의 남은 토큰 (AUTH_401)"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "없거나 탈퇴한 회원 (USER_404)"
+          }
+        },
+        "summary" : "언팔로우",
+        "tags" : [ "팔로우" ]
+      },
+      "get" : {
+        "description" : "회원의 팔로워·팔로잉 수와 로그인한 내가 팔로우 중인지 조회한다. 비로그인도 쓸 수 있고, 비로그인·내 프로필이면 following은 false다. 토큰이 깨졌거나 만료되면 비로그인과 같다.",
+        "operationId" : "status",
+        "parameters" : [ {
+          "description" : "회원 ID",
+          "example" : 7,
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/FollowStatusResponse"
+                }
+              }
+            },
+            "description" : "조회 성공"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "없거나 탈퇴한 회원 (USER_404)"
+          }
+        },
+        "security" : [ ],
+        "summary" : "팔로우 상태",
+        "tags" : [ "팔로우" ]
+      },
+      "post" : {
+        "description" : "회원을 팔로우한다. 이미 팔로우 중이어도 200(멱등)이다. 수는 대상 회원 기준이다.",
+        "operationId" : "follow",
+        "parameters" : [ {
+          "description" : "팔로우할 회원 ID",
+          "example" : 7,
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/FollowStatusResponse"
+                }
+              }
+            },
+            "description" : "팔로우 상태"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "자기 자신 (USER_002)"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "로그인 필요, 만료·깨진 토큰, 탈퇴한 회원의 남은 토큰 (AUTH_401)"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "없거나 탈퇴한 회원 (USER_404)"
+          }
+        },
+        "summary" : "팔로우",
+        "tags" : [ "팔로우" ]
+      }
+    },
+    "/api/users/{id}/followers" : {
+      "get" : {
+        "description" : "회원을 팔로우하는 사람을 팔로우한 시각 최신순(같으면 회원 id 내림차순)으로 페이지 조회한다. 비로그인도 쓸 수 있다.",
+        "operationId" : "followers",
+        "parameters" : [ {
+          "description" : "회원 ID",
+          "example" : 7,
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "description" : "페이지 번호 (1부터)",
+          "example" : 1,
+          "in" : "query",
+          "name" : "page",
+          "required" : false,
+          "schema" : {
+            "default" : 1,
+            "description" : "페이지 번호 (1부터)",
+            "example" : 1,
+            "format" : "int32",
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        }, {
+          "description" : "페이지 크기 (최대 100)",
+          "example" : 20,
+          "in" : "query",
+          "name" : "size",
+          "required" : false,
+          "schema" : {
+            "default" : 20,
+            "description" : "페이지 크기 (최대 100)",
+            "example" : 20,
+            "format" : "int32",
+            "maximum" : 100,
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PageResponseFollowUserResponse"
+                }
+              }
+            },
+            "description" : "조회 성공"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "페이지 값 오류 (COMMON_400)"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "없거나 탈퇴한 회원 (USER_404)"
+          }
+        },
+        "security" : [ ],
+        "summary" : "팔로워 목록",
+        "tags" : [ "팔로우" ]
+      }
+    },
+    "/api/users/{id}/followings" : {
+      "get" : {
+        "description" : "회원이 팔로우하는 사람을 팔로우한 시각 최신순(같으면 회원 id 내림차순)으로 페이지 조회한다. 비로그인도 쓸 수 있다.",
+        "operationId" : "followings",
+        "parameters" : [ {
+          "description" : "회원 ID",
+          "example" : 7,
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "description" : "페이지 번호 (1부터)",
+          "example" : 1,
+          "in" : "query",
+          "name" : "page",
+          "required" : false,
+          "schema" : {
+            "default" : 1,
+            "description" : "페이지 번호 (1부터)",
+            "example" : 1,
+            "format" : "int32",
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        }, {
+          "description" : "페이지 크기 (최대 100)",
+          "example" : 20,
+          "in" : "query",
+          "name" : "size",
+          "required" : false,
+          "schema" : {
+            "default" : 20,
+            "description" : "페이지 크기 (최대 100)",
+            "example" : 20,
+            "format" : "int32",
+            "maximum" : 100,
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PageResponseFollowUserResponse"
+                }
+              }
+            },
+            "description" : "조회 성공"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "페이지 값 오류 (COMMON_400)"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "없거나 탈퇴한 회원 (USER_404)"
+          }
+        },
+        "security" : [ ],
+        "summary" : "팔로잉 목록",
+        "tags" : [ "팔로우" ]
+      }
+    },
     "/api/users/{id}/stats" : {
       "get" : {
         "description" : "완료한 분석 수(삭제 제외), 학습한 카드 수(퀴즈 정답 카드 ∪ 복습 완료 카드), 퀴즈 정답률(%, 풀이가 없으면 null). 로그인 없이 볼 수 있다.",
@@ -4689,6 +5096,9 @@
   }, {
     "description" : "날짜별 복습 계획 조회, 직접 추가, 완료 체크, 삭제",
     "name" : "복습 계획"
+  }, {
+    "description" : "회원 팔로우·언팔로우와 팔로워·팔로잉 조회 (F-04)",
+    "name" : "팔로우"
   }, {
     "description" : "퀴즈 오답·내 코드·찜한 분야·수준으로 고른 맞춤 개념 카드와 AI 추천 이유",
     "name" : "추천"

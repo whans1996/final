@@ -27,7 +27,7 @@
 |---|---|---|---|
 | AC1 | 로그인한 회원이 활성 회원 B를 팔로우하지 않은 상태에서 | `POST /api/users/{B}/follow` | 200 `{following: true, followerCount, followingCount}`(B의 수, 방금 팔로우 반영). `follows`에 (나, B) 행이 1개 생긴다. **이미 팔로우 중이면** 같은 200을 돌려주고 행은 1개 그대로다 (멱등) |
 | AC2 | 로그인한 회원이 B를 팔로우 중일 때 | `DELETE /api/users/{B}/follow` | 200 `{following: false, followerCount, followingCount}`. 행이 지워진다. **팔로우하지 않은 상태면** 같은 200 (멱등) |
-| AC3 | | 자기 자신에게 `POST`·`DELETE` / 없거나 탈퇴한 회원에게 `POST`·`DELETE` / 토큰 없이 `POST`·`DELETE` / 탈퇴한 회원의 남은 Access 토큰으로 `POST`·`DELETE` | 각각 400 `FOLLOW_001` / 404 `USER_404` / 401 `AUTH_401` / 401 `AUTH_401` (F-12와 같은 방식). 어느 경우든 `follows`는 바뀌지 않는다 |
+| AC3 | | 자기 자신에게 `POST`·`DELETE` / 없거나 탈퇴한 회원에게 `POST`·`DELETE` / 토큰 없이 `POST`·`DELETE` / 탈퇴한 회원의 남은 Access 토큰으로 `POST`·`DELETE` | 각각 400 `USER_002` / 404 `USER_404` / 401 `AUTH_401` / 401 `AUTH_401` (F-12와 같은 방식). 어느 경우든 `follows`는 바뀌지 않는다 |
 | AC4 | 누구나 (비로그인 포함) | `GET /api/users/{B}/follow` | 200 `{following, followerCount, followingCount}`. `following`은 로그인한 내가 B를 팔로우 중일 때만 `true`(비로그인·내 프로필이면 `false`). 없거나 탈퇴한 B면 404 `USER_404` |
 | AC5 | 누구나 | `GET /api/users/{B}/followers`, `GET /api/users/{B}/followings` (`?page=&size=`, 기본 20) | 200 `PageResponse` `{items: [{id, nickname, level, followedAt}], page, size, total}`. 팔로우한 시각 최신순(같으면 회원 id 내림차순). 없거나 탈퇴한 B면 404 `USER_404`, page·size가 범위 밖이면 400 `COMMON_400` |
 
@@ -76,7 +76,7 @@ AC11 종류별 문장 (SC-17):
 
 | 상태 | 코드 | 언제 |
 |---|---|---|
-| 400 | FOLLOW_001 | 자기 자신 ("자기 자신은 팔로우할 수 없습니다.") |
+| 400 | USER_002 | 자기 자신 ("자기 자신은 팔로우할 수 없습니다.") |
 | 401 | AUTH_401 | 토큰 없음·무효, 탈퇴한 회원의 토큰 |
 | 404 | USER_404 | 없거나 탈퇴한 회원 |
 
@@ -189,10 +189,10 @@ AC11 종류별 문장 (SC-17):
 
 `/implement`가 진행하며 체크한다.
 
-- [ ] 브랜치 `feature/F-04-follow-feed`
-- [ ] Flyway 마이그레이션 (없음)
+- [x] 브랜치 `feature/F-04-follow-feed`
+- [x] Flyway 마이그레이션 (없음)
 - [ ] AC별 실패 테스트 작성 (red 확인)
-- [ ] BE 구현 (green): `ErrorCode` FOLLOW 블록 `FOLLOW_001`, `SecurityConfig` FOLLOW 블록, `follow` 패키지 Controller·Service·Mapper, `feed` 패키지 `FeedController`·`FeedService`·`FeedMapper`
+- [ ] BE 구현 (green): `ErrorCode` USER 블록 `USER_002`, `SecurityConfig` FOLLOW 블록, `follow` 패키지 Controller·Service·Mapper, `feed` 패키지 `FeedController`·`FeedService`·`FeedMapper`
 - [ ] FE 구현 (green)
 - [ ] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
 - [ ] contract-checker 통과

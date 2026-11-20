@@ -34,6 +34,8 @@ public enum ErrorCode {
     USER_404(HttpStatus.NOT_FOUND, "존재하지 않거나 탈퇴한 사용자입니다."),
     /** 탈퇴 시 비밀번호 재확인 실패. details.password에 사유를 담는다 (F-03). */
     USER_001(HttpStatus.BAD_REQUEST, "비밀번호가 올바르지 않습니다."),
+    /** 자기 자신을 팔로우·언팔로우 (F-04 AC3). */
+    USER_002(HttpStatus.BAD_REQUEST, "자기 자신은 팔로우할 수 없습니다."),
 
     // ── ANALYSIS (A F-05~07·F-19) ──
     /** 없는 분석, 다른 회원의 분석, soft delete된 분석. 존재 여부를 드러내지 않으려고 403 대신 404 (F-05a). */

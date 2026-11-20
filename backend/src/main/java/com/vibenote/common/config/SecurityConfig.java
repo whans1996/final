@@ -46,6 +46,11 @@ public class SecurityConfig {
         "/api/users/{id:\\d+}",
         "/api/users/{id:\\d+}/stats",
 
+        // ── FOLLOW (B F-04). 숫자 id만이라 /api/users/me/...는 열리지 않는다 ──
+        "/api/users/{id:\\d+}/follow", // GET 팔로우 상태만. POST·DELETE는 인증 필요
+        "/api/users/{id:\\d+}/followers",
+        "/api/users/{id:\\d+}/followings",
+
         // ── ANALYSIS (A F-19 공개 분석) ──
 
         // ── CONCEPT (B F-09~12) ──

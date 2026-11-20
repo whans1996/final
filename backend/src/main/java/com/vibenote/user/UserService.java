@@ -75,6 +75,14 @@ public class UserService {
         return userMapper.findByIdForShare(id);
     }
 
+    /**
+     * 회원 행을 배타 잠금으로 읽는다 (상태와 상관없이). 탈퇴(같은 행 UPDATE)와 직렬화할 때 쓴다. 여러 행을 잠글 때는 id 오름차순으로 불러 데드락을 피한다
+     * (F-04 팔로우).
+     */
+    public Optional<User> findByIdForUpdate(long id) {
+        return userMapper.findByIdForUpdate(id);
+    }
+
     /** 인증된 회원 본인. Access 토큰이 남아 있어도 탈퇴했으면 AUTH_401 (필터는 DB를 보지 않는다). */
     public User getActiveMember(long userId) {
         return userMapper
