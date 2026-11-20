@@ -1,6 +1,6 @@
 import http from '@/api/http'
 
-// 개념 카드 목록·검색 (F-09)·상세 (F-10)·리뷰 (F-11). 각 spec 3절. 목록·상세·리뷰 목록은 로그인 없이 부를 수 있다.
+// 개념 카드 목록·검색 (F-09)·상세 (F-10)·리뷰 (F-11)·찜 (F-12). 각 spec 3절. 목록·상세·리뷰 목록·찜 목록은 로그인 없이 부를 수 있다.
 
 const isEmpty = (value) => value === undefined || value === null || value === ''
 
@@ -22,7 +22,7 @@ export function fetchConcepts({ keyword, category, difficulty, sort, page, size 
  * 공개 카드 상세 (F-10). 로그인 상태면 인터셉터가 토큰을 붙여 appearances가 채워진다.
  * 없거나 비공개 카드면 404 CONCEPT_404.
  * @param {number} id
- * @returns {Promise<{ id: number, name: string, category: string, difficulty: string, summary: string, body: string|null, exampleCode: string|null, referenceUrl: string|null, wishCount: number, avgRating: number, appearances: { analysisId: number, analysisTitle: string, fileId: number|null, filePath: string|null, lineHint: string|null, contextNote: string|null }[], related: { id: number, name: string, category: string, difficulty: string, summary: string, wishCount: number, avgRating: number }[] }>}
+ * @returns {Promise<{ id: number, name: string, category: string, difficulty: string, summary: string, body: string|null, exampleCode: string|null, referenceUrl: string|null, wishCount: number, wished: boolean, avgRating: number, appearances: { analysisId: number, analysisTitle: string, fileId: number|null, filePath: string|null, lineHint: string|null, contextNote: string|null }[], related: { id: number, name: string, category: string, difficulty: string, summary: string, wishCount: number, avgRating: number }[] }>}
  */
 export function fetchConcept(id) {
   return http.get(`/concepts/${id}`).then((res) => res.data)
@@ -87,4 +87,41 @@ export function updateReview(conceptId, { rating, content }) {
  */
 export function deleteReview(conceptId) {
   return http.delete(`/concepts/${conceptId}/reviews/me`).then((res) => res.data)
+}
+
+// ── 카드 찜 (F-12, spec 3절). 찜·해제는 로그인 필요, 회원의 찜 목록은 공개 ──
+
+/**
+ * @typedef {{ wished: boolean, wishCount: number, reviewPlanDate: string|null }} ConceptWishResult
+ */
+
+/**
+ * 카드 찜 (멱등). 새로 복습 계획이 생겼으면 reviewPlanDate에 날짜. 404 CONCEPT_404.
+ * @param {number} conceptId
+ * @returns {Promise<ConceptWishResult>}
+ */
+export function wishConcept(conceptId) {
+  return http.post(`/concepts/${conceptId}/wish`).then((res) => res.data)
+}
+
+/**
+ * 카드 찜 해제 (멱등). 바뀐 찜 수를 돌려준다.
+ * @param {number} conceptId
+ * @returns {Promise<ConceptWishResult>}
+ */
+export function unwishConcept(conceptId) {
+  return http.delete(`/concepts/${conceptId}/wish`).then((res) => res.data)
+}
+
+/**
+ * 회원이 찜한 공개 카드 (찜한 시각 최신순). 404 USER_404.
+ * @param {number} userId
+ * @param {{ page?: number, size?: number }} query
+ * @returns {Promise<{ items: { id: number, name: string, category: string, difficulty: string, summary: string, wishCount: number, avgRating: number }[], page: number, size: number, total: number }>}
+ */
+export function fetchUserWishes(userId, { page, size } = {}) {
+  const params = Object.fromEntries(
+    Object.entries({ page, size }).filter(([, value]) => !isEmpty(value)),
+  )
+  return http.get(`/users/${userId}/wishes`, { params }).then((res) => res.data)
 }

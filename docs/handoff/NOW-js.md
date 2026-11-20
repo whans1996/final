@@ -17,12 +17,12 @@ F-12 카드 찜 — spec `docs/specs/F-12-concept-wish.md` APPROVED, `/implement
 - ✅ BE AC1~AC11 green (BE 566건 통과): `concept/wish/ConceptWishController·Service·Mapper(+XML)·dto/ConceptWishResponse`, `ConceptDetailResponse.wished`, `ActivityService.recordOnce`·`ActivityMapper.exists`, `PUBLIC_GET_PATHS`에 `/api/users/{id:\\d+}/wishes`, openapi.json 갱신
 - 테스트: `ConceptWishApiTest`(AC1~AC11, AC7도 여기), `ConceptWishConcurrencyTest`(AC2 같은 회원·AC6 다른 회원 동시), `ConceptWishServiceTest`(DuplicateKey), `feed/ActivityServiceTest`
 - spec과 다른 점: 쓰기 순서를 F-11처럼 `lockConcept` → `getPublished` → `getActiveMember`로 (잠금 전 스냅샷 문제)
-- ⏳ FE 테스트 작성됨(미커밋, red): `WishButton.spec.js`, `UserWishes.spec.js`, `ConceptDetailView.spec.js`·`UserProfileView.spec.js`·`api/__tests__/concepts.spec.js` 추가분
+- ✅ FE AC12~AC15 green (verify fe 통과): API 함수 3개, `WishButton.vue`, `UserWishes.vue`, `ConceptDetailView`·`UserProfileView` 연결. F-10 AC9 테스트의 "♥ 12" 기대를 "♡ 12"로 (AC12 빈 하트)
 
 ## 바로 다음 할 일
 
-1. FE 구현: `src/api/concepts.js`에 `wishConcept`·`unwishConcept`·`fetchUserWishes`, `components/concept/WishButton.vue`(data-action=toggle-wish, data-message=wish-review-plan/wish-error, class on), `UserWishes.vue`(data-section=wishes, data-action=more-wishes/browse-concepts), `ConceptDetailView`·`UserProfileView` 연결 → `node scripts/verify.mjs fe`
-2. contract-checker, ui-verifier(375·1280), 산출물(06 SC-10·SC-18, 02 UC23) → `/pr-review`
+1. contract-checker(F-12 API 3개 + 상세 wished) → ui-verifier(SC-10 찜 토글, SC-18 찜 절, 375·1280px. BE local + FE dev 필요)
+2. 산출물: `docs/산출물/06-화면설계서.md` SC-10 찜 버튼·SC-18 찜 절, `02-유스케이스.md` UC23, `01-요구사항정의서.md` F-12 행 → `/pr-review` (본문 `Closes #57`, @whans1996)
 
 ## 막힌 점 / 결정 필요
 

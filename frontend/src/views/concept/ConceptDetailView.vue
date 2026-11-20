@@ -1,5 +1,5 @@
 <script setup>
-// SC-10 개념 카드 상세 (F-10 AC9~AC13, F-11 리뷰 절 AC13~AC18, F-17 AC18 글쓰기 버튼). 공개 화면. 로그인하면 응답의 appearances(내 코드 등장 위치)가 채워진다.
+// SC-10 개념 카드 상세 (F-10 AC9~AC13, F-11 리뷰 절 AC13~AC18, F-12 찜 버튼 AC12~AC14, F-17 AC18 글쓰기 버튼). 공개 화면. 로그인하면 응답의 appearances(내 코드 등장 위치)가 채워진다.
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { fetchConcept } from '@/api/concepts'
@@ -9,6 +9,7 @@ import ConceptAppearances from '@/components/concept/ConceptAppearances.vue'
 import ConceptCard from '@/components/concept/ConceptCard.vue'
 import ConceptReviews from '@/components/concept/ConceptReviews.vue'
 import MarkdownBody from '@/components/concept/MarkdownBody.vue'
+import WishButton from '@/components/concept/WishButton.vue'
 import ReviewPlanAddButton from '@/components/reviewplan/ReviewPlanAddButton.vue'
 import { useAuthStore } from '@/stores/auth'
 import { LEVELS } from '@/utils/authValidation'
@@ -71,6 +72,13 @@ function onRatingChange({ avgRating, reviewCount: count }) {
   reviewCount.value = count
 }
 
+/** 찜·해제 결과로 헤더 찜 상태를 맞춘다 (F-12 AC13·AC14, 카드 상세를 다시 부르지 않는다) */
+function onWishChange({ wished, wishCount }) {
+  if (!concept.value) return
+  concept.value.wished = wished
+  concept.value.wishCount = wishCount
+}
+
 /** 이 카드를 첨부해 커뮤니티 글쓰기로 (F-17 AC18). 비로그인은 로그인 후 돌아온다 */
 function writePost() {
   const target = `/community/write?conceptId=${concept.value.id}`
@@ -108,9 +116,12 @@ function backToList() {
         <div class="title-row">
           <h1>{{ concept.name }}</h1>
           <span class="stats">
-            <span class="wish" :aria-label="`찜 ${concept.wishCount}`"
-              >♥ {{ concept.wishCount }}</span
-            >
+            <WishButton
+              :concept-id="concept.id"
+              :wished="concept.wished"
+              :wish-count="concept.wishCount"
+              @change="onWishChange"
+            />
             <span class="rating" :aria-label="`평점 ${rating}`">★ {{ rating }}</span>
             <span v-if="reviewCount !== null" class="review-count" data-role="review-count"
               >· 리뷰 {{ reviewCount }}</span
@@ -233,11 +244,9 @@ h1 {
 
 .stats {
   display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
   gap: var(--space-4);
-}
-
-.wish {
-  color: var(--color-danger);
 }
 
 .rating {
