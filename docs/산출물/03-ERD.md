@@ -22,7 +22,7 @@
 | concept_wishes | 카드 찜 | concepts N:M users | F-12 |
 | quizzes, quiz_questions | 분석별 퀴즈와 문항(선택지 4개 JSON 문자열 배열, 정답 위치 0부터, 해설, 관련 카드 `concept_id` NULL 가능). 분석 파이프라인 QUIZ 단계(F-14)가 분석당 1번 만들고(`analysis_id` UNIQUE, 재생성 없음) 문항 번호는 id 순서다. 생성이 실패하면 행이 없다 | analyses 1:1, concepts 1:N | F-14 |
 | quiz_attempts, quiz_answers | 풀이 기록(`score` 맞힌 수, `total` 문항 수)과 문항별 답안. 같은 퀴즈를 다시 풀면 새 풀이로 쌓인다. 분석을 soft delete해도 남는다(통계·챌린지가 읽음) | users·quizzes 1:N | F-14 |
-| review_plans | 날짜별 복습 계획. 퀴즈 제출 때 틀린 공개 개념이 `reason=WRONG`, 내일 날짜, TODO로 들어간다(그 개념의 TODO가 있으면 넣지 않음, F-14). UNIQUE `(user_id, concept_id, plan_date)` | users·concepts 1:N | F-14, F-15 |
+| review_plans | 날짜별 복습 계획. 퀴즈 제출 때 틀린 공개 개념이 `reason=WRONG`(F-14), 찜할 때 `WISH`(F-12가 `ReviewPlanService.addWish` 호출), 카드 상세 "복습에 추가"로 `MANUAL`(F-15)이 들어간다. 자동 추가는 내일 날짜, 모두 TODO로 시작하고 한 회원·카드의 TODO는 하나만 둔다. 완료하면 `status=DONE`·`done_at`(학습 통계·챌린지가 센다). 공개되지 않은 카드의 계획은 목록·API에서 빠진다(행은 둔다). UNIQUE `(user_id, concept_id, plan_date)` | users·concepts 1:N | F-14, F-15 |
 | recommendation_reasons | 추천 이유 캐시 | users·concepts | F-16 |
 | posts | 게시글 (board_type QNA/REVIEW/FREE, 분석·카드 첨부) | users 1:N | F-17 |
 | comments | 댓글 | posts 1:N, users 1:N | F-18 |

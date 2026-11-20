@@ -9,6 +9,7 @@ import ConceptAppearances from '@/components/concept/ConceptAppearances.vue'
 import ConceptCard from '@/components/concept/ConceptCard.vue'
 import ConceptReviews from '@/components/concept/ConceptReviews.vue'
 import MarkdownBody from '@/components/concept/MarkdownBody.vue'
+import ReviewPlanAddButton from '@/components/reviewplan/ReviewPlanAddButton.vue'
 import { LEVELS } from '@/utils/authValidation'
 
 const route = useRoute()
@@ -112,6 +113,7 @@ function backToList() {
           <span class="tag">{{ difficultyLabel }}</span>
         </span>
         <p class="summary">{{ concept.summary }}</p>
+        <ReviewPlanAddButton :concept-id="concept.id" />
       </header>
 
       <section v-if="concept.body" data-section="body">

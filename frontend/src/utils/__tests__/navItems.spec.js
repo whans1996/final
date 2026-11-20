@@ -13,11 +13,12 @@ describe('navItems (F-00b AC8)', () => {
     expect(labels(navItems(routes, loggedOut))).toEqual(['개념 카드', '로그인', '회원가입'])
   })
 
-  it('AC8 로그인하면 개념 카드·분석 요청·내 분석을 본다', () => {
+  it('AC8 로그인하면 개념 카드·분석 요청·내 분석·복습(F-15 AC12)을 본다', () => {
     expect(navItems(routes, user)).toEqual([
       { label: '개념 카드', to: '/concepts' },
       { label: '분석 요청', to: '/analyses/new' },
       { label: '내 분석', to: '/analyses' },
+      { label: '복습', to: '/review-plans' },
     ])
   })
 
@@ -26,6 +27,7 @@ describe('navItems (F-00b AC8)', () => {
       { label: '개념 카드', to: '/concepts' },
       { label: '분석 요청', to: '/analyses/new' },
       { label: '내 분석', to: '/analyses' },
+      { label: '복습', to: '/review-plans' },
       { label: '관리자', to: '/admin' },
     ])
   })

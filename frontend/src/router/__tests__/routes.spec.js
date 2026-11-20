@@ -30,6 +30,16 @@ describe('routes (F-00b AC7)', () => {
     expect(routes.at(-1).name).toBe('not-found')
   })
 
+  it('F-15 AC12 /review-plans는 로그인이 필요하다', () => {
+    const reviewPlans = routes.find((r) => r.name === 'review-plans')
+
+    expect(reviewPlans.path).toBe('/review-plans')
+    expect(reviewPlans.meta).toMatchObject({
+      requiresAuth: true,
+      nav: { label: '복습', order: 30, show: 'user' },
+    })
+  })
+
   it('AC9 /admin은 관리자 전용이고 자식 route를 가진다', () => {
     const admin = routes.find((r) => r.path === '/admin')
 

@@ -2,10 +2,22 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.vibenote.reviewplan.ReviewPlanMapper">
 
+    <sql id="columns">
+        id, user_id, concept_id, plan_date, status, reason, done_at, created_at
+    </sql>
+
     <select id="existsTodo" resultType="boolean">
         SELECT EXISTS (
             SELECT 1 FROM review_plans
             WHERE user_id = #{userId} AND concept_id = #{conceptId} AND status = 'TODO'
+        )
+    </select>
+
+    <select id="existsOtherTodo" resultType="boolean">
+        SELECT EXISTS (
+            SELECT 1 FROM review_plans
+            WHERE user_id = #{userId} AND concept_id = #{conceptId} AND status = 'TODO'
+              AND id &lt;&gt; #{planId}
         )
     </select>
 
@@ -20,4 +32,40 @@
         INSERT IGNORE INTO review_plans (user_id, concept_id, plan_date, status, reason, created_at)
         VALUES (#{userId}, #{conceptId}, #{planDate}, 'TODO', #{reason}, #{createdAt})
     </insert>
+
+    <!-- idx_review_plans_user_date (user_id, plan_date) -->
+    <select id="findInRange" resultType="com.vibenote.reviewplan.domain.ReviewPlan">
+        SELECT <include refid="columns"/>
+        FROM review_plans
+        WHERE user_id = #{userId} AND plan_date BETWEEN #{from} AND #{to}
+        ORDER BY plan_date, id
+    </select>
+
+    <select id="findOverdue" resultType="com.vibenote.reviewplan.domain.ReviewPlan">
+        SELECT <include refid="columns"/>
+        FROM review_plans
+        WHERE user_id = #{userId} AND plan_date &lt; #{today} AND status = 'TODO'
+        ORDER BY plan_date, id
+    </select>
+
+    <select id="findOwned" resultType="com.vibenote.reviewplan.domain.ReviewPlan">
+        SELECT <include refid="columns"/>
+        FROM review_plans
+        WHERE id = #{planId} AND user_id = #{userId}
+    </select>
+
+    <select id="findByDate" resultType="com.vibenote.reviewplan.domain.ReviewPlan">
+        SELECT <include refid="columns"/>
+        FROM review_plans
+        WHERE user_id = #{userId} AND concept_id = #{conceptId} AND plan_date = #{planDate}
+    </select>
+
+    <update id="updateStatus">
+        UPDATE review_plans SET status = #{status}, done_at = #{doneAt}
+        WHERE id = #{planId} AND user_id = #{userId}
+    </update>
+
+    <delete id="deleteOwned">
+        DELETE FROM review_plans WHERE id = #{planId} AND user_id = #{userId}
+    </delete>
 </mapper>
