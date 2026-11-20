@@ -1,5 +1,5 @@
 <script setup>
-// SC-10 개념 카드 상세 (F-10 AC9~AC13). 공개 화면. 로그인하면 응답의 appearances(내 코드 등장 위치)가 채워진다.
+// SC-10 개념 카드 상세 (F-10 AC9~AC13, F-11 리뷰 절 AC13~AC18). 공개 화면. 로그인하면 응답의 appearances(내 코드 등장 위치)가 채워진다.
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { fetchConcept } from '@/api/concepts'
@@ -7,6 +7,7 @@ import { errorCode, errorMessage } from '@/api/http'
 import CodeBlock from '@/components/concept/CodeBlock.vue'
 import ConceptAppearances from '@/components/concept/ConceptAppearances.vue'
 import ConceptCard from '@/components/concept/ConceptCard.vue'
+import ConceptReviews from '@/components/concept/ConceptReviews.vue'
 import MarkdownBody from '@/components/concept/MarkdownBody.vue'
 import { LEVELS } from '@/utils/authValidation'
 
@@ -17,6 +18,8 @@ const concept = ref(null)
 const loading = ref(true)
 const notFound = ref(false)
 const loadError = ref('')
+// 리뷰 목록 total (F-11 AC13). 리뷰 절이 rating-change로 알려 준다
+const reviewCount = ref(null)
 
 const difficultyLabel = computed(
   () =>
@@ -34,6 +37,7 @@ async function load(id) {
   loading.value = true
   notFound.value = false
   loadError.value = ''
+  reviewCount.value = null
   window.scrollTo(0, 0)
   try {
     const result = await fetchConcept(id)
@@ -57,6 +61,12 @@ watch(
   },
   { immediate: true },
 )
+
+/** 리뷰를 쓰거나 고치거나 지우면 헤더 평점·리뷰 수를 바꾼다 (카드 상세를 다시 부르지 않는다) */
+function onRatingChange({ avgRating, reviewCount: count }) {
+  if (avgRating !== undefined && concept.value) concept.value.avgRating = avgRating
+  reviewCount.value = count
+}
 
 /** 직전 화면이 목록(/concepts, 쿼리 포함)이면 뒤로 가서 검색 조건을 살리고, 아니면 목록 첫 화면으로 (AC12) */
 function backToList() {
@@ -92,6 +102,9 @@ function backToList() {
               >♥ {{ concept.wishCount }}</span
             >
             <span class="rating" :aria-label="`평점 ${rating}`">★ {{ rating }}</span>
+            <span v-if="reviewCount !== null" class="review-count" data-role="review-count"
+              >· 리뷰 {{ reviewCount }}</span
+            >
           </span>
         </div>
         <span class="tags">
@@ -136,6 +149,11 @@ function backToList() {
             <ConceptCard :concept="card" />
           </li>
         </ul>
+      </section>
+
+      <section data-section="reviews">
+        <h2>리뷰</h2>
+        <ConceptReviews :concept-id="concept.id" @rating-change="onRatingChange" />
       </section>
     </template>
   </article>
@@ -199,6 +217,10 @@ h1 {
 
 .rating {
   color: #b45309;
+}
+
+.review-count {
+  color: var(--color-text-muted);
 }
 
 .tags {

@@ -216,10 +216,10 @@
 
 - [x] 브랜치 `feature/F-11-concept-review`
 - [x] Flyway 마이그레이션 (없음)
-- [ ] AC별 실패 테스트 작성 (red 확인)
+- [x] AC별 실패 테스트 작성 (red 확인)
 - [x] BE 구현 (green): `ConceptReviewController`, `ConceptReviewService`, `ConceptReviewMapper`(+XML), DTO 4종(`ConceptReviewRequest`·`ConceptReviewResponse`·`ConceptReviewSaveResponse`·`ConceptRatingResponse`), `ErrorCode` `CONCEPT_001`·`CONCEPT_409`, `PUBLIC_GET_PATHS`
-- [ ] FE 구현 (green): API 함수 5개, `StarRating`, `ReviewForm`, `ConceptReviews`, `ConceptDetailView` 헤더·절 연결
-- [ ] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
+- [x] FE 구현 (green): API 함수 5개, `StarRating`, `ReviewForm`, `ConceptReviews`, `ConceptDetailView` 헤더·절 연결
+- [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
 - [ ] contract-checker 통과
 - [ ] ui-verifier 통과 (데스크톱·모바일)
 - [ ] reviewer 지적 사항 반영

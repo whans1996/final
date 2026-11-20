@@ -64,6 +64,8 @@ describe('ConceptDetailView (F-10 AC9~AC13)', () => {
   beforeEach(() => {
     vi.resetAllMocks()
     window.scrollTo = vi.fn()
+    // F-11 리뷰 절 기본값 (리뷰 0건)
+    conceptsApi.fetchReviews.mockResolvedValue({ items: [], page: 1, size: 10, total: 0 })
   })
 
   afterEach(() => {
@@ -308,5 +310,63 @@ describe('ConceptDetailView (F-10 AC9~AC13)', () => {
     expect(router.currentRoute.value.name).toBe('not-found')
     await router.push('/concepts/57')
     expect(router.currentRoute.value.name).toBe('concept-detail')
+  })
+
+  // ── F-11 AC13·AC18 (리뷰 절) ──
+
+  it('F-11 AC13 헤더 평점 옆에 리뷰 목록 total을 "리뷰 N"으로 보여 주고 리뷰 절이 붙는다', async () => {
+    conceptsApi.fetchConcept.mockResolvedValue(detail())
+    conceptsApi.fetchReviews.mockResolvedValue({ items: [], page: 1, size: 10, total: 12 })
+
+    const { wrapper } = await mountDetail()
+
+    expect(conceptsApi.fetchReviews).toHaveBeenCalledWith(57, { page: 1, size: 10 })
+    expect(wrapper.find('[data-role="review-count"]').text()).toBe('· 리뷰 12')
+    expect(section(wrapper, 'reviews').find('h2').text()).toBe('리뷰')
+  })
+
+  it('F-11 AC18 리뷰 절이 평점을 바꾸면 헤더 평점과 리뷰 수가 바뀐다', async () => {
+    conceptsApi.fetchConcept.mockResolvedValue(detail({ avgRating: 4.25 }))
+    const { wrapper } = await mountDetail()
+
+    wrapper
+      .findComponent({ name: 'ConceptReviews' })
+      .vm.$emit('rating-change', { avgRating: 3.7, reviewCount: 5 })
+    await flushPromises()
+
+    expect(wrapper.find('.rating').text()).toBe('★ 3.7')
+    expect(wrapper.find('[data-role="review-count"]').text()).toBe('· 리뷰 5')
+  })
+
+  it('F-11 AC18 리뷰 목록 조회가 실패해도 카드 본문은 그대로 보이고 리뷰 절에만 message가 보인다', async () => {
+    conceptsApi.fetchConcept.mockResolvedValue(detail())
+    conceptsApi.fetchReviews.mockRejectedValue(
+      apiError(500, { code: 'COMMON_500', message: '서버 오류가 발생했습니다.' }),
+    )
+
+    const { wrapper } = await mountDetail()
+
+    expect(wrapper.find('h1').text()).toBe('JWT 기반 인증')
+    expect(section(wrapper, 'body').exists()).toBe(true)
+    expect(section(wrapper, 'reviews').find('[role="alert"]').text()).toBe(
+      '서버 오류가 발생했습니다.',
+    )
+  })
+
+  it('F-11 AC18 관련 카드로 :id만 바뀌면 새 카드 기준으로 리뷰를 다시 불러온다', async () => {
+    conceptsApi.fetchConcept
+      .mockResolvedValueOnce(detail({ related: [summary()] }))
+      .mockResolvedValueOnce(detail({ id: 58, name: 'Spring Security 필터 체인' }))
+    conceptsApi.fetchReviews
+      .mockResolvedValueOnce({ items: [], page: 1, size: 10, total: 3 })
+      .mockResolvedValueOnce({ items: [], page: 1, size: 10, total: 0 })
+    const { wrapper, router } = await mountDetail()
+    expect(wrapper.find('[data-role="review-count"]').text()).toBe('· 리뷰 3')
+
+    await router.push('/concepts/58')
+    await flushPromises()
+
+    expect(conceptsApi.fetchReviews).toHaveBeenLastCalledWith(58, { page: 1, size: 10 })
+    expect(wrapper.find('[data-role="review-count"]').text()).toBe('· 리뷰 0')
   })
 })
