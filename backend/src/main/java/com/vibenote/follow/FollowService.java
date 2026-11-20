@@ -33,8 +33,9 @@ public class FollowService {
     }
 
     /**
-     * 팔로우한다. 이미 팔로우 중이면 행을 그대로 둔다 (AC1). 나와 대상의 users 행을 id 오름차순으로 잠근 뒤 상태를 본다. 탈퇴는 같은 행을 UPDATE한 뒤
-     * follows를 지우므로, 탈퇴와 겹쳐도 탈퇴한 회원의 팔로우 행이 남지 않는다.
+     * 팔로우한다. 이미 팔로우 중이면 행을 그대로 둔다 (AC1). 나와 대상의 users 행을 id 오름차순으로 공유 잠금(FOR SHARE)한 뒤 상태를 본다. 탈퇴는
+     * 같은 행을 UPDATE(배타 잠금)한 뒤 follows를 지우므로, 탈퇴와 겹쳐도 탈퇴한 회원의 팔로우 행이 남지 않는다. 이 트랜잭션은 users를 고치지 않아
+     * 잠금을 올릴 일이 없으므로 공유 잠금이면 충분하고, 인기 회원을 여러 사람이 동시에 팔로우해도 서로 기다리지 않는다 (PR 리뷰).
      */
     @Transactional
     public FollowStatusResponse follow(long targetId, long userId) {
@@ -42,11 +43,11 @@ public class FollowService {
         Optional<User> me;
         Optional<User> target;
         if (userId < targetId) {
-            me = userService.findByIdForUpdate(userId);
-            target = userService.findByIdForUpdate(targetId);
+            me = userService.findByIdForShare(userId);
+            target = userService.findByIdForShare(targetId);
         } else {
-            target = userService.findByIdForUpdate(targetId);
-            me = userService.findByIdForUpdate(userId);
+            target = userService.findByIdForShare(targetId);
+            me = userService.findByIdForShare(userId);
         }
         requireActive(target, () -> new BusinessException(ErrorCode.USER_404));
         requireActive(me, () -> new BusinessException(ErrorCode.AUTH_401));
