@@ -178,7 +178,7 @@
 - 사용 테이블: `quizzes`·`quiz_questions`(INSERT, 조회), `quiz_attempts`·`quiz_answers`(INSERT, 최근 풀이 조회), `review_plans`(TODO 존재 확인, INSERT), `analysis_concepts`·`concepts`(개념 목록, 상태), `analysis_files`(코드), `analyses`(소유·삭제 확인), `llm_usage_logs`(F-00 데코레이터가 INSERT)
 - 쿼리 위치
   - 새 `quiz/QuizMapper`(+`mapper/quiz/QuizMapper.xml`)
-  - 새 `reviewplan/ReviewPlanMapper`(+`mapper/reviewplan/ReviewPlanMapper.xml`): `existsTodo(userId, conceptId)`, `insertIgnoringDuplicate(...)`(`ON DUPLICATE KEY UPDATE id = id`, 영향 행 수로 새로 넣었는지 판단). F-15가 이 패키지를 확장한다
+  - 새 `reviewplan/ReviewPlanMapper`(+`mapper/reviewplan/ReviewPlanMapper.xml`): `existsTodo(userId, conceptId)`, `insertIgnoringDuplicate(...)`(`INSERT IGNORE … VALUES`, 영향 행 수 1이면 새로 넣음, UNIQUE가 겹치면 0. 구현 때 변경: `ON DUPLICATE KEY UPDATE id = id`는 Connector/J 기본값(CLIENT_FOUND_ROWS)에서 중복이어도 1을 돌려줘 구별할 수 없고, 대안으로 썼던 `INSERT … SELECT … WHERE NOT EXISTS`는 RR gap 공유 락 때문에 다른 회원의 동시 제출과 데드락이 나서(`ReviewPlanConcurrencyTest`, PR 리뷰 때 재현) 바꿨다). F-15가 이 패키지를 확장한다
   - 연결 개념 목록은 `AnalysisConceptMapper`에 `findForQuiz(analysisId)`(concept id·name·status·context_note, HIDDEN 제외, `concept_id ASC`)를 추가한다
 - 산출물: `03-ERD.md`의 quiz 4테이블 설명(채우는 단계, 분석당 1개, 재풀이 누적), `review_plans`의 WRONG 행이 생기는 시점
 
@@ -270,7 +270,7 @@ LLM은 테스트에서 실제로 부르지 않는다. 파이프라인 통합 테
 | AC3, AC4(형식) | `quiz/QuizResponseParserTest` (문항별 버림 규칙, 목록 밖·정수 아닌 conceptId → NULL, 10개 상한, 5개 미만 예외, 같은 seed면 같은 셔플·정답 위치 추적) | 단위 |
 | AC4 (재시도) | `quiz/QuizGeneratorTest` (FakeLlmClient: 형식 오류 1회만 재시도, LLM_503 재시도 없음 → 빈 결과) | 단위 |
 | AC5, AC6, AC7, AC8 | `quiz/QuizApiTest#AC5_…`~`AC8_…` (응답에 정답 없음·lastAttempt, 채점·저장·재풀이, PUBLISHED만 concept, 복습 내일·TODO 있으면 건너뜀·reviewAdded, 400 두 종·401·404 종류별, 에러 시 저장 없음) | MockMvc 통합 (고정 Clock) |
-| AC7 | `reviewplan/ReviewPlanServiceTest` (TODO 있으면 건너뜀, 같은 날 DONE과 UNIQUE 겹침 건너뜀, 새로 넣은 것만 반환) | 통합 |
+| AC7 | `reviewplan/ReviewPlanServiceTest` (TODO 있으면 건너뜀, 같은 날 DONE과 UNIQUE 겹침 건너뜀, 새로 넣은 것만 반환), `reviewplan/ReviewPlanConcurrencyTest` (다른 회원 동시 제출에 데드락 없음) | 통합 |
 | AC9 | `src/components/analysis/__tests__/AnalysisQuizTab.spec.js`, `src/views/__tests__/AnalysisDetailView.spec.js`(퀴즈 탭·query 복원) | Vitest |
 | AC10 | `src/views/__tests__/QuizView.spec.js` (제출 버튼 활성 조건, 결과·복습 안내, 다시 풀기, 제출 실패 시 답 유지) | Vitest |
 | API 함수 | `src/api/__tests__/quizzes.spec.js` | Vitest |
@@ -301,8 +301,8 @@ LLM은 테스트에서 실제로 부르지 않는다. 파이프라인 통합 테
 - [x] FE 구현 (green)
 - [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
 - [x] contract-checker 통과
-- [ ] ui-verifier 통과 (데스크톱·모바일, ui-check 스크린샷 SC-07-quiz·SC-08) — 1차 스크린샷만, 375px 탭 줄바꿈 수정 필요
-- [ ] reviewer 지적 사항 반영
+- [x] ui-verifier 통과 (데스크톱·모바일, ui-check 스크린샷 SC-07-quiz·SC-08) — 375px 탭 줄바꿈·선택 탭 스크롤 수정 후 재촬영
+- [x] reviewer 지적 사항 반영
 - [x] 산출물 반영 (스크린샷 표는 ui-verifier 뒤): `02-유스케이스.md` UC30(기획 기준 → 확정, 대안 흐름), `03-ERD.md` quiz 4테이블·review_plans WRONG, `06-화면설계서.md` SC-07 퀴즈 탭·SC-08, `08-외부API-생성형AI-활용.md` F-14 행, `09-데이터셋.md`·`datasets.json` DS-06
 - [ ] PR CI 초록, Codex ✅
 - [ ] 상태 DONE (PR 머지 전 마지막 커밋)

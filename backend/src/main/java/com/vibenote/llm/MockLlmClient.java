@@ -30,11 +30,11 @@ public class MockLlmClient implements LlmClient {
 
     static final String MODEL = "mock";
 
-    /** EXTRACTING 프롬프트 카드 목록의 {@code id | 이름 | 카테고리} 줄 ({@code ConceptPrompts.input}). */
     /** quiz 프롬프트 개념 목록 줄: {@code id | 이름} 또는 {@code id | 이름 | 쓰인 방식}. 나머지를 통째로 잡는다. */
     private static final Pattern QUIZ_CONCEPT_LINE =
             Pattern.compile("(?m)^(\\d+) \\| ([^\\r\\n]+)$");
 
+    /** EXTRACTING 프롬프트 카드 목록의 {@code id | 이름 | 카테고리} 줄 ({@code ConceptPrompts.input}). */
     private static final Pattern CATALOG_LINE =
             Pattern.compile("(?m)^(\\d+) \\| (.+) \\| [^|\\r\\n]+$");
 
