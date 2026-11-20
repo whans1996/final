@@ -18,7 +18,8 @@ public record RecommendationItemResponse(
         @Schema(
                         requiredMode = Schema.RequiredMode.REQUIRED,
                         description = "추천 이유 한 줄 (100자 이하)",
-                        example = "퀴즈에서 두 번 헷갈린 JWT 인증이 내 코드의 로그인 필터에 쓰였으니 지금 다시 보면 좋아요.")
+                        example =
+                                "퀴즈에서 2번 틀렸고 내 분석 코드에도 나온 JWT 인증이에요. 요청마다 사용자를 확인하는 흐름을 다시 보면 좋아요.")
                 String reason,
         @Schema(
                         requiredMode = Schema.RequiredMode.REQUIRED,

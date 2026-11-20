@@ -66,9 +66,29 @@ class RuleReasonsTest {
     }
 
     @Test
+    void AC5_프롬프트_근거의_오답_횟수는_신호_키처럼_3번에서_멈춘다() {
+        // 신호 키는 min(오답,3)이라 오답이 3회를 넘어도 캐시를 다시 만들지 않는다.
+        // 그래서 AI 이유에 남는 횟수가 그 뒤 오답 수와 어긋나지 않게 "3번 이상"으로 묶는다.
+        for (int wrong : new int[] {3, 4, 7}) {
+            assertThat(
+                            RuleReasons.grounds(
+                                    new RecommendationSignals(wrong, false, false, 0),
+                                    card(1, "java", Level.JUNIOR, 0, 0),
+                                    Level.JUNIOR))
+                    .containsExactly("퀴즈에서 3번 이상 틀린 개념이에요");
+        }
+        assertThat(
+                        RuleReasons.grounds(
+                                new RecommendationSignals(2, false, false, 0),
+                                card(1, "java", Level.JUNIOR, 0, 0),
+                                Level.JUNIOR))
+                .containsExactly("퀴즈에서 2번 틀린 개념이에요");
+    }
+
+    @Test
     void 프롬프트_근거는_조각을_모두_준다() {
         assertThat(
-                        RuleReasons.fragments(
+                        RuleReasons.grounds(
                                 new RecommendationSignals(1, true, true, 1),
                                 card(1, "java", Level.JUNIOR, 0, 0),
                                 Level.JUNIOR))

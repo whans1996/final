@@ -28,7 +28,7 @@ final class RecommendationPrompts {
 
     private static String line(ScoredConcept scored, Level level) {
         ConceptSummaryResponse c = scored.concept();
-        List<String> fragments = RuleReasons.fragments(scored.signals(), c, level);
+        List<String> fragments = RuleReasons.grounds(scored.signals(), c, level);
         String grounds = fragments.isEmpty() ? NO_GROUNDS : String.join(" / ", fragments);
         return c.id()
                 + " | "
