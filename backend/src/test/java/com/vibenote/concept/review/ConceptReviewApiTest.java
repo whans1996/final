@@ -542,4 +542,30 @@ class ConceptReviewApiTest extends IntegrationTestBase {
         }
         assertThat(reviewCount(c)).isEqualTo(1);
     }
+
+    @Test
+    void AC12_탈퇴한_회원의_남은_토큰이면_작성_수정_삭제는_401이고_리뷰는_그대로다() throws Exception {
+        long c = published("f11-ac12w");
+        long empty = published("f11-ac12w");
+        long gone = insertUser("f11ac12gone");
+        insertReview(c, gone, 4, "탈퇴 전 리뷰", BASE);
+        String token = bearer(gone); // 탈퇴 전에 받은 Access 토큰 (만료 전)
+        withdraw(gone);
+
+        for (ResultActions result :
+                List.of(
+                        create(empty, token, body(5, "탈퇴 후 리뷰")),
+                        update(c, token, body(1, "탈퇴 후 수정")),
+                        remove(c, token))) {
+            result.andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.code").value("AUTH_401"));
+        }
+        assertThat(reviewCount(empty)).isZero();
+        assertThat(
+                        jdbc.queryForObject(
+                                "SELECT content FROM concept_reviews WHERE concept_id = ?",
+                                String.class,
+                                c))
+                .isEqualTo("탈퇴 전 리뷰");
+    }
 }

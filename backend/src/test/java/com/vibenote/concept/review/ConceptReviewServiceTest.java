@@ -13,6 +13,7 @@ import com.vibenote.common.exception.ErrorCode;
 import com.vibenote.concept.ConceptQueryService;
 import com.vibenote.concept.review.dto.ConceptReviewRequest;
 import com.vibenote.feed.ActivityService;
+import com.vibenote.user.UserService;
 import java.time.Clock;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -34,6 +35,7 @@ class ConceptReviewServiceTest {
                         mapper,
                         mock(ConceptQueryService.class),
                         activityService,
+                        mock(UserService.class),
                         Clock.systemUTC());
 
         assertThatThrownBy(() -> service.create(1L, 2L, new ConceptReviewRequest(4, "좋아요")))

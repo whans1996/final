@@ -12,6 +12,7 @@ import com.vibenote.concept.review.dto.ConceptReviewResponse;
 import com.vibenote.concept.review.dto.ConceptReviewSaveResponse;
 import com.vibenote.feed.ActivityService;
 import com.vibenote.feed.ActivityType;
+import com.vibenote.user.UserService;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -31,16 +32,19 @@ public class ConceptReviewService {
     private final ConceptReviewMapper reviewMapper;
     private final ConceptQueryService conceptQueryService;
     private final ActivityService activityService;
+    private final UserService userService;
     private final Clock clock;
 
     public ConceptReviewService(
             ConceptReviewMapper reviewMapper,
             ConceptQueryService conceptQueryService,
             ActivityService activityService,
+            UserService userService,
             Clock clock) {
         this.reviewMapper = reviewMapper;
         this.conceptQueryService = conceptQueryService;
         this.activityService = activityService;
+        this.userService = userService;
         this.clock = clock;
     }
 
@@ -65,7 +69,7 @@ public class ConceptReviewService {
     @Transactional
     public ConceptReviewSaveResponse create(
             long conceptId, long userId, ConceptReviewRequest request) {
-        lockPublished(conceptId);
+        lockForWrite(conceptId, userId);
         if (reviewMapper.findByConceptAndUser(conceptId, userId).isPresent()) {
             throw new BusinessException(ErrorCode.CONCEPT_409);
         }
@@ -88,7 +92,7 @@ public class ConceptReviewService {
     @Transactional
     public ConceptReviewSaveResponse update(
             long conceptId, long userId, ConceptReviewRequest request) {
-        lockPublished(conceptId);
+        lockForWrite(conceptId, userId);
         ConceptReview mine = getMine(conceptId, userId);
         reviewMapper.update(mine.getId(), request.rating(), request.content());
         return saved(conceptId, userId);
@@ -96,20 +100,21 @@ public class ConceptReviewService {
 
     @Transactional
     public ConceptRatingResponse delete(long conceptId, long userId) {
-        lockPublished(conceptId);
+        lockForWrite(conceptId, userId);
         ConceptReview mine = getMine(conceptId, userId);
         reviewMapper.delete(mine.getId());
         return refreshRating(conceptId);
     }
 
     /**
-     * 카드 행을 먼저 잠그고(FOR UPDATE) 공개 여부를 본다. 순서를 바꾸면 첫 일반 SELECT가 REPEATABLE READ 스냅샷을 잠금 전에 잡아, 잠금을
-     * 기다린 트랜잭션이 앞 트랜잭션이 커밋한 리뷰를 보지 못한다 ({@code ConceptReviewConcurrencyTest}). 없는 id면 잠글 행이 없고 아래에서
-     * 404다.
+     * 카드 행을 먼저 잠그고(FOR UPDATE) 공개 여부와 활성 회원인지 본다. 순서를 바꾸면 첫 일반 SELECT가 REPEATABLE READ 스냅샷을 잠금 전에
+     * 잡아, 잠금을 기다린 트랜잭션이 앞 트랜잭션이 커밋한 리뷰를 보지 못한다 ({@code ConceptReviewConcurrencyTest}). 없는 id면 잠글 행이
+     * 없고 아래에서 404다. 필터는 DB를 보지 않으므로 탈퇴 전에 받은 Access 토큰은 여기서 AUTH_401로 막는다 (Codex 리뷰).
      */
-    private void lockPublished(long conceptId) {
+    private void lockForWrite(long conceptId, long userId) {
         reviewMapper.lockConcept(conceptId);
         conceptQueryService.getPublished(conceptId);
+        userService.getActiveMember(userId);
     }
 
     private ConceptReview getMine(long conceptId, long userId) {
