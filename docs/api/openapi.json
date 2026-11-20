@@ -480,9 +480,14 @@
             "example" : 12,
             "format" : "int32",
             "type" : "integer"
+          },
+          "wished" : {
+            "description" : "내가 찜했는지 (F-12). 비로그인·깨진 토큰이면 false",
+            "example" : false,
+            "type" : "boolean"
           }
         },
-        "required" : [ "appearances", "avgRating", "body", "category", "difficulty", "exampleCode", "id", "name", "referenceUrl", "related", "summary", "wishCount" ],
+        "required" : [ "appearances", "avgRating", "body", "category", "difficulty", "exampleCode", "id", "name", "referenceUrl", "related", "summary", "wishCount", "wished" ],
         "type" : "object"
       },
       "ConceptRatingResponse" : {
@@ -634,6 +639,30 @@
           }
         },
         "required" : [ "avgRating", "category", "difficulty", "id", "name", "summary", "wishCount" ],
+        "type" : "object"
+      },
+      "ConceptWishResponse" : {
+        "description" : "찜 여부와 찜 수",
+        "properties" : {
+          "reviewPlanDate" : {
+            "description" : "이번 찜으로 복습 계획이 새로 생겼으면 그 날짜(내일, Asia/Seoul). 이미 찜했거나 그 카드의 TODO·내일 계획이 있었거나 해제면 null",
+            "example" : "2026-12-04",
+            "format" : "date",
+            "type" : [ "string", "null" ]
+          },
+          "wishCount" : {
+            "description" : "요청 처리 후 카드의 찜 수",
+            "example" : 13,
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "wished" : {
+            "description" : "요청 후 내가 찜했는지",
+            "example" : true,
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "reviewPlanDate", "wishCount", "wished" ],
         "type" : "object"
       },
       "CreateAnalysisResponse" : {
@@ -3098,6 +3127,106 @@
         "tags" : [ "개념 카드" ]
       }
     },
+    "/api/concepts/{conceptId}/wish" : {
+      "delete" : {
+        "description" : "찜을 푼다. 찜하지 않은 카드여도 200(멱등)이고 바뀐 찜 수를 돌려준다. 복습 계획은 지우지 않는다.",
+        "operationId" : "unwish",
+        "parameters" : [ {
+          "description" : "카드 ID",
+          "example" : 57,
+          "in" : "path",
+          "name" : "conceptId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ConceptWishResponse"
+                }
+              }
+            },
+            "description" : "찜 상태"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "로그인 필요 (AUTH_401)"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "없는 카드이거나 공개되지 않은 카드 (CONCEPT_404)"
+          }
+        },
+        "summary" : "카드 찜 해제",
+        "tags" : [ "개념 카드" ]
+      },
+      "post" : {
+        "description" : "공개 카드를 찜한다. 이미 찜했어도 200(멱등)이다. 새로 찜하면 내일 복습 계획(reason WISH)에 넣어 보고, 넣었으면 reviewPlanDate로 그 날짜를 돌려준다.",
+        "operationId" : "wish",
+        "parameters" : [ {
+          "description" : "카드 ID",
+          "example" : 57,
+          "in" : "path",
+          "name" : "conceptId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ConceptWishResponse"
+                }
+              }
+            },
+            "description" : "찜 상태"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "로그인 필요 (AUTH_401)"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "없는 카드이거나 공개되지 않은 카드 (CONCEPT_404)"
+          }
+        },
+        "summary" : "카드 찜",
+        "tags" : [ "개념 카드" ]
+      }
+    },
     "/api/concepts/{id}" : {
       "get" : {
         "description" : "공개(PUBLISHED) 카드의 본문·예제 코드·출처와 관련 카드(최대 4개)를 조회한다. 비로그인도 쓸 수 있고, 로그인하면 내 분석(삭제되지 않은 DONE)에서 이 개념이 등장한 위치(최신 10개)를 함께 받는다. 토큰이 깨졌거나 만료되면 비로그인과 같다.",
@@ -3976,6 +4105,87 @@
         "summary" : "학습 통계",
         "tags" : [ "회원" ]
       }
+    },
+    "/api/users/{userId}/wishes" : {
+      "get" : {
+        "description" : "회원이 찜한 공개(PUBLISHED) 카드를 찜한 시각 최신순으로 페이지 조회한다. 비로그인도 쓸 수 있다.",
+        "operationId" : "listByUser",
+        "parameters" : [ {
+          "description" : "회원 ID",
+          "example" : 3,
+          "in" : "path",
+          "name" : "userId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "description" : "페이지 번호 (1부터)",
+          "example" : 1,
+          "in" : "query",
+          "name" : "page",
+          "required" : false,
+          "schema" : {
+            "default" : 1,
+            "description" : "페이지 번호 (1부터)",
+            "example" : 1,
+            "format" : "int32",
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        }, {
+          "description" : "페이지 크기 (최대 100)",
+          "example" : 20,
+          "in" : "query",
+          "name" : "size",
+          "required" : false,
+          "schema" : {
+            "default" : 20,
+            "description" : "페이지 크기 (최대 100)",
+            "example" : 20,
+            "format" : "int32",
+            "maximum" : 100,
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PageResponseConceptSummaryResponse"
+                }
+              }
+            },
+            "description" : "조회 성공"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "페이지 값 오류 (COMMON_400)"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "없거나 탈퇴한 회원 (USER_404)"
+          }
+        },
+        "security" : [ ],
+        "summary" : "회원의 찜 목록",
+        "tags" : [ "개념 카드" ]
+      }
     }
   },
   "security" : [ {
@@ -4004,7 +4214,7 @@
     "description" : "게시판(코드 이해 Q&A·학습 후기·자유) 글 목록·검색·상세·작성·수정·삭제",
     "name" : "커뮤니티"
   }, {
-    "description" : "공개 개념 카드 목록·검색·상세·리뷰",
+    "description" : "공개 개념 카드 목록·검색·상세·리뷰·찜",
     "name" : "개념 카드"
   }, {
     "description" : "분석한 코드로 만든 객관식 퀴즈 조회, 풀이 제출·채점",

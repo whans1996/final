@@ -178,10 +178,10 @@
 
 `/implement`가 진행하며 체크한다.
 
-- [ ] 브랜치 `feature/F-12-concept-wish`
-- [ ] Flyway 마이그레이션 (없음)
-- [ ] AC별 실패 테스트 작성 (red 확인)
-- [ ] BE 구현 (green): `ConceptWishController`, `ConceptWishService`, `ConceptWishMapper`(+XML), `ConceptWishResponse`, `ConceptDetailResponse.wished`, `ActivityService.recordOnce`·`ActivityMapper.exists`, `PUBLIC_GET_PATHS`
+- [x] 브랜치 `feature/F-12-concept-wish`
+- [x] Flyway 마이그레이션 (없음)
+- [x] AC별 실패 테스트 작성 (red 확인)
+- [x] BE 구현 (green): `ConceptWishController`, `ConceptWishService`, `ConceptWishMapper`(+XML), `ConceptWishResponse`, `ConceptDetailResponse.wished`, `ActivityService.recordOnce`·`ActivityMapper.exists`, `PUBLIC_GET_PATHS`
 - [ ] FE 구현 (green): API 함수 3개, `WishButton`, `UserWishes`, `ConceptDetailView`·`UserProfileView` 연결
 - [ ] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
 - [ ] contract-checker 통과

@@ -22,7 +22,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/** 개념 카드 목록·검색 (F-09)·상세 (F-10). 리뷰(F-11)·찜(F-12)은 각 기능에서 추가한다. */
+/** 개념 카드 목록·검색 (F-09)·상세 (F-10). 리뷰(F-11)·찜(F-12)은 하위 패키지 Controller에 있다. */
 @Tag(name = ConceptApiDocs.TAG, description = ConceptApiDocs.TAG_DESCRIPTION)
 @RestController
 @RequestMapping("/api/concepts")

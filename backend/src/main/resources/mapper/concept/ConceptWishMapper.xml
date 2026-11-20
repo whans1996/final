@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- F-12 카드 찜 (B) -->
+<mapper namespace="com.vibenote.concept.wish.ConceptWishMapper">
+
+    <select id="exists" resultType="boolean">
+        SELECT EXISTS (
+            SELECT 1 FROM concept_wishes WHERE user_id = #{userId} AND concept_id = #{conceptId}
+        )
+    </select>
+
+    <insert id="insert">
+        INSERT INTO concept_wishes (user_id, concept_id, created_at)
+        VALUES (#{userId}, #{conceptId}, #{createdAt})
+    </insert>
+
+    <delete id="delete">
+        DELETE FROM concept_wishes WHERE user_id = #{userId} AND concept_id = #{conceptId}
+    </delete>
+
+    <select id="lockConcept" resultType="long">
+        SELECT id FROM concepts WHERE id = #{conceptId} FOR UPDATE
+    </select>
+
+    <update id="refreshWishCount">
+        UPDATE concepts
+        SET wish_count = (SELECT COUNT(*) FROM concept_wishes WHERE concept_id = #{conceptId})
+        WHERE id = #{conceptId}
+    </update>
+
+    <select id="findWishCount" resultType="int">
+        SELECT wish_count FROM concepts WHERE id = #{conceptId}
+    </select>
+
+    <select id="findPublishedPageByUser" resultType="com.vibenote.concept.domain.Concept">
+        SELECT c.id, c.name, c.category, c.difficulty, c.summary, c.wish_count, c.avg_rating
+        FROM concept_wishes w
+        JOIN concepts c ON c.id = w.concept_id
+        WHERE w.user_id = #{userId} AND c.status = 'PUBLISHED'
+        ORDER BY w.created_at DESC, w.concept_id DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="countPublishedByUser" resultType="long">
+        SELECT COUNT(*)
+        FROM concept_wishes w
+        JOIN concepts c ON c.id = w.concept_id
+        WHERE w.user_id = #{userId} AND c.status = 'PUBLISHED'
+    </select>
+</mapper>
