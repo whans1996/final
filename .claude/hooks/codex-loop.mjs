@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 // Stop hook: 현재 feature 브랜치의 열린 PR이 Codex 리뷰를 통과(COMPLETE)할 때까지 루프를 이어 가게 한다
 // (11-19 사용자 지시 "Codex 리뷰가 통과될 때까지 계속 리뷰를 받고 고치도록"). 절차의 정본은 /pr-review 8단계다.
-//   STALE    push한 head에 리뷰 요청이 없음 → 막고 `--request --wait --status`(백그라운드)를 지시
+//   STALE    push한 head에 리뷰 요청이 없음, 또는 head 리뷰가 실패·정체함 → 막고 `--request --wait --status`(백그라운드)를 지시
+//            (실패·정체 재요청은 같은 head의 일반 STALE과 따로 한 번 더 반응한다, #48)
 //   RUNNING  요청은 했는데 이 세션에서 --wait를 백그라운드로 돌린 적이 없음 → 막고 --wait를 지시 (끝나도 알림을 못 받으므로)
 //   FINDINGS 재리뷰 5회 미만 → 막고 8-3 처리 지시, 5회 이상 → 사람 판단 안내(systemMessage)
-//   ERROR    Codex 환경·계정 미설정, gh 실패 → 안내(systemMessage)
+//   ERROR    Codex 환경·계정 미설정, 재시도 뒤에도 실패·정체, gh 실패 → 안내(systemMessage)
 // (PR, head, 판정)마다 한 번만 반응한다: 지적을 반박하거나 사람에게 넘기고 멈춘 경우 매 턴 다시 막지 않게.
 // draft PR은 보지 않는다. 판정 규칙은 scripts/lib/codex.mjs(loopAction·skipRecheck·waitingInTranscript, 테스트 있음)에 있고,
 // 판정 자체는 scripts/codex-review.mjs(대기 없음, 읽기 전용)의 첫 줄을 쓴다.
@@ -13,7 +14,7 @@ import { spawnSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { NON_INTERACTIVE_GIT_ENV, ROOT, currentBranch, git, isGitRepo, readStdinJson, readText } from '../../scripts/lib/common.mjs';
-import { MAX_REVIEW_ROUNDS, loopAction, skipRecheck, waitingInTranscript } from '../../scripts/lib/codex.mjs';
+import { MAX_REVIEW_ROUNDS, isRetryLine, loopAction, skipRecheck, waitingInTranscript } from '../../scripts/lib/codex.mjs';
 
 const STATE_FILE = join(ROOT, '.harness', 'codex-loop.json');
 const RECHECK_MS = 3 * 60_000;
@@ -69,12 +70,14 @@ if (judged.error || !line) {
 const n = pr.number;
 const handled = prev.handled || [];
 const waiting = () => waitingInTranscript(readText(input.transcript_path || '') || '', n);
+// 같은 head의 실패·정체 재요청이면 안내 문구만 바꾼다 (STALE은 기다리는 프로세스와 무관하게 막는다)
+const retry = isRetryLine(line);
 const act = loopAction({ line, pr: n, handled, waiting: line.startsWith('RUNNING') && waiting() });
 save({ verdict: act.verdict, prHead: act.prHead, handled: handled.includes(act.key) ? handled : [...handled, act.key].slice(-20) });
 
 const waitCmd = `node scripts/codex-review.mjs ${n} --request --wait --status`;
 const REASON = {
-  request: `push한 head가 아직 리뷰 요청 전입니다. \`${waitCmd}\`를 Bash run_in_background로 실행하고 완료 알림을 기다리세요 (/pr-review 8단계). push하지 않은 커밋이 있으면 먼저 push합니다.`,
+  request: `${retry ? 'head의 Codex 리뷰가 실패하거나 멈춰 재요청이 필요합니다' : 'push한 head가 아직 리뷰 요청 전입니다'}. \`${waitCmd}\`를 Bash run_in_background로 실행하고 완료 알림을 기다리세요 (/pr-review 8단계). push하지 않은 커밋이 있으면 먼저 push합니다.`,
   wait: `리뷰가 진행 중인데 이 세션에서 기다리는 프로세스가 없습니다. \`${waitCmd}\`를 Bash run_in_background로 실행하고 완료 알림을 기다리세요.`,
   fix:
     `재리뷰 ${act.rounds}/${MAX_REVIEW_ROUNDS}회. \`node scripts/codex-review.mjs ${n}\`로 지적을 확인하고 /pr-review 8-3대로 처리하세요: ` +

@@ -26,7 +26,7 @@ import {
   workFilesNewerThanNow,
   worklogEntries,
 } from '../../scripts/lib/common.mjs';
-import { followUpIssues, issueBannerLine, issueContext, summarizeIssues } from '../../scripts/lib/issues.mjs';
+import { followUpIssues, issueBannerLine, issueContext, issueFailureLine, summarizeIssues } from '../../scripts/lib/issues.mjs';
 import { latestPeerNow, nowHeadline, readPeerState, writePeerState } from '../../scripts/lib/peer.mjs';
 import { autoSync } from '../../scripts/lib/sync.mjs';
 
@@ -42,11 +42,6 @@ const input = readStdinJson();
 const parts = ['# 바이브노트 세션 컨텍스트 (SessionStart hook 자동 주입)'];
 const warnings = [];
 let synced = [];
-// 외부 명령(gh·docker)은 병렬·3초 제한이라 아래 git fetch와 겹쳐 돈다
-const checksFailed = (e) => [{ status: 'warn', item: '환경 점검', detail: `실패: ${e?.message ?? e}` }];
-const checksP = envCheck.runChecks ? envCheck.runChecks({ fast: true }).catch(checksFailed) : Promise.resolve(checksFailed(envCheck.error));
-// 만들기만 하고 다시 안 보던 follow-up 이슈를 세션마다 보여 준다 (gh가 없거나 느리면 건너뜀)
-const issuesP = followUpIssues().catch(() => null);
 
 if (!isGitRepo()) {
   warnings.push('git 저장소가 아닙니다.');
@@ -56,7 +51,7 @@ if (!isGitRepo()) {
 
   // 원격과 비교 (네트워크가 느리면 건너뜀)
   if (git(['remote']).out) {
-    git(['fetch', '--quiet'], { timeout: 5000, env: NON_INTERACTIVE_GIT_ENV });
+    git(['fetch', '--quiet', '--prune'], { timeout: 5000, env: NON_INTERACTIVE_GIT_ENV });
     // 다른 PC가 push한 내 브랜치 커밋과 상대가 develop에 머지한 커밋을 자동으로 합친다 (scripts/lib/sync.mjs)
     synced = autoSync();
     if (synced.length) parts.push(`## 자동 동기화\n${synced.join('\n')}`);
@@ -93,6 +88,13 @@ if (!isGitRepo()) {
   }
 }
 
+// 외부 명령(gh·docker)은 위 동기 git(fetch·autoSync)이 끝난 뒤 띄운다 (#67).
+// 먼저 띄우면 동기 git이 이벤트 루프를 막는 사이 제한 시간 타이머가 먼저 터져 출력이 버려지고, 이슈가 경고 없이 빠지거나 점검이 거짓 ✅가 된다
+const checksFailed = (e) => [{ status: 'warn', item: '환경 점검', detail: `실패: ${e?.message ?? e}` }];
+const checksP = envCheck.runChecks ? envCheck.runChecks({ fast: true }).catch(checksFailed) : Promise.resolve(checksFailed(envCheck.error));
+// 만들기만 하고 다시 안 보던 follow-up 이슈를 세션마다 보여 준다 (실패하면 실패 줄을 낸다)
+const issuesP = followUpIssues().catch((e) => ({ ok: false, reason: e?.message ?? String(e) }));
+
 // PC·환경 (git hooks 연결 여부도 여기서 본다)
 const {
   currentPc = () => ({ id: null, hostname: '?' }),
@@ -101,7 +103,8 @@ const {
   loadPcs = () => ({}),
 } = envCheck;
 const pc = currentPc();
-const rows = await checksP;
+// 둘 다 여기서 받는다. 이슈를 아래 동기 git(상대 NOW·작업 파일·peer 상태) 뒤에 받으면 같은 경합으로 사라진다 (reviewer)
+const [rows, issuesRes] = await Promise.all([checksP, issuesP]);
 const env = [pc.id ? `- PC: ${pc.label} (${pc.id}) · hostname ${pc.hostname}` : `- PC: 미등록 (hostname ${pc.hostname})`];
 const bad = rows.filter((r) => r.status !== 'ok');
 env.push(
@@ -166,16 +169,21 @@ if (myEntry) parts.push(`## 내 작업로그 마지막 항목\n${myEntry.text.tr
 // 이슈 표시가 깨져도 NOW 주입은 살린다
 let issueSummary = null;
 let issueList = null;
+let issueFailure = null;
 try {
-  const issues = me ? await issuesP : null;
-  issueSummary = issues ? summarizeIssues(issues, { key: me, github: pc.github }) : null;
+  const res = me ? issuesRes : null;
+  if (res && !res.ok) issueFailure = issueFailureLine(res.reason);
+  issueSummary = res?.ok ? summarizeIssues(res.issues, { key: me, github: pc.github }) : null;
   issueList = issueSummary ? issueContext(issueSummary) : null;
-} catch {
+} catch (e) {
   issueSummary = null;
+  issueFailure = issueFailureLine(`표시 오류: ${e?.message ?? e}`);
 }
-if (issueList) {
+if (issueFailure) {
+  parts.push(`## 열린 follow-up 이슈\n- ${issueFailure}\n- /pickup에서 위 명령으로 직접 확인한다 ("이슈 없음"으로 보고하지 않는다)`);
+} else if (issueList) {
   parts.push(
-    `## 열린 follow-up 이슈 (내 영역·공통)\n${issueList}\n` +
+    `## 열린 follow-up 이슈 (차단·내 영역·공통)\n${issueList}\n` +
       '- 기능 사이 남는 시간에 내 영역 이슈를 처리하고, /spec 때 이 기능에 흡수할 이슈를 spec "관련 이슈"에 적는다 (docs/conventions.md 7절)',
   );
 }
@@ -199,7 +207,7 @@ try {
     envBad: bad.map((r) => `${icon(r.status)} ${r.item}`),
     warnings,
     syncLines: synced.filter((l) => /^- (✅|⚠️|⏸️)/.test(l)),
-    issueLine: issueSummary ? issueBannerLine(issueSummary) : null,
+    issueLine: issueFailure ?? (issueSummary ? issueBannerLine(issueSummary) : null),
     myFeature: me && now ? nowHeadline(now).feature : null,
     peerName: other ? Object.entries(loadPcs()).find(([id]) => ownerKey(id) === other)?.[1].owner : null,
     peerFeature: otherNow ? nowHeadline(otherNow.text).feature : null,

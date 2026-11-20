@@ -9,7 +9,7 @@ import { join } from 'node:path';
 import { ROOT, currentBranch, git } from './lib/common.mjs';
 import { MIGRATION_DIR, compareVersions, migrationFilesAt, versionOf, versionText } from './lib/migrations.mjs';
 
-git(['fetch', '--quiet', 'origin'], { timeout: 15_000 });
+git(['fetch', '--quiet', '--prune', 'origin'], { timeout: 15_000 });
 
 /** { file, version, where } */
 const seen = [];
