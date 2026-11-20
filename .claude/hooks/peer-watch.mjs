@@ -21,7 +21,7 @@ try {
   // 확인 시각을 먼저 남긴다: 아래가 hook 제한(15초)에 걸려 죽어도 다음 프롬프트마다 다시 느려지지 않고,
   // 같은 PC의 두 세션이 동시에 같은 변화를 알리는 것도 줄인다
   peer.writePeerState({ ...prev, checkedAt: Date.now() });
-  git(['fetch', '--quiet'], { timeout: 4000, env: NON_INTERACTIVE_GIT_ENV });
+  git(['fetch', '--quiet', '--prune'], { timeout: 4000, env: NON_INTERACTIVE_GIT_ENV });
   // 상대가 develop에 머지한 커밋·다른 PC의 내 브랜치 커밋을 자동으로 합친다 (scripts/lib/sync.mjs)
   const { autoSync } = await import('../../scripts/lib/sync.mjs');
   const synced = autoSync();

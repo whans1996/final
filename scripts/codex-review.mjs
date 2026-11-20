@@ -2,7 +2,7 @@
 // PR의 Codex 리뷰 상태를 판정하고, 필요하면 재리뷰를 요청해 끝날 때까지 기다린다.
 // Codex는 PR마다 요약 댓글 하나를 갱신하며 그 안에 기계용 상태를 넣는다:
 //   <!-- codex-review-state:v1 {"code_review":{"commit_sha":"…","has_any_findings":false,"status":"completed"}, …} -->
-// 이 상태가 PR head 커밋 기준인지로 판정한다.
+// 이 상태가 PR head 커밋 기준인지로 판정한다. 판정 규칙은 scripts/lib/codex.mjs judgeReview (테스트: scripts/test/codex.test.mjs).
 // 보조 신호: 수동 요청 뒤 다는 영수증 댓글 "Didn't find any major issues … Reviewed commit: `abc1234`"가
 // head 커밋이면 상태 댓글이 늦게 갱신되어도 COMPLETE로 본다. 자동 리뷰 뒤의 👍 반응은 커밋 정보가 없어 쓰지 않는다.
 // 문서만 바뀐 커밋: Codex가 마지막으로 지적 없이 끝낸 커밋 이후 docs/ 아래(openapi.json 제외)만 바뀌었으면
@@ -26,24 +26,23 @@
 // 출력 첫 줄과 종료 코드:
 //   COMPLETE 0  head 커밋 리뷰 완료, 지적 없음 (또는 이관 완료, 문서만 변경)
 //   FINDINGS 2  head 커밋 리뷰 완료, 지적 있음 (지적 요약을 함께 출력)
-//   RUNNING  3  head 커밋 리뷰 중, 또는 head에 대한 재리뷰를 요청했고 시작을 기다리는 중
-//   STALE    4  리뷰 상태가 없거나 이전 커밋 기준
+//   RUNNING  3  head 커밋 리뷰 중, 또는 head에 대한 재리뷰를 요청했고 시작을 기다리는 중,
+//               또는 결과를 기다리는 이전 커밋 이후 문서만 바뀜 (#39)
+//   STALE    4  리뷰 상태가 없거나 이전 커밋 기준, 또는 head 리뷰가 실패(failed)·정체(15분 넘게 진행·미시작)해
+//               재시도 표시를 붙여 다시 요청해야 함 (--wait --request는 대기 중 한 번 스스로 재시도한다, #48)
 //   TIMEOUT  5  --wait 시간 초과
 //   CLOSED   6  PR이 이미 머지·종료됨 (루프 불필요)
-//   ERROR    1  gh 실패, 또는 Codex가 마지막 요청 뒤 환경·계정 설정 안내만 남김
+//   ERROR    1  gh 실패, 또는 Codex가 마지막 요청 뒤 환경·계정 설정 안내만 남김,
+//               또는 같은 head에서 재시도 뒤에도 리뷰가 실패·정체함 (사람이 Codex 상태를 확인)
 //               (환경을 만들거나 계정을 연결한 뒤 --request로 다시 실행하면 요청을 새로 단다)
 // 첫 줄 끝에는 "(재리뷰 n회)"를 붙인다 (Stop hook codex-loop.mjs가 상한 5회를 판단한다).
 
 import { spawnSync } from 'node:child_process';
 import { NON_INTERACTIVE_GIT_ENV, git } from './lib/common.mjs';
-import { CODEX_BOT, REQUEST_MARK_RE, onlyDocsChanged, requestCount, setupNotice, unresolvedFindingAt } from './lib/codex.mjs';
+import { CODEX_BOT, judgeReview, onlyDocsChanged, requestCount } from './lib/codex.mjs';
 
 const CODE = { COMPLETE: 0, ERROR: 1, FINDINGS: 2, RUNNING: 3, STALE: 4, TIMEOUT: 5, CLOSED: 6 };
 const BOT = CODEX_BOT;
-const STATE_RE = /<!--\s*codex-review-state:v1\s*(\{.*?\})\s*-->/s;
-const REQUEST_RE = REQUEST_MARK_RE;
-const RESOLVED_RE = /<!--\s*codex-findings-resolved:\s*([0-9a-f]{40})\s*-->/;
-const CLEAN_RECEIPT_RE = /codex-review-receipt[\s\S]*Didn't find any major issues[\s\S]*?Reviewed commit:\*{0,2}\s*`([0-9a-f]{7,40})`/;
 
 function fail(msg) {
   console.log(`ERROR ${msg}`);
@@ -85,23 +84,6 @@ function head() {
 const ghList = (path) => (ghJson(['api', '--paginate', '--slurp', `${path}?per_page=100`]) || []).flat();
 const issueComments = () => ghList(`repos/${repo}/issues/${pr}/comments`);
 
-/** 요약 댓글의 code_review 상태 + 댓글 갱신 시각(at) */
-function codexState(comments) {
-  for (const c of comments) {
-    if (!c.user?.login?.startsWith(BOT)) continue;
-    const m = STATE_RE.exec(c.body || '');
-    if (m) {
-      try {
-        const cr = JSON.parse(m[1]).code_review;
-        return cr ? { ...cr, at: c.updated_at || c.created_at } : null;
-      } catch {
-        return null;
-      }
-    }
-  }
-  return null;
-}
-
 /** head 커밋에 달린 Codex 인라인 지적 요약 */
 function findings(sha) {
   const list = ghList(`repos/${repo}/pulls/${pr}/comments`);
@@ -120,37 +102,11 @@ function findings(sha) {
     });
 }
 
-/** "지적 없음" 영수증 댓글 목록 { sha(7~40자), at } (댓글 순서) */
-function cleanReceipts(comments) {
-  return comments
-    .filter((c) => c.user?.login?.startsWith(BOT))
-    .map((c) => ({ sha: CLEAN_RECEIPT_RE.exec(c.body || '')?.[1], at: c.created_at }))
-    .filter((r) => r.sha);
-}
-
 /** Codex 인라인 지적(스레드 첫 댓글) 시각 목록 */
 function findingTimes() {
   return ghList(`repos/${repo}/pulls/${pr}/comments`)
     .filter((c) => c.user?.login?.startsWith(BOT) && !c.in_reply_to_id)
     .map((c) => c.created_at);
-}
-
-/** 사람이 단 "지적을 이슈로 이관함" 마커 [{ sha, at }] */
-function resolvedMarks(comments) {
-  return comments
-    .filter((c) => !c.user?.login?.startsWith(BOT))
-    .map((c) => ({ sha: RESOLVED_RE.exec(c.body || '')?.[1], at: c.created_at }))
-    .filter((m) => m.sha);
-}
-
-/** 문서만 변경 판정의 기준 후보 커밋 (늦은 영수증부터). 마지막 미해결 인라인 지적(findingAt)보다 늦은 "지적 없음"(또는 이관 완료) 결과만 */
-function cleanBases(st, stOk, receipts, resolved, findingAt) {
-  const fresh = [...receipts, ...resolved]
-    .filter((r) => r.at > findingAt)
-    .sort((a, b) => (a.at < b.at ? 1 : -1))
-    .map((r) => r.sha);
-  const stFresh = stOk && st.at > findingAt ? [st.commit_sha] : [];
-  return [...new Set([...fresh, ...stFresh])];
 }
 
 /** 로컬에 커밋이 없으면 원격에서 받아 온다 (GitHub는 sha로 fetch 가능) */
@@ -185,71 +141,13 @@ function developMergeBase(h) {
 function judge() {
   const h = head();
   const comments = issueComments();
-  const st = codexState(comments);
-  const short = h.sha.slice(0, 7);
-  if (h.state !== 'OPEN') return { verdict: 'CLOSED', h, comments, msg: `PR #${pr}이 ${h.state} 상태 (Codex 루프 불필요)` };
-  const receipts = cleanReceipts(comments);
-  const resolved = resolvedMarks(comments);
-  const clean = receipts.some((r) => h.sha.startsWith(r.sha));
-  const stClean = st?.status === 'completed' && !st.has_any_findings;
-  // 지적이 있었지만 그 커밋의 남은 지적을 모두 이슈로 넘긴 상태 (pr-review 8-3 이관 완료).
-  // 마커 뒤에 새 지적이 달렸으면 이관 완료가 아니다. 인라인 지적 조회는 필요할 때만 한다
-  let times;
-  const allFindings = () => (times ??= findingTimes());
-  const lastAny = () => [...allFindings()].sort().at(-1) ?? '';
-  const stMarks = resolved.filter((m) => m.sha === st?.commit_sha);
-  const stResolved = st?.status === 'completed' && stMarks.length > 0 && stMarks.some((m) => m.at > lastAny());
-  if (st?.commit_sha === h.sha && stClean) {
-    return { verdict: 'COMPLETE', h, comments, msg: `head ${short} 지적 없음 (상태 댓글)` };
-  }
-  if (st?.commit_sha === h.sha && stResolved) {
-    return { verdict: 'COMPLETE', h, comments, msg: `head ${short} 남은 지적 이관 완료 (--resolve)` };
-  }
-  if (clean && !(st?.commit_sha === h.sha && st.status === 'completed')) {
-    return { verdict: 'COMPLETE', h, comments, msg: `head ${short} 지적 없음 (영수증 댓글)` };
-  }
-  if (!st || st.commit_sha !== h.sha) {
-    // 마지막 리뷰가 지적 없이(또는 이관 완료로) 끝났을 때만(상태 댓글이 없으면 영수증으로) 기준 커밋을 잡는다.
-    // 지적이 남았거나 리뷰 중이면 영수증으로 건너뛰어 그 결과를 덮지 않는다.
-    // 영수증·상태 댓글 뒤에 미해결 인라인 지적이 달렸으면 그것은 마지막 리뷰가 아니므로 쓰지 않는다.
-    // 상태 댓글도 갱신이 늦을 수 있어 같은 기준을 적용한다 (Codex 리뷰)
-    if (!st || stClean || stResolved) {
-      const findingAt = unresolvedFindingAt(allFindings(), resolved.map((m) => m.at));
-      const bases = cleanBases(st, stClean || stResolved, receipts, resolved, findingAt);
-      const dev = bases.length ? developMergeBase(h) : null;
-      const base = dev && bases.find((b) => docsOnlySince(b, h, dev.mb));
-      if (base) {
-        return { verdict: 'COMPLETE', h, comments, msg: `head ${short} 문서만 변경 (Codex ✅ ${base.slice(0, 7)} 이후)` };
-      }
-    }
-    // 환경·계정 안내가 이 head에 대한 마지막 요청보다 늦으면 기다려도 리뷰가 오지 않는다.
-    // --request로 시작하면 설정을 마친 뒤의 재시도로 보고 요청을 새로 단다 (아래, Codex 리뷰)
-    const notice = setupNotice(comments);
-    const reqAt = requestAt(comments, h.sha);
-    if (notice && (!reqAt || notice.at > reqAt)) {
-      const msg =
-        notice.kind === 'account'
-          ? `Codex 계정 미연결 (@${notice.who ?? h.author ?? '?'}, ${notice.at}): ${notice.url} 에서 GitHub를 연결하고 Code review를 켠 뒤 --request로 다시 요청 (docs/환경설정.md 8절)`
-          : `Codex 환경 없음 (${notice.at}): ${notice.url} 에서 만든 뒤 --request로 다시 요청`;
-      return { verdict: 'ERROR', envMissing: true, h, comments, msg };
-    }
-    // 이 head에 대한 요청을 이미 달았으면 Codex가 시작하기를 기다리는 중이다 (요청을 다시 달지 않는다)
-    if (reqAt) return { verdict: 'RUNNING', h, comments, msg: `head ${short} 재리뷰 요청함 (${reqAt}), 시작 대기` };
-    const seen = st?.commit_sha ? `${st.commit_sha.slice(0, 7)} 기준` : '상태 댓글 없음';
-    return { verdict: 'STALE', h, comments, msg: `head ${short}, Codex ${seen}` };
-  }
-  if (st.status !== 'completed') return { verdict: 'RUNNING', h, comments, msg: `head ${short} 리뷰 ${st.status}` };
-  return { verdict: 'FINDINGS', h, comments, msg: `head ${short}` };
-}
-
-/** 이 head sha에 대한 재리뷰 요청 중 가장 늦은 시각 (없으면 null).
- *  커밋 시각과 비교하면 "먼저 커밋하고 나중에 push"한 경우 옛 요청을 새 head 것으로 오판하므로 sha 마커로 묶는다 (Codex 리뷰).
- *  봇의 안내문에도 "@codex review"가 들어 있으므로 사람 댓글만 본다. */
-function requestAt(comments, sha) {
-  const at = comments
-    .filter((c) => !c.user?.login?.startsWith(BOT) && REQUEST_RE.exec(c.body || '')?.[1] === sha)
-    .map((c) => c.created_at);
-  return at.length ? at.sort().at(-1) : null;
+  // 문서 판정은 필요할 때만 head·develop을 받는다 (head를 못 받으면 문서만 변경으로 보지 않는다)
+  let dev;
+  const docsOnly = (base) => {
+    dev ??= developMergeBase(h) ?? { missing: true };
+    return !dev.missing && docsOnlySince(base, h, dev.mb);
+  };
+  return { ...judgeReview({ pr, h, comments, findingTimes, docsOnlySince: docsOnly }), h, comments };
 }
 
 const STATUS = { COMPLETE: 'success', FINDINGS: 'failure', ERROR: 'error' };
@@ -278,7 +176,9 @@ function report(r) {
 let r = judge();
 if (r.verdict === 'CLOSED') report(r);
 
-const postRequest = (sha) => gh(['pr', 'comment', pr, '--body', `@codex review\n\n<!-- codex-review-request: ${sha} -->`]);
+// retry: 실패·정체한 같은 head의 재시도 표시 (재리뷰 횟수는 늘지 않는다. 재시도 뒤 또 실패·정체하면 ERROR, #48)
+const postRequest = (sha, retry = false) =>
+  gh(['pr', 'comment', pr, '--body', `@codex review\n\n<!-- codex-review-request: ${sha} -->${retry ? `\n<!-- codex-review-retry: ${sha} -->` : ''}`]);
 
 if (resolve) {
   if (r.verdict !== 'FINDINGS') {
@@ -297,9 +197,9 @@ if (request && r.envMissing) {
   // 방금 단 댓글이 목록에 바로 안 보일 수 있어 다시 판정하지 않고 대기 상태로 둔다
   r = { ...r, verdict: 'RUNNING', envMissing: false, msg: `head ${r.h.sha.slice(0, 7)} 설정 안내 뒤 재리뷰 요청함, 시작 대기` };
 } else if (request && r.verdict === 'STALE') {
-  // 같은 head에 대한 요청이 이미 있으면 judge가 RUNNING으로 판정하므로 여기서는 요청이 없다
-  postRequest(r.h.sha);
-  console.error(`(@codex review 요청함: head ${r.h.sha.slice(0, 7)})`);
+  // 같은 head에 대한 요청이 이미 있으면 judge가 RUNNING으로 판정한다. 있는데도 STALE이면 그 리뷰가 실패·정체한 것(retry)
+  postRequest(r.h.sha, r.retry);
+  console.error(`(@codex review ${r.retry ? '재시도' : '요청'}함: ${r.msg})`);
   r = { ...r, verdict: 'RUNNING', msg: `head ${r.h.sha.slice(0, 7)} 재리뷰 요청함, 시작 대기` };
 }
 
@@ -311,6 +211,12 @@ while (Date.now() < deadline) {
   await new Promise((res) => setTimeout(res, 30_000));
   r = judge();
   if (done(r.verdict)) report(r);
+  // 대기 중 리뷰가 실패·정체했으면 --request일 때 한 번 재시도하고 계속 기다린다 (재시도 뒤 또 그러면 ERROR).
+  // 그 밖의 STALE(새 커밋 push 등)은 기다려도 결과가 오지 않으므로 바로 끝낸다 (#48)
+  if (r.verdict === 'STALE' && request && r.retry) {
+    postRequest(r.h.sha, true);
+    console.error(`(@codex review 재시도함: ${r.msg})`);
+  } else if (r.verdict === 'STALE') report(r);
 }
 console.log(`TIMEOUT ${timeoutMin}분 대기, 마지막 상태 ${r.verdict} (${r.msg})`);
 postStatus(r);

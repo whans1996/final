@@ -2,7 +2,10 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
+  STUCK_MS,
   isDocPath,
+  isRetryLine,
+  judgeReview,
   loopAction,
   onlyDocsChanged,
   requestCount,
@@ -131,4 +134,140 @@ test('Stop hook 동작: 판정별 차단·안내, 같은 (PR, head, 판정)은 �
   assert.equal(a('FINDINGS head abc1234 (재리뷰 2회)', { handled: [first.key] }).action, 'none');
   // 새 head의 지적은 다시 막는다
   assert.equal(a('FINDINGS head 9999999 (재리뷰 3회)', { handled: [first.key] }).action, 'block');
+});
+
+// ── judgeReview: codex-review.mjs의 판정 (#67, #48·#39) ──
+const HEAD = '1'.repeat(40);
+const PREV = '2'.repeat(40);
+const OLD = '3'.repeat(40);
+const T0 = Date.parse('2026-11-20T06:00:00Z');
+const iso = (min) => new Date(T0 + min * 60_000).toISOString().replace('.000Z', 'Z');
+// 실제 요약 댓글 형식 (PR #47·#66): 기계용 상태 + Code Review 행의 상태 시각
+const summary = (sha, status, { at = 0, findings = false } = {}) =>
+  bot(
+    iso(-60),
+    [
+      '<!-- codex-pull-request-review-summary -->',
+      `<!-- codex-review-state:v1 {"code_review":{"commit_sha":"${sha}","has_any_findings":${findings},"status":"${status}"}} -->`,
+      `| 📝 **Code Review** | **${status}** <relative-time datetime="${new Date(T0 + at * 60_000).toISOString()}">x</relative-time> | \`${sha.slice(0, 7)}\` | Manual request |`,
+    ].join('\n'),
+    iso(at),
+  );
+const req = (sha, min, { retry = false } = {}) =>
+  human('whans1996', iso(min), `@codex review\n\n<!-- codex-review-request: ${sha} -->${retry ? `\n<!-- codex-review-retry: ${sha} -->` : ''}`);
+const judge = (comments, { now = 0, docsOnly = [] } = {}) =>
+  judgeReview({
+    pr: 7,
+    h: { sha: HEAD, state: 'OPEN' },
+    comments,
+    findingTimes: () => [],
+    docsOnlySince: (b) => docsOnly.includes(b),
+    now: T0 + now * 60_000,
+  });
+
+test('judgeReview 기존 판정: 완료·지적·이전 커밋·요청 대기·문서만 변경·종료', () => {
+  assert.equal(judge([summary(HEAD, 'completed')]).verdict, 'COMPLETE');
+  assert.equal(judge([summary(HEAD, 'completed', { findings: true })]).verdict, 'FINDINGS');
+  assert.equal(judge([summary(PREV, 'completed', { findings: true })]).verdict, 'STALE');
+  assert.equal(judge([summary(PREV, 'completed', { findings: true }), req(HEAD, 0)], { now: 2 }).verdict, 'RUNNING');
+  const docs = judge([summary(PREV, 'completed')], { docsOnly: [PREV] });
+  assert.equal(docs.verdict, 'COMPLETE');
+  assert.match(docs.msg, /^head 1111111 문서만 변경/);
+  assert.equal(judgeReview({ pr: 7, h: { sha: HEAD, state: 'MERGED' }, comments: [] }).verdict, 'CLOSED');
+});
+
+test('Codex 리뷰 실패(failed)는 RUNNING이 아니라 재요청 대상, 재시도 뒤 또 실패하면 ERROR (#48)', () => {
+  const failed = judge([summary(HEAD, 'failed', { at: 0 })], { now: 1 });
+  assert.equal(failed.verdict, 'STALE');
+  assert.equal(failed.retry, true);
+  assert.match(failed.msg, /^head 1111111 Codex 리뷰 실패/);
+  // 실패 뒤 재요청했으면 시작을 기다린다
+  assert.equal(judge([summary(HEAD, 'failed', { at: 0 }), req(HEAD, 1, { retry: true })], { now: 3 }).verdict, 'RUNNING');
+  // 재시도한 뒤 다시 실패: 사람에게
+  const again = judge([req(HEAD, -10, { retry: true }), summary(HEAD, 'failed', { at: 0 })], { now: 1 });
+  assert.equal(again.verdict, 'ERROR');
+  assert.match(again.msg, /^head 1111111 Codex 리뷰 실패가 재시도 뒤에도 반복/);
+  // 알 수 없는 종료 상태도 실패로 본다
+  assert.equal(judge([summary(HEAD, 'cancelled', { at: 0 })], { now: 1 }).retry, true);
+});
+
+test(`리뷰가 ${STUCK_MS / 60_000}분 넘게 진행 중이거나 요청 뒤 시작하지 않으면 정체로 보고 재요청한다 (PR #66)`, () => {
+  assert.equal(judge([summary(HEAD, 'in_progress', { at: 0 })], { now: 5 }).verdict, 'RUNNING');
+  const stuck = judge([summary(HEAD, 'in_progress', { at: 0 })], { now: 21 });
+  assert.equal(stuck.verdict, 'STALE');
+  assert.equal(stuck.retry, true);
+  assert.match(stuck.msg, /21분째 in_progress \(정체\)/);
+  // 재요청 뒤 15분 안이면 기다리고, 넘으면 사람에게
+  assert.equal(judge([summary(HEAD, 'in_progress', { at: 0 }), req(HEAD, 21, { retry: true })], { now: 25 }).verdict, 'RUNNING');
+  assert.equal(judge([summary(HEAD, 'in_progress', { at: 0 }), req(HEAD, 21, { retry: true })], { now: 40 }).verdict, 'ERROR');
+  // 요청했는데 Codex가 시작도 안 함
+  const notStarted = judge([summary(PREV, 'completed', { findings: true }), req(HEAD, 0)], { now: 16 });
+  assert.equal(notStarted.verdict, 'STALE');
+  assert.equal(notStarted.retry, true);
+  assert.equal(judge([summary(PREV, 'completed', { findings: true }), req(HEAD, 0), req(HEAD, 16, { retry: true })], { now: 33 }).verdict, 'ERROR');
+});
+
+test('리뷰 결과를 기다리는 커밋 뒤에 문서만 push하면 재요청하지 않고 그 리뷰를 기다린다 (#39)', () => {
+  // OLD는 지적 없이 끝났고 PREV(코드 변경)를 요청한 뒤 HEAD(NOW 파일만)를 push
+  const base = [summary(OLD, 'completed', { at: -30 }), req(PREV, -5)];
+  const r = judge(base, { now: 0, docsOnly: [PREV] });
+  assert.equal(r.verdict, 'RUNNING');
+  assert.match(r.msg, /^head 1111111 문서만 변경, 2222222 리뷰 대기/);
+  // PREV 이후 코드가 바뀌었으면 원래대로 재요청
+  assert.equal(judge(base, { now: 0 }).verdict, 'STALE');
+  // PREV 리뷰가 진행 중이어도 같다. 정체하면 head로 재요청 (재시도 아님)
+  assert.equal(judge([summary(PREV, 'in_progress', { at: -2 })], { now: 0, docsOnly: [PREV] }).verdict, 'RUNNING');
+  const stuck = judge([summary(PREV, 'in_progress', { at: -20 })], { now: 0, docsOnly: [PREV] });
+  assert.equal(stuck.verdict, 'STALE');
+  assert.ok(!stuck.retry);
+  // PREV가 지적 없이 끝나면 기존 문서만 변경 규칙으로 COMPLETE
+  assert.equal(judge([summary(PREV, 'completed', { at: 0 })], { now: 1, docsOnly: [PREV] }).verdict, 'COMPLETE');
+});
+
+test('실패·정체 재시도 댓글은 재리뷰 횟수에 넣지 않는다 (reviewer: 자동 리뷰 실패 뒤 재시도가 1회로 셈)', () => {
+  // PR 생성 때 돈 자동 리뷰(요청 마커 없음)가 실패 → 재시도
+  assert.equal(requestCount([summary(HEAD, 'failed', { at: 0 }), req(HEAD, 1, { retry: true })]), 0);
+  assert.equal(requestCount([req(PREV, -30), req(HEAD, 0), req(HEAD, 20, { retry: true })]), 2);
+  // 판정은 재시도 댓글을 요청으로 계속 본다 (시작 대기)
+  assert.equal(judge([summary(HEAD, 'failed', { at: 0 }), req(HEAD, 1, { retry: true })], { now: 3 }).verdict, 'RUNNING');
+});
+
+test('같은 초 안의 요청·상태 시각은 문자열이 아니라 시각으로 비교한다 (reviewer)', () => {
+  // 재시도 요청(…:00Z) 뒤 0.6초에 다시 실패(…:00.600Z): 문자열 비교면 'Z' > '.'라 요청이 더 늦은 것으로 본다
+  const r = judge([req(HEAD, 0, { retry: true }), summary(HEAD, 'failed', { at: 0.01 })], { now: 1 });
+  assert.equal(r.verdict, 'ERROR');
+});
+
+test('#39: 이전 커밋 리뷰가 실패로 남았어도 더 최근 요청 커밋 뒤 문서만 바뀌었으면 그 리뷰를 기다린다 (reviewer)', () => {
+  const r = judge([summary(OLD, 'failed', { at: -30 }), req(PREV, -5)], { now: 0, docsOnly: [PREV] });
+  assert.equal(r.verdict, 'RUNNING');
+  assert.match(r.msg, /^head 1111111 문서만 변경, 2222222 리뷰 대기/);
+  // 진행 중인 리뷰가 더 최근이면 그 리뷰를 본다
+  const running = judge([req(OLD, -30), summary(PREV, 'in_progress', { at: -2 })], { now: 0, docsOnly: [OLD, PREV] });
+  assert.equal(running.verdict, 'RUNNING');
+  assert.match(running.msg, /2222222 리뷰 in_progress/);
+});
+
+test('Stop hook: 실패·정체 STALE은 기다리는 프로세스가 있어도 막는다 (대기 프로세스가 재시도할 수 있는지 hook이 모른다, Codex 리뷰 2회)', () => {
+  // 같은 head 재시도: /pickup의 --wait(--request 없음)는 재시도하지 않고 끝난다
+  const headFailed = judge([summary(HEAD, 'failed', { at: 0 })], { now: 1 });
+  assert.ok(headFailed.retry);
+  const headLine = `${headFailed.verdict} ${headFailed.msg} (재리뷰 0회)`;
+  assert.ok(isRetryLine(headLine));
+  assert.equal(loopAction({ line: headLine, pr: 7, waiting: true }).action, 'block');
+  // 이전 커밋 리뷰 실패(→ head 재요청): 어떤 대기 프로세스도 재요청하지 않는다
+  const prevFailed = judge([summary(PREV, 'failed', { at: -2 })], { now: 0, docsOnly: [PREV] });
+  assert.ok(!prevFailed.retry);
+  const prevLine = `${prevFailed.verdict} ${prevFailed.msg} (재리뷰 1회)`;
+  assert.ok(!isRetryLine(prevLine), prevLine);
+  assert.equal(loopAction({ line: prevLine, pr: 7, waiting: true }).action, 'block');
+});
+
+test('Stop hook: 실패·정체 재요청은 같은 head의 일반 STALE과 따로 한 번 반응한다', () => {
+  const plain = loopAction({ line: 'STALE head abc1234, Codex def5678 기준 (재리뷰 1회)', pr: 7 });
+  const stuck = loopAction({ line: 'STALE head abc1234 Codex 리뷰 실패(failed) → 재요청 (재리뷰 1회)', pr: 7, handled: [plain.key] });
+  assert.equal(stuck.action, 'block');
+  assert.equal(stuck.kind, 'request');
+  assert.notEqual(stuck.key, plain.key);
+  assert.equal(loopAction({ line: 'ERROR head abc1234 Codex 리뷰 실패가 재시도 뒤에도 반복 (재리뷰 1회)', pr: 7 }).kind, 'error');
 });

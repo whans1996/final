@@ -52,10 +52,17 @@ export function saveFullCheck(pcId, rows) {
   writeJson(ENV_CHECK_FILE, { at: new Date().toISOString(), pcId, rows });
 }
 
-function run(command, timeout) {
+/**
+ * 외부 명령 실행 → { ok, out, timedOut }. timedOut이면 "꺼짐·로그인 안 됨"이 아니라 "응답 없음"으로 알린다.
+ * 주의: 띄운 뒤 동기 작업으로 이벤트 루프를 막으면 타이머가 먼저 터져 출력이 버려진 채 err 없이 끝난다 (#67) → 동기 git이 끝난 뒤 부른다.
+ * 그래도 콜백이 제한 시간 뒤에 오면 출력을 믿을 수 없으므로 시간 초과로 본다 (거짓 ✅ 방지, reviewer).
+ */
+export function run(command, timeout) {
+  const start = Date.now();
   return new Promise((resolve) => {
     exec(command, { encoding: 'utf8', windowsHide: true, timeout }, (err, stdout, stderr) => {
-      resolve({ ok: !err, out: ((stdout || '') + (stderr || '')).trim() });
+      const timedOut = !!err?.killed || (!!timeout && Date.now() - start >= timeout);
+      resolve({ ok: !err && !timedOut, out: ((stdout || '') + (stderr || '')).trim(), timedOut });
     });
   });
 }
@@ -140,13 +147,15 @@ export async function runChecks({ fast = false } = {}) {
   // GitHub CLI — 활성 계정이 등록부의 이 PC 계정과 같은지
   const gh = await ghP;
   const ghAccount = /account (\S+)/.exec(gh.out)?.[1];
-  if (!gh.ok) add('warn', 'GitHub CLI', fast ? '로그인 안 됨 또는 응답 없음 → gh auth status' : 'gh 설치 후 gh auth login (PR 생성·CI 확인에 사용)');
+  if (gh.timedOut) add('warn', 'GitHub CLI', `${timeout / 1000}초 안에 응답 없음 (네트워크 확인) → gh auth status`);
+  else if (!gh.ok) add('warn', 'GitHub CLI', fast ? '로그인 안 됨 → gh auth status' : 'gh 설치 후 gh auth login (PR 생성·CI 확인에 사용)');
   else if (pc.github && ghAccount && ghAccount !== pc.github) add('warn', 'GitHub CLI', `활성 계정 ${ghAccount} ≠ 이 PC 계정 ${pc.github} → gh auth switch -u ${pc.github}`);
   else add('ok', 'GitHub CLI', `${ghAccount || '로그인됨'}${pc.id && !pc.github ? ' (scripts/lib/pcs.json에 github 미기입)' : ''}`);
 
   // Docker (Testcontainers, 일부 PC의 oxlint)
   const docker = await dockerP;
-  if (docker.ok) add('ok', 'Docker', `엔진 실행 중 (${docker.out})`);
+  if (docker.ok) add('ok', 'Docker', `엔진 실행 중${docker.out ? ` (${docker.out})` : ''}`);
+  else if (docker.timedOut) add('warn', 'Docker', `${timeout / 1000}초 안에 응답 없음 (엔진 시작 중일 수 있음) → docker info`);
   else if (dockerVerP && !(await dockerVerP).ok) add('fail', 'Docker', '없음 → Docker Desktop 설치 필요 (Testcontainers)');
   else add('warn', 'Docker', '엔진 꺼짐 → Docker Desktop 실행 (BE 통합 테스트·커밋 게이트에 필요)');
 

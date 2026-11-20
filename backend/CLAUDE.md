@@ -2,7 +2,7 @@
 
 > Java 21, Spring Boot 4.1, Spring Security + JWT(jjwt), MyBatis, MySQL 8, Flyway, springdoc, Jackson 3, Gradle 9.9(wrapper), Spotless(google-java-format AOSP 1.28.0).
 > 공통 API 규칙(응답 형식, 에러 코드, 네이밍)은 `../docs/conventions.md`를 따른다.
-> F-00에서는 Boot 3.5로 시작했고, 11-18 환경 최신화 결정으로 Boot 4.1·Java 21로 올렸다 (PR #12, `docs/기획서.md` 결정 로그). AI가 Boot 3 시절 코드(`spring-boot-starter-web`, `com.fasterxml.jackson.databind`, `@MockBean` 등)를 제안하면 Boot 4 방식으로 바꿔 쓴다.
+> F-00에서는 Boot 3.5로 시작했고, 11-18 환경 최신화 결정으로 Boot 4.1·Java 21로 올렸다 (PR #12, `docs/결정로그.md` 11-18). AI가 Boot 3 시절 코드(`spring-boot-starter-web`, `com.fasterxml.jackson.databind`, `@MockBean` 등)를 제안하면 Boot 4 방식으로 바꿔 쓴다.
 
 ## 패키지 구조
 
