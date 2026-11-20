@@ -27,6 +27,8 @@ const router = useRouter()
 
 const items = ref([])
 const total = ref(0)
+// 서버가 한 쪽보다 적게 돌려주면 끝까지 받은 것이다. 그사이 맨 위에 새 리뷰가 생겨 total이 커져도 버튼을 숨긴다
+const reachedEnd = ref(false)
 const loadingList = ref(true)
 const loadingMore = ref(false)
 const listError = ref('')
@@ -41,7 +43,7 @@ const boxError = ref('')
 // 삭제 후 빈 폼을 새로 그리기 위한 키
 const formKey = ref(0)
 
-const hasMore = computed(() => items.value.length < total.value)
+const hasMore = computed(() => !reachedEnd.value && items.value.length < total.value)
 
 // :id가 빠르게 바뀔 때 늦게 도착한 이전 카드의 응답은 버린다
 let generation = 0
@@ -56,6 +58,7 @@ async function load(conceptId) {
   const current = ++generation
   items.value = []
   total.value = 0
+  reachedEnd.value = false
   listError.value = ''
   moreError.value = ''
   myReview.value = null
@@ -69,6 +72,7 @@ async function load(conceptId) {
       if (current !== generation) return
       items.value = result.items
       total.value = result.total
+      reachedEnd.value = result.items.length < PAGE_SIZE
       emit('rating-change', { reviewCount: result.total })
     })
     .catch((error) => {
@@ -107,8 +111,11 @@ async function loadMore() {
       const fresh = result.items.filter((r) => !seen.has(r.id))
       items.value = [...items.value, ...fresh]
       total.value = result.total
+      reachedEnd.value = result.items.length < PAGE_SIZE
       added += fresh.length
     }
+    // 그사이 다른 회원이 쓰거나 지웠으면 헤더의 "리뷰 N"도 맞춘다
+    emit('rating-change', { reviewCount: total.value })
   } catch (error) {
     if (current === generation) moreError.value = errorMessage(error)
   } finally {

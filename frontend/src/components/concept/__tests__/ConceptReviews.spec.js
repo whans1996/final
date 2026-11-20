@@ -99,6 +99,7 @@ describe('ConceptReviews (F-11 AC13~AC17)', () => {
 
     expect(conceptsApi.fetchReviews).toHaveBeenLastCalledWith(57, { page: 2, size: 10 })
     expect(listed(wrapper)).toHaveLength(12)
+    expect(lastRating(wrapper)).toEqual({ reviewCount: 12 })
     expect(listed(wrapper).at(-1)).toBe('1')
     expect(wrapper.find('[data-action="more"]').exists()).toBe(false)
   })
@@ -123,6 +124,21 @@ describe('ConceptReviews (F-11 AC13~AC17)', () => {
     await flushPromises()
 
     expect(listed(wrapper)).toEqual(['12', '11', '10', '9', '8', '6', '5', '4', '3', '2', '1'])
+    expect(wrapper.find('[data-action="more"]').exists()).toBe(false)
+  })
+
+  it('AC13 더 보기 사이에 리뷰 수가 바뀌면 헤더용 리뷰 수를 다시 올리고 끝까지 받으면 버튼을 숨긴다', async () => {
+    conceptsApi.fetchReviews
+      .mockResolvedValueOnce(page(reviews(12, 10), 12))
+      .mockResolvedValueOnce(page(reviews(3, 3), 13, 2))
+    const { wrapper } = await mountReviews()
+
+    await wrapper.find('[data-action="more"]').trigger('click')
+    await flushPromises()
+
+    // 맨 위에 새로 생긴 리뷰는 아래로 더 불러와도 오지 않으므로 끝까지 받으면 버튼을 숨긴다
+    expect(listed(wrapper)).toHaveLength(12)
+    expect(lastRating(wrapper)).toEqual({ reviewCount: 13 })
     expect(wrapper.find('[data-action="more"]').exists()).toBe(false)
   })
 
