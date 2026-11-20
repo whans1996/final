@@ -485,6 +485,111 @@
         "required" : [ "appearances", "avgRating", "body", "category", "difficulty", "exampleCode", "id", "name", "referenceUrl", "related", "summary", "wishCount" ],
         "type" : "object"
       },
+      "ConceptRatingResponse" : {
+        "description" : "카드 평점과 리뷰 수",
+        "properties" : {
+          "avgRating" : {
+            "description" : "평균 별점 (소수 1자리, 리뷰가 없으면 0.0)",
+            "example" : 4.2,
+            "format" : "double",
+            "type" : "number"
+          },
+          "reviewCount" : {
+            "description" : "리뷰 수",
+            "example" : 12,
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "avgRating", "reviewCount" ],
+        "type" : "object"
+      },
+      "ConceptReviewRequest" : {
+        "description" : "리뷰 작성·수정 요청",
+        "properties" : {
+          "content" : {
+            "description" : "리뷰 내용 (앞뒤 공백 제외 1~200자)",
+            "example" : "예제가 명확했어요",
+            "maxLength" : 200,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "rating" : {
+            "description" : "별점 (정수 1~5)",
+            "example" : 4,
+            "format" : "int32",
+            "maximum" : 5,
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        },
+        "required" : [ "content", "rating" ],
+        "type" : "object"
+      },
+      "ConceptReviewResponse" : {
+        "description" : "카드 리뷰",
+        "properties" : {
+          "authorId" : {
+            "description" : "작성자 ID (탈퇴한 회원이면 null)",
+            "example" : 7,
+            "format" : "int64",
+            "type" : [ "integer", "null" ]
+          },
+          "authorNickname" : {
+            "description" : "작성자 현재 닉네임 (탈퇴한 회원이면 \"탈퇴한 사용자\")",
+            "example" : "코딩하는감자",
+            "type" : "string"
+          },
+          "content" : {
+            "description" : "리뷰 내용",
+            "example" : "토큰 서명과 만료 검증 순서가 한눈에 들어왔어요",
+            "type" : "string"
+          },
+          "createdAt" : {
+            "description" : "작성 시각",
+            "example" : "2026-12-02T21:14:03+09:00",
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "id" : {
+            "description" : "리뷰 ID",
+            "example" : 301,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "rating" : {
+            "description" : "별점 (1~5)",
+            "example" : 5,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "authorId", "authorNickname", "content", "createdAt", "id", "rating" ],
+        "type" : "object"
+      },
+      "ConceptReviewSaveResponse" : {
+        "description" : "리뷰 저장 결과",
+        "properties" : {
+          "avgRating" : {
+            "description" : "평균 별점 (소수 1자리)",
+            "example" : 4.3,
+            "format" : "double",
+            "type" : "number"
+          },
+          "review" : {
+            "$ref" : "#/components/schemas/ConceptReviewResponse",
+            "description" : "저장된 리뷰"
+          },
+          "reviewCount" : {
+            "description" : "리뷰 수",
+            "example" : 13,
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "avgRating", "review", "reviewCount" ],
+        "type" : "object"
+      },
       "ConceptSummaryResponse" : {
         "description" : "개념 카드 요약",
         "properties" : {
@@ -887,6 +992,37 @@
             "description" : "현재 페이지 항목",
             "items" : {
               "$ref" : "#/components/schemas/AnalysisSummaryResponse"
+            },
+            "type" : "array"
+          },
+          "page" : {
+            "description" : "페이지 번호 (1부터)",
+            "example" : 1,
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "size" : {
+            "description" : "페이지 크기",
+            "example" : 20,
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "total" : {
+            "description" : "전체 항목 수",
+            "example" : 134,
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "PageResponseConceptReviewResponse" : {
+        "description" : "페이지 응답",
+        "properties" : {
+          "items" : {
+            "description" : "현재 페이지 항목",
+            "items" : {
+              "$ref" : "#/components/schemas/ConceptReviewResponse"
             },
             "type" : "array"
           },
@@ -1463,7 +1599,7 @@
     "/api/analyses" : {
       "get" : {
         "description" : "삭제하지 않은 내 분석을 요청 시각 최신순으로 준다.",
-        "operationId" : "list",
+        "operationId" : "list_1",
         "parameters" : [ {
           "description" : "페이지 번호 (1부터)",
           "example" : 1,
@@ -1531,7 +1667,7 @@
       },
       "post" : {
         "description" : "ZIP을 접수하고 바로 202를 준다. 코드 수집·필터·선별은 백그라운드에서 진행되며 상태는 /api/analyses/{id}/status로 확인한다. 하루(Asia/Seoul) 5회까지이며 FAILED는 세지 않는다.",
-        "operationId" : "create",
+        "operationId" : "create_1",
         "requestBody" : {
           "content" : {
             "multipart/form-data" : {
@@ -1824,7 +1960,7 @@
     "/api/analyses/{id}/flows" : {
       "get" : {
         "description" : "이 분석의 흐름 전체(id 오름차순). DONE이 아니면 summary·steps는 null. 화면은 PENDING이 있으면 3초마다 다시 부른다.",
-        "operationId" : "list_1",
+        "operationId" : "list_2",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -2235,7 +2371,7 @@
     "/api/concepts" : {
       "get" : {
         "description" : "공개(PUBLISHED) 카드를 키워드(이름·요약 부분 일치)·카테고리·난이도로 거르고 인기순(찜 수→평점) 또는 최신순으로 페이지 조회한다. 비로그인도 쓸 수 있다.",
-        "operationId" : "list_2",
+        "operationId" : "list_3",
         "parameters" : [ {
           "description" : "이름·요약 부분 일치 검색어 (trim 후 50자 이하, 대소문자 무시)",
           "example" : "jwt",
@@ -2343,6 +2479,338 @@
         },
         "security" : [ ],
         "summary" : "개념 카드 목록·검색",
+        "tags" : [ "개념 카드" ]
+      }
+    },
+    "/api/concepts/{conceptId}/reviews" : {
+      "get" : {
+        "description" : "공개 카드의 리뷰를 최신순(작성 시각 내림차순)으로 페이지 조회한다. 비로그인도 쓸 수 있다.",
+        "operationId" : "list",
+        "parameters" : [ {
+          "description" : "카드 ID",
+          "example" : 57,
+          "in" : "path",
+          "name" : "conceptId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "description" : "페이지 번호 (1부터)",
+          "example" : 1,
+          "in" : "query",
+          "name" : "page",
+          "required" : false,
+          "schema" : {
+            "default" : 1,
+            "description" : "페이지 번호 (1부터)",
+            "example" : 1,
+            "format" : "int32",
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        }, {
+          "description" : "페이지 크기 (최대 100)",
+          "example" : 20,
+          "in" : "query",
+          "name" : "size",
+          "required" : false,
+          "schema" : {
+            "default" : 20,
+            "description" : "페이지 크기 (최대 100)",
+            "example" : 20,
+            "format" : "int32",
+            "maximum" : 100,
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PageResponseConceptReviewResponse"
+                }
+              }
+            },
+            "description" : "조회 성공"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "페이지 값 오류 (COMMON_400)"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "없는 카드이거나 공개되지 않은 카드 (CONCEPT_404)"
+          }
+        },
+        "security" : [ ],
+        "summary" : "카드 리뷰 목록",
+        "tags" : [ "개념 카드" ]
+      },
+      "post" : {
+        "description" : "별점(1~5)과 내용(앞뒤 공백 제외 1~200자)으로 리뷰를 쓴다. 카드당 한 번만 쓸 수 있고, 카드 평균 별점을 다시 계산해 함께 돌려준다.",
+        "operationId" : "create",
+        "parameters" : [ {
+          "description" : "카드 ID",
+          "example" : 57,
+          "in" : "path",
+          "name" : "conceptId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ConceptReviewRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ConceptReviewSaveResponse"
+                }
+              }
+            },
+            "description" : "작성 성공"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "별점·내용 검증 실패 (COMMON_400, details에 필드별 사유)"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "로그인 필요 (AUTH_401)"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "없는 카드이거나 공개되지 않은 카드 (CONCEPT_404)"
+          },
+          "409" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "이미 이 카드에 리뷰를 남김 (CONCEPT_409)"
+          }
+        },
+        "summary" : "리뷰 작성",
+        "tags" : [ "개념 카드" ]
+      }
+    },
+    "/api/concepts/{conceptId}/reviews/me" : {
+      "delete" : {
+        "description" : "내 리뷰를 지우고 다시 계산한 카드 평균 별점·리뷰 수를 돌려준다 (반올림된 평균을 화면이 다시 계산할 수 없어 200).",
+        "operationId" : "delete",
+        "parameters" : [ {
+          "description" : "카드 ID",
+          "example" : 57,
+          "in" : "path",
+          "name" : "conceptId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ConceptRatingResponse"
+                }
+              }
+            },
+            "description" : "삭제 성공"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "로그인 필요 (AUTH_401)"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "없는·비공개 카드 (CONCEPT_404) 또는 작성한 리뷰가 없음 (CONCEPT_001)"
+          }
+        },
+        "summary" : "내 리뷰 삭제",
+        "tags" : [ "개념 카드" ]
+      },
+      "get" : {
+        "description" : "이 카드에 내가 쓴 리뷰. 없으면 204(본문 없음).",
+        "operationId" : "mine",
+        "parameters" : [ {
+          "description" : "카드 ID",
+          "example" : 57,
+          "in" : "path",
+          "name" : "conceptId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ConceptReviewResponse"
+                }
+              }
+            },
+            "description" : "내 리뷰"
+          },
+          "204" : {
+            "description" : "이 카드에 쓴 리뷰가 없음"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "로그인 필요 (AUTH_401)"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "없는 카드이거나 공개되지 않은 카드 (CONCEPT_404)"
+          }
+        },
+        "summary" : "내 리뷰 조회",
+        "tags" : [ "개념 카드" ]
+      },
+      "put" : {
+        "description" : "내 리뷰의 별점·내용을 바꾼다. 작성 시각과 목록 순서는 그대로이고, 카드 평균 별점을 다시 계산해 돌려준다.",
+        "operationId" : "update",
+        "parameters" : [ {
+          "description" : "카드 ID",
+          "example" : 57,
+          "in" : "path",
+          "name" : "conceptId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ConceptReviewRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ConceptReviewSaveResponse"
+                }
+              }
+            },
+            "description" : "수정 성공"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "별점·내용 검증 실패 (COMMON_400, details에 필드별 사유)"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "로그인 필요 (AUTH_401)"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "없는·비공개 카드 (CONCEPT_404) 또는 작성한 리뷰가 없음 (CONCEPT_001)"
+          }
+        },
+        "summary" : "내 리뷰 수정",
         "tags" : [ "개념 카드" ]
       }
     },
@@ -2938,7 +3406,7 @@
     "description" : "회원가입, 로그인, 토큰 재발급, 로그아웃",
     "name" : "인증"
   }, {
-    "description" : "공개 개념 카드 목록·검색·상세",
+    "description" : "공개 개념 카드 목록·검색·상세·리뷰",
     "name" : "개념 카드"
   }, {
     "description" : "날짜별 복습 계획 조회, 직접 추가, 완료 체크, 삭제",
