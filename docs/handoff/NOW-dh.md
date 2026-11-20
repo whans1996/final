@@ -24,7 +24,7 @@ F-15 복습 계획 — spec `docs/specs/F-15-review-plan.md` **APPROVED (whans19
 ## 막힌 점 / 결정 필요
 
 - 사람: 이슈 #16, 노션 팀원 초대, 고아 폴더 `../final-harness` 삭제 여부
-- F-12(B)에 `addWish` 호출을 알려야 함 → spec 승인 push 후 Mattermost로 공유
+- F-12(B) 연동은 이슈 #57(area:B, 김준섭)로 넘김 → B의 `/spec F-12`가 흡수. F-15 PR 머지가 선행
 
 ## 주의
 
