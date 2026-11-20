@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 |---|---|
-| 상태 | APPROVED <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
+| 상태 | DONE (PR #68) <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
 | 기능 ID | F-18 |
 | 우선순위 | P0 |
 | 영역 오너 | B 김준섭 (카드·소셜) |
@@ -180,7 +180,7 @@
 - [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
 - [x] contract-checker 통과
 - [x] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일)
-- [ ] reviewer 지적 사항 반영
+- [x] reviewer 지적 사항 반영 (반드시 수정 0, 권장 3건 50e8608)
 - [x] 산출물 반영: `06-화면설계서.md` SC-15 "F-18에서 정할 것"(정렬·페이지)·모바일 버튼 문구 + 스크린샷, `docs/conventions.md` 3절 POST 코드, `02-유스케이스.md` UC41 "기획 기준" 표시 정리
-- [ ] PR CI 초록
-- [ ] 상태 DONE (PR 머지 후)
+- [x] PR CI 초록 — PR #68, Codex ✅ 50e8608
+- [x] 상태 DONE (PR #68)
