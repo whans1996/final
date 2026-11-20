@@ -205,12 +205,12 @@
 
 `/implement`가 진행하며 체크한다.
 
-- [ ] 브랜치 `feature/F-15-review-plan`
-- [ ] Flyway 마이그레이션 (없음)
-- [ ] AC별 실패 테스트 작성 (red 확인)
-- [ ] BE 구현 (green): ErrorCode 블록, Mapper·Service·Controller·DTO
-- [ ] FE 구현 (green): api, route·nav, SC-11, SC-10 버튼, SC-08 링크, CODEOWNERS
-- [ ] Swagger 어노테이션 + `docs/api/openapi.json` 갱신, conventions 3절 에러 코드
+- [x] 브랜치 `feature/F-15-review-plan`
+- [x] Flyway 마이그레이션 (없음)
+- [x] AC별 실패 테스트 작성 (red 확인)
+- [x] BE 구현 (green): ErrorCode 블록, Mapper·Service·Controller·DTO
+- [x] FE 구현 (green): api, route·nav, SC-11, SC-10 버튼, SC-08 링크, CODEOWNERS
+- [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신, conventions 3절 에러 코드
 - [ ] contract-checker 통과
 - [ ] ui-verifier 통과 (데스크톱·모바일)
 - [ ] reviewer 지적 사항 반영

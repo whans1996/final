@@ -2,24 +2,23 @@ package com.vibenote.reviewplan;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.vibenote.common.IntegrationTestBase;
-import com.vibenote.user.UserService;
 import com.vibenote.user.dto.SignupRequest;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
-/** F-14 AC7 오답 개념을 복습 계획에 넣는 규칙. */
-class ReviewPlanServiceTest extends IntegrationTestBase {
+/** F-14 AC7 오답 개념, F-15 AC8 찜한 카드를 복습 계획에 넣는 규칙. 오늘 = 2026-11-20 (ReviewPlanTestSupport). */
+class ReviewPlanServiceTest extends ReviewPlanTestSupport {
 
     private static final LocalDate TOMORROW = LocalDate.of(2026, 11, 20);
 
     @Autowired ReviewPlanService service;
-    @Autowired UserService userService;
-    @Autowired JdbcTemplate jdbc;
+    @Autowired PlatformTransactionManager transactionManager;
 
     @AfterEach
     void cleanUp() {
@@ -91,5 +90,59 @@ class ReviewPlanServiceTest extends IntegrationTestBase {
 
         assertThat(service.addWrongAnswers(me, List.of(c), TOMORROW))
                 .containsExactly(new ReviewPlanService.Added(c, TOMORROW));
+    }
+
+    // ── F-15 AC8 찜 자동 추가 ──
+
+    private static final LocalDate F15_TOMORROW = LocalDate.of(2026, 11, 21);
+
+    @Test
+    void AC8_찜한_카드를_내일_WISH_TODO로_넣는다() {
+        long me = createUser("f15ac8");
+        long a = insertConcept("f15-test-A", "PUBLISHED");
+
+        Optional<ReviewPlanService.Added> added = service.addWish(me, a);
+
+        assertThat(added).contains(new ReviewPlanService.Added(a, F15_TOMORROW));
+        assertThat(
+                        jdbc.queryForObject(
+                                "SELECT COUNT(*) FROM review_plans WHERE user_id = ? AND concept_id"
+                                    + " = ? AND plan_date = '2026-11-21' AND status = 'TODO' AND"
+                                    + " reason = 'WISH'",
+                                Integer.class,
+                                me,
+                                a))
+                .isEqualTo(1);
+    }
+
+    @Test
+    void AC8_TODO가_날짜와_상관없이_있거나_내일_계획이_있으면_넣지_않는다() {
+        long me = createUser("f15ac8s");
+        long todoLater = insertConcept("f15-test-나중 TODO", "PUBLISHED");
+        long todoPast = insertConcept("f15-test-지난 TODO", "PUBLISHED");
+        long doneTomorrow = insertConcept("f15-test-내일 DONE", "PUBLISHED");
+        insertTodo(me, todoLater, "2026-12-01");
+        insertTodo(me, todoPast, "2026-11-01");
+        insertPlan(me, doneTomorrow, "2026-11-21", "DONE", "MANUAL", "2026-11-20 09:00:00");
+
+        assertThat(service.addWish(me, todoLater)).isEmpty();
+        assertThat(service.addWish(me, todoPast)).isEmpty();
+        assertThat(service.addWish(me, doneTomorrow)).isEmpty();
+        assertThat(countPlans(me)).isEqualTo(3);
+    }
+
+    @Test
+    void AC8_호출자가_롤백하면_함께_롤백된다() {
+        long me = createUser("f15ac8r");
+        long a = insertConcept("f15-test-A", "PUBLISHED");
+
+        new TransactionTemplate(transactionManager)
+                .executeWithoutResult(
+                        status -> {
+                            assertThat(service.addWish(me, a)).isPresent();
+                            status.setRollbackOnly();
+                        });
+
+        assertThat(countPlans(me)).isZero();
     }
 }
