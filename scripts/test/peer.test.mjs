@@ -185,6 +185,8 @@ test('/spec 가드: develop 밖에서 같은 기능을 진행 중인 원격 브�
   assert.deepEqual(featureOnRemotes('F-05a', { cwd: me }), [{ branch: 'origin/feature/F-05a-zip', specs: ['docs/specs/F-05a-zip.md'] }]);
   assert.deepEqual(featureOnRemotes('F-05', { cwd: me }), []);
   assert.deepEqual(featureOnRemotes('F-99', { cwd: me }), []);
+  // 기준 브랜치를 못 찾으면 "없음"(✅)이 아니라 판정 불가(null) — 가드가 거짓 통과를 내지 않게 (reviewer)
+  assert.equal(featureOnRemotes('F-14', { cwd: me, base: 'origin/nope' }), null);
 });
 
 test('내 다른 브랜치 목록: 지금 브랜치가 아닌 것만 ⚠️', () => {
@@ -203,9 +205,17 @@ test('상대 NOW는 원격 브랜치마다 보고 갱신 시각이 늦은 것을
   const { origin, work } = setup();
   branchWith(work, 'feature/F-08-old', JS, NOW('2026-11-19 11:00', 'F-08 옛 작업'), 'JoonseobKim');
   branchWith(work, 'feature/F-09-cards', JS, NOW('2026-11-20 14:05', 'F-09 카드 목록'), 'JoonseobKim');
-  // 옛 브랜치가 나중에 머지되면 NOW를 바꾼 커밋 중 develop의 머지 커밋이 가장 늦다
-  mergeToDevelop(work, 'feature/F-08-old');
+  // 옛 브랜치가 나중에 squash 머지되면 NOW를 바꾼 커밋 중 develop의 squash 커밋이 가장 늦다
+  // (--no-ff 머지 커밋은 log의 history simplification이 건너뛰어 재현되지 않는다, reviewer)
+  sh(work, 'fetch', '-q');
+  sh(work, 'switch', '-q', '-C', 'develop', 'origin/develop');
+  sh(work, 'merge', '-q', '--squash', 'origin/feature/F-08-old');
+  sh(work, '-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-q', '-m', 'F-08 (#40)');
+  sh(work, 'push', '-q', 'origin', 'develop');
   const me = myClone(origin);
+  // 전제: 수정 전 방식(NOW를 바꾼 가장 늦은 커밋 1개)이면 옛 F-08 NOW를 고른다
+  const last = sh(me, 'log', '--remotes=origin', '-1', '--format=%H', '--', JS);
+  assert.match(sh(me, 'show', `${last}:${JS}`), /F-08 옛 작업/);
 
   const picked = latestPeerNow('js', { cwd: me });
   assert.equal(picked.source, 'origin/feature/F-09-cards');

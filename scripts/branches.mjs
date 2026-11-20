@@ -9,7 +9,9 @@ import { NON_INTERACTIVE_GIT_ENV, currentBranch, git, localPcId, nowRelPath, own
 import { featureOnRemotes, myBranchLines, myBranchNows } from './lib/peer.mjs';
 
 const arg = process.argv[2];
-git(['fetch', '--quiet', '--prune', 'origin'], { timeout: 15_000, env: NON_INTERACTIVE_GIT_ENV });
+const fetched = git(['fetch', '--quiet', '--prune', 'origin'], { timeout: 15_000, env: NON_INTERACTIVE_GIT_ENV });
+// 옛 원격 상태를 믿어서 생긴 사고(#54)라, 최신화에 실패하면 결과가 오래됐을 수 있음을 먼저 알린다
+if (!fetched.ok) console.log(`⚠️ git fetch 실패 (${fetched.err.split('\n')[0] || `exit ${fetched.status}`}) → 마지막으로 받은 원격 상태 기준이다`);
 
 if (arg) {
   const fid = /^f-\d+[a-z]?$/i.test(arg) ? arg.replace(/^f/, 'F') : null;
@@ -18,6 +20,10 @@ if (arg) {
     process.exit(2);
   }
   const found = featureOnRemotes(fid);
+  if (!found) {
+    console.log('❓ 판정 불가: origin/develop을 찾지 못했다 (원격 없음·fetch 실패) → 멈추고 사용자에게 묻는다');
+    process.exit(1);
+  }
   if (!found.length) {
     console.log(`✅ develop 밖에서 ${fid}를 진행 중인 원격 브랜치 없음`);
   } else {

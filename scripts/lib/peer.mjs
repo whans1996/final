@@ -115,9 +115,11 @@ export function myBranchNows(key, { cwd = ROOT, base = 'origin/develop' } = {}) 
 
 /**
  * /spec 가드 (#54): base(develop)에 머지 안 된 원격 브랜치 중 기능 fid(F-14, F-05a)를 진행 중인 것 → [{ branch, specs }] (최근 커밋 순).
- * 브랜치 이름에 `F-14-`가 있거나, base에 없는 `docs/specs/F-14-*.md`가 있으면 해당한다
+ * 브랜치 이름에 `F-14-`가 있거나, base에 없는 `docs/specs/F-14-*.md`가 있으면 해당한다.
+ * base를 못 찾으면 null(판정 불가): 빈 목록이면 가드가 거짓 통과(✅)를 낸다
  */
 export function featureOnRemotes(fid, { cwd = ROOT, base = 'origin/develop' } = {}) {
+  if (!git(['rev-parse', '--verify', '-q', `${base}^{commit}`], { cwd, timeout: LOCAL_GIT_TIMEOUT }).ok) return null;
   const prefix = `${fid}-`.toLowerCase();
   const specsOf = (ref) =>
     git(['ls-tree', '--name-only', ref, 'docs/specs/'], { cwd, timeout: LOCAL_GIT_TIMEOUT })
