@@ -1,7 +1,7 @@
 {
   "questions": [
     {
-      "conceptId": 39,
+      "conceptName": "@RestController와 요청 매핑",
       "question": "ArticlesApi 클래스에 붙은 @RestController와 @RequestMapping(path = \"/articles\")가 하는 일로 알맞은 것은?",
       "choices": [
         "/articles로 오는 HTTP 요청을 이 클래스의 메서드에 연결하고, 메서드가 돌려준 값을 응답 본문(JSON)으로 내보낸다",
@@ -13,7 +13,7 @@
       "explanation": "@RestController는 메서드의 반환값을 뷰 이름이 아니라 응답 본문으로 쓰게 하고, 클래스의 @RequestMapping(path = \"/articles\")는 그 아래 메서드 주소의 앞부분이 됩니다. 테이블 매핑은 MyBatis 매퍼가, 인증 예외는 WebSecurityConfig가 맡습니다."
     },
     {
-      "conceptId": 18,
+      "conceptName": "의존성 주입 (DI)",
       "question": "ArticlesApi가 ArticleCommandService와 ArticleQueryService를 쓰는 방식으로 알맞은 것은?",
       "choices": [
         "메서드 안에서 new ArticleCommandService()로 그때그때 만든다",
@@ -25,7 +25,7 @@
       "explanation": "ArticlesApi는 두 서비스를 생성자로 받습니다. 스프링이 빈을 만들 때 생성자 매개변수에 맞는 서비스 빈을 넣어 주므로 컨트롤러가 직접 객체를 만들거나 컨테이너를 찾지 않습니다."
     },
     {
-      "conceptId": 42,
+      "conceptName": "Bean Validation (@Valid)",
       "question": "ArticlesApi의 createArticle()이 요청 본문 NewArticleParam 앞에 @Valid를 붙여서 생기는 일은?",
       "choices": [
         "title이 비어 있어도 일단 저장한 뒤 나중에 관리자가 고친다",
@@ -37,7 +37,7 @@
       "explanation": "@Valid가 붙은 @RequestBody 매개변수는 컨트롤러 메서드가 실행되기 전에 Bean Validation으로 검사됩니다. 제약을 어기면 예외가 나고 예외 처리기가 오류 응답을 만들므로 잘못된 글이 서비스까지 가지 않습니다."
     },
     {
-      "conceptId": 62,
+      "conceptName": "Mapper 인터페이스와 XML 매퍼",
       "question": "ArticleMapper 인터페이스의 메서드는 어떻게 실제 SQL과 이어지나요?",
       "choices": [
         "메서드 이름을 분석해 SQL을 자동으로 만들어 준다",
@@ -49,7 +49,7 @@
       "explanation": "MyBatis는 @Mapper 인터페이스의 구현체를 만들고, 메서드를 XML 매퍼에서 같은 id를 가진 SQL에 연결합니다. 메서드 이름으로 쿼리를 만드는 방식이나 @Entity는 Spring Data JPA의 방식입니다."
     },
     {
-      "conceptId": 57,
+      "conceptName": "JWT 기반 인증",
       "question": "JwtTokenFilter가 Authorization 헤더에서 토큰을 꺼낸 뒤 하는 일로 알맞은 것은?",
       "choices": [
         "토큰을 데이터베이스의 세션 테이블과 비교한다",

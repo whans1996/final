@@ -9,6 +9,7 @@ import com.vibenote.analysis.concept.ConceptExtractProperties;
 import com.vibenote.analysis.concept.ConceptPrompts;
 import com.vibenote.analysis.concept.ConceptResponseParser;
 import com.vibenote.analysis.concept.ExtractedConcept;
+import com.vibenote.analysis.concept.LinkedConcept;
 import com.vibenote.analysis.domain.AnalysisFile;
 import com.vibenote.common.Level;
 import com.vibenote.concept.ConceptStatus;
@@ -16,6 +17,8 @@ import com.vibenote.concept.domain.Concept;
 import com.vibenote.llm.LlmStage;
 import com.vibenote.llm.MockLlmClient;
 import com.vibenote.quiz.GeneratedQuestion;
+import com.vibenote.quiz.QuizPrompts;
+import com.vibenote.quiz.QuizProperties;
 import com.vibenote.quiz.QuizResponseParser;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -25,7 +28,6 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
@@ -126,13 +128,44 @@ class MainFixturesTest {
 
     @Test
     void AC11_F14_quiz_fixture는_6문항이고_시드_카드_4개_이상과_null_1개를_가리킨다() throws Exception {
-        // concept.json이 가리키는 시드 카드 id (#49: 로컬 DB에 따라 다를 수 있어 목록 밖이면 파서가 NULL로 바꾼다)
-        Set<Long> seedIds = Set.of(18L, 39L, 42L, 57L, 62L);
+        // concept fixture가 연결하는 카드 (id는 시드 적용 이력이 다른 로컬 DB처럼 1000부터, #49)
+        List<ExtractedConcept> linked = extractWithSeedIds(1000);
+        Map<Long, String> nameById = new HashMap<>();
+        for (Map.Entry<String, String> seed : seeds().entrySet()) {
+            nameById.put(1000L + nameById.size(), seed.getKey());
+        }
+        List<LinkedConcept> concepts =
+                linked.stream()
+                        .filter(c -> c.conceptId() != null)
+                        .map(
+                                c ->
+                                        new LinkedConcept(
+                                                c.conceptId(),
+                                                nameById.get(c.conceptId()),
+                                                "PUBLISHED",
+                                                c.contextNote()))
+                        .toList();
+        QuizPrompts.Input input =
+                QuizPrompts.input(
+                        concepts,
+                        List.of(file(1, "src/F1.java", "service", "class F1 {}")),
+                        new QuizProperties(5, 10, 3000, 3000, 24000));
+        // QuizGenerator와 같은 방식으로 템플릿 전체를 채운다
+        String prompt =
+                new PromptTemplates()
+                        .render(
+                                LlmStage.QUIZ,
+                                Level.JUNIOR,
+                                Map.of(
+                                        "projectName", "realworld",
+                                        "concepts", input.concepts(),
+                                        "files", input.files()));
 
+        String response = MockLlmClient.linkQuizConceptNames(read("quiz.json"), prompt);
         List<GeneratedQuestion> result =
                 QuizResponseParser.parse(
-                        JsonMapper.builder().build().readTree(read("quiz.json")),
-                        seedIds,
+                        JsonMapper.builder().build().readTree(response),
+                        input.conceptIds(),
                         1L,
                         5,
                         10);

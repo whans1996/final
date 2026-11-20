@@ -8,7 +8,7 @@
 | 영역 오너 | A 김동환 (AI·분석·학습 루프) |
 | 관련 필수 요구사항 | ⑫ 계획/챌린지(이해 퀴즈), ⑬ AI 활용 알고리즘. 명세서 "필수 · 분석"(점수로 표현), "심화 · AI"(생성형 AI 기능) |
 | 의존 spec | F-00 LlmClient, F-05a 파이프라인, F-06 설명(`LlmJsonCall`·`PromptTemplates`·`ExplainPrompts.fileBlock`·`truncate`), F-08 개념 추출(`analysis_concepts`·`AnalysisConceptService`), F-00b 공통 기반(`ConceptQueryService.findPublishedSummaries`·`ConceptSummaryResponse`·`ConceptCard.vue`) — 모두 DONE. F-03 학습 통계(`UserStatsMapper`)는 이 기능이 쌓는 `quiz_attempts`·`quiz_answers`를 이미 집계한다. F-15(복습 계획)·F-16(추천)·F-25(챌린지)가 이 기능의 기록을 읽는다 |
-| 관련 이슈 | 없음 (#49 mock fixture 시드 id 문제는 흡수하지 않음. `quiz.json`은 `concept.json`과 같은 시드 id를 쓴다) |
+| 관련 이슈 | 없음 (#49는 develop에서 해결됨(PR #53). `quiz.json`도 같은 방식으로 시드 카드를 이름으로 가리킨다, 11-20 결정) |
 | 승인 | whans1996 2026-11-19 |
 
 ## 1. 목적
@@ -34,7 +34,7 @@
 | AC8 | 잘못된 제출이 | `POST /api/quizzes/{quizId}/attempts`로 오면 | `answers`가 비었거나 없음, `questionId`·`selectedIndex`가 null, `selectedIndex`가 0~3 밖 → 400 `COMMON_400`(`details`에 필드). 그 퀴즈의 문항마다 정확히 한 번씩 답하지 않음(누락, 같은 문항 중복, 다른 퀴즈의 문항) → 400 `QUIZ_400`. 토큰 없으면 401 `AUTH_401`. 없는 퀴즈, 다른 회원의 분석, soft delete된 분석의 퀴즈 → 404 `QUIZ_404`. 에러 때는 풀이·답·복습 계획이 하나도 저장되지 않는다 |
 | AC9 | 로그인한 회원이 `DONE` 분석의 | SC-07에서 "퀴즈" 탭(`?tab=quiz`, 개념 탭 다음)을 열면 | 퀴즈를 1회 불러와 "객관식 {n}문항", 지난 풀이가 있으면 "지난 풀이 {score}/{total} · {M/D HH:mm}"을 보여 주고, 버튼("퀴즈 풀기", 지난 풀이가 있으면 "다시 풀기")을 누르면 `/analyses/{id}/quiz`로 간다. `QUIZ_404`면 "이 분석은 퀴즈를 만들지 못했습니다."를 `EmptyState`로 보여 준다. 로딩 문구, 그 밖의 실패는 서버 `message`와 "다시 시도" 버튼 |
 | AC10 | 회원이 SC-08(`/analyses/:id(\d+)/quiz`)에서 | 문제를 풀고 제출하면 | 문항마다 번호·질문(줄바꿈 유지)과 4지선다 라디오, 위에 "{답한 수}/{n} 답함"을 보여 주고, 모두 답해야 "제출" 버튼이 켜진다. 제출 중에는 버튼을 끈다. 성공하면 점수 "{score}/{total}", 문항별 정오 표시·내 답·정답·해설·관련 `ConceptCard`(있으면, 누르면 `/concepts/{id}`)를 보여 주고, `reviewAdded`가 있으면 "틀린 개념 {k}개를 {M월 D일} 복습 계획에 추가했습니다."를 보여 준다. "다시 풀기"는 답을 비우고 풀이 화면으로 돌아가고, "분석으로 돌아가기"는 `/analyses/{id}?tab=quiz`로 간다. 제출이 실패하면 서버 `message`를 보여 주고 고른 답은 유지한다. 조회 실패 처리는 AC9와 같다. 375px에서 페이지 가로 스크롤이 없다 |
-| AC11 | 저장소의 Mock fixture `llm-fixtures/quiz.json`이 | 파서로 읽으면 | 6.3절 스키마를 통과해 6문항이 된다(`MainFixturesTest`). `concept.json`이 가리키는 시드 카드 id 중 4개 이상을 `conceptId`로 쓰고 `conceptId: null` 문항이 1개 있으며, dev 데이터(DS-02-01)만 보고 쓴다. `llm.provider=mock`으로 로컬 분석을 돌리면 퀴즈 탭과 SC-08 풀이·채점이 동작한다 |
+| AC11 | 저장소의 Mock fixture `llm-fixtures/quiz.json`이 | 파서로 읽으면 | 6.3절 스키마를 통과해 6문항이 된다(`MainFixturesTest`). `concept.json`이 연결하는 시드 카드 중 4개 이상을 이름(`conceptName`)으로 가리키고(`MockLlmClient`가 퀴즈 프롬프트 개념 목록의 id로 바꿈, 시드 id가 다른 DB에서도 연결됨) `conceptId: null` 문항이 1개 있으며, dev 데이터(DS-02-01)만 보고 쓴다. `llm.provider=mock`으로 로컬 분석을 돌리면 퀴즈 탭과 SC-08 풀이·채점이 동작한다 |
 
 ## 3. API 계약
 
@@ -203,7 +203,7 @@
 | 프롬프트 파일 | `backend/src/main/resources/prompts/quiz/{beginner,junior,senior}.md` |
 | 입력 | 6.2절 |
 | 출력 JSON 스키마 | 6.3절. 형식 오류 시 1회 재시도 (AC4) |
-| Mock fixture | `backend/src/main/resources/llm-fixtures/quiz.json` — **dev 데이터(DS-02-01 realworld)만 보고** 작성. 6문항, `concept.json`과 같은 시드 카드 id 4개 이상 + `null` 1개. 목록에 없는 id는 파서가 NULL로 바꾸므로 DB가 달라도 깨지지 않는다(#49는 W5에 결정). `data/datasets.json` DS-06 상태 갱신. eval 데이터(DS-02-05~08, DS-03·04) 사용 금지. `MockLlmClient`는 fixture가 없으면 예외이므로 이 파일이 없으면 mock 파이프라인의 퀴즈가 항상 비게 된다 |
+| Mock fixture | `backend/src/main/resources/llm-fixtures/quiz.json` — **dev 데이터(DS-02-01 realworld)만 보고** 작성. 6문항, `concept.json`이 연결하는 시드 카드 이름(`conceptName`) 4개 이상 + `conceptId: null` 1개. `MockLlmClient`가 QUIZ 단계에서 이름을 프롬프트 개념 목록의 id로 바꾸고, 목록에 없는 이름은 `null`로 둔다(#49와 같은 방식). `data/datasets.json` DS-06 상태 갱신. eval 데이터(DS-02-05~08, DS-03·04) 사용 금지. `MockLlmClient`는 fixture가 없으면 예외이므로 이 파일이 없으면 mock 파이프라인의 퀴즈가 항상 비게 된다 |
 | 캐시·재사용 | 결과는 `quizzes`·`quiz_questions`에 저장하고 조회·채점 API는 LLM을 부르지 않는다. 분석당 1회 생성, 재생성 없음 |
 | 호출 수 | 분석 1건당 1회 (재시도 포함 최대 2회). F-06·F-08과 합쳐 분석당 최대 8회 |
 
@@ -274,7 +274,7 @@ LLM은 테스트에서 실제로 부르지 않는다. 파이프라인 통합 테
 | AC9 | `src/components/analysis/__tests__/AnalysisQuizTab.spec.js`, `src/views/__tests__/AnalysisDetailView.spec.js`(퀴즈 탭·query 복원) | Vitest |
 | AC10 | `src/views/__tests__/QuizView.spec.js` (제출 버튼 활성 조건, 결과·복습 안내, 다시 풀기, 제출 실패 시 답 유지) | Vitest |
 | API 함수 | `src/api/__tests__/quizzes.spec.js` | Vitest |
-| AC11 | `analysis/explain/MainFixturesTest#AC11_…` (quiz.json 파서 통과, 6문항, conceptId 4개 이상·null 1개) | 단위 |
+| AC11 | `analysis/explain/MainFixturesTest#AC11_…` (시드 id 1000부터인 DB를 가정해 concept → quiz 프롬프트 → mock 연결 → 파서, 6문항, conceptId 4개 이상·null 1개) + `llm/MockLlmClientTest#AC11_…` | 단위 |
 
 ## 9. 범위 밖
 
