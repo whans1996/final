@@ -192,7 +192,7 @@ AC11 종류별 문장 (SC-17):
 - [x] 브랜치 `feature/F-04-follow-feed`
 - [x] Flyway 마이그레이션 (없음)
 - [ ] AC별 실패 테스트 작성 (red 확인)
-- [ ] BE 구현 (green): `ErrorCode` USER 블록 `USER_002`, `SecurityConfig` FOLLOW 블록, `follow` 패키지 Controller·Service·Mapper, `feed` 패키지 `FeedController`·`FeedService`·`FeedMapper`
+- [x] BE 구현 (green): `ErrorCode` USER 블록 `USER_002`, `SecurityConfig` FOLLOW 블록, `follow` 패키지 Controller·Service·Mapper, `feed` 패키지 `FeedController`·`FeedService`·`FeedMapper`
 - [ ] FE 구현 (green)
 - [ ] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
 - [ ] contract-checker 통과

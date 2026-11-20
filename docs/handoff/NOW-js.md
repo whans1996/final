@@ -4,24 +4,25 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-dh.md`)은 읽기만 한다.
 
-갱신: 2026-11-20 17:02 · 작업자: JoonseobKim · PC: js-home · 브랜치: feature/F-04-follow-feed
+갱신: 2026-11-20 17:12 · 작업자: JoonseobKim · PC: js-home · 브랜치: feature/F-04-follow-feed
 
 ---
 
 ## 현재 기능
 
-F-04 팔로우·활동 피드 — spec APPROVED `docs/specs/F-04-follow-feed.md`, `/implement` 진행 중. 이번 세션 목표: BE AC1~AC8
+F-04 팔로우·활동 피드 — spec APPROVED `docs/specs/F-04-follow-feed.md`, `/implement` 진행 중. **BE AC1~AC8 완료**, 다음 FE AC9~AC11
 
 ## 진행
 
-- ✅ AC1~AC5 팔로우 BE green (`follow/FollowApiTest` 8, `FollowQueryApiTest` 8): `FollowController`·`FollowService`(follow는 나·대상 users 행을 id 오름차순 FOR UPDATE, unfollow는 일반 조회)·`FollowMapper.xml`(INSERT IGNORE, 수·목록은 ACTIVE 회원 JOIN), `ErrorCode.USER_002`(자기 자신, 결정로그 11-20: conventions상 팔로우=USER 도메인), `SecurityConfig` FOLLOW 블록, `UserService.findByIdForUpdate` 추가
-- ⏳ AC6~AC8 피드 BE
+- ✅ AC1~AC5 팔로우 BE (d498220): `follow/FollowController`·`FollowService`(follow는 나·대상 users 행 id 오름차순 FOR UPDATE)·`FollowMapper.xml`. 자기 자신 에러는 `USER_002`(spec의 FOLLOW_001이 conventions 3절과 어긋나 변경, 결정로그)
+- ✅ AC6~AC8 피드 BE: `feed/FeedController`(`GET /api/feed`)·`FeedService`·`FeedMapper.xml`(목록·COUNT 공용 `<sql id="visible">`, REVIEW target.id=카드 id, ANALYSIS 제목 없으면 FE용 "제목 없는 분석"은 `FeedItemResponse.from`). `FeedApiTest` 11개
+- 주의: 테스트 트랜잭션 안에서 같은 MyBatis SELECT를 두 번 부르면 세션 캐시가 옛 결과를 준다 → `SqlSessionTemplate.clearCache()` (FeedApiTest 찜 재찜 케이스)
 
 ## 바로 다음 할 일
 
-1. `feed/FeedApiTest#AC6_팔로우한_사람의_활동만_최신순으로_보인다` red → `feed/FeedController`(`GET /api/feed`, Tag `피드`)·`FeedService.getFeed(me, page)`·`FeedMapper.xml`(spec 4절 쿼리: follows JOIN + 종류별 LEFT JOIN + OR 조건, REVIEW는 activities.target_id=리뷰 id → target.id=카드 id)
-2. AC7 종류별 숨김(분석 비공개·삭제·DONE 아님 / 리뷰 삭제·카드 비공개 / 찜 해제·카드 비공개 / 글 삭제 / 챌린지 삭제), AC8 빈 피드
-3. 그다음 FE AC9~AC11 (spec 5절)
+1. FE API: `frontend/src/api/follows.js`(`fetchFollowStatus`·`follow`·`unfollow`·`fetchFollowers`·`fetchFollowings`), `src/api/feed.js`(`fetchFeed`) + `src/api/__tests__` (기존 `posts.js` 패턴)
+2. `utils/relativeTime.js` `formatRelativeTime(iso, now)` + `utils/__tests__/relativeTime.spec.js` (AC11 규칙)
+3. AC9 `components/follow/FollowSummary.vue` → `UserProfileView.vue`, AC10 `views/UserFollowsView.vue`(`routes/user.js` `/users/:id(\\d+)/follows`), AC11 `views/community/FeedView.vue`·`components/feed/FeedItem.vue`(`routes/community.js` nav 피드 order 7)
 
 ## 막힌 점 / 결정 필요
 
@@ -29,5 +30,5 @@ F-04 팔로우·활동 피드 — spec APPROVED `docs/specs/F-04-follow-feed.md`
 
 ## 주의
 
-- 공통 파일 변경(`ErrorCode` USER_002, `SecurityConfig` FOLLOW 블록, `UserService.findByIdForUpdate`, `feed` 패키지, `routes/user.js`, `UserProfileView`) → PR에 @whans1996 멘션
+- 공통 파일 변경(`ErrorCode` USER_002, `SecurityConfig` FOLLOW 블록, `UserService.findByIdForUpdate`, `conventions.md` 3절 USER_002, `feed` 패키지, `routes/user.js`, `UserProfileView`) → PR에 @whans1996 멘션
 - `codex-review.mjs`가 Codex 실행 실패를 RUNNING으로 기다린다 (#48, 상대 PR #69가 수정 중)

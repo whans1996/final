@@ -806,6 +806,79 @@
         },
         "type" : "object"
       },
+      "FeedActorResponse" : {
+        "description" : "활동한 회원",
+        "properties" : {
+          "id" : {
+            "description" : "회원 ID",
+            "example" : 7,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "nickname" : {
+            "description" : "닉네임",
+            "example" : "java러버",
+            "type" : "string"
+          }
+        },
+        "required" : [ "id", "nickname" ],
+        "type" : "object"
+      },
+      "FeedItemResponse" : {
+        "description" : "피드 항목 (활동 하나)",
+        "properties" : {
+          "actor" : {
+            "$ref" : "#/components/schemas/FeedActorResponse"
+          },
+          "createdAt" : {
+            "description" : "활동 시각",
+            "example" : "2026-11-20T13:40:00",
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "id" : {
+            "description" : "활동 ID",
+            "example" : 91,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "target" : {
+            "$ref" : "#/components/schemas/FeedTargetResponse"
+          },
+          "type" : {
+            "description" : "활동 종류",
+            "enum" : [ "ANALYSIS", "REVIEW", "WISH", "POST", "CHALLENGE_JOIN", "CHALLENGE_COMPLETE" ],
+            "example" : "REVIEW",
+            "type" : "string"
+          }
+        },
+        "required" : [ "actor", "createdAt", "id", "target", "type" ],
+        "type" : "object"
+      },
+      "FeedTargetResponse" : {
+        "description" : "활동 대상. id는 링크할 대상의 id (REVIEW·WISH는 카드, ANALYSIS는 분석, POST는 글, CHALLENGE_*는 챌린지)",
+        "properties" : {
+          "id" : {
+            "description" : "링크할 대상 ID. REVIEW는 리뷰 id가 아니라 카드 id",
+            "example" : 12,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "rating" : {
+            "description" : "REVIEW의 별점(1~5). 나머지 종류는 null",
+            "example" : 5,
+            "format" : "int32",
+            "type" : [ "integer", "null" ]
+          },
+          "title" : {
+            "description" : "대상 이름. ANALYSIS는 분석 제목, 없으면 프로젝트명, 둘 다 없으면 \"제목 없는 분석\"",
+            "example" : "JWT 기반 인증",
+            "type" : "string"
+          }
+        },
+        "required" : [ "id", "rating", "title" ],
+        "type" : "object"
+      },
       "FlowEndpoint" : {
         "description" : "API 하나 (개요 apis의 method·path 그대로)",
         "properties" : {
@@ -1217,6 +1290,37 @@
             "description" : "현재 페이지 항목",
             "items" : {
               "$ref" : "#/components/schemas/ConceptSummaryResponse"
+            },
+            "type" : "array"
+          },
+          "page" : {
+            "description" : "페이지 번호 (1부터)",
+            "example" : 1,
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "size" : {
+            "description" : "페이지 크기",
+            "example" : 20,
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "total" : {
+            "description" : "전체 항목 수",
+            "example" : 134,
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "PageResponseFeedItemResponse" : {
+        "description" : "페이지 응답",
+        "properties" : {
+          "items" : {
+            "description" : "현재 페이지 항목",
+            "items" : {
+              "$ref" : "#/components/schemas/FeedItemResponse"
             },
             "type" : "array"
           },
@@ -3510,6 +3614,76 @@
         "tags" : [ "개념 카드" ]
       }
     },
+    "/api/feed" : {
+      "get" : {
+        "description" : "팔로우한 사람이 공개한 분석·남긴 리뷰·찜한 카드·쓴 글·챌린지 참여/달성을 활동 시각 최신순(같으면 활동 id 내림차순)으로 페이지 조회한다. 내 활동은 넣지 않는다. 대상을 지금 볼 수 없으면(비공개·삭제된 분석, 지운 리뷰·글·챌린지, 해제한 찜, 공개가 아닌 카드) 목록과 total에서 뺀다.",
+        "operationId" : "feed",
+        "parameters" : [ {
+          "description" : "페이지 번호 (1부터)",
+          "example" : 1,
+          "in" : "query",
+          "name" : "page",
+          "required" : false,
+          "schema" : {
+            "default" : 1,
+            "description" : "페이지 번호 (1부터)",
+            "example" : 1,
+            "format" : "int32",
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        }, {
+          "description" : "페이지 크기 (최대 100)",
+          "example" : 20,
+          "in" : "query",
+          "name" : "size",
+          "required" : false,
+          "schema" : {
+            "default" : 20,
+            "description" : "페이지 크기 (최대 100)",
+            "example" : 20,
+            "format" : "int32",
+            "maximum" : 100,
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PageResponseFeedItemResponse"
+                }
+              }
+            },
+            "description" : "조회 성공"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "페이지 값 오류 (COMMON_400)"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "로그인 필요, 만료·깨진 토큰 (AUTH_401)"
+          }
+        },
+        "summary" : "내 피드",
+        "tags" : [ "피드" ]
+      }
+    },
     "/api/posts" : {
       "get" : {
         "description" : "게시판 구분 없이 또는 한 게시판의 글을 최신순(작성 시각 내림차순)으로 페이지 조회한다. keyword는 제목·본문 부분 일치. 비로그인도 쓸 수 있다.",
@@ -5096,6 +5270,9 @@
   }, {
     "description" : "날짜별 복습 계획 조회, 직접 추가, 완료 체크, 삭제",
     "name" : "복습 계획"
+  }, {
+    "description" : "팔로우한 사람의 공개 활동 피드 (F-04)",
+    "name" : "피드"
   }, {
     "description" : "회원 팔로우·언팔로우와 팔로워·팔로잉 조회 (F-04)",
     "name" : "팔로우"

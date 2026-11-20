@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.vibenote.feed.FeedMapper">
+
+    <!--
+      팔로우한 활성 회원의 활동 + 종류별 대상. 대상을 지금 볼 수 없으면 WHERE에서 빠진다 (F-04 AC7, #64).
+      activities.target_id: ANALYSIS=분석, REVIEW=리뷰, WISH=카드, POST=글, CHALLENGE_*=챌린지.
+      목록과 COUNT가 같은 조건을 쓰도록 FROM~WHERE를 한곳에 둔다.
+    -->
+    <sql id="visible">
+        FROM activities a
+        JOIN follows f ON f.following_id = a.user_id AND f.follower_id = #{me}
+        JOIN users u ON u.id = a.user_id AND u.status = 'ACTIVE'
+        LEFT JOIN analyses an
+               ON a.type = 'ANALYSIS' AND an.id = a.target_id AND an.user_id = a.user_id
+        LEFT JOIN concept_reviews r
+               ON a.type = 'REVIEW' AND r.id = a.target_id AND r.user_id = a.user_id
+        LEFT JOIN concepts rc ON rc.id = r.concept_id
+        LEFT JOIN concept_wishes w
+               ON a.type = 'WISH' AND w.user_id = a.user_id AND w.concept_id = a.target_id
+        LEFT JOIN concepts wc ON wc.id = w.concept_id
+        LEFT JOIN posts p ON a.type = 'POST' AND p.id = a.target_id AND p.user_id = a.user_id
+        LEFT JOIN challenges ch
+               ON a.type IN ('CHALLENGE_JOIN', 'CHALLENGE_COMPLETE') AND ch.id = a.target_id
+        WHERE (a.type = 'ANALYSIS' AND an.is_public = TRUE AND an.status = 'DONE' AND an.deleted_at IS NULL)
+           OR (a.type = 'REVIEW' AND rc.status = 'PUBLISHED')
+           OR (a.type = 'WISH' AND wc.status = 'PUBLISHED')
+           OR (a.type = 'POST' AND p.id IS NOT NULL)
+           OR (a.type IN ('CHALLENGE_JOIN', 'CHALLENGE_COMPLETE') AND ch.id IS NOT NULL)
+    </sql>
+
+    <select id="countVisible" resultType="long">
+        SELECT COUNT(*) <include refid="visible"/>
+    </select>
+
+    <select id="findVisiblePage" resultType="com.vibenote.feed.domain.FeedRow">
+        SELECT a.id,
+               a.type,
+               a.created_at,
+               u.id       AS actor_id,
+               u.nickname AS actor_nickname,
+               CASE WHEN a.type = 'REVIEW' THEN r.concept_id ELSE a.target_id END AS target_id,
+               CASE a.type
+                   WHEN 'ANALYSIS' THEN COALESCE(NULLIF(TRIM(an.title), ''), NULLIF(TRIM(an.project_name), ''))
+                   WHEN 'REVIEW'   THEN rc.name
+                   WHEN 'WISH'     THEN wc.name
+                   WHEN 'POST'     THEN p.title
+                   ELSE ch.title
+               END AS target_title,
+               r.rating   AS target_rating
+        <include refid="visible"/>
+        ORDER BY a.created_at DESC, a.id DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+</mapper>
