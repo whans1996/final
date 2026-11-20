@@ -22,7 +22,7 @@ F-15 복습 계획 — spec `docs/specs/F-15-review-plan.md` APPROVED, **AC1~AC1
 1. (완료) 커밋 6dd1841(BE)·b31a233(FE) push됨. FE 커밋 때 App.spec 헤더 메뉴 기대값에 복습 추가
 2. `contract-checker`로 spec 3절 ↔ openapi.json ↔ `src/api/reviewPlans.js` 비교
 3. BE(local)·FE dev 띄우고 `ui-verifier`: `/review-plans` 데스크톱·375px, `/concepts/{id}` 복습에 추가 버튼
-4. 산출물: 화면 설계서 SC-11 절, SC-10·SC-08 변경, UC31, ERD `review_plans` 설명 → `/pr-review`
+4. 산출물 글은 반영함(화면 설계서 SC-11 절·SC-10·SC-08, UC31, ERD). ui-verifier 스크린샷을 `docs/산출물/screens/SC-11-*.png`로 넣고 SC-11 절에 표 추가 → `/pr-review`
 
 ## 막힌 점 / 결정 필요
 
