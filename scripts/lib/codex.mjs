@@ -70,6 +70,12 @@ export function requestCount(comments) {
 export const MAX_REVIEW_ROUNDS = 5;
 
 /**
+ * 같은 head의 실패·정체로 재시도 표시를 붙여 재요청할 판정 줄인가 (judgeReview의 retry: true, "… → 재요청").
+ * 이전 커밋 리뷰의 실패·정체는 "… → head 재요청"이라 아니다. --wait 프로세스는 retry일 때만 스스로 재시도한다
+ */
+export const isRetryLine = (line) => /^STALE .*(실패|정체).*→ 재요청/.test(line || '');
+
+/**
  * 다시 확인하지 않아도 되는가. prev = { head(로컬 HEAD), prHead(판정한 PR head 7자), verdict, at }.
  * COMPLETE는 그 판정의 PR head가 지금 로컬 HEAD일 때만 확정으로 본다: 커밋만 하고 push 전에 판정하면
  * PR head는 이전 커밋이라, push 뒤의 STALE을 놓치지 않게 한다 (reviewer). 그 밖에는 recheckMs마다 다시 본다.
@@ -117,8 +123,9 @@ export function loopAction({ line, pr, handled = [], waiting = false }) {
   const key = `${pr}:${prHead}:${verdict}${verdict === 'STALE' && /실패|정체/.test(line) ? ':retry' : ''}`;
   const out = (action, kind) => ({ verdict, rounds, prHead, key, action, kind });
   if (handled.includes(key)) return out('none');
-  // 실패·정체 재요청은 기다리는 --request --wait 프로세스가 스스로 한 번 재시도한다. 막으면 두 번째 --wait가 떠 재시도 댓글이 겹친다 (reviewer)
-  if (verdict === 'STALE') return key.endsWith(':retry') && waiting ? out('none') : out('block', 'request');
+  // 같은 head의 실패·정체 재요청은 기다리는 --request --wait 프로세스가 스스로 한 번 재시도한다. 막으면 두 번째 --wait가 떠 재시도 댓글이 겹친다 (reviewer).
+  // 이전 커밋 리뷰의 실패·정체(→ head 재요청)는 그 프로세스가 재시도하지 않고 끝나므로 맡기지 않는다 (Codex 리뷰)
+  if (verdict === 'STALE') return isRetryLine(line) && waiting ? out('none') : out('block', 'request');
   if (verdict === 'RUNNING') return waiting ? out('none') : out('block', 'wait');
   if (verdict === 'FINDINGS') return rounds >= MAX_REVIEW_ROUNDS ? out('notify', 'limit') : out('block', 'fix');
   if (verdict === 'ERROR') return out('notify', /계정 미연결|환경 없음/.test(line) ? 'setup' : 'error');

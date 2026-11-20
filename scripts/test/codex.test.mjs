@@ -4,6 +4,7 @@ import { test } from 'node:test';
 import {
   STUCK_MS,
   isDocPath,
+  isRetryLine,
   judgeReview,
   loopAction,
   onlyDocsChanged,
@@ -253,6 +254,20 @@ test('Stop hook: 실패·정체 재요청은 기다리는 --wait 프로세스가
   assert.equal(loopAction({ line, pr: 7 }).action, 'block');
   // 새 커밋 push로 인한 일반 STALE은 기다리던 프로세스가 곧 끝나므로 그대로 막는다
   assert.equal(loopAction({ line: 'STALE head abc1234, Codex def5678 기준 (재리뷰 1회)', pr: 7, waiting: true }).action, 'block');
+});
+
+test('Stop hook: 이전 커밋 리뷰 실패·정체(→ head 재요청)는 대기 프로세스가 재시도하지 않으므로 맡기지 않는다 (Codex 리뷰)', () => {
+  // judgeReview의 실제 문구로 확인한다: 문서만 push한 뒤 PREV 리뷰가 실패
+  const prevFailed = judge([summary(PREV, 'failed', { at: -2 })], { now: 0, docsOnly: [PREV] });
+  assert.equal(prevFailed.verdict, 'STALE');
+  assert.ok(!prevFailed.retry);
+  const line = `${prevFailed.verdict} ${prevFailed.msg} (재리뷰 1회)`;
+  assert.ok(!isRetryLine(line), line);
+  assert.equal(loopAction({ line, pr: 7, waiting: true }).action, 'block');
+  // 같은 head 재시도 문구만 대기 프로세스에 맡긴다
+  const headFailed = judge([summary(HEAD, 'failed', { at: 0 })], { now: 1 });
+  assert.ok(headFailed.retry);
+  assert.ok(isRetryLine(`${headFailed.verdict} ${headFailed.msg} (재리뷰 0회)`));
 });
 
 test('Stop hook: 실패·정체 재요청은 같은 head의 일반 STALE과 따로 한 번 반응한다', () => {

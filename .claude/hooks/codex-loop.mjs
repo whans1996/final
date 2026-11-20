@@ -14,7 +14,7 @@ import { spawnSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { NON_INTERACTIVE_GIT_ENV, ROOT, currentBranch, git, isGitRepo, readStdinJson, readText } from '../../scripts/lib/common.mjs';
-import { MAX_REVIEW_ROUNDS, loopAction, skipRecheck, waitingInTranscript } from '../../scripts/lib/codex.mjs';
+import { MAX_REVIEW_ROUNDS, isRetryLine, loopAction, skipRecheck, waitingInTranscript } from '../../scripts/lib/codex.mjs';
 
 const STATE_FILE = join(ROOT, '.harness', 'codex-loop.json');
 const RECHECK_MS = 3 * 60_000;
@@ -70,8 +70,8 @@ if (judged.error || !line) {
 const n = pr.number;
 const handled = prev.handled || [];
 const waiting = () => waitingInTranscript(readText(input.transcript_path || '') || '', n);
-// 실패·정체 재요청(STALE)도 기다리는 프로세스가 있으면 그쪽이 재시도한다 (중복 재시도 방지)
-const retry = /^STALE .*(실패|정체)/.test(line);
+// 같은 head의 실패·정체 재요청(STALE)도 기다리는 프로세스가 있으면 그쪽이 재시도한다 (중복 재시도 방지)
+const retry = isRetryLine(line);
 const act = loopAction({ line, pr: n, handled, waiting: (line.startsWith('RUNNING') || retry) && waiting() });
 save({ verdict: act.verdict, prHead: act.prHead, handled: handled.includes(act.key) ? handled : [...handled, act.key].slice(-20) });
 
