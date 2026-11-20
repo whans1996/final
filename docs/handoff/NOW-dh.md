@@ -4,23 +4,22 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
 
-갱신: 2026-11-20 16:57 · 작업자: whans1996@naver.com · PC: dh-home · 브랜치: feature/issue-67-issue-priority
+갱신: 2026-11-20 18:01 · 작업자: whans1996@naver.com · PC: dh-home · 브랜치: feature/issue-54-my-branches
 
 ## 현재 기능
 
-하네스 PR **#69** — 이슈 #67 (+ #48·#39 Closes). Codex ✅ 00458c1 (재리뷰 3회), CI는 Backend 검증 진행 중이었음 (나머지 초록). 머지 대기
+하네스 이슈 **#54** (+ #32 흡수) — 내 다른 PC 브랜치 진행 표시·`/spec` 중복 가드. 브랜치 `feature/issue-54-my-branches`. **PR #70 Codex ✅ 5be8f51** (재리뷰 2회), CI Backend 검증만 진행 중 → 초록이면 사람이 머지
 
 ## 진행
 
-- ✅ 구현 1~5단계 (이슈 조회 실패 줄, blocker 라벨, Codex 실패·정체 재요청·#39, 로컬 develop·main FF, 문구 통일)
-- ✅ /pr-review: reviewer 반드시 1 + 권장·작은 지적 반영(be50c75·1ef3d59), 2건 → #44 댓글
-- ✅ Codex: P2 2건(같은 주제) → 사용자 결정으로 "재시도를 대기 프로세스에 맡김"(R3) 되돌림 00458c1. 지적 스레드 2개에 답글
+- ✅ 구현(be38ea0): `peer.mjs` `myBranchNows`·`myBranchLines`·`featureOnRemotes`, `latestPeerNow` 원격 브랜치별 비교(#32-1), `developChanges` 절단 제거(#32-2), session-start 섹션, `scripts/branches.mjs`
+- ✅ `/pr-review`: verifier 81/81·`verify.mjs all` 통과. reviewer 반드시 수정 2건(5d1cdb5: #32-1 테스트 squash 재현, 가드 판정 불가 null), 권장 5건 모두 반영(edb0dc2, 사용자 결정: 지금 브랜치·squash 잔여 제외, 3초 상한, 커밋 시각)
+- ✅ PR #70 (Closes #54, #32). Codex 1회차 P2 2건(뒤처진 브랜치의 물려받은 spec 오탐, 브랜치 조회 실패 거짓 ✅) 이 PR에서 수정(5be8f51) → 2회차 COMPLETE
 
 ## 바로 다음 할 일
 
-1. `gh pr checks 69`로 Backend 검증 초록 확인 → 사람이 GitHub에서 PR #69 머지 (wip 없음, 일반 머지). 그 전에 develop에 새 머지가 있으면 `git merge origin/develop` → push → CI 재확인
-2. 머지 후 사람: 원격 브랜치 41개 삭제 (`git branch -r --merged origin/develop`, `git push origin --delete ...`), 저장소 설정 "머지 후 브랜치 자동 삭제" 켜기 (PR #69 본문 후속 작업)
-3. 그 뒤 #54 → #55·#17 → F-05b `/spec`
+1. `gh pr checks 70`로 CI 초록 확인 → 사람이 GitHub에서 머지 (상대 PR이 먼저 머지되면 `git merge origin/develop` → push 후 CI 재확인). 머지 뒤 `/pickup`이 #54·#32 닫힘 확인
+2. 그 뒤 #55·#17 → F-05b `/spec` (먼저 `node scripts/branches.mjs F-05b`)
 
 ## 막힌 점 / 결정 필요
 
@@ -29,3 +28,4 @@
 ## 주의
 
 - 리뷰 지적은 '무시 가능'도 직접 확인한다 (11-20 사용자 지시)
+- 하네스 가드는 Bash 명령 문자열의 `core.hooksPath`를 막는다 → 테스트 파일 편집은 Edit 도구로
