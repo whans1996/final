@@ -310,6 +310,44 @@ describe('ConceptReviews (F-11 AC13~AC17)', () => {
     },
   )
 
+  it('AC13 더 보기를 받는 동안에는 수정·삭제를 막는다', async () => {
+    let answerMore
+    conceptsApi.fetchReviews
+      .mockResolvedValueOnce(page(reviews(12, 10), 12))
+      .mockReturnValueOnce(new Promise((resolve) => (answerMore = resolve)))
+    conceptsApi.fetchMyReview.mockResolvedValue(review(2, { authorId: 9 }))
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const { wrapper } = await mountReviews({ loggedIn: true })
+
+    await wrapper.find('[data-action="more"]').trigger('click')
+    expect(wrapper.find('[data-action="edit"]').element.disabled).toBe(true)
+    expect(wrapper.find('[data-action="delete"]').element.disabled).toBe(true)
+    await wrapper.find('[data-action="delete"]').trigger('click')
+    expect(conceptsApi.deleteReview).not.toHaveBeenCalled()
+
+    answerMore(page(reviews(2, 2), 12, 2))
+    await flushPromises()
+    expect(wrapper.find('[data-action="delete"]').element.disabled).toBe(false)
+  })
+
+  it('AC13 리뷰를 저장하는 동안에는 더 보기를 막는다', async () => {
+    conceptsApi.fetchReviews.mockResolvedValue(page(reviews(12, 10), 12))
+    conceptsApi.fetchMyReview.mockResolvedValue(null)
+    let answerCreate
+    conceptsApi.createReview.mockReturnValue(new Promise((resolve) => (answerCreate = resolve)))
+    const { wrapper } = await mountReviews({ loggedIn: true })
+
+    await writeReview(wrapper, 5, '새 리뷰')
+    expect(conceptsApi.createReview).toHaveBeenCalledTimes(1)
+    expect(wrapper.find('[data-action="more"]').element.disabled).toBe(true)
+    await wrapper.find('[data-action="more"]').trigger('click')
+    expect(conceptsApi.fetchReviews).toHaveBeenCalledTimes(1)
+
+    answerCreate({ review: review(13, { authorId: 9 }), avgRating: 4.0, reviewCount: 13 })
+    await flushPromises()
+    expect(wrapper.find('[data-action="more"]').element.disabled).toBe(false)
+  })
+
   it('AC15 409면 서버 message를 보여 주고 내 리뷰를 다시 불러온다', async () => {
     conceptsApi.fetchReviews.mockResolvedValue(page([], 0))
     conceptsApi.fetchMyReview

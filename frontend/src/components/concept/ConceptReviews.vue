@@ -45,7 +45,10 @@ const boxError = ref('')
 // 삭제 후 빈 폼을 새로 그리기 위한 키
 const formKey = ref(0)
 
-const busy = computed(() => submitting.value || loadingList.value || loadingMine.value)
+// 목록 읽기(처음·더 보기)와 쓰기를 한 번에 하나씩만 한다. 겹치면 늦게 온 읽기 응답이 쓰기 결과를 덮는다
+const busy = computed(
+  () => submitting.value || loadingList.value || loadingMine.value || loadingMore.value,
+)
 const hasMore = computed(() => !reachedEnd.value && items.value.length < total.value)
 
 // :id가 빠르게 바뀔 때 늦게 도착한 이전 카드의 응답은 버린다
@@ -111,6 +114,7 @@ async function loadMine(conceptId, current = generation) {
 // 받은 위치(offset)가 든 쪽부터 받는다. 불러온 내 리뷰를 지워 offset이 쪽 경계에서 어긋나면 그 쪽에서 빈자리만 채워지므로,
 // 한 쪽 분량이 안 되면 한 번 더 받는다.
 async function loadMore() {
+  if (busy.value) return
   const current = generation
   loadingMore.value = true
   moreError.value = ''
@@ -305,7 +309,7 @@ watch(() => props.conceptId, load, { immediate: true })
         type="button"
         class="more"
         data-action="more"
-        :disabled="loadingMore"
+        :disabled="busy"
         @click="loadMore"
       >
         더 보기
