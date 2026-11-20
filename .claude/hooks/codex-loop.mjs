@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 // Stop hook: 현재 feature 브랜치의 열린 PR이 Codex 리뷰를 통과(COMPLETE)할 때까지 루프를 이어 가게 한다
 // (11-19 사용자 지시 "Codex 리뷰가 통과될 때까지 계속 리뷰를 받고 고치도록"). 절차의 정본은 /pr-review 8단계다.
-//   STALE    push한 head에 리뷰 요청이 없음 → 막고 `--request --wait --status`(백그라운드)를 지시
+//   STALE    push한 head에 리뷰 요청이 없음, 또는 head 리뷰가 실패·정체함 → 막고 `--request --wait --status`(백그라운드)를 지시
+//            (실패·정체 재요청은 같은 head의 일반 STALE과 따로 한 번 더 반응한다, #48)
 //   RUNNING  요청은 했는데 이 세션에서 --wait를 백그라운드로 돌린 적이 없음 → 막고 --wait를 지시 (끝나도 알림을 못 받으므로)
 //   FINDINGS 재리뷰 5회 미만 → 막고 8-3 처리 지시, 5회 이상 → 사람 판단 안내(systemMessage)
-//   ERROR    Codex 환경·계정 미설정, gh 실패 → 안내(systemMessage)
+//   ERROR    Codex 환경·계정 미설정, 재시도 뒤에도 실패·정체, gh 실패 → 안내(systemMessage)
 // (PR, head, 판정)마다 한 번만 반응한다: 지적을 반박하거나 사람에게 넘기고 멈춘 경우 매 턴 다시 막지 않게.
 // draft PR은 보지 않는다. 판정 규칙은 scripts/lib/codex.mjs(loopAction·skipRecheck·waitingInTranscript, 테스트 있음)에 있고,
 // 판정 자체는 scripts/codex-review.mjs(대기 없음, 읽기 전용)의 첫 줄을 쓴다.
