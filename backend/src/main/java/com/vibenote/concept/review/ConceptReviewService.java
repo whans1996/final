@@ -5,6 +5,7 @@ import com.vibenote.common.exception.ErrorCode;
 import com.vibenote.common.page.PageQuery;
 import com.vibenote.common.page.PageResponse;
 import com.vibenote.concept.ConceptQueryService;
+import com.vibenote.concept.review.domain.ConceptReview;
 import com.vibenote.concept.review.dto.ConceptRatingResponse;
 import com.vibenote.concept.review.dto.ConceptReviewRequest;
 import com.vibenote.concept.review.dto.ConceptReviewResponse;

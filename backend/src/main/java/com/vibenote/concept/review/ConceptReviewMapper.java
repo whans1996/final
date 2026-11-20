@@ -1,5 +1,6 @@
 package com.vibenote.concept.review;
 
+import com.vibenote.concept.review.domain.ConceptReview;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;

@@ -4,6 +4,7 @@ import com.vibenote.common.exception.ErrorResponse;
 import com.vibenote.common.page.PageQuery;
 import com.vibenote.common.page.PageResponse;
 import com.vibenote.common.security.AuthUser;
+import com.vibenote.concept.ConceptApiDocs;
 import com.vibenote.concept.review.dto.ConceptRatingResponse;
 import com.vibenote.concept.review.dto.ConceptReviewRequest;
 import com.vibenote.concept.review.dto.ConceptReviewResponse;
@@ -31,13 +32,10 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 /** 개념 카드 리뷰 (F-11). 목록은 공개, 내 리뷰 조회·작성·수정·삭제는 로그인 필요. */
-@Tag(name = "개념 카드", description = ConceptReviewController.TAG_DESCRIPTION)
+@Tag(name = ConceptApiDocs.TAG, description = ConceptApiDocs.TAG_DESCRIPTION)
 @RestController
 @RequestMapping("/api/concepts/{conceptId}/reviews")
 public class ConceptReviewController {
-
-    /** ConceptController와 같은 값 (같은 Tag의 설명이 달라지지 않게). */
-    public static final String TAG_DESCRIPTION = "공개 개념 카드 목록·검색·상세·리뷰";
 
     private final ConceptReviewService reviewService;
 

@@ -1,4 +1,4 @@
-package com.vibenote.concept.review;
+package com.vibenote.concept.review.domain;
 
 import java.time.LocalDateTime;
 

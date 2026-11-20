@@ -10,7 +10,7 @@
         JOIN users u ON u.id = r.user_id
     </sql>
 
-    <select id="findPage" resultType="com.vibenote.concept.review.ConceptReview">
+    <select id="findPage" resultType="com.vibenote.concept.review.domain.ConceptReview">
         <include refid="reviewWithAuthor"/>
         WHERE r.concept_id = #{conceptId}
         ORDER BY r.created_at DESC, r.id DESC
@@ -21,7 +21,7 @@
         SELECT COUNT(*) FROM concept_reviews WHERE concept_id = #{conceptId}
     </select>
 
-    <select id="findByConceptAndUser" resultType="com.vibenote.concept.review.ConceptReview">
+    <select id="findByConceptAndUser" resultType="com.vibenote.concept.review.domain.ConceptReview">
         <include refid="reviewWithAuthor"/>
         WHERE r.concept_id = #{conceptId} AND r.user_id = #{userId}
     </select>

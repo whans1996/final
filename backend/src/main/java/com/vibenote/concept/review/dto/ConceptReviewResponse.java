@@ -1,7 +1,7 @@
 package com.vibenote.concept.review.dto;
 
 import com.vibenote.common.config.ClockConfig;
-import com.vibenote.concept.review.ConceptReview;
+import com.vibenote.concept.review.domain.ConceptReview;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.OffsetDateTime;
 
