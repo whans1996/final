@@ -4,30 +4,33 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-dh.md`)은 읽기만 한다.
 
-갱신: 2026-11-20 11:55 · 작업자: JoonseobKim · PC: js-home · 브랜치: feature/F-17-community-board
+갱신: 2026-11-20 12:02 · 작업자: JoonseobKim · PC: js-home · 브랜치: feature/F-17-community-board
 
 ---
 
 ## 현재 기능
 
-F-17 커뮤니티 게시판 — spec `docs/specs/F-17-community-board.md` **APPROVED (김준섭 11-20)**, 구현 전 (F-11은 PR #58 머지 완료)
+F-17 커뮤니티 게시판 — spec `docs/specs/F-17-community-board.md` APPROVED, `/implement` 진행 중 (이번 세션 목표: BE AC1~12 → FE AC13~18)
 
 ## 진행
 
-- ✅ spec 초안: BE AC1~12 (목록·검색·상세·조회수·첨부 표시·작성·수정·삭제·권한), FE AC13~18 (SC-14·15·16 + SC-10 글쓰기 버튼). 마이그레이션 없음
-- ✅ 결정 4건(분석 첨부 = 내 DONE 분석·표시는 공개/주인만, 조회수 매번 +1, 제목+본문 검색, SC-10 버튼 + `?conceptId=`·`?analysisId=`) → 결정로그 추가, 승인 커밋 push
+- ✅ 9절 결정: `PUT`은 `@Valid` 없이 `PostService.update`가 404·403 뒤 `Validator`로 직접 검증 (spec 9절에 기록)
+- ✅ AC1~3 목록·검색 green: `com.vibenote.post` (`PostController#list`, `PostService#search`, `PostMapper.xml` findPage·count), `PostListApiTest` 6개 + `PostServiceTest`, `PUBLIC_GET_PATHS` POST 블록
+- 테스트 공통 데이터: `backend/src/test/java/com/vibenote/post/PostApiTestBase.java`
 
 ## 바로 다음 할 일
 
-1. `/clear` → `/implement F-17` (Opus/high): 9절 결정(PUT 403을 400보다 먼저) 고르고 `backend/src/test/.../post/PostListApiTest#AC1_...`부터 red
-2. BE AC1~12 → FE AC13~18 순서. `ErrorCode` POST 블록·`SecurityConfig.PUBLIC_GET_PATHS` POST 블록에만 추가
+1. AC4·5 상세: `PostDetailApiTest#AC4_...`·`#AC5_...`·`#AC3_상세...` red → `PostMapper.incrementViewCount`·`findDetail`(analyses·concepts LEFT JOIN), `PostDetailResponse`·`PostAnalysisAttachment`·`PostConceptAttachment`, `ErrorCode.POST_404`
+2. AC6~8 작성 → AC9~11 수정·삭제 → AC12 인증 (`PostWriteApiTest`, `PostAuthApiTest`) → FE
 
 ## 막힌 점 / 결정 필요
 
-- spec 9절: `PUT`에서 작성자 확인(403)을 형식 검증(400)보다 먼저 하는 방법 (구현 착수 때)
+- 없음
 
 ## 주의
 
+- 공통 파일 변경: `SecurityConfig.PUBLIC_GET_PATHS`(POST 블록), 곧 `ErrorCode` POST 블록 → PR 본문에서 @whans1996 멘션
+- keyword 이스케이프는 `ConceptService.escapeLike`와 같은 한 줄을 `PostService.escapeLike`로 복제 (공용 유틸로 빼지 않음 → 공통 코드 변경 없음)
 - F-15(동환) 아직 PR 전 → F-12 찜(#57 `addWish` 연동)은 F-15 머지 뒤
 - SC-07 "커뮤니티에 질문하기" 버튼은 구현 PR에서 follow-up 이슈(area:analysis, whans1996)로 만든다
-- `codex-review.mjs`가 Codex 실행 실패를 RUNNING으로 기다린다 (#48) → 오래 걸리면 PR 댓글 `codex-review-state`를 직접 본다
+- `codex-review.mjs`가 Codex 실행 실패를 RUNNING으로 기다린다 (#48)

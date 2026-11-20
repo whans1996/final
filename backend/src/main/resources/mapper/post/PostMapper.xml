@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- F-17 커뮤니티 게시판 (B) -->
+<mapper namespace="com.vibenote.post.PostMapper">
+
+    <sql id="summaryColumns">
+        p.id, p.user_id, p.board_type, p.title, p.analysis_id, p.concept_id, p.view_count,
+        p.created_at, p.updated_at,
+        u.nickname AS author_nickname, u.status AS author_status,
+        (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id) AS comment_count
+    </sql>
+
+    <!-- keyword는 PostService가 LIKE 와일드카드를 '!'로 이스케이프해 넘긴다 -->
+    <sql id="searchWhere">
+        <where>
+            <if test="boardType != null">p.board_type = #{boardType}</if>
+            <if test="keyword != null">
+                AND (p.title LIKE CONCAT('%', #{keyword}, '%') ESCAPE '!'
+                     OR p.content LIKE CONCAT('%', #{keyword}, '%') ESCAPE '!')
+            </if>
+        </where>
+    </sql>
+
+    <select id="findPage" resultType="com.vibenote.post.domain.Post">
+        SELECT <include refid="summaryColumns"/>
+        FROM posts p
+        JOIN users u ON u.id = p.user_id
+        <include refid="searchWhere"/>
+        ORDER BY p.created_at DESC, p.id DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="count" resultType="long">
+        SELECT COUNT(*) FROM posts p
+        <include refid="searchWhere"/>
+    </select>
+</mapper>

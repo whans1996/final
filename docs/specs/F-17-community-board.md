@@ -217,14 +217,14 @@ AI로 코딩하는 학습자가 **코드 이해 Q&A·학습 후기·자유** 게
 
 ## 9. 결정 필요
 
-- (구현 착수 전) `PUT`에서 작성자 확인(403)을 형식 검증(400)보다 먼저 하는 방법을 고른다 (3절 판단 순서)
+- ~~(구현 착수 전) `PUT`에서 작성자 확인(403)을 형식 검증(400)보다 먼저 하는 방법을 고른다~~ → **결정(11-20)**: `PUT`은 Controller에 `@Valid`를 달지 않고, `PostService.update`가 404·403 확인 뒤 주입받은 `jakarta.validation.Validator`로 직접 검증해 `COMMON_400`(`details` 필드별)로 던진다. `@Validated` 그룹은 Controller 시점에 돌아 순서를 바꾸지 못한다. `POST`는 `@Valid` 그대로. 첨부 둘 다(`details.conceptId`)는 두 경로 모두 Service가 본다
 
 ## 10. 구현 체크리스트
 
 `/implement`가 진행하며 체크한다.
 
-- [ ] 브랜치 `feature/F-17-community-board`
-- [ ] Flyway 마이그레이션 (없음)
+- [x] 브랜치 `feature/F-17-community-board`
+- [x] Flyway 마이그레이션 (없음)
 - [ ] AC별 실패 테스트 작성 (red 확인)
 - [ ] BE 구현 (green): `PostController`, `PostService`, `PostMapper`(+XML), DTO(`PostRequest`·`PostSearchRequest`·`PostSummaryResponse`·`PostDetailResponse`·`PostAnalysisAttachment`·`PostConceptAttachment`·`PostIdResponse`), `ErrorCode` `POST_001`·`POST_002`·`POST_403`·`POST_404`, `PUBLIC_GET_PATHS`
 - [ ] FE 구현 (green): `api/posts.js`, `routes/community.js`, 뷰 3개, 컴포넌트 4개, SC-10 글쓰기 버튼
