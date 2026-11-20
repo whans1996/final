@@ -2,14 +2,14 @@
 
 | 항목 | 값 |
 |---|---|
-| 상태 | DRAFT <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
+| 상태 | APPROVED <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
 | 기능 ID | F-11 |
 | 우선순위 | P0 |
 | 영역 오너 | B 김준섭 (카드·소셜) |
 | 관련 필수 요구사항 | ⑩ 리뷰 작성/조회 |
 | 의존 spec | F-02 (로그인), F-10 (카드 상세 화면 `ConceptDetailView`·`ConceptController`·`src/api/concepts.js`, 모두 develop에 머지됨). 활동 기록은 F-00b의 `ActivityService.record` |
 | 관련 이슈 | 없음 |
-| 승인 | (승인한 사람, 날짜) |
+| 승인 | 김준섭 2026-11-20 |
 
 ## 1. 목적
 

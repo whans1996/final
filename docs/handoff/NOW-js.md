@@ -4,26 +4,27 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-dh.md`)은 읽기만 한다.
 
-갱신: 2026-11-20 08:39 · 작업자: JoonseobKim · PC: js-home · 브랜치: feature/F-11-concept-review
+갱신: 2026-11-20 09:24 · 작업자: JoonseobKim · PC: js-home · 브랜치: feature/F-11-concept-review
 
 ## 현재 기능
 
-F-11 카드 리뷰 (`docs/specs/F-11-concept-review.md` **DRAFT, 승인 대기**). F-10은 PR #52로 머지 완료
+F-11 카드 리뷰 (`docs/specs/F-11-concept-review.md` **APPROVED 11-20**). F-10은 PR #52로 머지 완료
 
 ## 진행
 
 - ✅ spec 초안: BE AC1~AC12(목록·작성·`/me` 조회·수정·삭제, 평점 재계산, 409·404·401), FE AC13~AC18(SC-10 리뷰 절)
+- ✅ spec 승인 (김준섭 2026-11-20)
 - ✅ 결정(사용자 답): 수정·삭제 포함(`/reviews/me`), 내용 필수 1~200자, "더 보기" 10개씩 → 결정로그 추가
 - 마이그레이션 없음. 새 에러 코드 `CONCEPT_001`(내 리뷰 없음 404)·`CONCEPT_409`(중복)
 
 ## 바로 다음 할 일
 
-1. spec 검토·승인 받기 → 상태 `APPROVED`, 승인 칸 `김준섭 YYYY-MM-DD` → `docs(F-11): spec 승인` 커밋·push (브랜치는 이미 있음, 초안은 커밋됨)
-2. `/clear` 후 새 세션에서 `/implement F-11` (Opus/high). 첫 테스트: `concept/review/ConceptReviewApiTest#AC1_...`
+1. `/clear` 후 새 세션(Opus/high)에서 `/implement F-11`. 첫 테스트: `backend/src/test/.../concept/review/ConceptReviewApiTest#AC1_...` (12개 리뷰 페이지 2쪽·범위 밖·0건)
+2. AC12에서 `PUBLIC_GET_PATHS`의 `/api/concepts/{id:\\d+}/reviews`가 `/reviews/me`를 공개로 열지 않는지 확인
 
 ## 막힌 점 / 결정 필요
 
-- 없음 (승인만 대기)
+- 없음
 
 ## 주의
 
