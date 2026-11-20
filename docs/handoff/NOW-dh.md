@@ -4,23 +4,23 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
 
-갱신: 2026-11-19 20:26 · 작업자: whans1996@naver.com · PC: dh-home · 브랜치: feature/issue-49-mock-concept-names
+갱신: 2026-11-20 09:34 · 작업자: whans1996@naver.com · PC: dh-home · 브랜치: feature/F-14-code-quiz
 
 ## 현재 기능
 
-follow-up #49 mock concept fixture가 시드 카드 id에 기대는 문제 — **PR #53 열림** (develop 대상, `Closes #49`). **Codex ✅ `28641e7`** (지적 없음), CI Backend 검증 실행 중
+F-14 코드 이해 퀴즈 — PR #56 (develop 대상) CI 초록, Codex ✅ da9d7bc, spec DONE 표시 완료. **사람이 GitHub에서 Squash and merge** (wip 커밋 `0fa4933` 있음)
 
 ## 진행
 
-- ✅ `MockLlmClient.linkConceptNames` + `concept.json` 시드 이름 5개 (`c69697e`), SC-07 개념 탭 스크린샷 (`c4d22d1`)
-- ✅ /pr-review: verifier 통과, reviewer 반드시 수정 0·권장 3 모두 반영 (`28641e7`): 템플릿 전체 프롬프트로 AC10 검사, `MockLlmClient(Function)` 주입 생성자로 `complete()` CONCEPT 분기 테스트, 이름에 ` | ` 포함 테스트, spec AC10·8절 문구 + 결정로그 1줄
-- PR 설명 `.harness/pr-issue-49.md`
+- ✅ /pr-review: verifier 통과(BE 465·FE 239), contract-checker 불일치 0, reviewer 반드시 수정 1·권장 3 반영, '무시 가능' 5건 확인
+- ✅ 동시 제출 데드락 재현·수정 `5f784a5`(`INSERT IGNORE`, `ReviewPlanConcurrencyTest`), 다시 풀기 스크롤 `f7a8178`, JSON 본문 크기 제한 → #55
+- ✅ PR #56 생성(@JoonseobKim 멘션, 스크린샷 6장), CI 전부 pass, Codex COMPLETE(재리뷰 1회)
 
 ## 바로 다음 할 일
 
-1. `gh pr checks 53`으로 Backend 검증 초록 확인 (실패하면 `gh run view --log-failed`)
-2. CI 초록 + Codex ✅ → 사람이 GitHub에서 머지 (spec 완료 표시는 없음: F-08은 이미 DONE)
-3. 머지 뒤 다음 기능: F-14 코드 이해 퀴즈 `/spec` (Opus/high)
+1. 머지 전 `git fetch` → develop에 새 커밋이 있으면 `git merge origin/develop` → push → CI 초록 재확인 (상대 F-11 진행 중)
+2. GitHub에서 PR #56 **Squash and merge**
+3. 머지 후 `/clear` → `/pickup`으로 다음 A 영역 기능 선택 (F-15 복습 계획 후보: `reviewplan` 패키지 확장)
 
 ## 막힌 점 / 결정 필요
 
@@ -28,5 +28,6 @@ follow-up #49 mock concept fixture가 시드 카드 id에 기대는 문제 — *
 
 ## 주의
 
-- B 파일(`ConceptService`·`ConceptController`·`api/concepts.js`·`routes/concept.js`)과 공용 `ConceptCard.vue`, 시드 `R__seed_concepts.sql`은 고치지 않는다. Gradle 테스트를 bootRun과 동시에 돌리지 않는다. V1~V5 수정 금지
-- Git Bash heredoc·sed에서 한글·`\n`이 깨질 수 있다 → 한글 수정은 Edit 도구로
+- 리뷰 지적은 '무시 가능'도 직접 확인한다 (11-20 사용자 지시)
+- 이 세션엔 프로젝트 에이전트가 등록 안 됨 → general-purpose에 `.claude/agents/*.md`를 읽게 해서 대신함
+- Gradle 테스트를 bootRun과 동시에 돌리지 않는다

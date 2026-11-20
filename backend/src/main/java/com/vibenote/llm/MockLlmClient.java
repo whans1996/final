@@ -4,7 +4,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.regex.Matcher;
@@ -27,6 +29,10 @@ import tools.jackson.databind.node.ObjectNode;
 public class MockLlmClient implements LlmClient {
 
     static final String MODEL = "mock";
+
+    /** quiz 프롬프트 개념 목록 줄: {@code id | 이름} 또는 {@code id | 이름 | 쓰인 방식}. 나머지를 통째로 잡는다. */
+    private static final Pattern QUIZ_CONCEPT_LINE =
+            Pattern.compile("(?m)^(\\d+) \\| ([^\\r\\n]+)$");
 
     /** EXTRACTING 프롬프트 카드 목록의 {@code id | 이름 | 카테고리} 줄 ({@code ConceptPrompts.input}). */
     private static final Pattern CATALOG_LINE =
@@ -51,6 +57,8 @@ public class MockLlmClient implements LlmClient {
         String content = fixtures.apply("llm-fixtures/" + request.stage().key() + ".json");
         if (request.stage() == LlmStage.CONCEPT) {
             content = linkConceptNames(content, request.prompt());
+        } else if (request.stage() == LlmStage.QUIZ) {
+            content = linkQuizConceptNames(content, request.prompt());
         }
         return new LlmResponse(content, MODEL, 0, 0);
     }
@@ -103,5 +111,54 @@ public class MockLlmClient implements LlmClient {
         }
         obj.set("concepts", linked);
         return JSON.writeValueAsString(obj);
+    }
+
+    /**
+     * quiz fixture의 {@code questions[].conceptName}을 프롬프트 개념 목록에서 같은 이름의 카드 id({@code conceptId})로
+     * 바꾼다. 목록에 없는 이름이면 {@code conceptId}를 null로 둔다 (문항은 남기고 카드 연결만 없는 것처럼). {@code conceptName}이 없는
+     * 문항은 그대로 둔다 (#49와 같은 이유: 시드 카드 id는 DB마다 다르다).
+     *
+     * @param fixture quiz 단계 fixture JSON
+     * @param prompt QUIZ 프롬프트 (개념 목록 줄을 포함)
+     */
+    public static String linkQuizConceptNames(String fixture, String prompt) {
+        List<String[]> lines = new ArrayList<>();
+        Matcher m = QUIZ_CONCEPT_LINE.matcher(prompt == null ? "" : prompt);
+        while (m.find()) {
+            lines.add(new String[] {m.group(1), m.group(2)});
+        }
+        JsonNode root = JSON.readTree(fixture);
+        if (!(root instanceof ObjectNode obj) || !root.path("questions").isArray()) {
+            return fixture;
+        }
+        ArrayNode linked = JSON.createArrayNode();
+        for (JsonNode item : root.path("questions")) {
+            JsonNode name = item.get("conceptName");
+            if (name == null || !(item instanceof ObjectNode entry)) {
+                linked.add(item);
+                continue;
+            }
+            ObjectNode copy = entry.deepCopy();
+            copy.remove("conceptName");
+            Long id = quizConceptId(lines, name.asString());
+            if (id == null) {
+                copy.putNull("conceptId");
+            } else {
+                copy.put("conceptId", id);
+            }
+            linked.add(copy);
+        }
+        obj.set("questions", linked);
+        return JSON.writeValueAsString(obj);
+    }
+
+    /** 이름이 줄의 나머지 전체이거나 {@code 이름 | }로 시작하는 첫 줄의 id. 이름·쓰인 방식에 구분자가 들어가도 이름이 같아야 맞는다. */
+    private static Long quizConceptId(List<String[]> lines, String name) {
+        for (String[] line : lines) {
+            if (line[1].equals(name) || line[1].startsWith(name + " | ")) {
+                return Long.parseLong(line[0]);
+            }
+        }
+        return null;
     }
 }

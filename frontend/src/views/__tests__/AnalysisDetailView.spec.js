@@ -2,11 +2,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
 import AnalysisDetailView from '@/views/AnalysisDetailView.vue'
 import * as analysesApi from '@/api/analyses'
+import * as quizzesApi from '@/api/quizzes'
 import { useAuthStore } from '@/stores/auth'
 import { authGuard, routes } from '@/router'
 import { apiError, mountAt } from './viewTestUtils'
 
 vi.mock('@/api/analyses')
+vi.mock('@/api/quizzes')
 
 function login() {
   useAuthStore().setSession({
@@ -229,7 +231,7 @@ describe('AnalysisDetailView 결과 탭 (F-06 AC13~AC15)', () => {
     expect(analysesApi.fetchAnalysis).toHaveBeenCalledWith(42)
     expect(wrapper.find('h1').text()).toBe('todo-app')
     const tabs = wrapper.findAll('[role="tab"]')
-    expect(tabs.map((t) => t.text())).toEqual(['개요', '파일', '실행 흐름', '개념'])
+    expect(tabs.map((t) => t.text())).toEqual(['개요', '파일', '실행 흐름', '개념', '퀴즈'])
     expect(tabs[0].attributes('aria-selected')).toBe('true')
     expect(wrapper.find('[data-section="summary"]').text()).toContain('Todo 서비스')
     expect(analysesApi.fetchAnalysisFiles).not.toHaveBeenCalled()
@@ -251,7 +253,7 @@ describe('AnalysisDetailView 결과 탭 (F-06 AC13~AC15)', () => {
 
     expect(analysesApi.fetchAnalysis).toHaveBeenCalledTimes(1)
     expect(wrapper.find('h1').text()).toBe('todo-app')
-    expect(wrapper.findAll('[role="tab"]')).toHaveLength(4)
+    expect(wrapper.findAll('[role="tab"]')).toHaveLength(5)
   })
 
   it('AC13 FAILED면 결과 탭 없이 F-05a 실패 화면 그대로다', async () => {
@@ -399,7 +401,7 @@ describe('AnalysisDetailView 결과 탭 (F-06 AC13~AC15)', () => {
     const { wrapper, router } = await mountDetail('/analyses/42?tab=concepts')
 
     const tabs = wrapper.findAll('[role="tab"]')
-    expect(tabs.map((t) => t.text())).toEqual(['개요', '파일', '실행 흐름', '개념'])
+    expect(tabs.map((t) => t.text())).toEqual(['개요', '파일', '실행 흐름', '개념', '퀴즈'])
     expect(tabs[3].attributes('aria-selected')).toBe('true')
     expect(analysesApi.fetchAnalysisConcepts).toHaveBeenCalledWith(42)
     expect(wrapper.find('[data-concept-id="12"]').exists()).toBe(true)
@@ -407,5 +409,30 @@ describe('AnalysisDetailView 결과 탭 (F-06 AC13~AC15)', () => {
     await wrapper.find('[data-action="open-file"]').trigger('click')
     await flushPromises()
     expect(router.currentRoute.value.query).toEqual({ tab: 'files', file: '102' })
+  })
+
+  it('F-14 AC9 퀴즈 탭은 개념 다음이고, ?tab=quiz로 열면 복원해 문항 수와 풀이 링크를 보여 준다', async () => {
+    analysesApi.fetchAnalysisStatus.mockResolvedValue(status({ status: 'DONE', progress: 100 }))
+    analysesApi.fetchAnalysis.mockResolvedValue(detail())
+    quizzesApi.fetchAnalysisQuiz.mockResolvedValue({
+      quizId: 3,
+      analysisId: 42,
+      questions: [1, 2, 3, 4, 5].map((n) => ({
+        id: n,
+        no: n,
+        question: 'q',
+        choices: ['a', 'b', 'c', 'd'],
+      })),
+      lastAttempt: null,
+    })
+
+    const { wrapper } = await mountDetail('/analyses/42?tab=quiz')
+
+    const tabs = wrapper.findAll('[role="tab"]')
+    expect(tabs.map((t) => t.text())).toEqual(['개요', '파일', '실행 흐름', '개념', '퀴즈'])
+    expect(tabs[4].attributes('aria-selected')).toBe('true')
+    expect(quizzesApi.fetchAnalysisQuiz).toHaveBeenCalledWith(42)
+    expect(wrapper.find('[data-message="count"]').text()).toBe('객관식 5문항')
+    expect(wrapper.find('[data-action="start-quiz"]').attributes('href')).toBe('/analyses/42/quiz')
   })
 })

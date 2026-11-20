@@ -119,6 +119,8 @@ class AnalysisExtractingPipelineTest extends AnalysisTestSupport {
         InOrder order = inOrder(analysisService);
         order.verify(analysisService).advance(id, AnalysisStatus.EXPLAINING, 40);
         order.verify(analysisService).advance(id, AnalysisStatus.EXTRACTING, 70);
+        // F-14가 EXTRACTING 뒤에 QUIZ를 끼웠다 (F-14 AC1)
+        order.verify(analysisService).advance(id, AnalysisStatus.QUIZ, 85);
         order.verify(analysisService).complete(eq(id));
 
         long draft =

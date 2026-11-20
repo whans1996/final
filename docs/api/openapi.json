@@ -714,6 +714,37 @@
         "required" : [ "description", "no", "path", "title" ],
         "type" : "object"
       },
+      "LastAttemptResponse" : {
+        "description" : "내 가장 최근 풀이",
+        "properties" : {
+          "attemptId" : {
+            "description" : "풀이 ID",
+            "example" : 15,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "createdAt" : {
+            "description" : "제출 시각",
+            "example" : "2026-11-19T17:30:12+09:00",
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "score" : {
+            "description" : "맞힌 문항 수",
+            "example" : 5,
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "total" : {
+            "description" : "문항 수",
+            "example" : 6,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "attemptId", "createdAt", "score", "total" ],
+        "type" : "object"
+      },
       "LayerRole" : {
         "description" : "레이어 하나의 역할",
         "properties" : {
@@ -911,6 +942,206 @@
         },
         "type" : "object"
       },
+      "QuizAnswerRequest" : {
+        "description" : "문항 하나의 답",
+        "properties" : {
+          "questionId" : {
+            "description" : "문항 ID",
+            "example" : 21,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "selectedIndex" : {
+            "description" : "고른 선택지 위치 (0~3)",
+            "example" : 0,
+            "format" : "int32",
+            "maximum" : 3,
+            "minimum" : 0,
+            "type" : "integer"
+          }
+        },
+        "required" : [ "questionId", "selectedIndex" ],
+        "type" : "object"
+      },
+      "QuizAttemptRequest" : {
+        "description" : "풀이 제출",
+        "properties" : {
+          "answers" : {
+            "description" : "문항별 답 (문항마다 한 번씩)",
+            "items" : {
+              "$ref" : "#/components/schemas/QuizAnswerRequest"
+            },
+            "minItems" : 1,
+            "type" : "array"
+          }
+        },
+        "required" : [ "answers" ],
+        "type" : "object"
+      },
+      "QuizAttemptResponse" : {
+        "description" : "풀이 채점 결과",
+        "properties" : {
+          "attemptId" : {
+            "description" : "풀이 ID",
+            "example" : 16,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "createdAt" : {
+            "description" : "제출 시각",
+            "example" : "2026-11-19T17:42:05+09:00",
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "results" : {
+            "description" : "문항별 결과 (no 순서)",
+            "items" : {
+              "$ref" : "#/components/schemas/QuizResultItem"
+            },
+            "type" : "array"
+          },
+          "reviewAdded" : {
+            "description" : "틀린 문항의 공개 개념 중 새로 넣은 복습 계획 (conceptId 오름차순). 없으면 []",
+            "items" : {
+              "$ref" : "#/components/schemas/ReviewAddedItem"
+            },
+            "type" : "array"
+          },
+          "score" : {
+            "description" : "맞힌 문항 수",
+            "example" : 1,
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "total" : {
+            "description" : "문항 수",
+            "example" : 2,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "attemptId", "createdAt", "results", "reviewAdded", "score", "total" ],
+        "type" : "object"
+      },
+      "QuizQuestionResponse" : {
+        "description" : "퀴즈 문항 (정답·해설 없음)",
+        "properties" : {
+          "choices" : {
+            "description" : "선택지 4개",
+            "example" : [ "작성자인지 확인한다", "slug를 바꾼다", "토큰을 새로 발급한다", "글을 지우고 다시 만든다" ],
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "id" : {
+            "description" : "문항 ID",
+            "example" : 21,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "no" : {
+            "description" : "문항 번호 (1부터)",
+            "example" : 1,
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "question" : {
+            "description" : "질문 (줄바꿈 포함 가능)",
+            "example" : "ArticleApi의 updateArticle()이 수정 전에 하는 일은 무엇인가요?",
+            "type" : "string"
+          }
+        },
+        "required" : [ "choices", "id", "no", "question" ],
+        "type" : "object"
+      },
+      "QuizResponse" : {
+        "description" : "분석의 퀴즈",
+        "properties" : {
+          "analysisId" : {
+            "description" : "분석 ID",
+            "example" : 7,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "lastAttempt" : {
+            "$ref" : "#/components/schemas/LastAttemptResponse",
+            "description" : "내 가장 최근 풀이. 풀이가 없으면 null"
+          },
+          "questions" : {
+            "description" : "문항 5~10개 (no 순서)",
+            "items" : {
+              "$ref" : "#/components/schemas/QuizQuestionResponse"
+            },
+            "type" : "array"
+          },
+          "quizId" : {
+            "description" : "퀴즈 ID",
+            "example" : 3,
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "analysisId", "questions", "quizId" ],
+        "type" : "object"
+      },
+      "QuizResultItem" : {
+        "description" : "문항별 채점 결과",
+        "properties" : {
+          "answerIndex" : {
+            "description" : "정답 위치",
+            "example" : 1,
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "choices" : {
+            "description" : "선택지 4개",
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "concept" : {
+            "$ref" : "#/components/schemas/ConceptSummaryResponse",
+            "description" : "관련 개념 카드. 없거나 공개되지 않은 카드면 null"
+          },
+          "correct" : {
+            "description" : "맞혔는지",
+            "example" : false,
+            "type" : "boolean"
+          },
+          "explanation" : {
+            "description" : "해설",
+            "example" : "jwtService.getSubFromToken()으로 사용자 id를 꺼내 SecurityContextHolder에 넣습니다.",
+            "type" : "string"
+          },
+          "no" : {
+            "description" : "문항 번호",
+            "example" : 2,
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "question" : {
+            "description" : "질문",
+            "example" : "JwtTokenFilter가 Authorization 헤더에서 토큰을 꺼낸 뒤 하는 일로 알맞은 것은?",
+            "type" : "string"
+          },
+          "questionId" : {
+            "description" : "문항 ID",
+            "example" : 22,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "selectedIndex" : {
+            "description" : "내가 고른 위치",
+            "example" : 3,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "answerIndex", "choices", "correct", "explanation", "no", "question", "questionId", "selectedIndex" ],
+        "type" : "object"
+      },
       "ReadingStep" : {
         "description" : "읽는 순서 항목",
         "properties" : {
@@ -932,6 +1163,25 @@
           }
         },
         "required" : [ "fileId", "path", "reason" ],
+        "type" : "object"
+      },
+      "ReviewAddedItem" : {
+        "description" : "새로 추가한 복습 계획",
+        "properties" : {
+          "conceptId" : {
+            "description" : "개념 카드 ID",
+            "example" : 57,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "planDate" : {
+            "description" : "복습 날짜 (제출 다음 날, Asia/Seoul)",
+            "example" : "2026-11-20",
+            "format" : "date",
+            "type" : "string"
+          }
+        },
+        "required" : [ "conceptId", "planDate" ],
         "type" : "object"
       },
       "SignupRequest" : {
@@ -1590,6 +1840,55 @@
         "tags" : [ "분석" ]
       }
     },
+    "/api/analyses/{id}/quiz" : {
+      "get" : {
+        "description" : "문항(정답·해설·개념 제외)과 내 가장 최근 풀이 요약. LLM을 부르지 않는다.",
+        "operationId" : "getQuiz",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/QuizResponse"
+                }
+              }
+            },
+            "description" : "조회 성공"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "토큰 없음·만료 (AUTH_401)"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "없는·남의·삭제된 분석 (ANALYSIS_404), 내 분석이지만 퀴즈가 없음 (QUIZ_404)"
+          }
+        },
+        "summary" : "분석의 퀴즈 조회",
+        "tags" : [ "퀴즈" ]
+      }
+    },
     "/api/analyses/{id}/status" : {
       "get" : {
         "description" : "내 분석의 단계·진행률·실패 사유. 진행 화면이 2초마다 폴링한다.",
@@ -1976,6 +2275,75 @@
         "tags" : [ "개념 카드" ]
       }
     },
+    "/api/quizzes/{quizId}/attempts" : {
+      "post" : {
+        "description" : "문항마다 한 번씩 답하면 채점해 저장하고, 틀린 문항의 공개 개념을 내일 복습 계획에 넣는다. 같은 퀴즈를 여러 번 풀 수 있다.",
+        "operationId" : "submit",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "quizId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/QuizAttemptRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/QuizAttemptResponse"
+                }
+              }
+            },
+            "description" : "채점 성공"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "answers 검증 실패 (COMMON_400), 문항마다 한 번씩 답하지 않음 (QUIZ_400)"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "토큰 없음·만료 (AUTH_401)"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "없는 퀴즈, 남의 분석·삭제된 분석의 퀴즈 (QUIZ_404)"
+          }
+        },
+        "summary" : "퀴즈 풀이 제출·채점",
+        "tags" : [ "퀴즈" ]
+      }
+    },
     "/api/users/me" : {
       "delete" : {
         "description" : "현재 비밀번호를 확인한 뒤 비활성화(WITHDRAWN)하고 이메일·닉네임·소개를 마스킹한다. 모든 기기의 Refresh 토큰과 팔로우 관계를 지우고, 작성한 글·댓글·리뷰와 퀴즈 기록은 남긴다. 같은 이메일로 다시 가입할 수 있다.",
@@ -2214,5 +2582,8 @@
   }, {
     "description" : "공개 개념 카드 목록·검색·상세",
     "name" : "개념 카드"
+  }, {
+    "description" : "분석한 코드로 만든 객관식 퀴즈 조회, 풀이 제출·채점",
+    "name" : "퀴즈"
   } ]
 }

@@ -1,5 +1,6 @@
 package com.vibenote.analysis;
 
+import com.vibenote.analysis.concept.AnalysisConceptService;
 import com.vibenote.analysis.concept.ConceptExtractor;
 import com.vibenote.analysis.concept.ConceptLinkService;
 import com.vibenote.analysis.domain.Analysis;
@@ -17,6 +18,8 @@ import com.vibenote.analysis.pipeline.SourceFile;
 import com.vibenote.analysis.pipeline.ZipArchiveReader;
 import com.vibenote.common.exception.ErrorCode;
 import com.vibenote.concept.ConceptDraftService;
+import com.vibenote.quiz.QuizGenerator;
+import com.vibenote.quiz.QuizSaveService;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -30,7 +33,7 @@ import org.springframework.stereotype.Component;
  * 사유로, 예기치 못한 예외면 ANALYSIS_500으로 FAILED 처리한다. 결과와 상관없이 임시 ZIP을 지운다 (AC10).
  *
  * <p>단계 목록은 {@link #stages} 한 곳에 둔다. F-06이 SELECTING 뒤에 EXPLAINING(40)을, F-08이 그 뒤에 EXTRACTING(70)을
- * 넣었고, F-14가 그 뒤에 QUIZ(85)를 끼워 넣는다.
+ * 넣었고, F-14가 그 뒤에 QUIZ(85)를 넣었다.
  */
 @Component
 public class AnalysisPipeline {
@@ -48,6 +51,9 @@ public class AnalysisPipeline {
     private final ConceptDraftService conceptDraftService;
     private final ConceptExtractor conceptExtractor;
     private final ConceptLinkService conceptLinkService;
+    private final AnalysisConceptService analysisConceptService;
+    private final QuizGenerator quizGenerator;
+    private final QuizSaveService quizSaveService;
 
     /** EXPLAINING 진행률: 개요 뒤 45, 파일 묶음 k/n 뒤 45 + floor(24·k/n) (F-06 AC2). */
     static final int EXPLAIN_OVERVIEW_DONE = 45;
@@ -64,7 +70,10 @@ public class AnalysisPipeline {
             ExplainProperties explainProperties,
             ConceptDraftService conceptDraftService,
             ConceptExtractor conceptExtractor,
-            ConceptLinkService conceptLinkService) {
+            ConceptLinkService conceptLinkService,
+            AnalysisConceptService analysisConceptService,
+            QuizGenerator quizGenerator,
+            QuizSaveService quizSaveService) {
         this.analysisService = analysisService;
         this.tempFiles = tempFiles;
         this.zipReader = zipReader;
@@ -75,13 +84,17 @@ public class AnalysisPipeline {
         this.conceptDraftService = conceptDraftService;
         this.conceptExtractor = conceptExtractor;
         this.conceptLinkService = conceptLinkService;
+        this.analysisConceptService = analysisConceptService;
+        this.quizGenerator = quizGenerator;
+        this.quizSaveService = quizSaveService;
         this.stages =
                 List.of(
                         new Stage(AnalysisStatus.FETCHING, 5, this::fetch),
                         new Stage(AnalysisStatus.FILTERING, 15, this::filter),
                         new Stage(AnalysisStatus.SELECTING, 25, this::select),
                         new Stage(AnalysisStatus.EXPLAINING, 40, this::explain),
-                        new Stage(AnalysisStatus.EXTRACTING, 70, this::extract));
+                        new Stage(AnalysisStatus.EXTRACTING, 70, this::extract),
+                        new Stage(AnalysisStatus.QUIZ, 85, this::quiz));
     }
 
     /** 분석 하나를 끝까지 실행한다. 분석 전용 실행기 스레드에서 부른다. */
@@ -180,6 +193,20 @@ public class AnalysisPipeline {
                 conceptExtractor.extract(
                         analysis,
                         conceptDraftService.findAllForMatching(),
+                        analysisService.findFiles(id)));
+    }
+
+    /**
+     * 퀴즈 생성 1회 (F-14). 생성이 실패하면 퀴즈 없이 계속한다 (QuizGenerator). LLM은 트랜잭션 밖에서 부르고 퀴즈와 문항은 한 트랜잭션으로
+     * 저장한다. 저장 중 예외는 ANALYSIS_500이다.
+     */
+    private void quiz(Context context) {
+        long id = context.analysisId;
+        quizSaveService.save(
+                id,
+                quizGenerator.generate(
+                        analysisService.findForPipeline(id),
+                        analysisConceptService.findForQuiz(id),
                         analysisService.findFiles(id)));
     }
 

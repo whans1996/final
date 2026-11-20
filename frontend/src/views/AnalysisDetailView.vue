@@ -1,9 +1,9 @@
 <script setup>
 // SC-07 분석 상세.
 // 진행 중: 상태를 바로 1회, 이후 2초마다 조회하고 DONE·FAILED·404이거나 화면을 떠나면 멈춘다 (F-05a AC15).
-// DONE: 상세를 1회 불러와 "개요"·"파일"·"실행 흐름"·"개념" 탭을 보여 준다. 탭과 선택 파일은 쿼리(?tab=files&file=123)에 둔다
-// (F-06 AC13~AC15, F-07 AC14, F-08 AC8).
-import { computed, ref, watch } from 'vue'
+// DONE: 상세를 1회 불러와 "개요"·"파일"·"실행 흐름"·"개념"·"퀴즈" 탭을 보여 준다. 탭과 선택 파일은 쿼리(?tab=files&file=123)에 둔다
+// (F-06 AC13~AC15, F-07 AC14, F-08 AC8, F-14 AC9).
+import { computed, nextTick, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { fetchAnalysis, fetchAnalysisStatus } from '@/api/analyses'
 import { errorCode, errorMessage } from '@/api/http'
@@ -14,6 +14,7 @@ import AnalysisOverviewTab from '@/components/analysis/AnalysisOverviewTab.vue'
 import AnalysisFilesTab from '@/components/analysis/AnalysisFilesTab.vue'
 import AnalysisFlowsTab from '@/components/analysis/AnalysisFlowsTab.vue'
 import AnalysisConceptsTab from '@/components/analysis/AnalysisConceptsTab.vue'
+import AnalysisQuizTab from '@/components/analysis/AnalysisQuizTab.vue'
 import { LEVELS } from '@/utils/authValidation'
 
 const POLL_INTERVAL_MS = 2000
@@ -22,6 +23,7 @@ const TABS = [
   { name: 'files', label: '파일' },
   { name: 'flows', label: '실행 흐름' },
   { name: 'concepts', label: '개념' },
+  { name: 'quiz', label: '퀴즈' },
 ]
 
 const route = useRoute()
@@ -40,6 +42,20 @@ const isDone = computed(() => status.value?.status === 'DONE')
 const activeTab = computed(() =>
   TABS.some((t) => t.name === route.query.tab) ? route.query.tab : 'overview',
 )
+const tabsEl = ref(null)
+
+// 좁은 화면에서 탭 줄이 가로로 스크롤되므로 선택된 탭이 보이게 한다 (?tab=quiz로 바로 들어온 경우 포함)
+watch(
+  [activeTab, analysis],
+  async () => {
+    await nextTick()
+    tabsEl.value
+      ?.querySelector('[aria-selected="true"]')
+      ?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' })
+  },
+  { flush: 'post' },
+)
+
 const selectedFileId = computed(() => {
   const id = Number(route.query.file)
   return Number.isInteger(id) && id > 0 ? id : null
@@ -154,7 +170,7 @@ watch(
           </button>
         </div>
         <template v-else-if="analysis">
-          <div class="tabs" role="tablist" aria-label="분석 결과">
+          <div ref="tabsEl" class="tabs" role="tablist" aria-label="분석 결과">
             <button
               v-for="tab in TABS"
               :id="`tab-${tab.name}`"
@@ -189,7 +205,12 @@ watch(
               :apis="analysis.overview?.apis ?? []"
               @select-file="selectFile"
             />
-            <AnalysisConceptsTab v-else :analysis-id="analysis.id" @select-file="selectFile" />
+            <AnalysisConceptsTab
+              v-else-if="activeTab === 'concepts'"
+              :analysis-id="analysis.id"
+              @select-file="selectFile"
+            />
+            <AnalysisQuizTab v-else :analysis-id="analysis.id" />
           </div>
         </template>
       </div>
@@ -243,10 +264,13 @@ watch(
 .tabs {
   display: flex;
   gap: var(--space-1);
+  overflow-x: auto;
   border-bottom: 1px solid var(--color-border);
 }
 
 .tab {
+  flex-shrink: 0;
+  white-space: nowrap;
   padding: var(--space-2) var(--space-4);
   border: none;
   border-bottom: 2px solid transparent;

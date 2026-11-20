@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.vibenote.reviewplan.ReviewPlanMapper">
+
+    <select id="existsTodo" resultType="boolean">
+        SELECT EXISTS (
+            SELECT 1 FROM review_plans
+            WHERE user_id = #{userId} AND concept_id = #{conceptId} AND status = 'TODO'
+        )
+    </select>
+
+    <!--
+      같은 (회원, 개념, 날짜) 행이 있으면(UNIQUE uk_review_plans_user_concept_date) 넣지 않고 0을 돌려준다 (F-14 AC7).
+      - ON DUPLICATE KEY UPDATE id = id는 Connector/J 기본값(CLIENT_FOUND_ROWS)에서 중복이어도 1을 돌려줘 쓰지 않는다.
+      - INSERT … SELECT … WHERE NOT EXISTS는 RR에서 gap에 공유 next-key 락을 걸어, 같은 gap에 넣는 다른 회원의
+        동시 제출과 데드락이 난다 (ReviewPlanConcurrencyTest로 재현). INSERT IGNORE는 insert intention 락만 잡는다.
+      - INSERT IGNORE는 FK 위반 같은 다른 오류도 경고로 바꾼다. 호출자가 존재하는 회원과 PUBLISHED 카드만 넘긴다.
+    -->
+    <insert id="insertIgnoringDuplicate">
+        INSERT IGNORE INTO review_plans (user_id, concept_id, plan_date, status, reason, created_at)
+        VALUES (#{userId}, #{conceptId}, #{planDate}, 'TODO', #{reason}, #{createdAt})
+    </insert>
+</mapper>

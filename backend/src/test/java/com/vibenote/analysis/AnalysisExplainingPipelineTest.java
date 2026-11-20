@@ -125,6 +125,8 @@ class AnalysisExplainingPipelineTest extends AnalysisTestSupport {
         order.verify(analysisService).advance(id, AnalysisStatus.EXPLAINING, 40);
         // F-08이 EXPLAINING 뒤에 EXTRACTING을 끼웠다 (F-08 AC1)
         order.verify(analysisService).advance(id, AnalysisStatus.EXTRACTING, 70);
+        // F-14가 EXTRACTING 뒤에 QUIZ를 끼웠다 (F-14 AC1)
+        order.verify(analysisService).advance(id, AnalysisStatus.QUIZ, 85);
         order.verify(analysisService).complete(eq(id));
 
         List<Map<String, Object>> files = files(id);
@@ -175,7 +177,8 @@ class AnalysisExplainingPipelineTest extends AnalysisTestSupport {
                         LlmStage.FILE,
                         LlmStage.FILE,
                         LlmStage.FILE,
-                        LlmStage.CONCEPT);
+                        LlmStage.CONCEPT,
+                        LlmStage.QUIZ);
         assertThat(requests)
                 .allSatisfy(
                         r -> {
@@ -204,7 +207,8 @@ class AnalysisExplainingPipelineTest extends AnalysisTestSupport {
                         "file " + userId,
                         "file " + userId,
                         "file " + userId,
-                        "concept " + userId);
+                        "concept " + userId,
+                        "quiz " + userId);
 
         InOrder order = inOrder(analysisService);
         order.verify(analysisService).advance(id, AnalysisStatus.EXPLAINING, 40);
@@ -213,6 +217,8 @@ class AnalysisExplainingPipelineTest extends AnalysisTestSupport {
         order.verify(analysisService).advance(id, AnalysisStatus.EXPLAINING, 61);
         order.verify(analysisService).advance(id, AnalysisStatus.EXPLAINING, 69);
         order.verify(analysisService).advance(id, AnalysisStatus.EXTRACTING, 70);
+        // F-14가 EXTRACTING 뒤에 QUIZ를 끼웠다 (F-14 AC1)
+        order.verify(analysisService).advance(id, AnalysisStatus.QUIZ, 85);
         order.verify(analysisService).complete(eq(id));
     }
 
@@ -258,7 +264,8 @@ class AnalysisExplainingPipelineTest extends AnalysisTestSupport {
                         LlmStage.FILE,
                         LlmStage.FILE,
                         LlmStage.FILE,
-                        LlmStage.CONCEPT);
+                        LlmStage.CONCEPT,
+                        LlmStage.QUIZ);
     }
 
     @Test
@@ -292,6 +299,11 @@ class AnalysisExplainingPipelineTest extends AnalysisTestSupport {
         assertThat(files(id)).allSatisfy(f -> assertThat(f.get("role")).isNull());
         assertThat(requests())
                 .extracting(LlmRequest::stage)
-                .containsExactly(LlmStage.OVERVIEW, LlmStage.FILE, LlmStage.FILE, LlmStage.CONCEPT);
+                .containsExactly(
+                        LlmStage.OVERVIEW,
+                        LlmStage.FILE,
+                        LlmStage.FILE,
+                        LlmStage.CONCEPT,
+                        LlmStage.QUIZ);
     }
 }
