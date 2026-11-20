@@ -4,30 +4,30 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
 
-갱신: 2026-11-20 09:34 · 작업자: whans1996@naver.com · PC: dh-home · 브랜치: feature/F-14-code-quiz
+갱신: 2026-11-20 10:05 · 작업자: whans1996@naver.com · PC: dh-home · 브랜치: feature/F-15-review-plan
 
 ## 현재 기능
 
-F-14 코드 이해 퀴즈 — PR #56 (develop 대상) CI 초록, Codex ✅ da9d7bc, spec DONE 표시 완료. **사람이 GitHub에서 Squash and merge** (wip 커밋 `0fa4933` 있음)
+F-15 복습 계획 — spec `docs/specs/F-15-review-plan.md` **APPROVED (whans1996 11-20)**, 구현 전
 
 ## 진행
 
-- ✅ /pr-review: verifier 통과(BE 465·FE 239), contract-checker 불일치 0, reviewer 반드시 수정 1·권장 3 반영, '무시 가능' 5건 확인
-- ✅ 동시 제출 데드락 재현·수정 `5f784a5`(`INSERT IGNORE`, `ReviewPlanConcurrencyTest`), 다시 풀기 스크롤 `f7a8178`, JSON 본문 크기 제한 → #55
-- ✅ PR #56 생성(@JoonseobKim 멘션, 스크린샷 6장), CI 전부 pass, Codex COMPLETE(재리뷰 1회)
+- ✅ F-14 PR #56 머지(11-20 09:38), develop CI 초록
+- ✅ F-15 spec 초안: AC1~AC12 (GET 기간·밀린 복습, POST MANUAL, PATCH 완료·되돌림, DELETE, `addWish` for F-12, SC-11, SC-10 버튼, 헤더 nav·SC-08 링크). 마이그레이션 없음
+- ✅ 사용자 결정 4건 → 결정로그 11-20 행 (찜은 F-12가 addWish 호출, 직접 추가는 SC-10 버튼, 밀린 복습 맨 위, 대시보드는 F-16)
 
 ## 바로 다음 할 일
 
-1. 머지 전 `git fetch` → develop에 새 커밋이 있으면 `git merge origin/develop` → push → CI 초록 재확인 (상대 F-11 진행 중)
-2. GitHub에서 PR #56 **Squash and merge**
-3. 머지 후 `/clear` → `/pickup`으로 다음 A 영역 기능 선택 (F-15 복습 계획 후보: `reviewplan` 패키지 확장)
+1. `/clear` 후 새 세션에서 `/implement F-15` (Opus/high). 브랜치 `feature/F-15-review-plan` (spec 승인 커밋 push됨)
+2. 순서: ErrorCode `REVIEW_PLAN_404/409` → `reviewplan/ReviewPlanApiTest#AC1_기간을_주지_않으면_오늘부터_7일을_돌려준다`부터 red → Mapper `findInRange`·`findOverdue` → Service `list` → Controller
 
 ## 막힌 점 / 결정 필요
 
 - 사람: 이슈 #16, 노션 팀원 초대, 고아 폴더 `../final-harness` 삭제 여부
+- F-12(B)에 `addWish` 호출을 알려야 함 → spec 승인 push 후 Mattermost로 공유
 
 ## 주의
 
 - 리뷰 지적은 '무시 가능'도 직접 확인한다 (11-20 사용자 지시)
-- 이 세션엔 프로젝트 에이전트가 등록 안 됨 → general-purpose에 `.claude/agents/*.md`를 읽게 해서 대신함
+- 공통 파일 `views/concept/ConceptDetailView.vue`를 B가 F-11에서 고치는 중 → 요약 아래 한 줄만 추가, PR @JoonseobKim 멘션
 - Gradle 테스트를 bootRun과 동시에 돌리지 않는다
