@@ -223,6 +223,38 @@ test('리뷰 결과를 기다리는 커밋 뒤에 문서만 push하면 재요청
   assert.equal(judge([summary(PREV, 'completed', { at: 0 })], { now: 1, docsOnly: [PREV] }).verdict, 'COMPLETE');
 });
 
+test('실패·정체 재시도 댓글은 재리뷰 횟수에 넣지 않는다 (reviewer: 자동 리뷰 실패 뒤 재시도가 1회로 셈)', () => {
+  // PR 생성 때 돈 자동 리뷰(요청 마커 없음)가 실패 → 재시도
+  assert.equal(requestCount([summary(HEAD, 'failed', { at: 0 }), req(HEAD, 1, { retry: true })]), 0);
+  assert.equal(requestCount([req(PREV, -30), req(HEAD, 0), req(HEAD, 20, { retry: true })]), 2);
+  // 판정은 재시도 댓글을 요청으로 계속 본다 (시작 대기)
+  assert.equal(judge([summary(HEAD, 'failed', { at: 0 }), req(HEAD, 1, { retry: true })], { now: 3 }).verdict, 'RUNNING');
+});
+
+test('같은 초 안의 요청·상태 시각은 문자열이 아니라 시각으로 비교한다 (reviewer)', () => {
+  // 재시도 요청(…:00Z) 뒤 0.6초에 다시 실패(…:00.600Z): 문자열 비교면 'Z' > '.'라 요청이 더 늦은 것으로 본다
+  const r = judge([req(HEAD, 0, { retry: true }), summary(HEAD, 'failed', { at: 0.01 })], { now: 1 });
+  assert.equal(r.verdict, 'ERROR');
+});
+
+test('#39: 이전 커밋 리뷰가 실패로 남았어도 더 최근 요청 커밋 뒤 문서만 바뀌었으면 그 리뷰를 기다린다 (reviewer)', () => {
+  const r = judge([summary(OLD, 'failed', { at: -30 }), req(PREV, -5)], { now: 0, docsOnly: [PREV] });
+  assert.equal(r.verdict, 'RUNNING');
+  assert.match(r.msg, /^head 1111111 문서만 변경, 2222222 리뷰 대기/);
+  // 진행 중인 리뷰가 더 최근이면 그 리뷰를 본다
+  const running = judge([req(OLD, -30), summary(PREV, 'in_progress', { at: -2 })], { now: 0, docsOnly: [OLD, PREV] });
+  assert.equal(running.verdict, 'RUNNING');
+  assert.match(running.msg, /2222222 리뷰 in_progress/);
+});
+
+test('Stop hook: 실패·정체 재요청은 기다리는 --wait 프로세스가 있으면 그 프로세스에 맡긴다 (reviewer: 재시도 댓글 중복)', () => {
+  const line = 'STALE head abc1234 Codex 리뷰 실패(failed) → 재요청 (재리뷰 1회)';
+  assert.equal(loopAction({ line, pr: 7, waiting: true }).action, 'none');
+  assert.equal(loopAction({ line, pr: 7 }).action, 'block');
+  // 새 커밋 push로 인한 일반 STALE은 기다리던 프로세스가 곧 끝나므로 그대로 막는다
+  assert.equal(loopAction({ line: 'STALE head abc1234, Codex def5678 기준 (재리뷰 1회)', pr: 7, waiting: true }).action, 'block');
+});
+
 test('Stop hook: 실패·정체 재요청은 같은 head의 일반 STALE과 따로 한 번 반응한다', () => {
   const plain = loopAction({ line: 'STALE head abc1234, Codex def5678 기준 (재리뷰 1회)', pr: 7 });
   const stuck = loopAction({ line: 'STALE head abc1234 Codex 리뷰 실패(failed) → 재요청 (재리뷰 1회)', pr: 7, handled: [plain.key] });

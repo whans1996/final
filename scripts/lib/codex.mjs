@@ -54,9 +54,15 @@ export function setupNotice(comments) {
   return { ...noticeOf(last.body), at: last.created_at, who: who ?? null };
 }
 
-/** 재리뷰 요청 횟수 (사람 댓글의 head sha 마커, 서로 다른 커밋 수) */
+/**
+ * 재리뷰 요청 횟수 (사람 댓글의 head sha 마커, 서로 다른 커밋 수).
+ * 실패·정체 재시도 댓글은 세지 않는다: 자동 리뷰(마커 없음)가 실패한 head를 재시도하면 1회로 세져 상한이 줄었다 (reviewer)
+ */
 export function requestCount(comments) {
-  const shas = comments.filter((c) => !isBot(c)).map((c) => REQUEST_MARK_RE.exec(c.body || '')?.[1]).filter(Boolean);
+  const shas = comments
+    .filter((c) => !isBot(c) && !RETRY_MARK_RE.test(c.body || ''))
+    .map((c) => REQUEST_MARK_RE.exec(c.body || '')?.[1])
+    .filter(Boolean);
   return new Set(shas).size;
 }
 
@@ -111,7 +117,8 @@ export function loopAction({ line, pr, handled = [], waiting = false }) {
   const key = `${pr}:${prHead}:${verdict}${verdict === 'STALE' && /실패|정체/.test(line) ? ':retry' : ''}`;
   const out = (action, kind) => ({ verdict, rounds, prHead, key, action, kind });
   if (handled.includes(key)) return out('none');
-  if (verdict === 'STALE') return out('block', 'request');
+  // 실패·정체 재요청은 기다리는 --request --wait 프로세스가 스스로 한 번 재시도한다. 막으면 두 번째 --wait가 떠 재시도 댓글이 겹친다 (reviewer)
+  if (verdict === 'STALE') return key.endsWith(':retry') && waiting ? out('none') : out('block', 'request');
   if (verdict === 'RUNNING') return waiting ? out('none') : out('block', 'wait');
   if (verdict === 'FINDINGS') return rounds >= MAX_REVIEW_ROUNDS ? out('notify', 'limit') : out('block', 'fix');
   if (verdict === 'ERROR') return out('notify', /계정 미연결|환경 없음/.test(line) ? 'setup' : 'error');
@@ -237,7 +244,8 @@ export function judgeReview({ pr, h, comments, findingTimes = () => [], docsOnly
     };
     if (st?.commit_sha === target && st.status !== 'completed') {
       // 실패·정체한 뒤에 단 요청이면 다시 시작하기를 기다린다
-      if (lastReq && lastReq > st.since) return waitReq();
+      // 시각 형식이 달라(…:46Z 대 …:46.657Z) 문자열이 아니라 시각으로 비교한다 (reviewer)
+      if (lastReq && Date.parse(lastReq) > Date.parse(st.since)) return waitReq();
       if (FAILED_RE.test(st.status)) return stuck('실패', `실패(${st.status})`);
       const age = now - Date.parse(st.since);
       if (age > STUCK_MS) return stuck('정체', `${minutes(age)}분째 ${st.status} (정체)`);
@@ -272,9 +280,14 @@ export function judgeReview({ pr, h, comments, findingTimes = () => [], docsOnly
     // #39: 결과를 기다리는 이전 커밋(리뷰 중이거나 요청만 함) 이후 문서만 바뀌었으면 재요청하지 않고 그 리뷰를 기다린다.
     // 그 리뷰가 지적 없이 끝나면 위 문서만 변경 규칙으로 COMPLETE, 지적이 있으면 STALE이 된다
     const done = (sha) => (st?.commit_sha === sha && st.status === 'completed') || receipts.some((r) => sha.startsWith(r.sha));
-    const waiting = reqs.filter((r) => r.sha !== h.sha && !done(r.sha)).sort((a, b) => (a.at < b.at ? 1 : -1));
-    const pending = st && st.status !== 'completed' ? st.commit_sha : waiting[0]?.sha;
-    if (pending && docsOnlySince(pending)) {
+    // 후보: 진행 중(또는 실패로 남은) 리뷰 커밋과 결과 없는 요청 커밋, 최근 것부터. 실패로 남은 이전 커밋 때문에
+    // 더 최근 요청을 놓치지 않게 문서만 바뀐 첫 후보를 고른다 (reviewer)
+    const candidates = [
+      ...reqs.filter((r) => r.sha !== h.sha && !done(r.sha)),
+      ...(st && st.status !== 'completed' ? [{ sha: st.commit_sha, at: st.since }] : []),
+    ].sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
+    const pending = [...new Set(candidates.map((c) => c.sha))].find((sha) => docsOnlySince(sha));
+    if (pending) {
       const r = inFlight(pending, '문서만 변경');
       if (r) return r;
     }

@@ -70,12 +70,14 @@ if (judged.error || !line) {
 const n = pr.number;
 const handled = prev.handled || [];
 const waiting = () => waitingInTranscript(readText(input.transcript_path || '') || '', n);
-const act = loopAction({ line, pr: n, handled, waiting: line.startsWith('RUNNING') && waiting() });
+// 실패·정체 재요청(STALE)도 기다리는 프로세스가 있으면 그쪽이 재시도한다 (중복 재시도 방지)
+const retry = /^STALE .*(실패|정체)/.test(line);
+const act = loopAction({ line, pr: n, handled, waiting: (line.startsWith('RUNNING') || retry) && waiting() });
 save({ verdict: act.verdict, prHead: act.prHead, handled: handled.includes(act.key) ? handled : [...handled, act.key].slice(-20) });
 
 const waitCmd = `node scripts/codex-review.mjs ${n} --request --wait --status`;
 const REASON = {
-  request: `push한 head가 아직 리뷰 요청 전입니다. \`${waitCmd}\`를 Bash run_in_background로 실행하고 완료 알림을 기다리세요 (/pr-review 8단계). push하지 않은 커밋이 있으면 먼저 push합니다.`,
+  request: `${retry ? 'head의 Codex 리뷰가 실패하거나 멈춰 재요청이 필요합니다' : 'push한 head가 아직 리뷰 요청 전입니다'}. \`${waitCmd}\`를 Bash run_in_background로 실행하고 완료 알림을 기다리세요 (/pr-review 8단계). push하지 않은 커밋이 있으면 먼저 push합니다.`,
   wait: `리뷰가 진행 중인데 이 세션에서 기다리는 프로세스가 없습니다. \`${waitCmd}\`를 Bash run_in_background로 실행하고 완료 알림을 기다리세요.`,
   fix:
     `재리뷰 ${act.rounds}/${MAX_REVIEW_ROUNDS}회. \`node scripts/codex-review.mjs ${n}\`로 지적을 확인하고 /pr-review 8-3대로 처리하세요: ` +
