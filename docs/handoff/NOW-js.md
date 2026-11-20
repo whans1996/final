@@ -4,13 +4,13 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-dh.md`)은 읽기만 한다.
 
-갱신: 2026-11-20 21:17 · 작업자: JoonseobKim · PC: js-home · 브랜치: feature/F-04-follow-feed
+갱신: 2026-11-20 21:26 · 작업자: JoonseobKim · PC: js-home · 브랜치: feature/F-04-follow-feed
 
 ---
 
 ## 현재 기능
 
-F-04 팔로우·활동 피드 — spec APPROVED `docs/specs/F-04-follow-feed.md`, `/implement` 진행 중. **AC1~AC11 모두 green**, contract-checker 불일치 0, 산출물(UC05·UC06·SC-17·SC-18) 반영, develop 병합(cf65f33, #70 하네스). **ui-verifier 통과(11-20 21시, 문제 0)** + 스크린샷 8장(SC-17-feed*·SC-18-follow*) 화면설계서에 삽입. 남은 것: `/pr-review`
+F-04 팔로우·활동 피드 — spec APPROVED `docs/specs/F-04-follow-feed.md`, `/implement` 진행 중. **AC1~AC11 모두 green**, contract-checker 불일치 0, 산출물(UC05·UC06·SC-17·SC-18) 반영, develop 병합(cf65f33, #70 하네스). **ui-verifier 통과(11-20 21시, 문제 0)** + 스크린샷 8장 화면설계서에 삽입. **`/pr-review` 점검 완료**(BE 644·계약 0·reviewer 반드시 수정 0, 권장 3건 반영 6ca0af4). 남은 것: push → PR 생성
 
 ## 진행
 
@@ -21,14 +21,15 @@ F-04 팔로우·활동 피드 — spec APPROVED `docs/specs/F-04-follow-feed.md`
 
 ## 바로 다음 할 일
 
-1. `/pr-review` — verifier·reviewer·contract-checker → PR 본문에 `Closes #64`, 공통 파일 @whans1996 멘션, 스크린샷 `node scripts/pr-screens.mjs SC-17 SC-18`
-2. spec 체크리스트 남은 것: reviewer 반영, 산출물(REST API 명세 확인), PR CI 초록
+1. `git push` → `node scripts/pr-screens.mjs SC-17 SC-18` 출력을 `.harness/pr-F-04.md`의 `SCREENSHOTS_PLACEHOLDER` 자리에 붙인다
+2. 사용자 확인 후 `gh pr create --base develop --title "feat(F-04): 팔로우·활동 피드" --body-file .harness/pr-F-04.md` → `gh pr checks` → `node scripts/codex-review.mjs <번호> --request --wait --status`(백그라운드)
+3. Codex COMPLETE + CI 초록 → `docs(F-04): 완료 표시 (spec DONE)` → 사람이 머지
 
 ## 막힌 점 / 결정 필요
 
-- 없음. ui-verifier가 못 본 것: 언팔로우 hover, 비로그인 클릭 redirect, "새 활동이 없습니다", 더 보기 (단위 테스트로만 확인). BE는 21:15에 띄운 새 코드(bootRun local)
+- 없음. 피드 상대 시각 시간대 문제는 #17에 댓글로 넘김
 
 ## 주의
 
-- 공통 파일 변경(`ErrorCode` USER_002, `SecurityConfig` FOLLOW 블록, `UserService.findByIdForUpdate`, `conventions.md` 3절 USER_002, `feed` 패키지, `routes/user.js`, `UserProfileView`, `App.spec`·`navItems.spec` nav 기대값) → PR에 @whans1996 멘션
+- 공통 파일 변경(`ErrorCode` USER_002, `SecurityConfig` FOLLOW 블록, `conventions.md` 3절 USER_002, `feed` 패키지, `routes/user.js`, `UserProfileView`, `App.spec`·`navItems.spec` nav 기대값, F-12 `WishButton.spec` 대기) → PR에 @whans1996 멘션
 - 하네스 PR #69(#67·#48·#39) develop 머지됨(8189d3f), 이 브랜치에 이미 포함 → `codex-review.mjs`가 Codex 실패·정체를 STALE로 판정

@@ -197,8 +197,8 @@ AC11 종류별 문장 (SC-17):
 - [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
 - [x] contract-checker 통과 (불일치 0, 11-20)
 - [x] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일) — 11-20, `/feed`(빈·항목)·`/users/:id`·`/users/:id/follows` 1280·375 문제 0, 스크린샷 SC-17·SC-18 8장
-- [ ] reviewer 지적 사항 반영
-- [ ] 산출물 반영: 유스케이스 UC05(멱등으로 대안 흐름 수정)·UC06, 화면 설계서 SC-17("spec에서 정할 것" 정리, 스크린샷)·SC-18(팔로우 영역, 팔로우 목록 화면), REST API 명세
-- [ ] 공통 파일 변경(`ErrorCode`, `SecurityConfig`, `feed` 패키지, `routes/user.js`, `UserProfileView`) PR 본문에 @whans1996 멘션
+- [x] reviewer 지적 사항 반영 — 11-20, 반드시 수정 0. 권장: 빈 피드 안내 깜빡임·팔로우 직후 "언팔로우" 표시(FE), 팔로우 잠금 FOR SHARE, 피드 상대 시각 #17 댓글
+- [x] 산출물 반영: 유스케이스 UC05(멱등으로 대안 흐름 수정)·UC06, 화면 설계서 SC-17("spec에서 정할 것" 정리, 스크린샷)·SC-18(팔로우 영역, 팔로우 목록 화면), REST API 명세
+- [x] 공통 파일 변경(`ErrorCode`, `SecurityConfig`, `feed` 패키지, `routes/user.js`, `UserProfileView`) PR 본문에 @whans1996 멘션
 - [ ] PR CI 초록, `Closes #64`
 - [ ] 상태 DONE (PR 머지 후)
