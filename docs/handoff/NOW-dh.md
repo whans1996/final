@@ -4,24 +4,23 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
 
-갱신: 2026-11-20 09:27 · 작업자: whans1996@naver.com · PC: dh-home · 브랜치: feature/F-14-code-quiz
+갱신: 2026-11-20 09:34 · 작업자: whans1996@naver.com · PC: dh-home · 브랜치: feature/F-14-code-quiz
 
 ## 현재 기능
 
-F-14 코드 이해 퀴즈 (`docs/specs/F-14-code-quiz.md`) — `/pr-review` 진행 중. 점검 끝, PR 생성 전(사용자 확인 대기)
+F-14 코드 이해 퀴즈 — PR #56 (develop 대상) CI 초록, Codex ✅ da9d7bc, spec DONE 표시 완료. **사람이 GitHub에서 Squash and merge** (wip 커밋 `0fa4933` 있음)
 
 ## 진행
 
-- ✅ AC1~AC11, develop 병합, 스크린샷 6장(SC-07 퀴즈 탭·SC-08)
-- ✅ /pr-review 점검: verifier 통과(BE 464·FE 239), contract-checker 불일치 0, reviewer 반드시 수정 1(NOW 머리말 `d70494d`)
-- ✅ reviewer '무시 가능'까지 전부 확인: 동시 제출 데드락 **재현**(다른 회원끼리도) → `INSERT IGNORE`로 수정 `5f784a5`(`ReviewPlanConcurrencyTest`), 다시 풀기 스크롤 `f7a8178`, 권장 3건 `59b10b5`, JSON 본문 크기 제한 없음 → #55(area:common)
-- PR 설명 초안 `.harness/pr-F-14.md`
+- ✅ /pr-review: verifier 통과(BE 465·FE 239), contract-checker 불일치 0, reviewer 반드시 수정 1·권장 3 반영, '무시 가능' 5건 확인
+- ✅ 동시 제출 데드락 재현·수정 `5f784a5`(`INSERT IGNORE`, `ReviewPlanConcurrencyTest`), 다시 풀기 스크롤 `f7a8178`, JSON 본문 크기 제한 → #55
+- ✅ PR #56 생성(@JoonseobKim 멘션, 스크린샷 6장), CI 전부 pass, Codex COMPLETE(재리뷰 1회)
 
 ## 바로 다음 할 일
 
-1. 사용자 확인 후 `git push -u origin feature/F-14-code-quiz` → `gh pr create --base develop --title "feat(F-14): 코드 이해 퀴즈" --body-file .harness/pr-F-14.md`
-2. push 후 `node scripts/pr-screens.mjs SC-07 SC-08` 출력으로 PR 설명 `## 스크린샷` 갱신(`gh pr edit --body-file`), `gh pr checks`
-3. Codex 루프: `node scripts/codex-review.mjs <PR> --request --wait --status` (background)
+1. 머지 전 `git fetch` → develop에 새 커밋이 있으면 `git merge origin/develop` → push → CI 초록 재확인 (상대 F-11 진행 중)
+2. GitHub에서 PR #56 **Squash and merge**
+3. 머지 후 `/clear` → `/pickup`으로 다음 A 영역 기능 선택 (F-15 복습 계획 후보: `reviewplan` 패키지 확장)
 
 ## 막힌 점 / 결정 필요
 
@@ -29,6 +28,6 @@ F-14 코드 이해 퀴즈 (`docs/specs/F-14-code-quiz.md`) — `/pr-review` 진�
 
 ## 주의
 
-- 공통 파일 변경: `application.yml`(quiz 블록), `ErrorCode`(QUIZ 2개), `openapi.json`, `docs/conventions.md`(QUIZ 행) → PR에 @JoonseobKim 멘션
 - 리뷰 지적은 '무시 가능'도 직접 확인한다 (11-20 사용자 지시)
 - 이 세션엔 프로젝트 에이전트가 등록 안 됨 → general-purpose에 `.claude/agents/*.md`를 읽게 해서 대신함
+- Gradle 테스트를 bootRun과 동시에 돌리지 않는다

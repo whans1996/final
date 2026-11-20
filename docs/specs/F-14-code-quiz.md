@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 |---|---|
-| 상태 | APPROVED <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
+| 상태 | DONE (PR #56) <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
 | 기능 ID | F-14 |
 | 우선순위 | P0 |
 | 영역 오너 | A 김동환 (AI·분석·학습 루프) |
@@ -304,5 +304,5 @@ LLM은 테스트에서 실제로 부르지 않는다. 파이프라인 통합 테
 - [x] ui-verifier 통과 (데스크톱·모바일, ui-check 스크린샷 SC-07-quiz·SC-08) — 375px 탭 줄바꿈·선택 탭 스크롤 수정 후 재촬영
 - [x] reviewer 지적 사항 반영
 - [x] 산출물 반영 (스크린샷 표는 ui-verifier 뒤): `02-유스케이스.md` UC30(기획 기준 → 확정, 대안 흐름), `03-ERD.md` quiz 4테이블·review_plans WRONG, `06-화면설계서.md` SC-07 퀴즈 탭·SC-08, `08-외부API-생성형AI-활용.md` F-14 행, `09-데이터셋.md`·`datasets.json` DS-06
-- [ ] PR CI 초록, Codex ✅
-- [ ] 상태 DONE (PR 머지 전 마지막 커밋)
+- [x] PR CI 초록, Codex ✅ da9d7bc
+- [x] 상태 DONE (PR 머지 전 마지막 커밋)
