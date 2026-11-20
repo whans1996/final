@@ -50,15 +50,14 @@ const canSubmit = computed(
   () => form.title.trim() !== '' && form.content.trim() !== '' && !saving.value && !loading.value,
 )
 
+// 작성자 본인에게 viewable이 아닌 첨부(삭제한 분석, 숨겨진 카드)는 다시 보내면 POST_001·002가 되므로
+// 빼고 연다. 그대로 "저장"하면 첨부가 없어진다 (AC18 "빼고 열었습니다"와 같은 처리)
 const attachmentFromPost = (post) => {
-  if (post.analysis) {
-    const a = post.analysis
-    return { type: 'ANALYSIS', id: a.id, label: a.viewable ? analysisLabel(a) : `분석 #${a.id}` }
-  }
-  if (post.concept) {
-    const c = post.concept
-    return { type: 'CONCEPT', id: c.id, label: c.viewable ? c.name : `카드 #${c.id}` }
-  }
+  const a = post.analysis
+  const c = post.concept
+  if (a?.viewable) return { type: 'ANALYSIS', id: a.id, label: analysisLabel(a) }
+  if (c?.viewable) return { type: 'CONCEPT', id: c.id, label: c.name }
+  if (a || c) notice.value = PREFILL_FAILED
   return null
 }
 

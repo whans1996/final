@@ -244,6 +244,44 @@ describe('PostWriteView (F-17 AC17·AC18)', () => {
     expect(confirm).not.toHaveBeenCalled()
   })
 
+  it('AC18 자기 글의 edit에서 볼 수 없게 된 첨부(숨긴 카드·삭제한 분석)는 빼고 열고 안내한다', async () => {
+    postsApi.fetchPost.mockResolvedValue(
+      detail({
+        concept: {
+          id: 12,
+          viewable: false,
+          name: null,
+          category: null,
+          difficulty: null,
+          summary: null,
+        },
+      }),
+    )
+    postsApi.updatePost.mockResolvedValue(detail({ concept: null }))
+    const { wrapper } = await mountWrite('/community/42/edit')
+
+    expect(wrapper.text()).toContain('첨부할 수 없는 항목이라 빼고 열었습니다')
+    expect(wrapper.find('[data-role="attachment-chip"]').exists()).toBe(false)
+    await submitForm(wrapper)
+    expect(postsApi.updatePost).toHaveBeenCalledWith(42, {
+      boardType: 'REVIEW',
+      title: '원래 제목',
+      content: '원래 본문',
+      analysisId: null,
+      conceptId: null,
+    })
+
+    postsApi.fetchPost.mockResolvedValue(
+      detail({
+        concept: null,
+        analysis: { id: 15, viewable: false, title: null, projectName: null },
+      }),
+    )
+    const deleted = await mountWrite('/community/42/edit')
+    expect(deleted.wrapper.text()).toContain('첨부할 수 없는 항목이라 빼고 열었습니다')
+    expect(deleted.wrapper.find('[data-role="attachment-chip"]').exists()).toBe(false)
+  })
+
   it('AC18 남의 글의 edit은 안내를 보여 주고 그 글로 보낸다', async () => {
     postsApi.fetchPost.mockResolvedValue(detail({ authorId: 8 }))
     const { wrapper, router } = await mountWrite('/community/42/edit')
