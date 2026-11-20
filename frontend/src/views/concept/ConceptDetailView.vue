@@ -9,6 +9,7 @@ import ConceptAppearances from '@/components/concept/ConceptAppearances.vue'
 import ConceptCard from '@/components/concept/ConceptCard.vue'
 import ConceptReviews from '@/components/concept/ConceptReviews.vue'
 import MarkdownBody from '@/components/concept/MarkdownBody.vue'
+import ReviewPlanAddButton from '@/components/reviewplan/ReviewPlanAddButton.vue'
 import { useAuthStore } from '@/stores/auth'
 import { LEVELS } from '@/utils/authValidation'
 
@@ -121,6 +122,7 @@ function backToList() {
           <span class="tag">{{ difficultyLabel }}</span>
         </span>
         <p class="summary">{{ concept.summary }}</p>
+        <ReviewPlanAddButton :concept-id="concept.id" />
         <button type="button" class="write-post" data-action="write-post" @click="writePost">
           이 카드로 글쓰기
         </button>

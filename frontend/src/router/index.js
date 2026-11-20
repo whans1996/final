@@ -7,6 +7,7 @@ import authRoutes from './routes/auth'
 import challengeRoutes from './routes/challenge'
 import communityRoutes from './routes/community'
 import conceptRoutes from './routes/concept'
+import reviewPlanRoutes from './routes/reviewplan'
 import userRoutes from './routes/user'
 
 // 라우트는 도메인 파일(routes/*.js)에 두고 여기서는 합치기만 한다 (F-00b). 기능 PR은 자기 도메인 파일만 고친다.
@@ -17,6 +18,7 @@ export const routes = [
   ...userRoutes,
   ...analysisRoutes,
   ...conceptRoutes,
+  ...reviewPlanRoutes,
   ...communityRoutes,
   ...challengeRoutes,
   ...adminRoutes,

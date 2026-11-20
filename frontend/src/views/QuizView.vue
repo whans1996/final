@@ -117,6 +117,13 @@ watch(
           틀린 개념 {{ attempt.reviewAdded.length }}개를
           {{ planDateLabel(attempt.reviewAdded[0].planDate) }} 복습 계획에 추가했습니다.
         </p>
+        <RouterLink
+          v-if="attempt.reviewAdded.length > 0"
+          to="/review-plans"
+          class="review-link"
+          data-action="review-plans"
+          >복습 계획 보기</RouterLink
+        >
       </div>
       <p v-else class="hint" data-message="progress">
         {{ answeredCount }}/{{ quiz.questions.length }} 답함
@@ -198,6 +205,11 @@ watch(
   padding: var(--space-3) var(--space-4);
   border-radius: var(--radius);
   background: var(--color-background);
+}
+
+.review-link {
+  align-self: flex-start;
+  font-size: 0.9em;
 }
 
 .actions {

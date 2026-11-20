@@ -76,6 +76,10 @@ public enum ErrorCode {
     QUIZ_400(HttpStatus.BAD_REQUEST, "모든 문항에 한 번씩 답해 주세요."),
 
     // ── REVIEW_PLAN (A F-15) ──
+    /** 없는 계획, 다른 회원의 계획, PUBLISHED가 아닌 카드의 계획 (F-15 AC7). */
+    REVIEW_PLAN_404(HttpStatus.NOT_FOUND, "복습 계획을 찾을 수 없습니다."),
+    /** 그 카드의 TODO 계획이 이미 있음, 같은 날짜의 계획이 있음, DONE→TODO인데 다른 TODO가 있음 (F-15 AC5·AC6). */
+    REVIEW_PLAN_409(HttpStatus.CONFLICT, "이미 복습 계획에 있는 카드입니다."),
 
     // ── POST (B F-17·F-18) ──
     /** 없는 글의 상세·수정·삭제 (F-17 AC4·AC11). */

@@ -133,6 +133,8 @@ describe('QuizView (F-14 SC-08)', () => {
     expect(wrapper.find('[data-message="review-added"]').text()).toBe(
       '틀린 개념 1개를 11월 20일 복습 계획에 추가했습니다.',
     )
+    // F-15 AC12: 문구 뒤에 복습 계획 링크
+    expect(wrapper.find('[data-action="review-plans"]').attributes('href')).toBe('/review-plans')
     expect(wrapper.find('input[type="radio"]').exists()).toBe(false)
   })
 
@@ -148,6 +150,7 @@ describe('QuizView (F-14 SC-08)', () => {
 
     expect(wrapper.find('[data-message="score"]').exists()).toBe(true)
     expect(wrapper.find('[data-message="review-added"]').exists()).toBe(false)
+    expect(wrapper.find('[data-action="review-plans"]').exists()).toBe(false)
   })
 
   it('AC10 "다시 풀기"는 답을 비우고 풀이 화면으로, "분석으로 돌아가기"는 퀴즈 탭으로 간다', async () => {
