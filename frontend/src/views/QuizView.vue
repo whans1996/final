@@ -72,6 +72,7 @@ function retry() {
   attempt.value = null
   answers.value = {}
   submitError.value = ''
+  window.scrollTo?.({ top: 0 })
 }
 
 watch(

@@ -158,9 +158,13 @@ describe('QuizView (F-14 SC-08)', () => {
     await choose(wrapper, 22, 3)
     await submitButton(wrapper).trigger('click')
     await flushPromises()
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
 
     await wrapper.find('[data-action="retry-quiz"]').trigger('click')
 
+    // 결과 화면 맨 아래의 버튼을 눌러도 풀이 화면 맨 위(1번 문항)부터 보이게 한다
+    expect(scrollTo).toHaveBeenCalledWith({ top: 0 })
+    scrollTo.mockRestore()
     expect(wrapper.find('[data-message="score"]').exists()).toBe(false)
     expect(wrapper.find('[data-message="progress"]').text()).toBe('0/2 답함')
     expect(wrapper.findAll('input[type="radio"]:checked')).toHaveLength(0)
