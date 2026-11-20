@@ -4,7 +4,7 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-dh.md`)은 읽기만 한다.
 
-갱신: 2026-11-20 17:21 · 작업자: JoonseobKim · PC: js-home · 브랜치: feature/F-04-follow-feed
+갱신: 2026-11-20 17:24 · 작업자: JoonseobKim · PC: js-home · 브랜치: feature/F-04-follow-feed
 
 ---
 
@@ -32,4 +32,4 @@ F-04 팔로우·활동 피드 — spec APPROVED `docs/specs/F-04-follow-feed.md`
 ## 주의
 
 - 공통 파일 변경(`ErrorCode` USER_002, `SecurityConfig` FOLLOW 블록, `UserService.findByIdForUpdate`, `conventions.md` 3절 USER_002, `feed` 패키지, `routes/user.js`, `UserProfileView`, `App.spec`·`navItems.spec` nav 기대값) → PR에 @whans1996 멘션
-- `codex-review.mjs`가 Codex 실행 실패를 RUNNING으로 기다린다 (#48, 상대 PR #69가 수정 중)
+- 하네스 PR #69(#67·#48·#39) develop 머지됨(8189d3f), 이 브랜치에 이미 포함 → `codex-review.mjs`가 Codex 실패·정체를 STALE로 판정
