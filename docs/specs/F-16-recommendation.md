@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 |---|---|
-| 상태 | APPROVED <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
+| 상태 | DONE (PR #62) <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
 | 기능 ID | F-16 |
 | 우선순위 | P0 |
 | 영역 오너 | A 김동환 (AI·분석·학습 루프) |
@@ -234,7 +234,7 @@ ALTER TABLE recommendation_reasons
 - [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
 - [x] contract-checker 통과 (불일치 0)
 - [x] ui-verifier 통과 (데스크톱·모바일)
-- [ ] reviewer 지적 사항 반영
+- [x] reviewer 지적 사항 반영
 - [x] 산출물 반영: 화면 설계서 SC-04 절·스크린샷과 SC-11 빈 상태, ERD `recommendation_reasons.signal_key`, 유스케이스(추천·대시보드), AI 활용 문서(08)에 추천 이유 생성
-- [ ] PR CI 초록 (공통 파일 변경 @JoonseobKim 멘션)
-- [ ] 상태 DONE (PR 머지 후)
+- [x] PR CI 초록 (공통 파일 변경 @JoonseobKim 멘션)
+- [x] 상태 DONE (PR #62, Codex ✅ 761f962, CI 초록)
