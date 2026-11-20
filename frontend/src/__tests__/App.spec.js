@@ -20,17 +20,25 @@ async function headerLinks(options) {
 
 // F-00b AC8: 헤더 메뉴는 route meta.nav로 만들고, 닉네임·로그아웃은 App이 고정으로 붙인다
 describe('App 헤더 (F-00b AC8)', () => {
-  it('AC8 비로그인은 개념 카드·로그인·회원가입을 본다 (F-09 AC9)', async () => {
+  it('AC8 비로그인은 개념 카드·커뮤니티·로그인·회원가입을 본다 (F-09 AC9, F-17 AC13)', async () => {
     const { wrapper, links } = await headerLinks()
 
-    expect(links).toEqual(['개념 카드', '로그인', '회원가입'])
+    expect(links).toEqual(['개념 카드', '커뮤니티', '로그인', '회원가입'])
     expect(wrapper.find('header button').exists()).toBe(false)
   })
 
-  it('AC8 로그인하면 대시보드(F-16 AC9)·개념 카드·분석 요청·내 분석·복습(F-15 AC12), 닉네임, 로그아웃을 본다 (관리자 없음)', async () => {
+  it('AC8 로그인하면 대시보드(F-16 AC9)·개념 카드·커뮤니티(F-17 AC13)·분석 요청·내 분석·복습(F-15 AC12), 닉네임, 로그아웃을 본다 (관리자 없음)', async () => {
     const { wrapper, links } = await headerLinks({ beforeNavigate: loginAs('USER') })
 
-    expect(links).toEqual(['대시보드', '개념 카드', '분석 요청', '내 분석', '복습', '코딩초보'])
+    expect(links).toEqual([
+      '대시보드',
+      '개념 카드',
+      '커뮤니티',
+      '분석 요청',
+      '내 분석',
+      '복습',
+      '코딩초보',
+    ])
     expect(wrapper.find('header button').text()).toBe('로그아웃')
   })
 
@@ -40,6 +48,7 @@ describe('App 헤더 (F-00b AC8)', () => {
     expect(links).toEqual([
       '대시보드',
       '개념 카드',
+      '커뮤니티',
       '분석 요청',
       '내 분석',
       '복습',

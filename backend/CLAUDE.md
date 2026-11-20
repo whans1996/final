@@ -19,7 +19,7 @@ com.vibenote
 ├─ quiz            퀴즈 생성, 풀이, 채점 (F-14)
 ├─ reviewplan      복습 계획 (F-15)
 ├─ recommendation  맞춤 추천 (F-16)
-├─ community       게시글(게시판 3종), 댓글 (F-17, F-18)
+├─ post            게시글(게시판 3종), 댓글 (F-17, F-18)
 ├─ challenge       학습 챌린지 관리, 참여·달성도 집계 (F-24, F-25)
 ├─ llm             LlmClient와 구현체(Mock, Gemini, Ollama), 프롬프트 로더, 사용량 로그
 └─ common          예외, GlobalExceptionHandler, 페이지, JsonTypeHandler, 보안 설정, 유틸

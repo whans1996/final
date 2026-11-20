@@ -54,6 +54,8 @@ public class SecurityConfig {
         "/api/concepts/{id:\\d+}/reviews", // F-11 목록만. /reviews/me는 인증 필요
 
         // ── POST (B F-17·F-18) ──
+        "/api/posts",
+        "/api/posts/{id:\\d+}",
 
         // ── CHALLENGE (A F-25) ──
 
