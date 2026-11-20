@@ -225,10 +225,10 @@ AI로 코딩하는 학습자가 **코드 이해 Q&A·학습 후기·자유** 게
 
 - [x] 브랜치 `feature/F-17-community-board`
 - [x] Flyway 마이그레이션 (없음)
-- [x] AC별 실패 테스트 작성 (red 확인) — BE AC1~12
+- [x] AC별 실패 테스트 작성 (red 확인) — BE AC1~12, FE AC13~18 (뷰 테스트는 기존 관례대로 `views/__tests__/`)
 - [x] BE 구현 (green): `PostController`, `PostService`, `PostMapper`(+XML), DTO(`PostRequest`·`PostSearchRequest`·`PostSummaryResponse`·`PostDetailResponse`·`PostAnalysisAttachment`·`PostConceptAttachment`·`PostIdResponse`), `ErrorCode` `POST_001`·`POST_002`·`POST_403`·`POST_404`, `PUBLIC_GET_PATHS`
-- [ ] FE 구현 (green): `api/posts.js`, `routes/community.js`, 뷰 3개, 컴포넌트 4개, SC-10 글쓰기 버튼
-- [ ] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
+- [x] FE 구현 (green): `api/posts.js`, `routes/community.js`, 뷰 3개, 컴포넌트 4개, SC-10 글쓰기 버튼
+- [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
 - [ ] contract-checker 통과
 - [ ] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일)
 - [ ] reviewer 지적 사항 반영

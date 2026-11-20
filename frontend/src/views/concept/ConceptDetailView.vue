@@ -1,5 +1,5 @@
 <script setup>
-// SC-10 개념 카드 상세 (F-10 AC9~AC13, F-11 리뷰 절 AC13~AC18). 공개 화면. 로그인하면 응답의 appearances(내 코드 등장 위치)가 채워진다.
+// SC-10 개념 카드 상세 (F-10 AC9~AC13, F-11 리뷰 절 AC13~AC18, F-17 AC18 글쓰기 버튼). 공개 화면. 로그인하면 응답의 appearances(내 코드 등장 위치)가 채워진다.
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { fetchConcept } from '@/api/concepts'
@@ -9,10 +9,12 @@ import ConceptAppearances from '@/components/concept/ConceptAppearances.vue'
 import ConceptCard from '@/components/concept/ConceptCard.vue'
 import ConceptReviews from '@/components/concept/ConceptReviews.vue'
 import MarkdownBody from '@/components/concept/MarkdownBody.vue'
+import { useAuthStore } from '@/stores/auth'
 import { LEVELS } from '@/utils/authValidation'
 
 const route = useRoute()
 const router = useRouter()
+const auth = useAuthStore()
 
 const concept = ref(null)
 const loading = ref(true)
@@ -68,6 +70,13 @@ function onRatingChange({ avgRating, reviewCount: count }) {
   reviewCount.value = count
 }
 
+/** 이 카드를 첨부해 커뮤니티 글쓰기로 (F-17 AC18). 비로그인은 로그인 후 돌아온다 */
+function writePost() {
+  const target = `/community/write?conceptId=${concept.value.id}`
+  if (auth.isLoggedIn) router.push(target)
+  else router.push({ path: '/login', query: { redirect: target } })
+}
+
 /** 직전 화면이 목록(/concepts, 쿼리 포함)이면 뒤로 가서 검색 조건을 살리고, 아니면 목록 첫 화면으로 (AC12) */
 function backToList() {
   const back = router.options.history.state?.back
@@ -112,6 +121,9 @@ function backToList() {
           <span class="tag">{{ difficultyLabel }}</span>
         </span>
         <p class="summary">{{ concept.summary }}</p>
+        <button type="button" class="write-post" data-action="write-post" @click="writePost">
+          이 카드로 글쓰기
+        </button>
       </header>
 
       <section v-if="concept.body" data-section="body">
@@ -160,6 +172,17 @@ function backToList() {
 </template>
 
 <style scoped>
+.write-post {
+  margin-top: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  color: var(--color-primary);
+  font: inherit;
+  cursor: pointer;
+}
+
 .detail {
   max-width: 760px;
   margin: 0 auto;
