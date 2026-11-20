@@ -137,7 +137,7 @@ ALTER TABLE recommendation_reasons
 - DTO `recommendation/dto/`: `RecommendationListResponse(items)`, `RecommendationItemResponse(concept, score, signals, reason, reasonSource)`, `RecommendationSignals(wrongCount, inMyCode, wishedCategory, levelFit)`, enum `ReasonSource { AI, RULE }`. 모든 필드에 `@Schema`
 - `MockLlmClient`: RECOMMEND 단계는 `linkRecommendIds(fixture, prompt)`로 fixture의 `reasons[i].reason`을 프롬프트 카드 줄(`^\d+ \|`)의 id에 순서대로 붙여 돌려준다(카드가 fixture보다 많으면 처음부터 다시). 기존 `linkConceptNames`·`linkQuizConceptNames`와 같은 위치
 - 동시성: 같은 회원이 동시에 조회하면 LLM이 두 번 불리고 마지막 저장이 남는다. 막지 않는다 (결과는 같은 키라 무해)
-- 성능: 후보 계산은 쿼리 6개 + 메모리 정렬. 캐시 적중 시 NF-03(500ms) 안. LLM 호출이 있으면 그 시간만큼 늦다 (Gemini 장애 시 최대 폴백 시간, 6절)
+- 성능: 후보 계산은 쿼리 6개 + 메모리 정렬. 캐시 적중 시 NF-03(500ms) 안. LLM 호출이 있으면 그 시간만큼 늦다 (Gemini 장애 시 최대 폴백 시간, 6절). FE `fetchRecommendations`는 기본 15초 대신 이 예산(재시도 2회 × (Gemini 60초 + Ollama 120초) = 360초) + 10초를 기다려 AC6의 RULE 응답을 받는다 (PR #62 Codex)
 
 ## 6. LLM
 
