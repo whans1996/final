@@ -51,6 +51,7 @@ public class SecurityConfig {
         // ── CONCEPT (B F-09~11) ──
         "/api/concepts",
         "/api/concepts/{id:\\d+}",
+        "/api/concepts/{id:\\d+}/reviews", // F-11 목록만. /reviews/me는 인증 필요
 
         // ── POST (B F-17·F-18) ──
 

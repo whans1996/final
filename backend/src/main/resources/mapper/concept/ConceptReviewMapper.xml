@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- F-11 카드 리뷰 (B) -->
+<mapper namespace="com.vibenote.concept.review.ConceptReviewMapper">
+
+    <sql id="reviewWithAuthor">
+        SELECT r.id, r.concept_id, r.user_id, r.rating, r.content, r.created_at,
+               u.nickname AS author_nickname, u.status AS author_status
+        FROM concept_reviews r
+        JOIN users u ON u.id = r.user_id
+    </sql>
+
+    <select id="findPage" resultType="com.vibenote.concept.review.ConceptReview">
+        <include refid="reviewWithAuthor"/>
+        WHERE r.concept_id = #{conceptId}
+        ORDER BY r.created_at DESC, r.id DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="countByConcept" resultType="long">
+        SELECT COUNT(*) FROM concept_reviews WHERE concept_id = #{conceptId}
+    </select>
+
+    <select id="findByConceptAndUser" resultType="com.vibenote.concept.review.ConceptReview">
+        <include refid="reviewWithAuthor"/>
+        WHERE r.concept_id = #{conceptId} AND r.user_id = #{userId}
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+        INSERT INTO concept_reviews (concept_id, user_id, rating, content, created_at, updated_at)
+        VALUES (#{conceptId}, #{userId}, #{rating}, #{content}, #{createdAt}, #{createdAt})
+    </insert>
+
+    <update id="update">
+        UPDATE concept_reviews SET rating = #{rating}, content = #{content} WHERE id = #{id}
+    </update>
+
+    <delete id="delete">
+        DELETE FROM concept_reviews WHERE id = #{id}
+    </delete>
+
+    <select id="lockConcept" resultType="long">
+        SELECT id FROM concepts WHERE id = #{conceptId} FOR UPDATE
+    </select>
+
+    <update id="refreshAvgRating">
+        UPDATE concepts
+        SET avg_rating = COALESCE(
+            (SELECT ROUND(AVG(rating), 1) FROM concept_reviews WHERE concept_id = #{conceptId}), 0.0)
+        WHERE id = #{conceptId}
+    </update>
+
+    <select id="findAvgRating" resultType="java.math.BigDecimal">
+        SELECT avg_rating FROM concepts WHERE id = #{conceptId}
+    </select>
+</mapper>

@@ -1,0 +1,127 @@
+package com.vibenote.concept.review;
+
+import com.vibenote.common.exception.BusinessException;
+import com.vibenote.common.exception.ErrorCode;
+import com.vibenote.common.page.PageQuery;
+import com.vibenote.common.page.PageResponse;
+import com.vibenote.concept.ConceptQueryService;
+import com.vibenote.concept.review.dto.ConceptRatingResponse;
+import com.vibenote.concept.review.dto.ConceptReviewRequest;
+import com.vibenote.concept.review.dto.ConceptReviewResponse;
+import com.vibenote.concept.review.dto.ConceptReviewSaveResponse;
+import com.vibenote.feed.ActivityService;
+import com.vibenote.feed.ActivityType;
+import java.time.Clock;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
+import java.util.Optional;
+import org.springframework.dao.DuplicateKeyException;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+/**
+ * 카드 리뷰 (F-11). 모든 요청은 공개 카드만 대상으로 하고(아니면 CONCEPT_404), 쓰기는 카드 행을 잠근 뒤 리뷰를 바꾸고 같은 트랜잭션에서 {@code
+ * concepts.avg_rating}을 다시 계산한다.
+ */
+@Service
+public class ConceptReviewService {
+
+    private final ConceptReviewMapper reviewMapper;
+    private final ConceptQueryService conceptQueryService;
+    private final ActivityService activityService;
+    private final Clock clock;
+
+    public ConceptReviewService(
+            ConceptReviewMapper reviewMapper,
+            ConceptQueryService conceptQueryService,
+            ActivityService activityService,
+            Clock clock) {
+        this.reviewMapper = reviewMapper;
+        this.conceptQueryService = conceptQueryService;
+        this.activityService = activityService;
+        this.clock = clock;
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<ConceptReviewResponse> list(long conceptId, PageQuery page) {
+        conceptQueryService.getPublished(conceptId);
+        List<ConceptReviewResponse> items =
+                reviewMapper.findPage(conceptId, page.size(), page.offset()).stream()
+                        .map(ConceptReviewResponse::from)
+                        .toList();
+        return PageResponse.of(items, page, reviewMapper.countByConcept(conceptId));
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<ConceptReviewResponse> findMine(long conceptId, long userId) {
+        conceptQueryService.getPublished(conceptId);
+        return reviewMapper
+                .findByConceptAndUser(conceptId, userId)
+                .map(ConceptReviewResponse::from);
+    }
+
+    @Transactional
+    public ConceptReviewSaveResponse create(
+            long conceptId, long userId, ConceptReviewRequest request) {
+        lockPublished(conceptId);
+        if (reviewMapper.findByConceptAndUser(conceptId, userId).isPresent()) {
+            throw new BusinessException(ErrorCode.CONCEPT_409);
+        }
+        ConceptReview review =
+                new ConceptReview(
+                        conceptId,
+                        userId,
+                        request.rating(),
+                        request.content(),
+                        LocalDateTime.now(clock).truncatedTo(ChronoUnit.SECONDS));
+        try {
+            reviewMapper.insert(review);
+        } catch (DuplicateKeyException e) {
+            throw new BusinessException(ErrorCode.CONCEPT_409);
+        }
+        activityService.record(userId, ActivityType.REVIEW, review.getId());
+        return saved(conceptId, userId);
+    }
+
+    @Transactional
+    public ConceptReviewSaveResponse update(
+            long conceptId, long userId, ConceptReviewRequest request) {
+        lockPublished(conceptId);
+        ConceptReview mine = getMine(conceptId, userId);
+        reviewMapper.update(mine.getId(), request.rating(), request.content());
+        return saved(conceptId, userId);
+    }
+
+    @Transactional
+    public ConceptRatingResponse delete(long conceptId, long userId) {
+        lockPublished(conceptId);
+        ConceptReview mine = getMine(conceptId, userId);
+        reviewMapper.delete(mine.getId());
+        return refreshRating(conceptId);
+    }
+
+    private void lockPublished(long conceptId) {
+        conceptQueryService.getPublished(conceptId);
+        reviewMapper.lockConcept(conceptId);
+    }
+
+    private ConceptReview getMine(long conceptId, long userId) {
+        return reviewMapper
+                .findByConceptAndUser(conceptId, userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.CONCEPT_001));
+    }
+
+    private ConceptReviewSaveResponse saved(long conceptId, long userId) {
+        ConceptRatingResponse rating = refreshRating(conceptId);
+        ConceptReview review = getMine(conceptId, userId);
+        return ConceptReviewSaveResponse.of(ConceptReviewResponse.from(review), rating);
+    }
+
+    private ConceptRatingResponse refreshRating(long conceptId) {
+        reviewMapper.refreshAvgRating(conceptId);
+        return new ConceptRatingResponse(
+                reviewMapper.findAvgRating(conceptId).doubleValue(),
+                reviewMapper.countByConcept(conceptId));
+    }
+}

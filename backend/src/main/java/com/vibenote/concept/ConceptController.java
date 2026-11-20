@@ -7,6 +7,7 @@ import com.vibenote.common.security.AuthUser;
 import com.vibenote.concept.dto.ConceptDetailResponse;
 import com.vibenote.concept.dto.ConceptSearchRequest;
 import com.vibenote.concept.dto.ConceptSummaryResponse;
+import com.vibenote.concept.review.ConceptReviewController;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -23,7 +24,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /** 개념 카드 목록·검색 (F-09)·상세 (F-10). 리뷰(F-11)·찜(F-12)은 각 기능에서 추가한다. */
-@Tag(name = "개념 카드", description = "공개 개념 카드 목록·검색·상세")
+@Tag(name = "개념 카드", description = ConceptReviewController.TAG_DESCRIPTION)
 @RestController
 @RequestMapping("/api/concepts")
 public class ConceptController {

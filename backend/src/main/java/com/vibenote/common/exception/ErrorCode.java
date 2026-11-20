@@ -64,6 +64,10 @@ public enum ErrorCode {
     // ── CONCEPT (A F-08 · B F-09~13) ──
     /** 없는 카드, 또는 PUBLISHED가 아닌 카드(DRAFT·HIDDEN)를 일반 사용자가 조회 (F-00b, NF-04). */
     CONCEPT_404(HttpStatus.NOT_FOUND, "개념 카드를 찾을 수 없습니다."),
+    /** 수정·삭제할 내 리뷰가 그 카드에 없음 (F-11 AC10). */
+    CONCEPT_001(HttpStatus.NOT_FOUND, "작성한 리뷰가 없습니다."),
+    /** 한 카드에 두 번째 리뷰 (F-11 AC6, UNIQUE (concept_id, user_id)). */
+    CONCEPT_409(HttpStatus.CONFLICT, "이미 이 카드에 리뷰를 남겼습니다."),
 
     // ── QUIZ (A F-14) ──
 
