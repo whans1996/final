@@ -5,6 +5,8 @@ import { ROOT } from './common.mjs';
 
 export const AREA_OF = { dh: 'area:A', js: 'area:B' };
 export const COMMON_AREA = 'area:common';
+/** 누군가의 작업(커밋·머지·다음 기능)을 막는 이슈. 영역과 무관하게 두 사람 모두에게 먼저 보인다 (#67) */
+export const BLOCKER = 'blocker';
 export const STALE_DAYS = 7;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -44,10 +46,12 @@ export function issueFailureLine(reason) {
 }
 
 /**
- * 이슈를 내 것·공통·분류 필요로 나눈다 (상대 영역은 세지 않는다).
- * 공통 = area:common, 내 것 = (공통이 아닌 것 중) 내 area 라벨이거나 담당자가 나. stale = 그중 STALE_DAYS일 넘게 열린 것.
+ * 이슈를 차단·내 것·공통·분류 필요로 나눈다 (상대 영역은 차단이 아니면 세지 않는다).
+ * 차단 = blocker 라벨(영역 무관, 다른 그룹에서 뺀다), 공통 = area:common, 내 것 = (공통이 아닌 것 중) 내 area 라벨이거나 담당자가 나.
+ * stale = 차단·내 것·공통 중 STALE_DAYS일 넘게 열린 것.
  */
 export function summarizeIssues(issues, { key, github } = {}, now = Date.now()) {
+  const blockers = [];
   const mine = [];
   const common = [];
   const untriaged = [];
@@ -55,30 +59,34 @@ export function summarizeIssues(issues, { key, github } = {}, now = Date.now()) 
   for (const i of issues ?? []) {
     const labels = (i.labels ?? []).map((l) => l.name);
     const assignees = (i.assignees ?? []).map((a) => a.login);
+    if (labels.includes(BLOCKER)) blockers.push(i);
     // 공통은 담당자가 나여도 공통으로 센다 (공통 이슈 담당은 만든 사람이라 대부분 나)
-    if (labels.includes(COMMON_AREA)) common.push(i);
+    else if (labels.includes(COMMON_AREA)) common.push(i);
     else if ((myArea && labels.includes(myArea)) || (github && assignees.includes(github))) mine.push(i);
     else if (!labels.some((l) => l.startsWith('area:'))) untriaged.push(i);
   }
   const byNumber = (a, b) => a.number - b.number;
-  const stale = [...mine, ...common].filter((i) => now - Date.parse(i.createdAt) > STALE_DAYS * DAY_MS).sort(byNumber);
-  return { mine: mine.sort(byNumber), common: common.sort(byNumber), untriaged: untriaged.sort(byNumber), stale };
+  const stale = [...blockers, ...mine, ...common].filter((i) => now - Date.parse(i.createdAt) > STALE_DAYS * DAY_MS).sort(byNumber);
+  return { blockers: blockers.sort(byNumber), mine: mine.sort(byNumber), common: common.sort(byNumber), untriaged: untriaged.sort(byNumber), stale };
 }
 
-/** 세션 시작 배너 한 줄. 볼 이슈가 없으면 null */
-export function issueBannerLine({ mine, common, untriaged, stale }) {
-  if (!mine.length && !common.length && !untriaged.length) return null;
+/** 세션 시작 배너 한 줄. 차단 이슈가 있으면 🔴로 시작하고 첫 이슈로 보여 준다. 볼 이슈가 없으면 null */
+export function issueBannerLine({ blockers = [], mine, common, untriaged, stale }) {
+  const all = [...blockers, ...mine, ...common, ...untriaged];
+  if (!all.length) return null;
   const counts = [`내 ${mine.length}`, `공통 ${common.length}`];
+  if (blockers.length) counts.unshift(`차단 ${blockers.length}`);
   if (untriaged.length) counts.push(`분류 필요 ${untriaged.length}`);
   if (stale.length) counts.push(`${STALE_DAYS}일 넘음 ${stale.length}`);
-  const first = [...mine, ...common, ...untriaged][0];
-  return `📌 이슈: ${counts.join(' · ')} (#${first.number} ${first.title.length > 40 ? `${first.title.slice(0, 39)}…` : first.title}${mine.length + common.length + untriaged.length > 1 ? ' 외' : ''})`;
+  const first = all[0];
+  return `${blockers.length ? '🔴' : '📌'} 이슈: ${counts.join(' · ')} (#${first.number} ${first.title.length > 40 ? `${first.title.slice(0, 39)}…` : first.title}${all.length > 1 ? ' 외' : ''})`;
 }
 
 /** 모델에 주는 이슈 목록 (그룹별 최대 limit개) */
-export function issueContext({ mine, common, untriaged }, limit = 10) {
+export function issueContext({ blockers = [], mine, common, untriaged }, limit = 10) {
   const list = (items) => items.slice(0, limit).map((i) => `  - #${i.number} ${i.title}`).join('\n') + (items.length > limit ? `\n  - … 외 ${items.length - limit}개` : '');
   const groups = [
+    ['🔴 차단 (blocker: 작업 전에 멈추고 사용자에게 해결·우회 여부를 묻는다)', blockers],
     ['내 영역', mine],
     ['공통', common],
     ['분류 필요 (area 라벨 없음 → 라벨·담당자 지정 제안)', untriaged],

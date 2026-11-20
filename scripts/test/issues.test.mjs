@@ -90,6 +90,19 @@ test('모델용 목록은 빈 그룹을 빼고 그룹마다 개수를 자른다'
   assert.equal(issueContext(summarizeIssues([], { key: 'dh' }, NOW)), null);
 });
 
+test('blocker 라벨은 영역과 무관하게 차단 그룹으로 먼저 모으고 다른 그룹에서 뺀다 (#67)', () => {
+  const issues = [...ISSUES, issue(63, ['follow-up', 'area:B', 'blocker'], { days: 8, title: 'B 영역이 내 커밋을 막음' }), issue(70, ['follow-up', 'area:A', 'blocker'])];
+  const s = summarizeIssues(issues, { key: 'dh', github: 'whans1996' }, NOW);
+  // 상대 영역(area:B)이어도 차단이면 보인다
+  assert.deepEqual(s.blockers.map((i) => i.number), [63, 70]);
+  assert.deepEqual(s.mine.map((i) => i.number), [16, 26, 41]);
+  assert.deepEqual(s.stale.map((i) => i.number), [16, 17, 63]);
+  assert.equal(issueBannerLine(s), '🔴 이슈: 차단 2 · 내 3 · 공통 1 · 분류 필요 1 · 7일 넘음 3 (#63 B 영역이 내 커밋을 막음 외)');
+  assert.match(issueContext(s), /^- 🔴 차단 \(blocker: [^\n]*\) 2개\n {2}- #63 B 영역이 내 커밋을 막음\n {2}- #70/);
+  // 차단 이슈만 있어도 배너를 낸다
+  assert.match(issueBannerLine(summarizeIssues([issue(63, ['area:B', 'blocker'])], { key: 'dh' }, NOW)), /^🔴 이슈: 차단 1 · 내 0 · 공통 0 \(#63/);
+});
+
 test('PR 본문의 닫는 키워드에서 이슈 번호를 뽑는다', () => {
   assert.deepEqual(closingRefs('## 해결 이슈\nCloses #16\nfixes #23, Resolved: #24'), [16, 23, 24]);
   assert.deepEqual(closingRefs('closes #16\nCLOSES #16'), [16]);

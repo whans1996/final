@@ -182,7 +182,7 @@ if (issueFailure) {
   parts.push(`## 열린 follow-up 이슈\n- ${issueFailure}\n- /pickup에서 위 명령으로 직접 확인한다 ("이슈 없음"으로 보고하지 않는다)`);
 } else if (issueList) {
   parts.push(
-    `## 열린 follow-up 이슈 (내 영역·공통)\n${issueList}\n` +
+    `## 열린 follow-up 이슈 (차단·내 영역·공통)\n${issueList}\n` +
       '- 기능 사이 남는 시간에 내 영역 이슈를 처리하고, /spec 때 이 기능에 흡수할 이슈를 spec "관련 이슈"에 적는다 (docs/conventions.md 7절)',
   );
 }
