@@ -23,6 +23,7 @@ public record ConceptReviewRequest(
         @Schema(
                         requiredMode = Schema.RequiredMode.REQUIRED,
                         description = "리뷰 내용 (앞뒤 공백 제외 1~200자)",
+                        minLength = 1,
                         maxLength = 200,
                         example = "예제가 명확했어요")
                 @NotBlank(message = "리뷰 내용을 입력해 주세요.")
