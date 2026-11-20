@@ -44,12 +44,12 @@ export function nowHeadline(text) {
   return { stamp, feature, next };
 }
 
-/** origin 원격 브랜치 [{ branch: 'origin/x', name: 'x', at }] (최근 커밋 순, HEAD 제외). noMerged를 주면 그 ref에 머지 안 된 것만 */
+/** origin 원격 브랜치 [{ branch: 'origin/x', name: 'x', at }] (최근 커밋 순, HEAD 제외). noMerged를 주면 그 ref에 머지 안 된 것만. 조회 실패면 null */
 function remoteBranches(cwd, { noMerged } = {}) {
   const args = ['for-each-ref', '--sort=-committerdate', '--format=%(refname:lstrip=3)%09%(committerdate:unix)'];
   if (noMerged) args.push(`--no-merged=${noMerged}`);
   const r = git([...args, 'refs/remotes/origin/'], { cwd, timeout: LOCAL_GIT_TIMEOUT });
-  if (!r.ok) return [];
+  if (!r.ok) return null;
   return r.out
     .split('\n')
     .map((l) => l.split('\t'))
@@ -85,7 +85,7 @@ function readBlobs(specs, cwd) {
  */
 export function latestPeerNow(key, { cwd = ROOT } = {}) {
   const rel = nowRelPath(key);
-  const branches = remoteBranches(cwd);
+  const branches = remoteBranches(cwd) ?? [];
   const blobs = readBlobs(
     branches.map((b) => `${b.branch}:${rel}`),
     cwd,
@@ -111,7 +111,7 @@ export function myBranchNows(key, { cwd = ROOT, base = 'origin/develop', budgetM
   const started = Date.now();
   const touched = [];
   let truncated = false;
-  for (const b of remoteBranches(cwd, { noMerged: base })) {
+  for (const b of remoteBranches(cwd, { noMerged: base }) ?? []) {
     if (PROTECTED_BRANCHES.includes(b.name)) continue;
     if (Date.now() - started > budgetMs) {
       truncated = true;
@@ -120,12 +120,7 @@ export function myBranchNows(key, { cwd = ROOT, base = 'origin/develop', budgetM
     if (git(['log', '-1', '--format=%H', `${base}..${b.branch}`, '--', rel], { cwd, timeout: LOCAL_GIT_TIMEOUT }).out) touched.push(b);
   }
   if (!touched.length) return { branches: [], truncated };
-  const onBase = new Set(
-    git(['log', '--format=', '--raw', '--no-abbrev', base, '--', rel], { cwd, timeout: LOCAL_GIT_TIMEOUT })
-      .out.split('\n')
-      .map((l) => l.split(/\s+/)[3])
-      .filter(Boolean),
-  );
+  const onBase = blobsInHistory(base, rel, cwd) ?? new Set();
   const blobs = readBlobs(
     touched.map((b) => `${b.branch}:${rel}`),
     cwd,
@@ -139,33 +134,52 @@ export function myBranchNows(key, { cwd = ROOT, base = 'origin/develop', budgetM
   };
 }
 
+/** `--raw` 줄 ":<old mode> <new mode> <old sha> <new sha> <status>\t<path>" → { sha(새 내용), path }. 지운 파일은 null */
+function rawEntry(line) {
+  const m = /^:\d+ \d+ [0-9a-f]+ ([0-9a-f]+) ([A-Z])\d*\t(.+)$/.exec(line);
+  return m && m[2] !== 'D' ? { sha: m[1], path: m[3] } : null;
+}
+
+/** ref의 이력에서 paths(파일·디렉터리)가 가졌던 내용(blob sha) 전체. 조회 실패면 null. 머지로 들어온 쪽 커밋도 보게 --full-history */
+function blobsInHistory(ref, paths, cwd) {
+  const r = git(['log', '--full-history', '--no-renames', '--format=', '--raw', '--no-abbrev', ref, '--', paths], { cwd, timeout: LOCAL_GIT_TIMEOUT });
+  if (!r.ok) return null;
+  return new Set(
+    r.out
+      .split('\n')
+      .map(rawEntry)
+      .filter(Boolean)
+      .map((e) => e.sha),
+  );
+}
+
 /**
  * /spec 가드 (#54): base(develop)에 머지 안 된 원격 브랜치 중 기능 fid(F-14, F-05a)를 진행 중인 것 → [{ branch, specs, here, merged }] (최근 커밋 순).
- * 브랜치 이름에 `F-14-`가 있거나, base와 내용이 다른(base에 없거나 고친) `docs/specs/F-14-*.md`가 있으면 해당한다.
+ * 브랜치 이름에 `F-14-`가 있거나, 그 브랜치가 갈라진 뒤 직접 고친(`base...branch`) `docs/specs/F-14-*.md` 중 내용이 base 이력에 없는 것이 있으면 해당한다.
+ * 브랜치 끝끼리 비교하면 develop보다 뒤처진 무관한 브랜치가 물려받은 옛 spec도 진행으로 잡힌다 (Codex 리뷰).
  * - here: current(지금 브랜치)와 같은 브랜치. 승인 뒤 같은 브랜치에서 /spec을 다시 실행하는 것은 막지 않는다
- * - merged: 이름만 맞고 그 기능 spec이 base와 똑같다 → squash 머지 뒤 남은 원격 브랜치로 본다 (멈출 대상 아님)
- * base를 못 찾으면 null(판정 불가): 빈 목록이면 가드가 거짓 통과(✅)를 낸다
+ * - merged: 이름만 맞고, 고친 그 기능 spec이 모두 base 이력에 있다 → squash 머지 뒤 남은 원격 브랜치로 본다 (멈출 대상 아님)
+ * base나 브랜치 목록·변경을 못 읽으면 null(판정 불가): 빈 목록이면 가드가 거짓 통과(✅)를 낸다
  */
-export function featureOnRemotes(fid, { cwd = ROOT, base = 'origin/develop', current = null } = {}) {
+export function featureOnRemotes(fid, { cwd = ROOT, base = 'origin/develop', current = null, listBranches = remoteBranches } = {}) {
   if (!git(['rev-parse', '--verify', '-q', `${base}^{commit}`], { cwd, timeout: LOCAL_GIT_TIMEOUT }).ok) return null;
+  const branches = listBranches(cwd, { noMerged: base });
+  const onBase = blobsInHistory(base, 'docs/specs/', cwd);
+  if (!branches || !onBase) return null;
   const prefix = `${fid}-`.toLowerCase();
-  // "<mode> blob <sha>\t<path>" → Map(path → sha)
-  const specsOf = (ref) =>
-    new Map(
-      git(['ls-tree', ref, 'docs/specs/'], { cwd, timeout: LOCAL_GIT_TIMEOUT })
-        .out.split('\n')
-        .map((l) => /^\d+ blob ([0-9a-f]+)\t(.+)$/.exec(l))
-        .filter((m) => m && m[2].split('/').at(-1).toLowerCase().startsWith(prefix))
-        .map((m) => [m[2], m[1]]),
-    );
-  const onBase = specsOf(base);
+  const isFid = (p) => p.split('/').at(-1).toLowerCase().startsWith(prefix);
   const found = [];
-  for (const b of remoteBranches(cwd, { noMerged: base })) {
+  for (const b of branches) {
     if (PROTECTED_BRANCHES.includes(b.name)) continue;
-    const mine = specsOf(b.branch);
-    const specs = [...mine].filter(([p, sha]) => onBase.get(p) !== sha).map(([p]) => p);
+    const d = git(['diff', '--raw', '--no-abbrev', '--no-renames', `${base}...${b.branch}`, '--', 'docs/specs/'], { cwd, timeout: LOCAL_GIT_TIMEOUT });
+    if (!d.ok) return null;
+    const changed = d.out
+      .split('\n')
+      .map(rawEntry)
+      .filter((e) => e && isFid(e.path));
+    const specs = changed.filter((e) => !onBase.has(e.sha)).map((e) => e.path);
     const named = b.name.split('/').some((part) => part.toLowerCase().startsWith(prefix));
-    if (named || specs.length) found.push({ branch: b.branch, specs, here: b.name === current, merged: !specs.length && mine.size > 0 });
+    if (named || specs.length) found.push({ branch: b.branch, specs, here: b.name === current, merged: !specs.length && changed.length > 0 });
   }
   return found;
 }

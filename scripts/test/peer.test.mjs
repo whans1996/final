@@ -198,6 +198,11 @@ test('/spec 가드: develop 밖에서 같은 기능을 진행 중인 원격 브�
   branchWith(work, 'feature/issue-70-z', 'z.txt', 'z');
   // develop에 있는 F-20 spec을 고치는 브랜치는 진행 중이다
   branchWith(work, 'feature/issue-71-w', 'docs/specs/F-20-done.md', '# F-20 고침');
+  // 그 뒤 develop이 F-20 spec을 고치면(APPROVED → DONE) issue-70-z는 옛 spec을 물려받은 채 뒤처지지만, 고친 적이 없으므로 진행이 아니다.
+  // squash 잔여 F-20-done도 그 spec 내용이 develop 이력에 있으므로 여전히 머지됨이다 (Codex 리뷰)
+  sh(work, 'switch', '-q', '-C', 'develop', 'origin/develop');
+  commit(work, 'docs/specs/F-20-done.md', '# F-20 DONE (PR #1)', 'docs: F-20 완료 표시');
+  sh(work, 'push', '-q', 'origin', 'develop');
   const me = myClone(origin);
 
   assert.deepEqual(featureOnRemotes('F-14', { cwd: me }), [
@@ -215,6 +220,8 @@ test('/spec 가드: develop 밖에서 같은 기능을 진행 중인 원격 브�
   assert.equal(featureOnRemotes('F-14', { cwd: me, current: 'feature/F-14-code-quiz' })[1].here, true);
   // 기준 브랜치를 못 찾으면 "없음"(✅)이 아니라 판정 불가(null) — 가드가 거짓 통과를 내지 않게 (reviewer)
   assert.equal(featureOnRemotes('F-14', { cwd: me, base: 'origin/nope' }), null);
+  // 원격 브랜치 목록 조회가 실패(시간 초과 등)해도 판정 불가 (Codex 리뷰)
+  assert.equal(featureOnRemotes('F-14', { cwd: me, listBranches: () => null }), null);
 });
 
 test('내 다른 브랜치 목록: 지금 브랜치가 아닌 것만 ⚠️', () => {
