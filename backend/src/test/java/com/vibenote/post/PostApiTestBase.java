@@ -20,8 +20,8 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * F-17 게시판 통합 테스트 공통 데이터 준비. 회원·분석·카드·글을 직접 넣고 테스트마다 롤백한다. 시드 카드와 다른 테스트의 데이터에 기대지 않도록 카드 카테고리는
- * {@code f17}, 이메일은 {@code @f17.test}를 쓴다.
+ * F-17 게시판·F-18 댓글 통합 테스트 공통 데이터 준비. 회원·분석·카드·글을 직접 넣고 테스트마다 롤백한다. 시드 카드와 다른 테스트의 데이터에 기대지 않도록 카드
+ * 카테고리는 {@code f17}, 이메일은 {@code @f17.test}를 쓴다.
  */
 @Transactional
 abstract class PostApiTestBase extends IntegrationTestBase {
@@ -33,6 +33,8 @@ abstract class PostApiTestBase extends IntegrationTestBase {
     protected static final LocalDateTime BASE = LocalDateTime.of(2026, 1, 1, 9, 0);
     protected static final String POSTS = "/api/posts";
     protected static final String POST = "/api/posts/{id}";
+    protected static final String COMMENTS = "/api/posts/{postId}/comments";
+    protected static final String COMMENT = "/api/posts/{postId}/comments/{commentId}";
 
     // ── 회원 ──
 
@@ -113,6 +115,32 @@ abstract class PostApiTestBase extends IntegrationTestBase {
                 userId);
     }
 
+    /** F-18. 작성·수정 시각을 직접 넣는다 (updatedAt이 createdAt보다 뒤면 edited). */
+    protected long insertComment(
+            long postId,
+            long userId,
+            String content,
+            LocalDateTime createdAt,
+            LocalDateTime updatedAt) {
+        jdbc.update(
+                "INSERT INTO comments (post_id, user_id, content, created_at, updated_at)"
+                        + " VALUES (?, ?, ?, ?, ?)",
+                postId,
+                userId,
+                content,
+                createdAt,
+                updatedAt);
+        return lastId();
+    }
+
+    protected long insertComment(long postId, long userId, String content, LocalDateTime at) {
+        return insertComment(postId, userId, content, at, at);
+    }
+
+    protected Map<String, Object> commentRow(long commentId) {
+        return jdbc.queryForMap("SELECT * FROM comments WHERE id = ?", commentId);
+    }
+
     /** 목록 테스트가 다른 데이터와 섞이지 않게 글을 비운다 (롤백된다). 댓글은 FK CASCADE로 함께 지워진다. */
     protected void clearPosts() {
         jdbc.update("DELETE FROM posts");
@@ -168,6 +196,13 @@ abstract class PostApiTestBase extends IntegrationTestBase {
         map.put("content", content);
         map.put("analysisId", analysisId);
         map.put("conceptId", conceptId);
+        return objectMapper.writeValueAsString(map);
+    }
+
+    /** 댓글 요청 본문. null이면 {@code {"content": null}}로 보낸다. */
+    protected String commentBody(String content) throws Exception {
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put("content", content);
         return objectMapper.writeValueAsString(map);
     }
 }

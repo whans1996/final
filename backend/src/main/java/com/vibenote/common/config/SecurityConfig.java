@@ -57,6 +57,7 @@ public class SecurityConfig {
         // ── POST (B F-17·F-18) ──
         "/api/posts",
         "/api/posts/{id:\\d+}",
+        "/api/posts/{id:\\d+}/comments", // F-18 댓글 목록만. 작성·수정·삭제는 인증 필요
 
         // ── CHALLENGE (A F-25) ──
 
