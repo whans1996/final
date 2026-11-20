@@ -106,16 +106,77 @@ function mergeOne({ ref, label, ffOnly }, cwd) {
   return { ok: false, line: `- ⚠️ ${label} 자동 병합: ${why}. 직접 \`git merge ${ref}\`로 합치세요.` };
 }
 
+/** 체크아웃하지 않아도 원격을 따라가게 할 로컬 브랜치 (#67: 로컬 develop이 10커밋 뒤처져 있었다) */
+export const TRACKED_LOCAL = ['develop', 'main'];
+
+/**
+ * 체크아웃 안 된 로컬 develop·main 중 fast-forward할 것과 알릴 것 (순수 함수).
+ * refs: [{ name, local, remote, ahead, behind }] (ahead·behind는 로컬 대 origin/<name>), checkedOut: 다른 worktree의 브랜치
+ * → { ff: [{ name, behind }], warn: [{ name, ahead }] }. 로컬에만 있는 커밋이 있으면 FF할 수 없어 알리기만 한다.
+ */
+export function localRefPlan({ current, checkedOut = [], refs }) {
+  const ff = [];
+  const warn = [];
+  for (const r of refs) {
+    if (!r.local || !r.remote || r.name === current || checkedOut.includes(r.name)) continue;
+    if (r.ahead > 0) warn.push({ name: r.name, ahead: r.ahead });
+    else if (r.behind > 0) ff.push({ name: r.name, behind: r.behind });
+  }
+  return { ff, warn };
+}
+
+function readLocalRefs(cwd) {
+  const refs = TRACKED_LOCAL.map((name) => {
+    const local = git(['rev-parse', '--verify', '-q', `refs/heads/${name}`], { cwd }).ok;
+    const remote = git(['rev-parse', '--verify', '-q', `refs/remotes/origin/${name}`], { cwd }).ok;
+    const ab = local && remote ? git(['rev-list', '--left-right', '--count', `refs/heads/${name}...refs/remotes/origin/${name}`], { cwd }) : null;
+    const [ahead, behind] = ab?.ok ? ab.out.split(/\s+/).map(Number) : [0, 0];
+    return { name, local, remote, ahead, behind };
+  });
+  // 다른 worktree에 체크아웃된 브랜치는 git이 갱신을 거부한다 (그 작업 트리가 따라가지 않으므로)
+  const checkedOut = git(['worktree', 'list', '--porcelain'], { cwd })
+    .out.split('\n')
+    .map((l) => /^branch refs\/heads\/(.+)$/.exec(l)?.[1])
+    .filter(Boolean);
+  return { current: currentBranch(cwd), checkedOut, refs };
+}
+
+/** 로컬 develop·main을 origin으로 fast-forward한다. 작업 트리를 건드리지 않으므로 커밋 안 된 변경이 있어도 한다 */
+function syncLocalRefs(cwd) {
+  const { ff, warn } = localRefPlan(readLocalRefs(cwd));
+  const done = [];
+  const lines = [];
+  for (const { name, behind } of ff) {
+    // '+' 없는 refspec이라 fast-forward가 아니면 git이 거부한다
+    const r = git(['fetch', '--quiet', '.', `refs/remotes/origin/${name}:refs/heads/${name}`], { cwd, timeout: MERGE_TIMEOUT });
+    if (r.ok) done.push(`${name} +${behind}`);
+    else lines.push(`- ⚠️ 로컬 ${name}을 origin/${name}으로 최신화하지 못했습니다 (${firstLine(r)}).`);
+  }
+  if (done.length) lines.unshift(`- 📥 로컬 ${done.join(' · ')} 커밋을 원격에 맞췄습니다 (fast-forward, 체크아웃 안 된 브랜치).`);
+  for (const { name, ahead } of warn) {
+    lines.push(`- ⚠️ 로컬 ${name}에 origin/${name}에 없는 커밋 ${ahead}개가 있어 최신화하지 않았습니다. \`git log origin/${name}..${name}\`으로 확인하세요 (${name}에 직접 커밋 금지).`);
+  }
+  return lines;
+}
+
 /**
  * fetch 뒤에 부른다. 알릴 줄 목록을 돌려준다 (할 일이 없으면 빈 배열). 어떤 오류도 던지지 않는다.
+ * 지금 브랜치를 합친 뒤 체크아웃 안 된 로컬 develop·main도 fast-forward한다.
  * @returns {string[]}
  */
 export function autoSync({ cwd = ROOT } = {}) {
   try {
     if (!autoSyncEnabled(cwd)) return [];
     const plan = syncPlan(readState(cwd));
+    const localLines = () => {
+      try {
+        return syncLocalRefs(cwd);
+      } catch {
+        return [];
+      }
+    };
     if (plan.blocked) {
-      return [`- ⏸️ 받을 새 커밋이 있지만 ${plan.blocked} 자동 병합을 미뤘습니다. 커밋한 뒤 다음 확인 때 합치거나 직접 \`git merge\` 하세요.`];
+      return [`- ⏸️ 받을 새 커밋이 있지만 ${plan.blocked} 자동 병합을 미뤘습니다. 커밋한 뒤 다음 확인 때 합치거나 직접 \`git merge\` 하세요.`, ...localLines()];
     }
     const lines = [];
     let mergeCommit = false;
@@ -129,7 +190,7 @@ export function autoSync({ cwd = ROOT } = {}) {
       lines.push('- 마이그레이션·openapi.json이 들어왔으면 `node scripts/verify.mjs be`로 확인하세요.');
     }
     if (mergeCommit) lines.push('- 병합 커밋은 아직 push하지 않았습니다 (다음 push 때 같이 올라갑니다).');
-    return lines;
+    return [...lines, ...localLines()];
   } catch {
     return [];
   }

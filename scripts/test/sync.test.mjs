@@ -5,7 +5,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, test } from 'node:test';
-import { autoSync, mergeNotes, syncPlan } from '../lib/sync.mjs';
+import { autoSync, localRefPlan, mergeNotes, syncPlan } from '../lib/sync.mjs';
 
 // git hook(커밋 테스트 게이트) 안에서 돌면 GIT_DIR·GIT_INDEX_FILE 등이 실제 저장소를 가리킨다. 그대로 두면 아래 임시
 // 저장소용 git 명령이 실제 저장소의 index·설정을 건드리므로 모두 지운다 (autoSync도 process.env를 물려받는다).
@@ -203,4 +203,49 @@ test('다른 PC가 develop을 합쳐 push했으면 내 원격만 받고 develop�
   assert.equal(lines.length, 1, lines.join('\n'));
   assert.match(lines[0], /원격 origin\/feature\/F-09-x의 새 커밋/);
   assert.equal(sh(me, 'rev-list', '--count', 'HEAD..origin/develop'), '0');
+});
+
+test('체크아웃 안 된 로컬 develop·main은 뒤처졌고 로컬 커밋이 없을 때만 fast-forward한다 (#67)', () => {
+  const ref = (name, behind, ahead = 0, extra = {}) => ({ name, local: true, remote: true, behind, ahead, ...extra });
+  const plan = localRefPlan({ current: 'feature/F-09-x', refs: [ref('develop', 3), ref('main', 1)] });
+  assert.deepEqual(plan, { ff: [{ name: 'develop', behind: 3 }, { name: 'main', behind: 1 }], warn: [] });
+  // 지금 브랜치·다른 worktree에 체크아웃된 브랜치는 건드리지 않는다 (작업 트리가 따라가지 않으므로)
+  assert.deepEqual(localRefPlan({ current: 'develop', checkedOut: ['main'], refs: [ref('develop', 3), ref('main', 1)] }).ff, []);
+  // 로컬에만 있는 커밋이 있으면 FF하지 않고 알린다, 없거나 원격이 없으면 건너뛴다
+  const odd = localRefPlan({ current: 'x', refs: [ref('develop', 2, 1), ref('main', 0), { name: 'main', local: false, remote: true, behind: 0, ahead: 0 }] });
+  assert.deepEqual(odd, { ff: [], warn: [{ name: 'develop', ahead: 1 }] });
+});
+
+test('상대가 develop·main에 머지하면 체크아웃 안 된 로컬 develop·main도 따라간다 (커밋 안 된 변경이 있어도)', () => {
+  const { peer, me } = setup();
+  sh(me, 'branch', 'develop', 'origin/develop');
+  peerMergesToDevelop(peer, 'theirs.txt', 'theirs\n');
+  sh(peer, 'push', '-q', 'origin', 'develop:main');
+  // 작업 중인 파일: feature 병합은 미루지만 로컬 develop·main은 작업 트리와 무관하므로 갱신한다
+  writeFileSync(join(me, 'shared.txt'), 'wip\n');
+  sh(me, 'fetch', '-q');
+
+  const lines = autoSync({ cwd: me });
+
+  assert.match(lines[0], /⏸️/);
+  assert.ok(lines.some((l) => /^- 📥 로컬 develop \+1 · main \+1/.test(l)), lines.join('\n'));
+  assert.equal(sh(me, 'rev-parse', 'develop'), sh(me, 'rev-parse', 'origin/develop'));
+  assert.equal(sh(me, 'rev-parse', 'main'), sh(me, 'rev-parse', 'origin/main'));
+  assert.equal(sh(me, 'rev-parse', '--abbrev-ref', 'HEAD'), 'feature/F-09-x');
+});
+
+test('로컬 develop에 원격에 없는 커밋이 있으면 FF하지 않고 알린다', () => {
+  const { peer, me } = setup();
+  sh(me, 'branch', 'develop', 'origin/develop');
+  sh(me, 'switch', '-q', 'develop');
+  commit(me, 'local.txt', 'x\n', 'chore: 실수로 develop에 커밋');
+  sh(me, 'switch', '-q', 'feature/F-09-x');
+  peerMergesToDevelop(peer, 'theirs.txt', 'theirs\n');
+  sh(me, 'fetch', '-q');
+  const before = sh(me, 'rev-parse', 'develop');
+
+  const lines = autoSync({ cwd: me });
+
+  assert.ok(lines.some((l) => /^- ⚠️ 로컬 develop에 origin\/develop에 없는 커밋 1개/.test(l)), lines.join('\n'));
+  assert.equal(sh(me, 'rev-parse', 'develop'), before);
 });

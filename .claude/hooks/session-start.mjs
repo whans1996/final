@@ -51,7 +51,7 @@ if (!isGitRepo()) {
 
   // 원격과 비교 (네트워크가 느리면 건너뜀)
   if (git(['remote']).out) {
-    git(['fetch', '--quiet'], { timeout: 5000, env: NON_INTERACTIVE_GIT_ENV });
+    git(['fetch', '--quiet', '--prune'], { timeout: 5000, env: NON_INTERACTIVE_GIT_ENV });
     // 다른 PC가 push한 내 브랜치 커밋과 상대가 develop에 머지한 커밋을 자동으로 합친다 (scripts/lib/sync.mjs)
     synced = autoSync();
     if (synced.length) parts.push(`## 자동 동기화\n${synced.join('\n')}`);

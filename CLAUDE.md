@@ -37,7 +37,7 @@ SSAFY 관통 프로젝트(2026-11-17 시작, 12-24 발표). Spring Boot 4 + MyBa
 ```
 
 - 새 세션은 `/pickup`으로 상태를 확인하고 시작한다. 기능은 **내 영역**에서 고른다. 상대 브랜치·상대 NOW 파일은 건드리지 않는다.
-- 상대가 develop에 머지한 것은 `git merge origin/develop`으로 받는다 (rebase·force push 금지). 세션 시작·`peer-watch` hook이 fetch 때 **자동으로 합친다** (다른 PC가 push한 내 브랜치 커밋 포함). 추적 파일에 커밋 안 된 변경이 있으면 미루고, 충돌하면 되돌린 뒤 알린다. push는 하지 않는다 (`scripts/lib/sync.mjs`, 끄기: `git config vibenote.autoSync false`). 마이그레이션은 `node scripts/next-migration.mjs`로 번호를 확인하고, openapi.json 충돌은 BE 테스트로 다시 생성한다.
+- 상대가 develop에 머지한 것은 `git merge origin/develop`으로 받는다 (rebase·force push 금지). 세션 시작·`peer-watch` hook이 fetch 때 **자동으로 합친다** (다른 PC가 push한 내 브랜치 커밋 포함, 체크아웃 안 된 로컬 develop·main은 fast-forward). 추적 파일에 커밋 안 된 변경이 있으면 미루고, 충돌하면 되돌린 뒤 알린다. push는 하지 않는다 (`scripts/lib/sync.mjs`, 끄기: `git config vibenote.autoSync false`). 마이그레이션은 `node scripts/next-migration.mjs`로 번호를 확인하고, openapi.json 충돌은 BE 테스트로 다시 생성한다.
 - 진행현황·WBS·간트는 기능 PR에서 고치지 않는다. 주간 `/progress`가 별도 docs PR로 맞춘다.
 - 미룬 작업은 `follow-up` 이슈(area 라벨·담당자)로 남기고, `/spec` 때 흡수하거나 기능 사이에 `feature/issue-<번호>-slug`로 처리한다. 해결 PR에 `Closes #n`을 적으면 develop 머지 때 워크플로가 닫는다.
 - 기능 구현은 상태가 `APPROVED`인 spec이 있어야 시작한다. 없으면 `/spec`부터 한다.
