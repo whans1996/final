@@ -5,6 +5,7 @@ import { createMemoryHistory, createRouter } from 'vue-router'
 import { routes } from '@/router'
 import ConceptDetailView from '@/views/concept/ConceptDetailView.vue'
 import * as conceptsApi from '@/api/concepts'
+import { useAuthStore } from '@/stores/auth'
 import { apiError, mountAt } from './viewTestUtils'
 
 vi.mock('@/api/concepts')
@@ -368,5 +369,39 @@ describe('ConceptDetailView (F-10 AC9~AC13)', () => {
 
     expect(conceptsApi.fetchReviews).toHaveBeenLastCalledWith(58, { page: 1, size: 10 })
     expect(wrapper.find('[data-role="review-count"]').text()).toBe('· 리뷰 0')
+  })
+})
+
+describe('ConceptDetailView 글쓰기 버튼 (F-17 AC18)', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+    window.scrollTo = vi.fn()
+    conceptsApi.fetchReviews.mockResolvedValue({ items: [], page: 1, size: 10, total: 0 })
+  })
+
+  it('AC18 "이 카드로 글쓰기"는 로그인하면 SC-16에 카드를 붙여, 비로그인이면 로그인 후 돌아오게 보낸다', async () => {
+    conceptsApi.fetchConcept.mockResolvedValue(detail())
+
+    const guest = await mountDetail()
+    await guest.wrapper.find('[data-action="write-post"]').trigger('click')
+    await flushPromises()
+    await vi.waitFor(() => expect(guest.router.currentRoute.value.path).toBe('/login'))
+    expect(guest.router.currentRoute.value.query).toEqual({
+      redirect: '/community/write?conceptId=57',
+    })
+
+    const member = await mountAt(ConceptDetailView, '/concepts/57', {
+      beforeNavigate: () =>
+        useAuthStore().setSession({
+          accessToken: 'access-1',
+          user: { id: 7, nickname: '코딩초보', level: 'JUNIOR', role: 'USER' },
+        }),
+    })
+    await flushPromises()
+    await member.wrapper.find('[data-action="write-post"]').trigger('click')
+    await flushPromises()
+    await vi.waitFor(() =>
+      expect(member.router.currentRoute.value.fullPath).toBe('/community/write?conceptId=57'),
+    )
   })
 })

@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- F-17 커뮤니티 게시판 (B) -->
+<mapper namespace="com.vibenote.post.PostMapper">
+
+    <sql id="summaryColumns">
+        p.id, p.user_id, p.board_type, p.title, p.analysis_id, p.concept_id, p.view_count,
+        p.created_at, p.updated_at,
+        u.nickname AS author_nickname, u.status AS author_status,
+        (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id) AS comment_count
+    </sql>
+
+    <!-- keyword는 PostService가 LIKE 와일드카드를 '!'로 이스케이프해 넘긴다 -->
+    <sql id="searchWhere">
+        <where>
+            <if test="boardType != null">p.board_type = #{boardType}</if>
+            <if test="keyword != null">
+                AND (p.title LIKE CONCAT('%', #{keyword}, '%') ESCAPE '!'
+                     OR p.content LIKE CONCAT('%', #{keyword}, '%') ESCAPE '!')
+            </if>
+        </where>
+    </sql>
+
+    <select id="findPage" resultType="com.vibenote.post.domain.Post">
+        SELECT <include refid="summaryColumns"/>
+        FROM posts p
+        JOIN users u ON u.id = p.user_id
+        <include refid="searchWhere"/>
+        ORDER BY p.created_at DESC, p.id DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="count" resultType="long">
+        SELECT COUNT(*) FROM posts p
+        <include refid="searchWhere"/>
+    </select>
+
+    <!-- 조회수는 posts 행에만 더한다 (updated_at은 그대로 둔다). 없는 id면 0행 -->
+    <update id="incrementViewCount">
+        UPDATE posts SET view_count = view_count + 1, updated_at = updated_at WHERE id = #{id}
+    </update>
+
+    <select id="findDetail" resultType="com.vibenote.post.domain.Post">
+        SELECT <include refid="summaryColumns"/>,
+               p.content,
+               a.user_id AS analysis_owner_id,
+               COALESCE(a.is_public, FALSE) AS analysis_public,
+               (a.deleted_at IS NOT NULL) AS analysis_deleted,
+               a.title AS analysis_title,
+               a.project_name AS analysis_project_name,
+               cn.status AS concept_status,
+               cn.name AS concept_name,
+               cn.category AS concept_category,
+               cn.difficulty AS concept_difficulty,
+               cn.summary AS concept_summary
+        FROM posts p
+        JOIN users u ON u.id = p.user_id
+        LEFT JOIN analyses a ON a.id = p.analysis_id
+        LEFT JOIN concepts cn ON cn.id = p.concept_id
+        WHERE p.id = #{id}
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+        INSERT INTO posts (user_id, board_type, title, content, analysis_id, concept_id, created_at, updated_at)
+        VALUES (#{userId}, #{boardType}, #{title}, #{content}, #{analysisId}, #{conceptId}, #{createdAt}, #{updatedAt})
+    </insert>
+
+    <!-- 통째로 바꾼다 (첨부 해제 포함). view_count·created_at은 그대로 -->
+    <update id="update">
+        UPDATE posts
+        SET board_type = #{boardType}, title = #{title}, content = #{content},
+            analysis_id = #{analysisId}, concept_id = #{conceptId}, updated_at = #{updatedAt}
+        WHERE id = #{id}
+    </update>
+
+    <!-- 댓글은 comments.post_id FK ON DELETE CASCADE로 함께 지워진다. activities 행은 남긴다 -->
+    <delete id="delete">
+        DELETE FROM posts WHERE id = #{id}
+    </delete>
+
+    <select id="findAuthorIdForUpdate" resultType="java.lang.Long">
+        SELECT user_id FROM posts WHERE id = #{id} FOR UPDATE
+    </select>
+
+    <!-- 첨부 검증 (F-17 AC8). 남의 분석·DONE 아님·삭제됨·없는 id를 구분하지 않는다 -->
+    <select id="existsAttachableAnalysis" resultType="boolean">
+        SELECT EXISTS (
+            SELECT 1 FROM analyses
+            WHERE id = #{analysisId} AND user_id = #{userId} AND status = 'DONE' AND deleted_at IS NULL)
+    </select>
+
+    <select id="existsPublishedConcept" resultType="boolean">
+        SELECT EXISTS (SELECT 1 FROM concepts WHERE id = #{conceptId} AND status = 'PUBLISHED')
+    </select>
+</mapper>

@@ -82,6 +82,14 @@ public enum ErrorCode {
     REVIEW_PLAN_409(HttpStatus.CONFLICT, "이미 복습 계획에 있는 카드입니다."),
 
     // ── POST (B F-17·F-18) ──
+    /** 없는 글의 상세·수정·삭제 (F-17 AC4·AC11). */
+    POST_404(HttpStatus.NOT_FOUND, "게시글을 찾을 수 없습니다."),
+    /** 남의 글 수정·삭제 (F-17 AC11). 형식 검증(400)보다 먼저 판단한다. */
+    POST_403(HttpStatus.FORBIDDEN, "본인이 쓴 글만 수정·삭제할 수 있습니다."),
+    /** 남의 분석·DONE 아님·삭제됨·없는 id를 구분하지 않는다 (F-17 AC8). */
+    POST_001(HttpStatus.BAD_REQUEST, "첨부할 수 없는 분석입니다."),
+    /** PUBLISHED가 아니거나 없는 카드 (F-17 AC8). */
+    POST_002(HttpStatus.BAD_REQUEST, "첨부할 수 없는 개념 카드입니다."),
 
     // ── LLM (A) ──
     /** 개요 응답이 1회 재시도 후에도 스키마 위반. 파이프라인 FAILED 사유다 (F-06 AC5). */
