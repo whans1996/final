@@ -1,7 +1,7 @@
 # NOW — 김준섭 현재 작업 스냅샷
 
 > 김준섭(B 영역: 카드·소셜) 전용. 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
-> "갱신: 2026-11-20 22:10 · 작업자: JoonseobKim · PC: js-home · 브랜치: feature/F-13-admin-concepts
+> "갱신: 2026-11-20 22:25 · 작업자: JoonseobKim · PC: js-home · 브랜치: feature/F-13-admin-concepts
 
 ---
 
