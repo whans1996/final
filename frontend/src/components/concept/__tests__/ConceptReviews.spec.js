@@ -142,6 +142,23 @@ describe('ConceptReviews (F-11 AC13~AC17)', () => {
     expect(wrapper.find('[data-action="more"]').exists()).toBe(false)
   })
 
+  it('AC13 다른 회원이 새 리뷰를 쓴 뒤에도 더 보기로 나머지를 모두 불러온다', async () => {
+    let server = reviews(25, 25)
+    conceptsApi.fetchReviews.mockImplementation(async (_id, { page: p, size }) =>
+      page(server.slice((p - 1) * size, p * size), server.length, p),
+    )
+    const { wrapper } = await mountReviews()
+    server = [review(26), ...server] // 첫 10개를 받은 뒤 다른 회원이 썼다
+
+    for (let click = 0; click < 3 && wrapper.find('[data-action="more"]').exists(); click += 1) {
+      await wrapper.find('[data-action="more"]').trigger('click')
+      await flushPromises()
+    }
+
+    expect(listed(wrapper)).toEqual(reviews(25, 25).map((r) => String(r.id)))
+    expect(wrapper.find('[data-action="more"]').exists()).toBe(false)
+  })
+
   it('AC13 새 리뷰를 쓴 뒤 더 보기는 밀려난 항목을 한 번만 붙인다', async () => {
     let server = reviews(12, 12)
     conceptsApi.fetchReviews.mockImplementation(async (_id, { page: p, size }) =>
@@ -257,6 +274,22 @@ describe('ConceptReviews (F-11 AC13~AC17)', () => {
 
     expect(wrapper.find('[data-error="content"]').text()).toBe('리뷰는 200자 이하로 입력해 주세요.')
     expect(wrapper.find('[data-role="create-form"]').exists()).toBe(true)
+  })
+
+  it('AC15 처음 내 리뷰 조회가 작성보다 늦게 와도 방금 쓴 리뷰가 내 리뷰 상자로 남는다', async () => {
+    let answerMine
+    conceptsApi.fetchReviews.mockResolvedValue(page([], 0))
+    conceptsApi.fetchMyReview.mockReturnValue(new Promise((resolve) => (answerMine = resolve)))
+    const mine = review(1, { authorId: 9, rating: 5, content: '새 리뷰' })
+    conceptsApi.createReview.mockResolvedValue({ review: mine, avgRating: 5.0, reviewCount: 1 })
+    const { wrapper } = await mountReviews({ loggedIn: true })
+
+    await writeReview(wrapper, 5, '새 리뷰')
+    answerMine(null) // 작성 전 기준의 204
+    await flushPromises()
+
+    expect(wrapper.find('[data-role="my-review"]').exists()).toBe(true)
+    expect(wrapper.find('[data-role="create-form"]').exists()).toBe(false)
   })
 
   it('AC15 409면 서버 message를 보여 주고 내 리뷰를 다시 불러온다', async () => {

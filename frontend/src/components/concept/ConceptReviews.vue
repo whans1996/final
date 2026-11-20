@@ -47,6 +47,11 @@ const hasMore = computed(() => !reachedEnd.value && items.value.length < total.v
 
 // :id가 빠르게 바뀔 때 늦게 도착한 이전 카드의 응답은 버린다
 let generation = 0
+// 서버 최신순 목록에서 받은 위치 수. 화면 항목 수와 따로 센다: 내가 쓰면 맨 위에 하나 붙어 +1, 불러온 내 리뷰를 지우면 -1.
+// 다른 회원이 그사이 쓰면 같은 항목이 다시 오는데 id로 거른다
+let offset = 0
+// 내 리뷰를 쓰거나 고치거나 지울 때마다 올린다. 그 전에 보낸 /me 조회의 응답은 버린다
+let mineVersion = 0
 
 function resetForm() {
   formErrors.value = {}
@@ -59,6 +64,7 @@ async function load(conceptId) {
   items.value = []
   total.value = 0
   reachedEnd.value = false
+  offset = 0
   listError.value = ''
   moreError.value = ''
   myReview.value = null
@@ -73,6 +79,7 @@ async function load(conceptId) {
       items.value = result.items
       total.value = result.total
       reachedEnd.value = result.items.length < PAGE_SIZE
+      offset = result.items.length
       emit('rating-change', { reviewCount: result.total })
     })
     .catch((error) => {
@@ -87,16 +94,17 @@ async function load(conceptId) {
 }
 
 async function loadMine(conceptId, current = generation) {
+  const version = mineVersion
   try {
     const result = await fetchMyReview(conceptId)
-    if (current === generation) myReview.value = result
+    if (current === generation && version === mineVersion) myReview.value = result
   } catch {
     // 내 리뷰를 못 불러와도 목록은 보인다. 작성하면 409로 다시 불러온다
   }
 }
 
-// 다음 쪽은 이미 받은 개수로 정한다. 새 리뷰가 앞에 붙으면 항목이 뒤로 밀려 같은 항목이 다시 오므로 id로 거르고,
-// 불러온 리뷰를 지우면 항목이 앞으로 당겨져 경계 쪽에서 빈자리 하나만 채워지므로, 한 쪽 분량이 안 되면 한 번 더 받는다.
+// 받은 위치(offset)가 든 쪽부터 받는다. 불러온 내 리뷰를 지워 offset이 쪽 경계에서 어긋나면 그 쪽에서 빈자리만 채워지므로,
+// 한 쪽 분량이 안 되면 한 번 더 받는다.
 async function loadMore() {
   const current = generation
   loadingMore.value = true
@@ -104,9 +112,10 @@ async function loadMore() {
   try {
     let added = 0
     for (let request = 0; request < 2 && added < PAGE_SIZE && hasMore.value; request += 1) {
-      const nextPage = Math.floor(items.value.length / PAGE_SIZE) + 1
+      const nextPage = Math.floor(offset / PAGE_SIZE) + 1
       const result = await fetchReviews(props.conceptId, { page: nextPage, size: PAGE_SIZE })
       if (current !== generation) return
+      offset = (nextPage - 1) * PAGE_SIZE + result.items.length
       const seen = new Set(items.value.map((r) => r.id))
       const fresh = result.items.filter((r) => !seen.has(r.id))
       items.value = [...items.value, ...fresh]
@@ -124,6 +133,7 @@ async function loadMore() {
 }
 
 function applySaved(saved) {
+  mineVersion += 1
   myReview.value = saved.review
   total.value = saved.reviewCount
   emit('rating-change', { avgRating: saved.avgRating, reviewCount: saved.reviewCount })
@@ -137,6 +147,7 @@ async function onCreate(body) {
     const saved = await createReview(props.conceptId, body)
     if (current !== generation) return
     items.value = [saved.review, ...items.value.filter((r) => r.id !== saved.review.id)]
+    offset += 1
     applySaved(saved)
   } catch (error) {
     if (current !== generation) return
@@ -191,7 +202,9 @@ async function onDelete() {
   try {
     const rating = await deleteReview(props.conceptId)
     if (current !== generation) return
+    if (items.value.some((r) => r.id === id)) offset -= 1
     items.value = items.value.filter((r) => r.id !== id)
+    mineVersion += 1
     total.value = rating.reviewCount
     myReview.value = null
     formKey.value += 1
