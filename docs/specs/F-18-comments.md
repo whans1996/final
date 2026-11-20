@@ -174,10 +174,10 @@
 
 - [x] 브랜치 `feature/F-18-comments`
 - [x] Flyway 마이그레이션 (없음)
-- [ ] AC별 실패 테스트 작성 (red 확인)
+- [x] AC별 실패 테스트 작성 (red 확인)
 - [x] BE 구현 (green): `CommentController`, `CommentService`, `CommentMapper`(+XML), `Comment`, DTO 3종, `ErrorCode` `POST_003`·`POST_004`, `PUBLIC_GET_PATHS`
-- [ ] FE 구현 (green): `api/posts.js` 함수 4개, 컴포넌트 3개, `PostDetailView` 댓글 절
-- [ ] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
+- [x] FE 구현 (green): `api/posts.js` 함수 4개, 컴포넌트 3개, `PostDetailView` 댓글 절
+- [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
 - [ ] contract-checker 통과
 - [ ] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일)
 - [ ] reviewer 지적 사항 반영

@@ -40,6 +40,8 @@ async function mountDetail(path = '/community/42', options) {
 describe('PostDetailView (F-17 AC15·AC16)', () => {
   beforeEach(() => {
     vi.resetAllMocks()
+    // F-18 댓글 절이 함께 뜬다. 댓글 테스트는 PostComments.spec.js에 있다
+    postsApi.fetchComments.mockResolvedValue({ items: [], total: 0 })
   })
 
   afterEach(() => {
@@ -154,5 +156,41 @@ describe('PostDetailView (F-17 AC15·AC16)', () => {
 
     expect(wrapper.find('[role="alert"]').text()).toBe('본인이 쓴 글만 수정·삭제할 수 있습니다.')
     expect(router.currentRoute.value.path).toBe('/community/42')
+  })
+
+  it('F-18 AC11 글을 불러오면 본문·첨부 아래에 그 글의 댓글 절을 보여 준다', async () => {
+    postsApi.fetchPost.mockResolvedValue(detail())
+    postsApi.fetchComments.mockResolvedValue({
+      items: [
+        {
+          id: 101,
+          content: '프록시 때문이에요',
+          authorId: 9,
+          authorNickname: '스프링러버',
+          edited: false,
+          createdAt: '2026-11-20T14:10:05+09:00',
+          updatedAt: '2026-11-20T14:10:05+09:00',
+        },
+      ],
+      total: 1,
+    })
+
+    const { wrapper } = await mountDetail()
+
+    expect(postsApi.fetchComments).toHaveBeenCalledWith(42)
+    const section = wrapper.find('[data-role="comments"]')
+    expect(section.find('h2').text()).toBe('댓글 1')
+    expect(section.text()).toContain('프록시 때문이에요')
+  })
+
+  it('F-18 AC11 글이 404면 댓글 절을 보여 주지 않고 댓글도 부르지 않는다', async () => {
+    postsApi.fetchPost.mockRejectedValue(
+      apiError(404, { code: 'POST_404', message: '게시글을 찾을 수 없습니다.' }),
+    )
+
+    const { wrapper } = await mountDetail()
+
+    expect(wrapper.find('[data-role="comments"]').exists()).toBe(false)
+    expect(postsApi.fetchComments).not.toHaveBeenCalled()
   })
 })
