@@ -184,9 +184,9 @@
 - [x] BE 구현 (green): `ConceptWishController`, `ConceptWishService`, `ConceptWishMapper`(+XML), `ConceptWishResponse`, `ConceptDetailResponse.wished`, `ActivityService.recordOnce`·`ActivityMapper.exists`, `PUBLIC_GET_PATHS`
 - [x] FE 구현 (green): API 함수 3개, `WishButton`, `UserWishes`, `ConceptDetailView`·`UserProfileView` 연결
 - [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
-- [ ] contract-checker 통과
-- [ ] ui-verifier 통과 (데스크톱·모바일)
+- [x] contract-checker 통과
+- [x] ui-verifier 통과 (데스크톱·모바일)
 - [ ] reviewer 지적 사항 반영
-- [ ] 산출물 반영: `06-화면설계서.md` SC-10 찜 버튼·SC-18 찜 절 + 스크린샷, `02-유스케이스.md` UC23("상세에서 ♥", 프로필 찜 목록, 재찜 활동), `01-요구사항정의서.md` F-12 행 확인
+- [x] 산출물 반영: `06-화면설계서.md` SC-10 찜 버튼·SC-18 찜 절 + 스크린샷, `02-유스케이스.md` UC23("상세에서 ♥", 프로필 찜 목록, 재찜 활동), `01-요구사항정의서.md` F-12 행 확인
 - [ ] PR CI 초록 (`ConceptController`·`ConceptService`·`SecurityConfig`·`feed` 패키지·`src/api/concepts.js`가 공통 → 본문에서 @whans1996 멘션, `node scripts/owners.mjs --diff origin/develop`). PR 본문 `Closes #57`
 - [ ] 상태 DONE (PR 머지 전 마지막 커밋)

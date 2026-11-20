@@ -244,9 +244,9 @@ h1 {
 
 .stats {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   flex-wrap: wrap;
-  gap: var(--space-4);
+  gap: var(--space-1) var(--space-4);
 }
 
 .rating {

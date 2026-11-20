@@ -90,11 +90,9 @@ async function toggle() {
 </template>
 
 <style scoped>
+/* 버튼과 안내를 부모(헤더 .stats, flex-wrap) 줄에 바로 올린다. 안내가 버튼 상자를 넓혀 옆 평점을 밀지 않고 아래 한 줄을 차지한다 */
 .wish-box {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-1);
+  display: contents;
 }
 
 .wish-button {
@@ -121,6 +119,8 @@ async function toggle() {
 
 .note,
 .form-error {
+  flex-basis: 100%;
+  order: 1;
   font-size: 0.85em;
 }
 
