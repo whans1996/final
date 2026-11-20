@@ -229,9 +229,9 @@ AI로 코딩하는 학습자가 **코드 이해 Q&A·학습 후기·자유** 게
 - [x] BE 구현 (green): `PostController`, `PostService`, `PostMapper`(+XML), DTO(`PostRequest`·`PostSearchRequest`·`PostSummaryResponse`·`PostDetailResponse`·`PostAnalysisAttachment`·`PostConceptAttachment`·`PostIdResponse`), `ErrorCode` `POST_001`·`POST_002`·`POST_403`·`POST_404`, `PUBLIC_GET_PATHS`
 - [x] FE 구현 (green): `api/posts.js`, `routes/community.js`, 뷰 3개, 컴포넌트 4개, SC-10 글쓰기 버튼
 - [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
-- [ ] contract-checker 통과
-- [ ] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일)
+- [x] contract-checker 통과 (불일치 0, 참고 2: openapi `$ref`+`type:null` 형제, edit 진입 시 조회수 +1)
+- [x] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일) — 12개 라우트, 콘솔 에러·375px 가로 스크롤 없음
 - [ ] reviewer 지적 사항 반영
-- [ ] 산출물 반영: `06-화면설계서.md` SC-14·15·16의 "spec에서 정할 것" 정리 + 스크린샷, SC-10에 글쓰기 버튼, `docs/conventions.md` 3절 POST 코드, follow-up 이슈(SC-07 질문하기 버튼)
+- [x] 산출물 반영 (follow-up 이슈는 PR 때): `06-화면설계서.md` SC-14·15·16의 "spec에서 정할 것" 정리 + 스크린샷, SC-10에 글쓰기 버튼, `docs/conventions.md` 3절 POST 코드, follow-up 이슈(SC-07 질문하기 버튼)
 - [ ] PR CI 초록
 - [ ] 상태 DONE (PR 머지 후)
