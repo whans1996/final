@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 |---|---|
-| 상태 | APPROVED <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
+| 상태 | DONE (PR #65) <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
 | 기능 ID | F-12 |
 | 우선순위 | P0 |
 | 영역 오너 | B 김준섭 (카드·소셜) |
@@ -189,5 +189,5 @@
 - [x] ui-verifier 통과 (데스크톱·모바일)
 - [x] reviewer 지적 사항 반영
 - [x] 산출물 반영: `06-화면설계서.md` SC-10 찜 버튼·SC-18 찜 절 + 스크린샷, `02-유스케이스.md` UC23("상세에서 ♥", 프로필 찜 목록, 재찜 활동), `01-요구사항정의서.md` F-12 행 확인
-- [ ] PR CI 초록 (`ConceptController`·`ConceptService`·`SecurityConfig`·`feed` 패키지·`src/api/concepts.js`가 공통 → 본문에서 @whans1996 멘션, `node scripts/owners.mjs --diff origin/develop`). PR 본문 `Closes #57`
-- [ ] 상태 DONE (PR 머지 전 마지막 커밋)
+- [x] PR CI 초록 (`ConceptController`·`ConceptService`·`SecurityConfig`·`feed` 패키지·`src/api/concepts.js`가 공통 → 본문에서 @whans1996 멘션, `node scripts/owners.mjs --diff origin/develop`). PR 본문 `Closes #57`
+- [x] 상태 DONE (PR 머지 전 마지막 커밋)

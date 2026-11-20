@@ -10,7 +10,7 @@
 
 ## 현재 기능
 
-F-12 카드 찜 — spec APPROVED, **PR #65 열림** (`Closes #57`), Codex 리뷰 루프 진행 중
+F-12 카드 찜 — spec **DONE (PR #65)**, CI 초록, **Codex ✅ d0c7597** (이후 docs만). 사람이 GitHub에서 머지만 남음
 
 ## 진행
 
@@ -18,13 +18,12 @@ F-12 카드 찜 — spec APPROVED, **PR #65 열림** (`Closes #57`), Codex 리�
 - ✅ verify all 통과(BE·FE 전체), contract-checker 0건, reviewer 반드시 수정 0건
 - ✅ reviewer 권장 4건 반영 `d0c7597`: 탈퇴 회원 찜 401 테스트(`ConceptWishApiTest#AC11_탈퇴한_회원의_남은_토큰이면_...`, red 확인), `UserWishes` 더 보기 중복 id 거르기·한 쪽 미만이면 끝, `ActivityService.recordOnce` javadoc, spec 4절 쓰기 순서·401 행, 결정로그
 - ✅ follow-up #64 (F-04 피드 WISH 활동 거르기) 생성, PR 후속에 기록
-- ⏳ CI 진행 중, Codex `node scripts/codex-review.mjs 65 --request --wait --status` 대기 (head `d0c7597`)
+- ✅ CI 초록, Codex ✅ d0c7597 (재리뷰 1회, 지적 없음), 완료 표시 커밋
 
 ## 바로 다음 할 일
 
-1. Codex 결과 확인: FINDINGS면 spec AC·보안을 깨는 지적만 실패 테스트부터 고쳐 `fix(F-12): ... (Codex 리뷰)` → push → 위 명령 재실행. 그 밖의 P2는 follow-up 이슈로 넘기고 `--resolve`
-2. COMPLETE + CI 초록이면 `docs(F-12): 완료 표시 (spec DONE)`: spec 헤더 `DONE (PR #65)`, 체크리스트 "PR CI 초록"·"상태 DONE" 체크
-3. 머지(사람, GitHub). 머지 직전 `git rev-list --count HEAD..origin/develop`가 0인지 확인
+1. 사람: PR #65 머지 직전 `git fetch && git rev-list --count HEAD..origin/develop`가 0인지 확인 (아니면 `git merge origin/develop` → push → CI 초록) 후 GitHub에서 **Merge** (wip 없음)
+2. 머지 후 `/clear` → `/pickup`. #57은 close-issues 워크플로가 닫는지 확인. 다음 기능은 내 영역(F-04 팔로우·피드, #64 흡수 등)에서 고른다
 
 ## 막힌 점 / 결정 필요
 
