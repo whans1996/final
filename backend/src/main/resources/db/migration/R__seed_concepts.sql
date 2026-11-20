@@ -7,6 +7,8 @@
 -- 주의
 --   - name(UNIQUE) 기준 upsert라 id는 유지된다(찜·리뷰 FK 보존). 대신 이 파일을 고치면
 --     관리자(F-13)가 화면에서 수정한 시드 카드 내용이 이 파일 내용으로 덮어써진다.
+--   - status는 upsert에서 덮어쓰지 않는다(F-13 AC12). 새 카드는 파일의 PUBLISHED로 들어가고,
+--     기존 카드는 관리자가 정한 상태(숨김 등)를 유지한다. 시드 카드를 내리려면 관리자 화면에서 숨긴다.
 --   - 카드 이름을 바꾸면 새 카드가 생긴다. 이름은 바꾸지 말고 필요하면 새 카드를 추가한다.
 --   - MySQL 기본 모드에서 백슬래시는 이스케이프 문자다. 본문·예제에 백슬래시를 쓰지 않는다.
 
@@ -2541,6 +2543,5 @@ ON DUPLICATE KEY UPDATE
     summary       = seed.summary,
     body          = seed.body,
     example_code  = seed.example_code,
-    status        = seed.status,
     source        = seed.source,
     reference_url = seed.reference_url;

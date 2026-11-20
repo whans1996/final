@@ -215,11 +215,11 @@ ALTER TABLE concepts
 `/implement`가 진행하며 체크한다.
 
 - [x] 브랜치 `feature/F-13-admin-concepts`
-- [ ] Flyway `V7__concept_source_admin.sql` + `R__seed_concepts.sql` status 보존
-- [ ] AC별 실패 테스트 작성 (red 확인)
-- [ ] BE 구현 (green)
+- [x] Flyway `V7__concept_source_admin.sql` + `R__seed_concepts.sql` status 보존
+- [ ] AC별 실패 테스트 작성 (red 확인) — BE AC1~AC12 완료, FE AC13~AC15 남음
+- [x] BE 구현 (green)
 - [ ] FE 구현 (green)
-- [ ] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
+- [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
 - [ ] contract-checker 통과
 - [ ] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일)
 - [ ] reviewer 지적 사항 반영
