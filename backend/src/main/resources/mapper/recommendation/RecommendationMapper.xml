@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.vibenote.recommendation.RecommendationMapper">
+
+    <resultMap id="conceptCount" type="com.vibenote.recommendation.domain.ConceptCount">
+        <constructor>
+            <arg column="concept_id" javaType="_long"/>
+            <arg column="count" javaType="_int"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="reason" type="com.vibenote.recommendation.domain.RecommendationReason">
+        <constructor>
+            <arg column="concept_id" javaType="_long"/>
+            <arg column="reason" javaType="java.lang.String"/>
+            <arg column="signal_key" javaType="java.lang.String"/>
+        </constructor>
+    </resultMap>
+
+    <!-- idx_quiz_attempts_user_created (user_id, ...)로 내 풀이부터 좁힌다 -->
+    <select id="countWrongByConcept" resultMap="conceptCount">
+        SELECT qq.concept_id, COUNT(*) AS count
+        FROM quiz_attempts qa
+        JOIN quizzes q ON q.id = qa.quiz_id
+        JOIN analyses a ON a.id = q.analysis_id AND a.deleted_at IS NULL
+        JOIN quiz_answers ans ON ans.attempt_id = qa.id AND ans.is_correct = FALSE
+        JOIN quiz_questions qq ON qq.id = ans.question_id AND qq.concept_id IS NOT NULL
+        WHERE qa.user_id = #{userId}
+        GROUP BY qq.concept_id
+    </select>
+
+    <select id="findMyConceptIds" resultType="long">
+        SELECT DISTINCT ac.concept_id
+        FROM analyses a
+        JOIN analysis_concepts ac ON ac.analysis_id = a.id
+        WHERE a.user_id = #{userId} AND a.deleted_at IS NULL
+    </select>
+
+    <select id="findReviewedConceptIds" resultType="long">
+        SELECT concept_id
+        FROM review_plans
+        WHERE user_id = #{userId}
+        GROUP BY concept_id
+        HAVING SUM(status = 'DONE') &gt; 0 AND SUM(status = 'TODO') = 0
+    </select>
+
+    <select id="findDueTodoConceptIds" resultType="long">
+        SELECT DISTINCT concept_id
+        FROM review_plans
+        WHERE user_id = #{userId} AND status = 'TODO' AND plan_date &lt;= #{today}
+    </select>
+
+    <select id="findReasons" resultMap="reason">
+        SELECT concept_id, reason, signal_key
+        FROM recommendation_reasons
+        WHERE user_id = #{userId}
+          AND concept_id IN
+        <foreach collection="conceptIds" item="id" open="(" separator="," close=")">#{id}</foreach>
+    </select>
+
+    <insert id="upsertReasons">
+        INSERT INTO recommendation_reasons (user_id, concept_id, reason, signal_key, created_at)
+        VALUES
+        <foreach collection="reasons" item="r" separator=",">
+            (#{userId}, #{r.conceptId}, #{r.reason}, #{r.signalKey}, #{createdAt})
+        </foreach>
+        AS fresh
+        ON DUPLICATE KEY UPDATE
+            reason = fresh.reason, signal_key = fresh.signal_key, created_at = fresh.created_at
+    </insert>
+</mapper>

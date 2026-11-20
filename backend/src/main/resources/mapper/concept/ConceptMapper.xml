@@ -38,6 +38,20 @@
         <selectKey keyProperty="id" resultType="long" order="AFTER">SELECT LAST_INSERT_ID()</selectKey>
     </insert>
 
+    <!-- ── F-16 추천 (A) ── -->
+
+    <select id="findAllPublishedSummaries" resultType="com.vibenote.concept.domain.Concept">
+        SELECT <include refid="summaryColumns"/> FROM concepts WHERE status = 'PUBLISHED' ORDER BY id
+    </select>
+
+    <select id="findWishedByUser" resultType="com.vibenote.concept.domain.Concept">
+        SELECT c.id, c.category
+        FROM concept_wishes w
+        JOIN concepts c ON c.id = w.concept_id AND c.status = 'PUBLISHED'
+        WHERE w.user_id = #{userId}
+        ORDER BY c.id
+    </select>
+
     <!-- ── F-09~13 카드 (B) ── -->
 
     <!-- F-09 목록 조건. keyword는 Service가 ! 로 이스케이프한 값. 대소문자 무시는 collation(utf8mb4_0900_ai_ci)에 맡긴다 -->
