@@ -62,7 +62,7 @@
 
     <update id="updateStatus">
         UPDATE review_plans SET status = #{status}, done_at = #{doneAt}
-        WHERE id = #{planId}
+        WHERE id = #{planId} AND user_id = #{userId}
     </update>
 
     <delete id="deleteOwned">

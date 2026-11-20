@@ -64,7 +64,11 @@ const groups = computed(() => {
 
 const isEmpty = computed(() => overdue.value.length === 0 && groups.value.length === 0)
 
+// 다시 시도가 실패한 그 기간을 다시 부르도록 마지막 요청 기간을 기억한다 (undefined = 오늘부터)
+let lastPeriod
+
 async function load(period) {
+  lastPeriod = period
   loading.value = true
   loadError.value = ''
   try {
@@ -154,7 +158,12 @@ load()
 
     <div v-else-if="loadError" class="error-box">
       <p class="form-error" role="alert">{{ loadError }}</p>
-      <button type="button" class="outline-button" data-action="retry-load" @click="load()">
+      <button
+        type="button"
+        class="outline-button"
+        data-action="retry-load"
+        @click="load(lastPeriod)"
+      >
         다시 시도
       </button>
     </div>

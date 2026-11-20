@@ -166,6 +166,28 @@ describe('ReviewPlanView (F-15 SC-11)', () => {
     expect(wrapper.findAll('[data-plan-id]')).toHaveLength(5)
   })
 
+  it('AC9 기간 이동이 실패하면 다시 시도는 실패한 그 기간을 다시 부른다', async () => {
+    reviewPlansApi.fetchReviewPlans.mockResolvedValue(response())
+    const { wrapper } = await mountView()
+
+    reviewPlansApi.fetchReviewPlans.mockRejectedValue(
+      apiError(500, { code: 'COMMON_500', message: '서버에서 오류가 발생했습니다.' }),
+    )
+    await wrapper.find('[data-action="next"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('[role="alert"]').exists()).toBe(true)
+
+    reviewPlansApi.fetchReviewPlans.mockResolvedValue(
+      response({ from: '2026-11-27', to: '2026-12-03', items: [] }),
+    )
+    await wrapper.find('[data-action="retry-load"]').trigger('click')
+    await flushPromises()
+    expect(reviewPlansApi.fetchReviewPlans).toHaveBeenLastCalledWith({
+      from: '2026-11-27',
+      to: '2026-12-03',
+    })
+  })
+
   it('AC10 체크하면 요청 중 끄고, 성공하면 응답으로 바꾸며 밀린 복습에서 빼고 개수를 줄인다', async () => {
     reviewPlansApi.fetchReviewPlans.mockResolvedValue(response())
     const { wrapper } = await mountView()

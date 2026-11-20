@@ -48,7 +48,11 @@ public interface ReviewPlanMapper {
             @Param("conceptId") long conceptId,
             @Param("planDate") LocalDate planDate);
 
+    /**
+     * @return 바꿨으면 1 (내 계획이 아니면 0)
+     */
     int updateStatus(
+            @Param("userId") long userId,
             @Param("planId") long planId,
             @Param("status") ReviewPlanStatus status,
             @Param("doneAt") LocalDateTime doneAt);

@@ -163,7 +163,7 @@ public class ReviewPlanService {
             throw new BusinessException(ErrorCode.REVIEW_PLAN_409);
         }
         LocalDateTime doneAt = status == ReviewPlanStatus.DONE ? now() : null;
-        mapper.updateStatus(planId, status, doneAt);
+        mapper.updateStatus(userId, planId, status, doneAt);
         plan.setStatus(status);
         plan.setDoneAt(doneAt);
         return ReviewPlanItemResponse.of(plan, concept);

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.vibenote.user.dto.SignupRequest;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
@@ -15,10 +16,12 @@ import org.springframework.transaction.support.TransactionTemplate;
 /** F-14 AC7 오답 개념, F-15 AC8 찜한 카드를 복습 계획에 넣는 규칙. 오늘 = 2026-11-20 (ReviewPlanTestSupport). */
 class ReviewPlanServiceTest extends ReviewPlanTestSupport {
 
-    private static final LocalDate TOMORROW = LocalDate.of(2026, 11, 20);
+    /** F-14 테스트가 addWrongAnswers에 넘기는 계획 날짜 (값은 고정 시계의 오늘). */
+    private static final LocalDate PLAN_DATE = LocalDate.of(2026, 11, 20);
 
     @Autowired ReviewPlanService service;
     @Autowired PlatformTransactionManager transactionManager;
+    @Autowired ReviewPlanMapper mapper;
 
     @AfterEach
     void cleanUp() {
@@ -66,12 +69,12 @@ class ReviewPlanServiceTest extends ReviewPlanTestSupport {
                 service.addWrongAnswers(
                         userId,
                         List.of(fresh, todoLater, todoPast, doneSameDay, doneOtherDay),
-                        TOMORROW);
+                        PLAN_DATE);
 
         assertThat(added)
                 .containsExactly(
-                        new ReviewPlanService.Added(fresh, TOMORROW),
-                        new ReviewPlanService.Added(doneOtherDay, TOMORROW));
+                        new ReviewPlanService.Added(fresh, PLAN_DATE),
+                        new ReviewPlanService.Added(doneOtherDay, PLAN_DATE));
         assertThat(
                         jdbc.queryForObject(
                                 "SELECT COUNT(*) FROM review_plans WHERE user_id = ? AND reason ="
@@ -88,8 +91,8 @@ class ReviewPlanServiceTest extends ReviewPlanTestSupport {
         long c = concept("f14rp-test-공유");
         plan(other, c, "2026-11-20", "TODO");
 
-        assertThat(service.addWrongAnswers(me, List.of(c), TOMORROW))
-                .containsExactly(new ReviewPlanService.Added(c, TOMORROW));
+        assertThat(service.addWrongAnswers(me, List.of(c), PLAN_DATE))
+                .containsExactly(new ReviewPlanService.Added(c, PLAN_DATE));
     }
 
     // ── F-15 AC8 찜 자동 추가 ──
@@ -144,5 +147,27 @@ class ReviewPlanServiceTest extends ReviewPlanTestSupport {
                         });
 
         assertThat(countPlans(me)).isZero();
+    }
+
+    @Test
+    void AC6_updateStatus는_다른_회원의_계획을_바꾸지_않는다() {
+        long owner = createUser("f15ac6own");
+        long other = createUser("f15ac6oth");
+        long c = insertConcept("f15-test-소유", "PUBLISHED");
+        long planId = insertTodo(owner, c, "2026-11-21");
+
+        assertThat(
+                        mapper.updateStatus(
+                                other,
+                                planId,
+                                ReviewPlanStatus.DONE,
+                                LocalDateTime.of(2026, 11, 20, 9, 0)))
+                .isZero();
+        assertThat(
+                        jdbc.queryForObject(
+                                "SELECT status FROM review_plans WHERE id = ?",
+                                String.class,
+                                planId))
+                .isEqualTo("TODO");
     }
 }
