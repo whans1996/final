@@ -78,6 +78,10 @@ class CommentWriteApiTest extends PostApiTestBase {
             update(me, postId, mine, commentBody("고침"))
                     .andExpect(status().isNotFound())
                     .andExpect(jsonPath("$.code").value("POST_404"));
+            // 판단 순서: 글(POST_404)이 형식 검증(400)보다 먼저다 (AC9)
+            update(me, postId, mine, commentBody(" "))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.code").value("POST_404"));
             remove(me, postId, mine)
                     .andExpect(status().isNotFound())
                     .andExpect(jsonPath("$.code").value("POST_404"))

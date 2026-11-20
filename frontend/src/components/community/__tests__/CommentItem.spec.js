@@ -155,7 +155,7 @@ describe('CommentItem (F-18 AC11·AC13)', () => {
     expect(wrapper.emitted('changed')).toHaveLength(1)
   })
 
-  it('AC13 삭제가 404면 댓글 아래에 서버 message를 보여 준다', async () => {
+  it('AC13 삭제가 404(POST_003)면 서버 message를 보여 주고 changed를 보내 목록을 다시 받는다', async () => {
     postsApi.deleteComment.mockRejectedValue(
       apiError(404, { code: 'POST_003', message: '댓글을 찾을 수 없습니다.' }),
     )
@@ -166,6 +166,23 @@ describe('CommentItem (F-18 AC11·AC13)', () => {
     await flushPromises()
 
     expect(wrapper.find('[data-role="comment-error"]').text()).toBe('댓글을 찾을 수 없습니다.')
+    // 이미 지워진 댓글이면 목록을 다시 받아 화면에서도 빠지게 한다
+    expect(wrapper.emitted('changed')).toHaveLength(1)
+  })
+
+  it('AC13 삭제가 403이면 댓글 아래에 서버 message만 보여 주고 목록은 그대로다', async () => {
+    postsApi.deleteComment.mockRejectedValue(
+      apiError(403, { code: 'POST_004', message: '본인이 쓴 댓글만 수정·삭제할 수 있습니다.' }),
+    )
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const wrapper = mountItem({ mine: true })
+
+    await wrapper.find('[data-action="delete-comment"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[data-role="comment-error"]').text()).toBe(
+      '본인이 쓴 댓글만 수정·삭제할 수 있습니다.',
+    )
     expect(wrapper.emitted('changed')).toBeUndefined()
   })
 })

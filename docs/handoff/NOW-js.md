@@ -4,26 +4,26 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-dh.md`)은 읽기만 한다.
 
-갱신: 2026-11-20 16:27 · 작업자: JoonseobKim · PC: js-home · 브랜치: feature/F-18-comments
+갱신: 2026-11-20 16:35 · 작업자: JoonseobKim · PC: js-home · 브랜치: feature/F-18-comments
 
 ---
 
 ## 현재 기능
 
-F-18 댓글 — spec **APPROVED**, `/implement` 진행 중. 이번 세션 목표: BE AC1~10 → FE AC11~13
+F-18 댓글 — 구현 완료(AC1~13), `/pr-review` 진행 중 (PR 아직 없음)
 
 ## 진행
 
-- ✅ spec 승인·결정(오래된순 200 상한, 1~500자, 활동 없음, 모바일 글자 버튼)
-- ✅ BE AC1~10 green (BE 617 통과): `post/Comment*` + `ErrorCode.POST_003·004` + `PUBLIC_GET_PATHS` + openapi.json, conventions 3절
-- ✅ FE AC11~13 green (verify fe 통과): `api/posts.js` 함수 4개, `components/community/CommentForm·CommentItem·PostComments.vue`, `PostDetailView`에 댓글 절
-- ✅ contract-checker 실질 0건, 산출물 02 UC41·06 SC-15 문구·스크린샷 반영
-- ✅ ui-verifier 통과 (데스크톱·375px, 가로 스크롤 없음, 콘솔 에러 없음). 로컬 DB에 테스트 회원 f18-ui-a·b, 글 4·5번
+- ✅ BE AC1~10, FE AC11~13 green, 산출물 UC41·SC-15 반영, ui-verifier 통과
+- ✅ /pr-review 점검: verifier 통과, contract-checker 불일치 0, reviewer 반드시 수정 0
+- 🔄 권장 3건 반영(미커밋): spec 4절 수정 시각 문구·AC13 문구 + 결정로그 1줄, `CommentWriteApiTest#AC4_없거나_지워진_글에_...`에 빈 내용 PUT→404 한 줄, `CommentItem.onDelete` 404 `POST_003`이면 `changed` emit(+`CommentItem.spec.js` 403 테스트 추가). verify all 재실행 중
+- PR 설명 초안 `.harness/pr-F-18.md` (스크린샷 칸은 `SCREENSHOTS_PLACEHOLDER`)
 
 ## 바로 다음 할 일
 
-1. `/pr-review` (새 세션 권장). PR 본문: 수정은 내용이 같으면 UPDATE 생략, 다르면 `updated_at`을 앱 Clock으로 (spec 4절 "ON UPDATE" 문구와 다름, #17 회피), @whans1996 멘션(SecurityConfig·ErrorCode 공통 파일)
-2. contract-checker 경미 1건: `CommentRequest.content` openapi `minLength: 0` (`@NotBlank`로 막음, F-17 PostRequest와 같음 → 그대로 둠)
+1. verify all 통과 확인 → `fix(F-18): PR 전 리뷰 권장 반영 (404 순서 테스트, 삭제 404 목록 갱신, spec 4절)` 커밋 → push
+2. `node scripts/pr-screens.mjs SC-15` 출력으로 PR 설명 스크린샷 칸 교체 → 사용자 확인 후 `gh pr create --base develop --title "feat(F-18): 커뮤니티 댓글 (목록·작성·수정·삭제)" --body-file .harness/pr-F-18.md`
+3. `gh pr checks` 확인, Codex 루프(`node scripts/codex-review.mjs <PR> --request --wait --status` 백그라운드)
 
 ## 막힌 점 / 결정 필요
 
@@ -31,5 +31,5 @@ F-18 댓글 — spec **APPROVED**, `/implement` 진행 중. 이번 세션 목표
 
 ## 주의
 
-- 공통 파일 변경 예정(`SecurityConfig.PUBLIC_GET_PATHS`, `ErrorCode`) → PR 본문에서 @whans1996 멘션
+- 공통 파일 변경(`SecurityConfig.PUBLIC_GET_PATHS`, `ErrorCode`) → PR 본문에 @whans1996 멘션 (초안에 넣음)
 - `codex-review.mjs`가 Codex 실행 실패를 RUNNING으로 기다린다 (#48)

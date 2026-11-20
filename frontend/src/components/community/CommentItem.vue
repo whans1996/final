@@ -1,6 +1,6 @@
 <script setup>
 // 댓글 한 개 (F-18 AC11·AC13). 내 댓글이면 머리 줄에 "수정"·"삭제" 글자 버튼(모바일도 같은 배치).
-// 수정 중 여부는 부모가 정한다(한 번에 한 댓글). 저장·삭제에 성공하면 changed를 올려 부모가 목록을 다시 받는다.
+// 수정 중 여부는 부모가 정한다(한 번에 한 댓글). 저장·삭제에 성공하거나 이미 지워진 댓글(POST_003)이면 changed를 올려 부모가 목록을 다시 받는다.
 // 내용은 텍스트 보간 + pre-wrap으로 글자 그대로 보여 준다 (v-html 금지, spec 5절).
 import { ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
@@ -58,6 +58,8 @@ async function onDelete() {
     emit('changed')
   } catch (e) {
     error.value = errorMessage(e)
+    // 이미 지워진 댓글(다른 탭·기기에서 삭제)이면 목록을 다시 받아 화면에서도 뺀다
+    if (errorCode(e) === 'POST_003') emit('changed')
   } finally {
     deleting.value = false
   }

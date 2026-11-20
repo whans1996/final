@@ -42,7 +42,7 @@
 |---|---|---|---|
 | AC11 | 누구나 | SC-15 `/community/:id`를 열면 | 본문·첨부 아래 "댓글 N"(목록 `total`) 절에 댓글이 오래된순으로 보인다. 각 댓글은 닉네임(`/users/{authorId}` 링크, `authorId`가 `null`이면 링크 없는 "탈퇴한 사용자"), 작성일(`YYYY-MM-DD HH:mm`), `edited`이면 "(수정됨)", 내용이다. 내용은 **글자 그대로**(줄바꿈 유지, HTML이 태그로 해석되지 않음) 보인다. 0건이면 "첫 댓글을 남겨 주세요", 불러오기 실패는 댓글 절 안에 서버 `message`(본문은 그대로 보인다). `total`이 `items` 수보다 크면 목록 아래 "댓글이 많아 처음 200개만 보입니다". 글이 404면 댓글 절을 보여 주지 않는다 |
 | AC12 | SC-15에서 | 비로그인이면 / 로그인 회원이면 | 비로그인은 작성 폼 대신 "로그인하고 댓글 남기기" 링크(`/login?redirect=/community/{id}`)를 본다. 회원은 입력창과 "등록"을 본다: 공백뿐이면 "등록"이 비활성, 500자에서 더 입력되지 않고 아래 "n/500"이 보인다. "등록"을 누르면 `createComment` 후 입력창을 비우고 댓글 목록만 다시 불러온다(헤더 "댓글 N"도 갱신). 저장 중에는 버튼이 비활성이다. 400이면 `details.content`를 입력창 아래에, 그 밖의 실패는 서버 `message`를 보여 주고 입력은 남긴다 |
-| AC13 | SC-15에서 | 로그인 회원이 자기 댓글(`authorId === auth.user.id`)을 보면 / 남의 댓글이나 비로그인이면 | 자기 댓글에만 머리 줄에 "수정"·"삭제" 글자 버튼이 보인다(375px에서도 같은 배치). "수정"은 그 자리를 값이 채워진 입력창("저장"·"취소", "n/500")으로 바꾸고, 한 번에 한 댓글만 수정 중이다. "저장"은 공백뿐이면 비활성이고 `updateComment` 후 목록을 다시 불러오며, "취소"는 요청 없이 원래 내용으로 돌아간다. "삭제"는 확인 대화상자에서 확인하면 `deleteComment` 후 목록을 다시 불러오고, 취소하면 아무 요청도 보내지 않는다. 수정·삭제가 400이면 입력창 아래 `details.content`, 403·404면 서버 `message`를 그 댓글 아래에 보여 준다. SC-15는 375px 폭에서 가로 스크롤이 없다 (NF-02) |
+| AC13 | SC-15에서 | 로그인 회원이 자기 댓글(`authorId === auth.user.id`)을 보면 / 남의 댓글이나 비로그인이면 | 자기 댓글에만 머리 줄에 "수정"·"삭제" 글자 버튼이 보인다(375px에서도 같은 배치). "수정"은 그 자리를 값이 채워진 입력창("저장"·"취소", "n/500")으로 바꾸고, 한 번에 한 댓글만 수정 중이다. "저장"은 공백뿐이면 비활성이고 `updateComment` 후 목록을 다시 불러오며, "취소"는 요청 없이 원래 내용으로 돌아간다. "삭제"는 확인 대화상자에서 확인하면 `deleteComment` 후 목록을 다시 불러오고, 취소하면 아무 요청도 보내지 않는다. 수정·삭제가 400이면 입력창 아래 `details.content`, 403·404면 서버 `message`를 그 댓글 아래에 보여 준다. 삭제가 404 `POST_003`(이미 지워진 댓글)이면 목록도 다시 불러온다 (PR 전 리뷰 반영). SC-15는 375px 폭에서 가로 스크롤이 없다 (NF-02) |
 
 ## 3. API 계약
 
@@ -122,7 +122,7 @@
 - Flyway: 없음. V1의 `comments`(`post_id` FK `ON DELETE CASCADE`, `user_id`, `content VARCHAR(1000)`, `created_at`, `updated_at ON UPDATE CURRENT_TIMESTAMP`, `idx_comments_post_created (post_id, created_at)`)를 그대로 쓴다. 500자는 애플리케이션 검증이다
 - 사용 테이블: `comments`(읽기·쓰기), `posts`(존재 확인), `users`(닉네임·status)
 - 목록: `WHERE post_id = ? ORDER BY created_at, id LIMIT 200` + `COUNT(*)`. 인덱스 `idx_comments_post_created`를 탄다
-- 수정: `UPDATE comments SET content = ? WHERE id = ?`. `updated_at`은 `ON UPDATE`가 바꾼다 (내용이 같으면 MySQL이 행을 바꾸지 않아 `updated_at`도 그대로 → AC7 "같은 내용이면 `edited` 유지"). `DATETIME`이 초 단위라 작성 후 1초 안에 고치면 `edited`가 `false`로 남는다 (허용)
+- 수정: 서비스가 다듬은 내용을 저장된 내용과 비교해 **다를 때만** `UPDATE comments SET content = ?, updated_at = ? WHERE id = ?`를 부르고, `updated_at`은 앱 `Clock`(서울 시각)으로 넣는다. 같은 내용이면 UPDATE를 생략해 `updated_at`이 그대로다 → AC7 "같은 내용이면 `edited` 유지". `ON UPDATE CURRENT_TIMESTAMP`에 맡기지 않는 것은 `created_at`(앱 Clock)과 DB 세션 시간대가 어긋나면 `edited` 판정이 틀어지기 때문이다 (#17, 구현 중 결정). `DATETIME`이 초 단위라 작성 후 1초 안에 고치면 `edited`가 `false`로 남는다 (허용)
 - 활동: 기록하지 않는다 (`ActivityType` 변경 없음, 11-20 결정)
 - 탈퇴 회원의 댓글은 남고 작성자를 "탈퇴한 사용자"로 표시한다 (기획서 ERD 주석, F-17과 같은 방식). 글을 지우면 FK CASCADE로 댓글도 지워진다 (F-17 AC10에서 이미 확인)
 
