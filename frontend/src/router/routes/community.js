@@ -1,4 +1,4 @@
-// 커뮤니티 게시판·댓글 (B F-17·F-18)
+// 커뮤니티 게시판·댓글 (B F-17·F-18), 활동 피드 (B F-04)
 export default [
   {
     path: '/community',
@@ -23,5 +23,11 @@ export default [
     name: 'post-edit',
     component: () => import('@/views/community/PostWriteView.vue'),
     meta: { requiresAuth: true },
+  },
+  {
+    path: '/feed',
+    name: 'feed',
+    component: () => import('@/views/community/FeedView.vue'),
+    meta: { requiresAuth: true, nav: { label: '피드', order: 7, show: 'user' } },
   },
 ]

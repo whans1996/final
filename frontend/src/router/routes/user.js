@@ -6,6 +6,12 @@ export default [
     component: () => import('@/views/UserProfileView.vue'),
   },
   {
+    // F-04 팔로워·팔로잉 목록 (?tab=followers|followings)
+    path: '/users/:id(\\d+)/follows',
+    name: 'user-follows',
+    component: () => import('@/views/UserFollowsView.vue'),
+  },
+  {
     path: '/me/settings',
     name: 'my-settings',
     component: () => import('@/views/MySettingsView.vue'),
