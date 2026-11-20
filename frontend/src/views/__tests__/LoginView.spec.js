@@ -29,14 +29,14 @@ describe('LoginView (F-02 AC8)', () => {
     await vi.waitFor(() => expect(router.currentRoute.value.fullPath).toBe('/review-plans'))
   })
 
-  it('AC8 redirect가 없으면 홈으로 이동한다', async () => {
+  it('AC8 redirect가 없으면 대시보드로 이동한다 (F-16 AC9)', async () => {
     authApi.login.mockResolvedValue(SESSION)
     const { wrapper, router } = await mountAt(LoginView, '/login')
 
     await fill(wrapper, { email: 'user@example.com', password: 'vibe1234' })
     await submit(wrapper)
 
-    await vi.waitFor(() => expect(router.currentRoute.value.path).toBe('/'))
+    await vi.waitFor(() => expect(router.currentRoute.value.path).toBe('/dashboard'))
   })
 
   it('AC8 AUTH_001이면 폼 위에 메시지를 보여 주고 입력을 유지한다', async () => {

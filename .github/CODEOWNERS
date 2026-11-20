@@ -61,6 +61,11 @@
 /frontend/src/views/__tests__/ReviewPlan*     @whans1996
 /frontend/src/components/reviewplan/         @whans1996
 /frontend/src/api/reviewPlans.js             @whans1996
+/frontend/src/views/dashboard/               @whans1996
+/frontend/src/views/__tests__/Dashboard*     @whans1996
+/frontend/src/components/recommendation/     @whans1996
+/frontend/src/api/recommendations.js         @whans1996
+/frontend/src/router/routes/dashboard.js     @whans1996
 /frontend/src/views/challenge/               @whans1996
 /frontend/src/router/routes/analysis.js      @whans1996
 /frontend/src/router/routes/challenge.js     @whans1996

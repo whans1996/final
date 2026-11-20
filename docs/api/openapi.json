@@ -1585,6 +1585,82 @@
         "required" : [ "fileId", "path", "reason" ],
         "type" : "object"
       },
+      "RecommendationItemResponse" : {
+        "description" : "추천 카드",
+        "properties" : {
+          "concept" : {
+            "$ref" : "#/components/schemas/ConceptSummaryResponse",
+            "description" : "카드 요약"
+          },
+          "reason" : {
+            "description" : "추천 이유 한 줄 (100자 이하)",
+            "example" : "퀴즈에서 2번 틀렸고 내 분석 코드에도 나온 JWT 인증이에요. 요청마다 사용자를 확인하는 흐름을 다시 보면 좋아요.",
+            "type" : "string"
+          },
+          "reasonSource" : {
+            "description" : "추천 이유 출처",
+            "enum" : [ "AI", "RULE" ],
+            "example" : "AI",
+            "type" : "string"
+          },
+          "score" : {
+            "description" : "추천 점수 (min(오답,3)×3 + 내 코드 2 + 찜한 분야 1 + 수준 적합도)",
+            "example" : 10,
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "signals" : {
+            "$ref" : "#/components/schemas/RecommendationSignals",
+            "description" : "점수의 근거 신호"
+          }
+        },
+        "required" : [ "concept", "reason", "reasonSource", "score", "signals" ],
+        "type" : "object"
+      },
+      "RecommendationListResponse" : {
+        "description" : "맞춤 추천 목록",
+        "properties" : {
+          "items" : {
+            "description" : "추천 카드 (점수 → 찜 수 → 평점 → id 순, 최대 size개)",
+            "items" : {
+              "$ref" : "#/components/schemas/RecommendationItemResponse"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "items" ],
+        "type" : "object"
+      },
+      "RecommendationSignals" : {
+        "description" : "추천 신호",
+        "properties" : {
+          "inMyCode" : {
+            "description" : "삭제되지 않은 내 분석에 이 카드가 나왔는지",
+            "example" : true,
+            "type" : "boolean"
+          },
+          "levelFit" : {
+            "description" : "회원 수준과 카드 난이도의 적합도 (같음 1, 한 단계 차이 0, 두 단계 차이 -1)",
+            "enum" : [ "-1", "0", "1" ],
+            "example" : 1,
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "wishedCategory" : {
+            "description" : "내가 찜한 카드 중 같은 카테고리가 있는지",
+            "example" : false,
+            "type" : "boolean"
+          },
+          "wrongCount" : {
+            "description" : "내 퀴즈 오답 중 이 카드를 다룬 문항 수 (상한 없는 실제 개수. 점수에는 3까지만 넣는다)",
+            "example" : 2,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "inMyCode", "levelFit", "wishedCategory", "wrongCount" ],
+        "type" : "object"
+      },
       "ReviewAddedItem" : {
         "description" : "새로 추가한 복습 계획",
         "properties" : {
@@ -3517,6 +3593,62 @@
         "tags" : [ "퀴즈" ]
       }
     },
+    "/api/recommendations" : {
+      "get" : {
+        "description" : "규칙 점수(min(오답,3)×3 + 내 분석 등장 2 + 찜한 분야 1 + 수준 적합도) 순으로 size개. 복습을 끝낸 카드, 오늘까지 복습할 카드, 찜한 카드는 뺀다. 이유는 캐시가 없거나 근거가 바뀐 카드만 LLM으로 만들고, LLM이 실패하면 규칙 문장(RULE)을 준다.",
+        "operationId" : "listRecommendations",
+        "parameters" : [ {
+          "description" : "추천 개수 (1~10)",
+          "example" : 5,
+          "in" : "query",
+          "name" : "size",
+          "required" : false,
+          "schema" : {
+            "default" : 5,
+            "description" : "추천 개수 (1~10)",
+            "example" : 5,
+            "format" : "int32",
+            "maximum" : 10,
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RecommendationListResponse"
+                }
+              }
+            },
+            "description" : "조회 성공 (공개 카드가 없으면 빈 목록)"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "size가 정수가 아님, 1 미만, 10 초과 (COMMON_400, details.size)"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "토큰 없음·만료 (AUTH_401)"
+          }
+        },
+        "summary" : "맞춤 추천 카드 조회",
+        "tags" : [ "추천" ]
+      }
+    },
     "/api/review-plans" : {
       "get" : {
         "description" : "기간(from~to, 생략하면 오늘부터 7일) 안의 내 계획과, 기간과 상관없이 오늘 이전 날짜의 TODO(밀린 복습). 공개되지 않은 카드의 계획은 뺀다.",
@@ -4006,6 +4138,9 @@
   }, {
     "description" : "공개 개념 카드 목록·검색·상세·리뷰",
     "name" : "개념 카드"
+  }, {
+    "description" : "퀴즈 오답·내 코드·찜한 분야·수준으로 고른 맞춤 개념 카드와 AI 추천 이유",
+    "name" : "추천"
   }, {
     "description" : "분석한 코드로 만든 객관식 퀴즈 조회, 풀이 제출·채점",
     "name" : "퀴즈"

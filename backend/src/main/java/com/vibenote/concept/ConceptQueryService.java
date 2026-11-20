@@ -47,4 +47,16 @@ public class ConceptQueryService {
                 .map(ConceptSummaryResponse::from)
                 .toList();
     }
+
+    /** PUBLISHED 카드 전체의 요약, id 오름차순 (F-16 추천 후보). */
+    public List<ConceptSummaryResponse> findAllPublishedSummaries() {
+        return conceptMapper.findAllPublishedSummaries().stream()
+                .map(ConceptSummaryResponse::from)
+                .toList();
+    }
+
+    /** 회원이 찜한 PUBLISHED 카드. id·category만 채운다 (F-16 찜한 분야 신호·찜 카드 제외). */
+    public List<Concept> findWishedByUser(long userId) {
+        return conceptMapper.findWishedByUser(userId);
+    }
 }

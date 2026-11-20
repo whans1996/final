@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.vibenote.common.Level;
 import org.junit.jupiter.api.Test;
+import org.springframework.core.io.ClassPathResource;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
@@ -153,13 +154,59 @@ class MockLlmClientTest {
     }
 
     @Test
-    void fixture가_없는_단계는_명확한_오류() {
-        // 분석 파이프라인 spec에서 main fixture를 추가하면 이 테스트의 대상 단계를 바꾼다
+    void fixture가_없으면_명확한_오류() {
+        MockLlmClient empty =
+                new MockLlmClient(
+                        path -> {
+                            throw new IllegalStateException("Mock LLM fixture가 없습니다: " + path);
+                        });
+
         assertThatThrownBy(
-                        () ->
-                                client.complete(
-                                        new LlmRequest(LlmStage.RECOMMEND, Level.JUNIOR, "prompt")))
+                        () -> empty.complete(new LlmRequest(LlmStage.FLOW, Level.JUNIOR, "prompt")))
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("llm-fixtures/recommend.json");
+                .hasMessageContaining("llm-fixtures/flow.json");
+    }
+
+    @Test
+    void 모든_단계에_main_fixture가_있다() {
+        for (LlmStage stage : LlmStage.values()) {
+            assertThat(new ClassPathResource("llm-fixtures/" + stage.key() + ".json").exists())
+                    .as(stage.key())
+                    .isTrue();
+        }
+    }
+
+    @Test
+    void linkRecommendIds_fixture_이유를_프롬프트_카드_순서대로_붙이고_카드가_더_많으면_처음부터_다시_쓴다() {
+        String fixture =
+                """
+                { "reasons": [ { "reason": "첫째" }, { "reason": "둘째" } ] }
+                """;
+        String prompt =
+                """
+                ## 카드 목록 (id | 이름)
+
+                31 | JWT 인증 | security | JUNIOR | 요약: 토큰 | 근거: 없음(수준 맞춤·인기)
+                7 | 트랜잭션 | spring | JUNIOR | 요약: 묶음 | 근거: 내 분석 코드에 나온 개념이에요
+                105 | 빈 | spring | BEGINNER | 요약: 객체 | 근거: 없음(수준 맞춤·인기)
+                """;
+        MockLlmClient fixed = new MockLlmClient(path -> fixture);
+
+        JsonNode reasons =
+                new ObjectMapper()
+                        .readTree(
+                                fixed.complete(
+                                                new LlmRequest(
+                                                        LlmStage.RECOMMEND, Level.JUNIOR, prompt))
+                                        .content())
+                        .path("reasons");
+
+        assertThat(reasons).hasSize(3);
+        assertThat(reasons.get(0).path("conceptId").asLong()).isEqualTo(31L);
+        assertThat(reasons.get(0).path("reason").asString()).isEqualTo("첫째");
+        assertThat(reasons.get(1).path("conceptId").asLong()).isEqualTo(7L);
+        assertThat(reasons.get(1).path("reason").asString()).isEqualTo("둘째");
+        assertThat(reasons.get(2).path("conceptId").asLong()).isEqualTo(105L);
+        assertThat(reasons.get(2).path("reason").asString()).isEqualTo("첫째");
     }
 }

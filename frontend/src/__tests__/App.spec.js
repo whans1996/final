@@ -27,10 +27,18 @@ describe('App 헤더 (F-00b AC8)', () => {
     expect(wrapper.find('header button').exists()).toBe(false)
   })
 
-  it('AC8 로그인하면 개념 카드·커뮤니티(F-17 AC13)·분석 요청·내 분석·복습(F-15 AC12), 닉네임, 로그아웃을 본다 (관리자 없음)', async () => {
+  it('AC8 로그인하면 대시보드(F-16 AC9)·개념 카드·커뮤니티(F-17 AC13)·분석 요청·내 분석·복습(F-15 AC12), 닉네임, 로그아웃을 본다 (관리자 없음)', async () => {
     const { wrapper, links } = await headerLinks({ beforeNavigate: loginAs('USER') })
 
-    expect(links).toEqual(['개념 카드', '커뮤니티', '분석 요청', '내 분석', '복습', '코딩초보'])
+    expect(links).toEqual([
+      '대시보드',
+      '개념 카드',
+      '커뮤니티',
+      '분석 요청',
+      '내 분석',
+      '복습',
+      '코딩초보',
+    ])
     expect(wrapper.find('header button').text()).toBe('로그아웃')
   })
 
@@ -38,6 +46,7 @@ describe('App 헤더 (F-00b AC8)', () => {
     const { wrapper, links } = await headerLinks({ beforeNavigate: loginAs('ADMIN') })
 
     expect(links).toEqual([
+      '대시보드',
       '개념 카드',
       '커뮤니티',
       '분석 요청',

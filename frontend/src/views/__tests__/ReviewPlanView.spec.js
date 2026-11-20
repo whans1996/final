@@ -2,9 +2,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
 import ReviewPlanView from '@/views/reviewplan/ReviewPlanView.vue'
 import * as reviewPlansApi from '@/api/reviewPlans'
+import * as recommendationsApi from '@/api/recommendations'
+import { recommendation } from '@/components/recommendation/__tests__/fixtures'
 import { apiError, mountAt } from './viewTestUtils'
 
 vi.mock('@/api/reviewPlans')
+vi.mock('@/api/recommendations')
 
 function concept(id, name) {
   return {
@@ -60,6 +63,7 @@ const item = (wrapper, id) => wrapper.find(`[data-plan-id="${id}"]`)
 describe('ReviewPlanView (F-15 SC-11)', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    recommendationsApi.fetchRecommendations.mockResolvedValue({ items: [] })
   })
 
   it('AC9 제목·기간·이동 버튼, 밀린 복습 개수, 날짜 머리글(오늘)과 배지를 보여 준다', async () => {
@@ -267,5 +271,75 @@ describe('ReviewPlanView (F-15 SC-11)', () => {
     expect(item(wrapper, 5).find('[data-message="item-error"]').text()).toBe(
       '복습 계획을 찾을 수 없습니다.',
     )
+  })
+
+  // ── F-16 AC10 빈 상태 추천 ──
+
+  it('F-16 AC10 빈 상태 아래에 추천 3개를 보여 준다', async () => {
+    reviewPlansApi.fetchReviewPlans.mockResolvedValue(response({ overdue: [], items: [] }))
+    recommendationsApi.fetchRecommendations.mockResolvedValue({
+      items: [recommendation(61), recommendation(62), recommendation(63)],
+    })
+    const { wrapper } = await mountView()
+    const recs = wrapper.find('[data-section="empty-recommendations"]')
+
+    expect(recommendationsApi.fetchRecommendations).toHaveBeenCalledWith({ size: 3 })
+    expect(recs.find('h2').text()).toBe('이런 카드부터 시작해 보세요')
+    expect(recs.findAll('[data-concept-id]').map((c) => c.attributes('data-concept-id'))).toEqual([
+      '61',
+      '62',
+      '63',
+    ])
+    expect(wrapper.text()).toContain('이 기간에 복습할 카드가 없습니다.')
+    expect(wrapper.find('[data-action="browse-concepts"]').exists()).toBe(true)
+  })
+
+  it('F-16 AC10 항목이 있으면 추천을 부르지 않는다', async () => {
+    reviewPlansApi.fetchReviewPlans.mockResolvedValue(response())
+    await mountView()
+
+    expect(recommendationsApi.fetchRecommendations).not.toHaveBeenCalled()
+  })
+
+  it('F-16 AC10 추천은 한 번만 부르고 기간을 옮겨도 다시 부르지 않는다', async () => {
+    reviewPlansApi.fetchReviewPlans.mockResolvedValue(response({ overdue: [], items: [] }))
+    recommendationsApi.fetchRecommendations.mockResolvedValue({ items: [recommendation(61)] })
+    const { wrapper } = await mountView()
+
+    reviewPlansApi.fetchReviewPlans.mockResolvedValue(
+      response({
+        from: '2026-11-27',
+        to: '2026-12-03',
+        overdue: [],
+        items: [plan(9, '2026-11-28')],
+      }),
+    )
+    await wrapper.find('[data-action="next"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('[data-section="empty-recommendations"]').attributes('style')).toContain(
+      'display: none',
+    )
+
+    reviewPlansApi.fetchReviewPlans.mockResolvedValue(response({ overdue: [], items: [] }))
+    await wrapper.find('[data-action="today"]').trigger('click')
+    await flushPromises()
+
+    expect(recommendationsApi.fetchRecommendations).toHaveBeenCalledTimes(1)
+    expect(
+      wrapper.find('[data-section="empty-recommendations"]').attributes('style') ?? '',
+    ).not.toContain('display: none')
+    expect(wrapper.find('[data-section="empty-recommendations"]').text()).toContain('카드61')
+  })
+
+  it('F-16 AC10 추천 조회가 실패하거나 비면 추천 절을 숨긴다', async () => {
+    reviewPlansApi.fetchReviewPlans.mockResolvedValue(response({ overdue: [], items: [] }))
+    recommendationsApi.fetchRecommendations.mockRejectedValue(
+      apiError(500, { code: 'COMMON_500', message: '오류' }),
+    )
+    const { wrapper } = await mountView()
+
+    expect(wrapper.text()).not.toContain('이런 카드부터 시작해 보세요')
+    expect(wrapper.find('[role="alert"]').exists()).toBe(false)
+    expect(wrapper.text()).toContain('이 기간에 복습할 카드가 없습니다.')
   })
 })
