@@ -220,9 +220,9 @@
 - [x] BE 구현 (green): `ConceptReviewController`, `ConceptReviewService`, `ConceptReviewMapper`(+XML), DTO 4종(`ConceptReviewRequest`·`ConceptReviewResponse`·`ConceptReviewSaveResponse`·`ConceptRatingResponse`), `ErrorCode` `CONCEPT_001`·`CONCEPT_409`, `PUBLIC_GET_PATHS`
 - [x] FE 구현 (green): API 함수 5개, `StarRating`, `ReviewForm`, `ConceptReviews`, `ConceptDetailView` 헤더·절 연결
 - [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
-- [ ] contract-checker 통과
-- [ ] ui-verifier 통과 (데스크톱·모바일)
+- [x] contract-checker 통과
+- [x] ui-verifier 통과 (데스크톱·모바일)
 - [ ] reviewer 지적 사항 반영
-- [ ] 산출물 반영: `06-화면설계서.md` SC-10 리뷰 부분(내 리뷰 상자·수정·삭제·더 보기) + 스크린샷, `01-요구사항정의서.md` F-11 행·`02-유스케이스.md` UC22에 수정·삭제, `docs/conventions.md` 3절 CONCEPT 코드
+- [x] 산출물 반영: `06-화면설계서.md` SC-10 리뷰 부분(내 리뷰 상자·수정·삭제·더 보기) + 스크린샷, `01-요구사항정의서.md` F-11 행·`02-유스케이스.md` UC22에 수정·삭제, `docs/conventions.md` 3절 CONCEPT 코드
 - [ ] PR CI 초록 (CODEOWNERS상 concept 패키지·`components/concept`·`src/api/concepts.js`와 `SecurityConfig`·`ErrorCode`가 공통 → 본문에서 @whans1996 멘션, `node scripts/owners.mjs --diff origin/develop`)
 - [ ] 상태 DONE (PR 머지 전 마지막 커밋)
