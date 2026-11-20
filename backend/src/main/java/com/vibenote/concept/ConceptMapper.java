@@ -37,6 +37,14 @@ public interface ConceptMapper {
      */
     void insertDraft(Concept concept);
 
+    // ── F-16 추천 (A) ──
+
+    /** PUBLISHED 카드 전체의 요약 컬럼, id 오름차순. 카드 수백 개 규모라 한 번에 읽는다. */
+    List<Concept> findAllPublishedSummaries();
+
+    /** 회원이 찜한 PUBLISHED 카드 (id·category만 채운다). concept_wishes는 B(F-12) 테이블이다. */
+    List<Concept> findWishedByUser(long userId);
+
     // ── F-09~13 카드 (B) ──
 
     /** PUBLISHED 카드 검색 (F-09). keyword는 {@code !}로 이스케이프된 값이고, null인 조건은 걸지 않는다. 요약 컬럼만 채운다. */

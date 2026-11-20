@@ -7,6 +7,7 @@ import authRoutes from './routes/auth'
 import challengeRoutes from './routes/challenge'
 import communityRoutes from './routes/community'
 import conceptRoutes from './routes/concept'
+import dashboardRoutes from './routes/dashboard'
 import reviewPlanRoutes from './routes/reviewplan'
 import userRoutes from './routes/user'
 
@@ -15,6 +16,7 @@ import userRoutes from './routes/user'
 export const routes = [
   { path: '/', name: 'home', component: HomeView },
   ...authRoutes,
+  ...dashboardRoutes,
   ...userRoutes,
   ...analysisRoutes,
   ...conceptRoutes,
@@ -47,14 +49,15 @@ export function authGuard(to, auth) {
 }
 
 /**
- * 로그인·가입 후 돌아갈 주소. 다른 사이트로 나가지 않게 앱 내부 경로만 허용한다.
+ * 로그인·가입 후 돌아갈 주소. 다른 사이트로 나가지 않게 앱 내부 경로만 허용하고,
+ * 없거나 허용되지 않으면 대시보드로 보낸다 (F-16 AC9).
  * 브라우저는 URL의 `\`를 `/`로 읽으므로 `/\evil.com`도 `//evil.com`처럼 막는다.
  */
 export function redirectTarget(query) {
   const target = query.redirect
   return typeof target === 'string' && target.startsWith('/') && !/^\/[/\\]/.test(target)
     ? target
-    : '/'
+    : '/dashboard'
 }
 
 const router = createRouter({

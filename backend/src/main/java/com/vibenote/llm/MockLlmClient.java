@@ -38,6 +38,9 @@ public class MockLlmClient implements LlmClient {
     private static final Pattern CATALOG_LINE =
             Pattern.compile("(?m)^(\\d+) \\| (.+) \\| [^|\\r\\n]+$");
 
+    /** RECOMMEND 프롬프트 카드 줄의 맨 앞 {@code id |} ({@code RecommendationPrompts.cards}). */
+    private static final Pattern RECOMMEND_CARD_LINE = Pattern.compile("(?m)^(\\d+) \\|");
+
     private static final JsonMapper JSON = JsonMapper.builder().build();
 
     /** fixture 경로({@code llm-fixtures/<stage>.json}) → 내용. */
@@ -59,6 +62,8 @@ public class MockLlmClient implements LlmClient {
             content = linkConceptNames(content, request.prompt());
         } else if (request.stage() == LlmStage.QUIZ) {
             content = linkQuizConceptNames(content, request.prompt());
+        } else if (request.stage() == LlmStage.RECOMMEND) {
+            content = linkRecommendIds(content, request.prompt());
         }
         return new LlmResponse(content, MODEL, 0, 0);
     }
@@ -149,6 +154,34 @@ public class MockLlmClient implements LlmClient {
             linked.add(copy);
         }
         obj.set("questions", linked);
+        return JSON.writeValueAsString(obj);
+    }
+
+    /**
+     * recommend fixture의 {@code reasons[i].reason}을 프롬프트 카드 줄의 id에 순서대로 붙여 {@code {"reasons":
+     * [{"conceptId", "reason"}]}}로 돌려준다. 카드가 fixture보다 많으면 처음부터 다시 쓴다 (F-16 5절). 카드 id는 DB마다 다르므로
+     * fixture에 적지 않는다.
+     *
+     * @param fixture recommend 단계 fixture JSON
+     * @param prompt RECOMMEND 프롬프트 (카드 줄을 포함)
+     */
+    public static String linkRecommendIds(String fixture, String prompt) {
+        JsonNode root = JSON.readTree(fixture);
+        JsonNode reasons = root.path("reasons");
+        if (!(root instanceof ObjectNode obj) || !reasons.isArray() || reasons.isEmpty()) {
+            return fixture;
+        }
+        ArrayNode linked = JSON.createArrayNode();
+        Matcher m = RECOMMEND_CARD_LINE.matcher(prompt == null ? "" : prompt);
+        int i = 0;
+        while (m.find()) {
+            ObjectNode item = JSON.createObjectNode();
+            item.put("conceptId", Long.parseLong(m.group(1)));
+            item.set("reason", reasons.get(i % reasons.size()).path("reason"));
+            linked.add(item);
+            i++;
+        }
+        obj.set("reasons", linked);
         return JSON.writeValueAsString(obj);
     }
 
