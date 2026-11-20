@@ -195,7 +195,7 @@ AC11 종류별 문장 (SC-17):
 - [x] BE 구현 (green): `ErrorCode` USER 블록 `USER_002`, `SecurityConfig` FOLLOW 블록, `follow` 패키지 Controller·Service·Mapper, `feed` 패키지 `FeedController`·`FeedService`·`FeedMapper`
 - [x] FE 구현 (green)
 - [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
-- [ ] contract-checker 통과
+- [x] contract-checker 통과 (불일치 0, 11-20)
 - [ ] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일)
 - [ ] reviewer 지적 사항 반영
 - [ ] 산출물 반영: 유스케이스 UC05(멱등으로 대안 흐름 수정)·UC06, 화면 설계서 SC-17("spec에서 정할 것" 정리, 스크린샷)·SC-18(팔로우 영역, 팔로우 목록 화면), REST API 명세
