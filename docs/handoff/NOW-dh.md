@@ -4,29 +4,32 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
 
-갱신: 2026-11-20 14:59 · 작업자: whans1996@naver.com · PC: dh-home · 브랜치: feature/F-16-recommendation
+갱신: 2026-11-20 15:39 · 작업자: whans1996@naver.com · PC: dh-home · 브랜치: feature/issue-63-post-view-test-wait
 
 ## 현재 기능
 
-F-16 맞춤 개념 카드 추천 — spec **DONE (PR #62)**, CI 초록, **Codex ✅ 761f962** (이후 docs만). 사람이 GitHub에서 **Squash and merge**만 남음 (wip 커밋 있음)
+하네스 점검 후 선행 처리 (계획: 이슈 차단 모델 + Codex 판정 + #63). F-16은 PR #62 머지 완료
 
 ## 진행
 
-- ✅ reviewer 권장 2건 `928eb83`, develop(F-17) 합침 `f8d6dd9`, Codex P2(추천 요청 타임아웃 370초) `761f962`
-- ✅ 이슈 #63(area:B): B의 PostDetailView·PostWriteView 테스트가 dh-home에서 지연 로딩 타이밍으로 실패 → 이 PC FE 정식 커밋이 hook에 막힘
+- ✅ #63: PostDetailView AC15·AC16·PostWriteView `vi.waitFor` timeout 5초 `6d80100` → dh-home에서 FE 정식 커밋이 hook 통과. **PR #66** CI 초록, **Codex ✅ ce0c247** (첫 리뷰가 Codex 쪽에서 21분 running 정체 → develop 병합 push로 재요청)
 
 ## 바로 다음 할 일
 
-1. 사람: PR #62 머지 직전 `git fetch && git rev-list --count HEAD..origin/develop`가 0인지 확인 (아니면 `git merge origin/develop` → push → CI 초록) 후 GitHub에서 **Squash and merge**
-2. 머지 후 `/clear` → `/pickup`: develop 받고 다음 A 기능 고르기 (`docs/기획서.md` 4절 일정, `gh issue list --label follow-up --label area:A`)
+1. 사람: PR #66 머지 (wip 없음). 그 뒤 `/clear` → 하네스 PR 세션 (Opus/high)
+2. 하네스 PR (`chore(harness)`, 먼저 `area:common` 이슈 생성 → `feature/issue-<n>-issue-priority`):
+   - `scripts/lib/issues.mjs` `followUpIssues`가 session-start 동기 git 블록에 3초 타이머를 뺏겨 null → `{ok,issues,reason}`, git 블록 뒤 시작, 실패 줄 항상 표시 (`env-check.mjs:55-61,141-145`도 같은 문제)
+   - `blocker` 라벨: `summarizeIssues`가 영역 무관 `blockers` 그룹, 배너 🔴, `/pickup`·`/spec` 1단계에서 멈추고 묻기, pr-review·handoff 생성 지침, conventions 7절, 결정로그
+   - #48·#39: `codex-review.mjs` `judge()`(185-243) → `scripts/lib/codex.mjs`로 옮겨 테스트, failed는 재요청(같은 head 2회면 ERROR), running이 15분 넘게 안 바뀌면 정체로 보고 재요청 (PR #66 사례)
+   - 머지 조건 문구 통일(CLAUDE.md:36·66, pr-review 9단계, PR 템플릿 = CI + Codex), 죽은 포인터(`docs/작업로그.md:5`, `backend/CLAUDE.md:5`)
+3. 그 뒤 #54 → #55·#17 → F-05b `/spec`
 
 ## 막힌 점 / 결정 필요
 
 - 사람: 이슈 #16, 노션 팀원 초대, 고아 폴더 `../final-harness` 삭제 여부
-- 실제 LLM 추천 이유 품질은 사용자 요청 시 prompt-evaluator(RECOMMEND)
+- 하네스 동결 원칙(막거나 거짓 정보 주는 버그만 고침) 결정로그 추가 여부
 
 ## 주의
 
-- #63 해결 전에는 이 PC에서 FE 파일 정식 커밋이 막힌다 (사용자 확인 후 wip + Squash)
-- B F-12(찜) 진행 중: concept 패키지 공통 변경 예정 → 먼저 머지되면 F-16 머지 전 develop 합치기
+- B F-12(찜) 진행 중: concept 패키지 공통 변경 예정
 - 리뷰 지적은 '무시 가능'도 직접 확인한다 (11-20 사용자 지시)

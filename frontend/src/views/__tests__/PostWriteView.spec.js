@@ -87,7 +87,9 @@ describe('PostWriteView (F-17 AC17·AC18)', () => {
       analysisId: null,
       conceptId: null,
     })
-    await vi.waitFor(() => expect(router.currentRoute.value.path).toBe('/community/42'))
+    await vi.waitFor(() => expect(router.currentRoute.value.path).toBe('/community/42'), {
+      timeout: 5000,
+    })
     expect(confirm).not.toHaveBeenCalled()
   })
 
@@ -128,7 +130,9 @@ describe('PostWriteView (F-17 AC17·AC18)', () => {
     expect(postsApi.createPost.mock.calls[0][0]).toMatchObject({ analysisId: 15, conceptId: null })
     resolve({ id: 43 })
     await flushPromises()
-    await vi.waitFor(() => expect(router.currentRoute.value.path).toBe('/community/43'))
+    await vi.waitFor(() => expect(router.currentRoute.value.path).toBe('/community/43'), {
+      timeout: 5000,
+    })
   })
 
   it('AC17 400이면 details를 필드 아래에, 첨부 오류는 첨부 아래에, 그 밖은 서버 message를 보여 준다', async () => {
@@ -255,7 +259,9 @@ describe('PostWriteView (F-17 AC17·AC18)', () => {
       analysisId: null,
       conceptId: 12,
     })
-    await vi.waitFor(() => expect(router.currentRoute.value.path).toBe('/community/42'))
+    await vi.waitFor(() => expect(router.currentRoute.value.path).toBe('/community/42'), {
+      timeout: 5000,
+    })
     expect(confirm).not.toHaveBeenCalled()
   })
 
@@ -302,7 +308,9 @@ describe('PostWriteView (F-17 AC17·AC18)', () => {
     const { wrapper, router } = await mountWrite('/community/42/edit')
 
     expect(wrapper.text()).toContain('본인이 쓴 글만 수정할 수 있습니다.')
-    await vi.waitFor(() => expect(router.currentRoute.value.path).toBe('/community/42'))
+    await vi.waitFor(() => expect(router.currentRoute.value.path).toBe('/community/42'), {
+      timeout: 5000,
+    })
     expect(postsApi.updatePost).not.toHaveBeenCalled()
   })
 })
