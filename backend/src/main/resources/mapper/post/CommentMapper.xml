@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- F-18 댓글 (B) -->
+<mapper namespace="com.vibenote.post.CommentMapper">
+
+    <sql id="columns">
+        c.id, c.post_id, c.user_id, c.content, c.created_at, c.updated_at,
+        u.nickname AS author_nickname, u.status AS author_status
+    </sql>
+
+    <select id="existsPost" resultType="boolean">
+        SELECT EXISTS (SELECT 1 FROM posts WHERE id = #{postId})
+    </select>
+
+    <select id="lockPost" resultType="int">
+        SELECT COUNT(*) FROM posts WHERE id = #{postId} FOR SHARE
+    </select>
+
+    <!-- idx_comments_post_created (post_id, created_at)를 탄다 -->
+    <select id="findByPost" resultType="com.vibenote.post.domain.Comment">
+        SELECT <include refid="columns"/>
+        FROM comments c
+        JOIN users u ON u.id = c.user_id
+        WHERE c.post_id = #{postId}
+        ORDER BY c.created_at, c.id
+        LIMIT #{limit}
+    </select>
+
+    <select id="countByPost" resultType="long">
+        SELECT COUNT(*) FROM comments WHERE post_id = #{postId}
+    </select>
+
+    <select id="findById" resultType="com.vibenote.post.domain.Comment">
+        SELECT <include refid="columns"/>
+        FROM comments c
+        JOIN users u ON u.id = c.user_id
+        WHERE c.id = #{id}
+    </select>
+
+    <select id="findInPostForUpdate" resultType="com.vibenote.post.domain.Comment">
+        SELECT id, post_id, user_id, content, created_at, updated_at
+        FROM comments
+        WHERE id = #{commentId} AND post_id = #{postId}
+        FOR UPDATE
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+        INSERT INTO comments (post_id, user_id, content, created_at, updated_at)
+        VALUES (#{postId}, #{userId}, #{content}, #{createdAt}, #{updatedAt})
+    </insert>
+
+    <!-- updated_at은 서비스 시각(Clock)으로 채운다. 내용이 같으면 CommentService가 이 문장을 부르지 않는다 -->
+    <update id="updateContent">
+        UPDATE comments SET content = #{content}, updated_at = #{updatedAt} WHERE id = #{id}
+    </update>
+
+    <delete id="delete">
+        DELETE FROM comments WHERE id = #{id}
+    </delete>
+</mapper>
