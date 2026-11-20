@@ -4,13 +4,13 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-dh.md`)은 읽기만 한다.
 
-갱신: 2026-11-20 17:19 · 작업자: JoonseobKim · PC: js-home · 브랜치: feature/F-04-follow-feed
+갱신: 2026-11-20 17:21 · 작업자: JoonseobKim · PC: js-home · 브랜치: feature/F-04-follow-feed
 
 ---
 
 ## 현재 기능
 
-F-04 팔로우·활동 피드 — spec APPROVED `docs/specs/F-04-follow-feed.md`, `/implement` 진행 중. **AC1~AC11 모두 green**, 다음 기능 단위 마무리(contract-checker·ui-verifier·산출물)
+F-04 팔로우·활동 피드 — spec APPROVED `docs/specs/F-04-follow-feed.md`, `/implement` 진행 중. **AC1~AC11 모두 green**, contract-checker 불일치 0, 산출물(UC05·UC06·SC-17·SC-18) 반영, develop 병합(1d0c91e). 남은 것: ui-verifier → `/pr-review`
 
 ## 진행
 
@@ -21,13 +21,13 @@ F-04 팔로우·활동 피드 — spec APPROVED `docs/specs/F-04-follow-feed.md`
 
 ## 바로 다음 할 일
 
-1. `contract-checker`(spec 3절 ↔ openapi.json ↔ `src/api/follows.js`·`feed.js`)
-2. BE(local)·FE dev 띄우고 `ui-verifier`: `/feed`(빈 피드·항목), `/users/:id`(팔로우 버튼), `/users/:id/follows` 1280·375. 필요하면 SC-17·SC-18 스크린샷 `docs/산출물/screens/`
-3. 산출물: 유스케이스 UC05(멱등)·UC06, 화면 설계서 SC-17·SC-18(팔로우 영역·목록), REST API 명세 → `/pr-review` (`Closes #64`)
+1. BE를 새 코드로 다시 띄운다 (`cd backend && ./gradlew bootRun --args='--spring.profiles.active=local'`, 16:25에 띄운 옛 BE가 8080에 떠 있으면 먼저 끈다). FE dev는 5173에 떠 있음
+2. `ui-verifier`: `/feed`(빈 피드·항목), `/users/:id`(팔로우 버튼), `/users/:id/follows` 1280·375 → SC-17·SC-18 스크린샷 `docs/산출물/screens/`, spec 체크리스트 ui-verifier 체크
+3. `/pr-review` (`Closes #64`, @whans1996 멘션)
 
 ## 막힌 점 / 결정 필요
 
-- 없음
+- 옛 BE 프로세스 종료가 auto mode 권한에 막힘 → 사람이 BE 재시작 필요
 
 ## 주의
 
