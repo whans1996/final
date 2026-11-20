@@ -70,4 +70,10 @@ public class AnalysisConceptService {
                                 .count();
         return new AnalysisConceptsResponse(items, pending);
     }
+
+    /** 퀴즈 프롬프트에 넣을 연결 개념 (F-14 AC2). 파이프라인이 부르므로 소유를 확인하지 않는다. */
+    @Transactional(readOnly = true)
+    public List<LinkedConcept> findForQuiz(long analysisId) {
+        return mapper.findForQuiz(analysisId);
+    }
 }

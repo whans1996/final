@@ -16,6 +16,9 @@ public interface AnalysisConceptMapper {
      */
     List<LinkRow> findByAnalysis(@Param("analysisId") long analysisId);
 
+    /** 퀴즈 프롬프트의 개념 목록 (F-14 AC2). HIDDEN 카드는 빼고 {@code concept_id} 오름차순. */
+    List<LinkedConcept> findForQuiz(@Param("analysisId") long analysisId);
+
     /**
      * analysis_concepts 행 (+ 조회 때 카드 상태·파일 경로).
      *

@@ -70,6 +70,10 @@ public enum ErrorCode {
     CONCEPT_409(HttpStatus.CONFLICT, "이미 이 카드에 리뷰를 남겼습니다."),
 
     // ── QUIZ (A F-14) ──
+    /** 없는 퀴즈, 남의·삭제된 분석의 퀴즈, 또는 내 분석이지만 퀴즈가 없음(생성 실패·QUIZ 전) (F-14 AC5·AC8). */
+    QUIZ_404(HttpStatus.NOT_FOUND, "퀴즈를 찾을 수 없습니다."),
+    /** 제출이 그 퀴즈의 문항마다 정확히 한 번씩 답하지 않음 (누락·중복·다른 퀴즈의 문항, F-14 AC8). */
+    QUIZ_400(HttpStatus.BAD_REQUEST, "모든 문항에 한 번씩 답해 주세요."),
 
     // ── REVIEW_PLAN (A F-15) ──
 

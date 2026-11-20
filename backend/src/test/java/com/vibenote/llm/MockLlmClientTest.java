@@ -114,6 +114,45 @@ class MockLlmClientTest {
     }
 
     @Test
+    void AC11_quiz_fixture의_conceptName을_프롬프트_개념_목록의_id로_바꾸고_없으면_null() throws Exception {
+        String fixture =
+                """
+                { "questions": [
+                  { "conceptName": "의존성 주입 (DI)", "question": "q1" },
+                  { "conceptName": "@RestController와 요청 매핑", "question": "q2" },
+                  { "conceptName": "목록에 없는 카드", "question": "q3" },
+                  { "conceptId": null, "question": "q4" }
+                ] }
+                """;
+        String prompt =
+                """
+                ## 개념 목록 (id | 이름 | 이 코드에서 쓰인 방식)
+
+                103 | @RestController와 요청 매핑
+                118 | 의존성 주입 (DI) | 생성자로 서비스를 받는다
+
+                ## 코드
+                """;
+        MockLlmClient fixed = new MockLlmClient(path -> fixture);
+
+        JsonNode questions =
+                new ObjectMapper()
+                        .readTree(
+                                fixed.complete(new LlmRequest(LlmStage.QUIZ, Level.JUNIOR, prompt))
+                                        .content())
+                        .path("questions");
+
+        assertThat(questions).hasSize(4);
+        assertThat(questions.get(0).path("conceptId").asLong()).isEqualTo(118L);
+        assertThat(questions.get(0).has("conceptName")).isFalse();
+        assertThat(questions.get(0).path("question").asString()).isEqualTo("q1");
+        assertThat(questions.get(1).path("conceptId").asLong()).isEqualTo(103L);
+        assertThat(questions.get(2).path("conceptId").isNull()).isTrue();
+        assertThat(questions.get(2).has("conceptName")).isFalse();
+        assertThat(questions.get(3).path("conceptId").isNull()).isTrue();
+    }
+
+    @Test
     void fixture가_없는_단계는_명확한_오류() {
         // 분석 파이프라인 spec에서 main fixture를 추가하면 이 테스트의 대상 단계를 바꾼다
         assertThatThrownBy(
