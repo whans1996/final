@@ -10,17 +10,14 @@
     </select>
 
     <!--
-      같은 (회원, 개념, 날짜) 행이 있으면 넣지 않고 0을 돌려준다 (F-14 AC7).
-      ON DUPLICATE KEY UPDATE id = id만으로는 Connector/J 기본값(useAffectedRows=false, CLIENT_FOUND_ROWS)에서
-      중복이어도 1을 돌려주므로 NOT EXISTS로 거른다. 동시 제출로 그 사이에 같은 행이 생겨도 오류가 나지 않게 ODKU를 남긴다.
+      같은 (회원, 개념, 날짜) 행이 있으면(UNIQUE uk_review_plans_user_concept_date) 넣지 않고 0을 돌려준다 (F-14 AC7).
+      - ON DUPLICATE KEY UPDATE id = id는 Connector/J 기본값(CLIENT_FOUND_ROWS)에서 중복이어도 1을 돌려줘 쓰지 않는다.
+      - INSERT … SELECT … WHERE NOT EXISTS는 RR에서 gap에 공유 next-key 락을 걸어, 같은 gap에 넣는 다른 회원의
+        동시 제출과 데드락이 난다 (ReviewPlanConcurrencyTest로 재현). INSERT IGNORE는 insert intention 락만 잡는다.
+      - INSERT IGNORE는 FK 위반 같은 다른 오류도 경고로 바꾼다. 호출자가 존재하는 회원과 PUBLISHED 카드만 넘긴다.
     -->
     <insert id="insertIgnoringDuplicate">
-        INSERT INTO review_plans (user_id, concept_id, plan_date, status, reason, created_at)
-        SELECT #{userId}, #{conceptId}, #{planDate}, 'TODO', #{reason}, #{createdAt} FROM DUAL
-        WHERE NOT EXISTS (
-            SELECT 1 FROM review_plans
-            WHERE user_id = #{userId} AND concept_id = #{conceptId} AND plan_date = #{planDate}
-        )
-        ON DUPLICATE KEY UPDATE id = id
+        INSERT IGNORE INTO review_plans (user_id, concept_id, plan_date, status, reason, created_at)
+        VALUES (#{userId}, #{conceptId}, #{planDate}, 'TODO', #{reason}, #{createdAt})
     </insert>
 </mapper>
