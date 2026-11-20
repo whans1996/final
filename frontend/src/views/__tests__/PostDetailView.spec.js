@@ -100,8 +100,10 @@ describe('PostDetailView (F-17 AC15·AC16)', () => {
     const { wrapper, router } = await mountDetail()
 
     await wrapper.find('[data-action="back-to-list"]').trigger('click')
-    await flushPromises()
-    expect(router.currentRoute.value.path).toBe('/community')
+    // /community는 지연 로딩 route라 첫 모듈 로딩이 flushPromises 한 번보다 길 수 있다 (#63)
+    await vi.waitFor(() => expect(router.currentRoute.value.path).toBe('/community'), {
+      timeout: 5000,
+    })
   })
 
   it('AC16 자기 글에만 수정·삭제가 보인다', async () => {
@@ -134,7 +136,9 @@ describe('PostDetailView (F-17 AC15·AC16)', () => {
     await wrapper.find('[data-action="delete"]').trigger('click')
     await flushPromises()
     expect(postsApi.deletePost).toHaveBeenCalledWith(42)
-    expect(router.currentRoute.value.path).toBe('/community')
+    await vi.waitFor(() => expect(router.currentRoute.value.path).toBe('/community'), {
+      timeout: 5000,
+    })
   })
 
   it('AC16 삭제가 403·404면 서버 message를 보여 준다', async () => {
