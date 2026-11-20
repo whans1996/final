@@ -14,7 +14,7 @@ F-04 팔로우·활동 피드 — **PR #71 열림, CI 전부 초록, Codex ✅ f
 
 ## 진행
 
-- ✅ AC1~AC5 팔로우 BE (d498220): `follow/FollowController`·`FollowService`(follow는 나·대상 users 행 id 오름차순 FOR UPDATE)·`FollowMapper.xml`. 자기 자신 에러는 `USER_002`(spec의 FOLLOW_001이 conventions 3절과 어긋나 변경, 결정로그)
+- ✅ AC1~AC5 팔로우 BE (d498220): `follow/FollowController`·`FollowService`(follow는 나·대상 users 행 id 오름차순 FOR SHARE, 6ca0af4)·`FollowMapper.xml`. 자기 자신 에러는 `USER_002`(spec의 FOLLOW_001이 conventions 3절과 어긋나 변경, 결정로그)
 - ✅ FE AC9~AC11: `api/follows.js`·`feed.js`, `components/follow/FollowSummary`·`FollowUserItem`, `views/UserFollowsView`, `views/community/FeedView`·`components/feed/FeedItem`·`feedTypes.js`, `composables/useMoreList.js`(더 보기+id 거름), `utils/relativeTime.js`, nav 피드 order 7(App·navItems 테스트 갱신)
 - ✅ AC6~AC8 피드 BE: `feed/FeedController`(`GET /api/feed`)·`FeedService`·`FeedMapper.xml`(목록·COUNT 공용 `<sql id="visible">`, REVIEW target.id=카드 id, ANALYSIS 제목 없으면 FE용 "제목 없는 분석"은 `FeedItemResponse.from`). `FeedApiTest` 11개
 - 주의: 테스트 트랜잭션 안에서 같은 MyBatis SELECT를 두 번 부르면 세션 캐시가 옛 결과를 준다 → `SqlSessionTemplate.clearCache()` (FeedApiTest 찜 재찜 케이스)
