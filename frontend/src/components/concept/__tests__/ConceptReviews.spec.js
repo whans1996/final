@@ -103,6 +103,50 @@ describe('ConceptReviews (F-11 AC13~AC17)', () => {
     expect(wrapper.find('[data-action="more"]').exists()).toBe(false)
   })
 
+  it('AC13 내 리뷰를 지운 뒤 더 보기는 건너뛰는 리뷰 없이 나머지를 붙이고 버튼이 사라진다', async () => {
+    // 서버: 최신순 12..1, 내 리뷰는 1쪽의 7번
+    let server = reviews(12, 12).map((r) => (r.id === 7 ? { ...r, authorId: 9 } : r))
+    conceptsApi.fetchReviews.mockImplementation(async (_id, { page: p, size }) =>
+      page(server.slice((p - 1) * size, p * size), server.length, p),
+    )
+    conceptsApi.fetchMyReview.mockImplementation(async () => server.find((r) => r.id === 7))
+    conceptsApi.deleteReview.mockImplementation(async () => {
+      server = server.filter((r) => r.id !== 7)
+      return { avgRating: 4.0, reviewCount: server.length }
+    })
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const { wrapper } = await mountReviews({ loggedIn: true })
+
+    await wrapper.find('[data-action="delete"]').trigger('click')
+    await flushPromises()
+    await wrapper.find('[data-action="more"]').trigger('click')
+    await flushPromises()
+
+    expect(listed(wrapper)).toEqual(['12', '11', '10', '9', '8', '6', '5', '4', '3', '2', '1'])
+    expect(wrapper.find('[data-action="more"]').exists()).toBe(false)
+  })
+
+  it('AC13 새 리뷰를 쓴 뒤 더 보기는 밀려난 항목을 한 번만 붙인다', async () => {
+    let server = reviews(12, 12)
+    conceptsApi.fetchReviews.mockImplementation(async (_id, { page: p, size }) =>
+      page(server.slice((p - 1) * size, p * size), server.length, p),
+    )
+    conceptsApi.fetchMyReview.mockResolvedValue(null)
+    conceptsApi.createReview.mockImplementation(async ({ rating, content }) => {
+      const mine = review(13, { rating, content, authorId: 9 })
+      server = [mine, ...server]
+      return { review: mine, avgRating: 4.0, reviewCount: server.length }
+    })
+    const { wrapper } = await mountReviews({ loggedIn: true })
+
+    await writeReview(wrapper, 5, '새 리뷰')
+    await wrapper.find('[data-action="more"]').trigger('click')
+    await flushPromises()
+
+    expect(listed(wrapper)).toEqual(reviews(13, 13).map((r) => String(r.id)))
+    expect(wrapper.find('[data-action="more"]').exists()).toBe(false)
+  })
+
   it('AC13 0건이면 첫 리뷰 안내를 보여 준다', async () => {
     conceptsApi.fetchReviews.mockResolvedValue(page([], 0))
 

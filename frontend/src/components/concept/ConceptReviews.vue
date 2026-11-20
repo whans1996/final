@@ -27,7 +27,6 @@ const router = useRouter()
 
 const items = ref([])
 const total = ref(0)
-const page = ref(0)
 const loadingList = ref(true)
 const loadingMore = ref(false)
 const listError = ref('')
@@ -57,7 +56,6 @@ async function load(conceptId) {
   const current = ++generation
   items.value = []
   total.value = 0
-  page.value = 0
   listError.value = ''
   moreError.value = ''
   myReview.value = null
@@ -71,7 +69,6 @@ async function load(conceptId) {
       if (current !== generation) return
       items.value = result.items
       total.value = result.total
-      page.value = 1
       emit('rating-change', { reviewCount: result.total })
     })
     .catch((error) => {
@@ -94,18 +91,24 @@ async function loadMine(conceptId, current = generation) {
   }
 }
 
+// 다음 쪽은 이미 받은 개수로 정한다. 새 리뷰가 앞에 붙으면 항목이 뒤로 밀려 같은 항목이 다시 오므로 id로 거르고,
+// 불러온 리뷰를 지우면 항목이 앞으로 당겨져 경계 쪽에서 빈자리 하나만 채워지므로, 한 쪽 분량이 안 되면 한 번 더 받는다.
 async function loadMore() {
   const current = generation
   loadingMore.value = true
   moreError.value = ''
   try {
-    const result = await fetchReviews(props.conceptId, { page: page.value + 1, size: PAGE_SIZE })
-    if (current !== generation) return
-    // 그사이 새 리뷰가 생겨 페이지가 밀리면 같은 항목이 다시 올 수 있다
-    const seen = new Set(items.value.map((r) => r.id))
-    items.value = [...items.value, ...result.items.filter((r) => !seen.has(r.id))]
-    total.value = result.total
-    page.value += 1
+    let added = 0
+    for (let request = 0; request < 2 && added < PAGE_SIZE && hasMore.value; request += 1) {
+      const nextPage = Math.floor(items.value.length / PAGE_SIZE) + 1
+      const result = await fetchReviews(props.conceptId, { page: nextPage, size: PAGE_SIZE })
+      if (current !== generation) return
+      const seen = new Set(items.value.map((r) => r.id))
+      const fresh = result.items.filter((r) => !seen.has(r.id))
+      items.value = [...items.value, ...fresh]
+      total.value = result.total
+      added += fresh.length
+    }
   } catch (error) {
     if (current === generation) moreError.value = errorMessage(error)
   } finally {
