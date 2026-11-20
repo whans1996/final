@@ -504,6 +504,27 @@ class ConceptWishApiTest extends IntegrationTestBase {
     }
 
     @Test
+    void AC11_탈퇴한_회원의_남은_토큰이면_찜_해제는_401이고_찜은_그대로다() throws Exception {
+        long me = insertUser("f12ac11w");
+        long wished = conceptWishedBy(0);
+        insertWish(me, wished, BASE);
+        long notWished = published();
+        jdbc.update("UPDATE users SET status = 'WITHDRAWN', withdrawn_at = NOW() WHERE id = ?", me);
+
+        wish(notWished, me)
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("AUTH_401"));
+        unwish(wished, me)
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("AUTH_401"));
+
+        assertThat(wishRows(me, notWished)).isZero();
+        assertThat(wishRows(me, wished)).isOne();
+        assertThat(wishCount(notWished)).isZero();
+        assertThat(wishActivities(me, notWished)).isZero();
+    }
+
+    @Test
     void AC11_찜_목록_공개_경로가_users_me를_열지_않는다() throws Exception {
         mockMvc.perform(get("/api/users/me"))
                 .andExpect(status().isUnauthorized())

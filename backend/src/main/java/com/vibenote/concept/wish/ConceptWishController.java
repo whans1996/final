@@ -42,7 +42,7 @@ public class ConceptWishController {
     @ApiResponse(responseCode = "200", description = "찜 상태")
     @ApiResponse(
             responseCode = "401",
-            description = "로그인 필요 (AUTH_401)",
+            description = "로그인 필요, 만료·깨진 토큰, 탈퇴한 회원의 남은 토큰 (AUTH_401)",
             content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     @ApiResponse(
             responseCode = "404",
@@ -61,7 +61,7 @@ public class ConceptWishController {
     @ApiResponse(responseCode = "200", description = "찜 상태")
     @ApiResponse(
             responseCode = "401",
-            description = "로그인 필요 (AUTH_401)",
+            description = "로그인 필요, 만료·깨진 토큰, 탈퇴한 회원의 남은 토큰 (AUTH_401)",
             content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     @ApiResponse(
             responseCode = "404",

@@ -71,6 +71,23 @@ describe('UserWishes (F-12 AC15)', () => {
     expect(moreButton(wrapper).exists()).toBe(false)
   })
 
+  it('AC15 그사이 찜이 늘어 다음 쪽이 앞 쪽과 겹치면 같은 카드를 두 번 붙이지 않고, 한 쪽보다 적게 오면 "더 보기"를 숨긴다', async () => {
+    // 1쪽(1~12)을 받은 뒤 새 찜(0)이 맨 앞에 생겨 2쪽이 12·13으로 밀려 온다
+    conceptsApi.fetchUserWishes
+      .mockResolvedValueOnce({ items: cards(1, 12), page: 1, size: 12, total: 13 })
+      .mockResolvedValueOnce({ items: cards(12, 2), page: 2, size: 12, total: 14 })
+    const { wrapper } = await mountWishes()
+
+    await moreButton(wrapper).trigger('click')
+    await flushPromises()
+
+    const ids = wrapper.findAll('[data-concept-id]').map((a) => a.attributes('data-concept-id'))
+    expect(ids).toHaveLength(13)
+    expect(new Set(ids).size).toBe(13)
+    expect(ids.at(-1)).toBe('13')
+    expect(moreButton(wrapper).exists()).toBe(false)
+  })
+
   it('AC15 전부 한 번에 왔으면 "더 보기"가 없다', async () => {
     conceptsApi.fetchUserWishes.mockResolvedValue({
       items: cards(1, 2),

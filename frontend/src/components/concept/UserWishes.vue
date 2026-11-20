@@ -20,8 +20,12 @@ const total = ref(null)
 const page = ref(0)
 const loading = ref(false)
 const error = ref('')
+// 서버가 한 쪽보다 적게 주면 끝이다. 그사이 찜이 바뀌어 화면 개수가 total에 못 미쳐도 버튼이 남지 않게 한다
+const ended = ref(false)
 
-const hasMore = computed(() => total.value !== null && items.value.length < total.value)
+const hasMore = computed(
+  () => !ended.value && total.value !== null && items.value.length < total.value,
+)
 
 // userId를 빠르게 바꿀 때 늦게 도착한 이전 요청의 응답은 버린다
 let lastRequest = 0
@@ -33,7 +37,14 @@ async function load(nextPage) {
   try {
     const result = await fetchUserWishes(props.userId, { page: nextPage, size: PAGE_SIZE })
     if (request !== lastRequest) return
-    items.value = nextPage === 1 ? result.items : [...items.value, ...result.items]
+    if (nextPage === 1) {
+      items.value = result.items
+    } else {
+      // offset 페이지라 그사이 새 찜이 생기면 다음 쪽이 앞 쪽과 겹친다. 이미 보인 카드는 거른다
+      const seen = new Set(items.value.map((card) => card.id))
+      items.value = [...items.value, ...result.items.filter((card) => !seen.has(card.id))]
+    }
+    ended.value = result.items.length < PAGE_SIZE
     total.value = result.total
     page.value = nextPage
   } catch (e) {
@@ -50,6 +61,7 @@ watch(
     items.value = []
     total.value = null
     page.value = 0
+    ended.value = false
     load(1)
   },
   { immediate: true },

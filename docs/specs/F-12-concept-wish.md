@@ -36,7 +36,7 @@
 | AC8 | 회원 U가 카드 15개를 찜했고 그중 1개가 `HIDDEN`, 1개가 `DRAFT`가 되었을 때 | 누구나(비로그인) `GET /api/users/{U}/wishes?page=1&size=12`를 요청하면 | 200과 페이지 응답 `{items, page:1, size:12, total:13}`. `items`는 `PUBLISHED` 카드만 **찜한 시각 최신순**(`concept_wishes.created_at DESC, concept_id DESC`)으로 12개, 항목은 `ConceptSummaryResponse`. `page=2`면 나머지 1개, 범위를 넘은 page면 `items: []`·`total: 13`. 찜이 없으면 `items: []`·`total: 0` |
 | AC9 | 없는 회원 id(`999999`)나 탈퇴한 회원(`users.status='WITHDRAWN'`)일 때 | `GET /api/users/{id}/wishes`를 요청하면 | 404 `USER_404`다 (F-03 공개 프로필과 같다) |
 | AC10 | 카드가 `DRAFT`·`HIDDEN`이거나 없는 id(`999999`)일 때 | `POST`·`DELETE .../wish`를 보내면 | 404 `CONCEPT_404`. 숨겨진 카드에 남아 있던 찜 행과 `wish_count`는 바뀌지 않는다 |
-| AC11 | 토큰 없음·만료·형식 오류일 때 | `POST`·`DELETE .../wish`를 보내면 | 401 `AUTH_401`. `GET /api/users/{id}/wishes`와 카드 상세는 토큰이 깨져 있어도 200이다 (공개 경로) |
+| AC11 | 토큰 없음·만료·형식 오류이거나 탈퇴한 회원의 남은 토큰일 때 | `POST`·`DELETE .../wish`를 보내면 | 401 `AUTH_401`. `GET /api/users/{id}/wishes`와 카드 상세는 토큰이 깨져 있어도 200이다 (공개 경로) |
 
 ### 프론트엔드
 
@@ -106,7 +106,7 @@
 | 상태 | 코드 | 언제 |
 |---|---|---|
 | 400 | COMMON_400 | `page`·`size` 값 오류, 숫자가 아닌 id |
-| 401 | AUTH_401 | 찜·해제에 토큰 없음·만료 (AC11) |
+| 401 | AUTH_401 | 찜·해제에 토큰 없음·만료·형식 오류, 탈퇴한 회원의 남은 토큰 (AC11) |
 | 404 | CONCEPT_404 | 찜·해제할 카드가 없거나 `DRAFT`·`HIDDEN` (AC10) |
 | 404 | USER_404 | 찜 목록의 회원이 없거나 탈퇴 (AC9) |
 
@@ -122,8 +122,9 @@
   - `refreshWishCount(conceptId)`: `UPDATE concepts SET wish_count = (SELECT COUNT(*) FROM concept_wishes WHERE concept_id = ?) WHERE id = ?`, `findWishCount(conceptId)`
   - `findPublishedPageByUser(userId, size, offset)`: `concept_wishes w JOIN concepts c ON c.id = w.concept_id WHERE w.user_id = ? AND c.status = 'PUBLISHED' ORDER BY w.created_at DESC, w.concept_id DESC LIMIT ? OFFSET ?`, `countPublishedByUser(userId)`. PK의 선두 `user_id`로 회원의 찜만 읽는다
 - 쓰기 순서 (`ConceptWishService`, `@Transactional`):
-  - 찜: `ConceptQueryService.getPublished`(→ 404) → `lockConcept`(같은 카드의 동시 찜을 직렬화해 찜 수가 행 수와 같게) → `exists`면 찜 수만 읽어 `{true, count, null}` → 아니면 `insert`(`DuplicateKeyException`도 "이미 찜함"으로 처리) → `refreshWishCount` → `ActivityService.recordOnce(U, WISH, C)` → `ReviewPlanService.addWish(U, C)` → 응답
-  - 해제: `getPublished` → `lockConcept` → `delete` → `refreshWishCount` → 응답 (복습 계획·활동은 그대로)
+  - 찜: `lockConcept`(같은 카드의 동시 찜을 직렬화해 찜 수가 행 수와 같게) → `ConceptQueryService.getPublished`(→ 404) → `UserService.getActiveMember`(탈퇴 회원의 남은 토큰 → 401) → `exists`면 찜 수만 읽어 `{true, count, null}` → 아니면 `insert`(`DuplicateKeyException`도 "이미 찜함"으로 처리) → `refreshWishCount` → `ActivityService.recordOnce(U, WISH, C)` → `ReviewPlanService.addWish(U, C)` → 응답
+  - 해제: `lockConcept` → `getPublished` → `getActiveMember` → `delete` → `refreshWishCount` → 응답 (복습 계획·활동은 그대로)
+  - 잠금을 먼저 거는 이유: 잠금보다 일반 SELECT(`getPublished`)가 먼저면 REPEATABLE READ 스냅샷이 잠금 전에 잡혀, 잠금을 기다린 트랜잭션의 `exists`가 앞 트랜잭션이 커밋한 찜을 보지 못한다 (구현 중 변경, F-11 `ConceptReviewService.lockForWrite`와 같은 순서). 없는 id면 잠글 행이 없고 `getPublished`에서 404다
 - 활동: `ActivityService`에 `recordOnce(userId, type, targetId)` 추가 (같은 `(user_id, type, target_id)` 행이 있으면 넣지 않는다, `ActivityMapper.exists` 추가). `WISH`의 `target_id`는 **카드 id**다 → **F-04 피드는 `concept_wishes`(아직 찜 중)·`concepts.status = 'PUBLISHED'`와 JOIN해 해제된 찜과 숨겨진 카드의 활동을 걸러야 한다** (F-04 spec에 옮긴다). `feed` 패키지는 공통이므로 PR에서 멘션
 - 카드 상세 `wished`: `ConceptService.getDetail(id, userId)`에서 `userId`가 있으면 `ConceptWishMapper.exists`로 채운다
 - `wish_count`는 탈퇴 회원의 찜도 센다 (행이 남아 있으므로 `concept_wishes` 행 수와 같게 유지). 시드 `R__seed_concepts.sql`의 upsert는 `wish_count`를 덮어쓰지 않는다 (F-11에서 확인)
@@ -151,7 +152,7 @@
 | AC1~AC5 | `concept/wish/ConceptWishApiTest#AC1_...`~`#AC5_...` (응답 본문, `concept_wishes`·`wish_count`·`activities`·`review_plans` DB 값, 이미 찜·TODO 있음·해제 후 재찜 시 활동 수 불변, 찜하지 않은 카드 DELETE) | MockMvc + Testcontainers 통합 |
 | AC2 동시성 | `ConceptWishServiceTest#AC2_DuplicateKey도_이미_찜함` (매퍼가 `DuplicateKeyException`을 던지도록 mock) | 단위 |
 | AC6 | `ConceptWishApiTest#AC6_...` (3명 찜·1명 해제 후 DB 값과 상세 `wishCount`) + 서로 다른 회원 동시 찜(`ExecutorService` 2스레드) 후 `wish_count` = 행 수 | 통합 |
-| AC7 | `concept/ConceptDetailApiTest`(기존)에 `#AC7_찜_여부` 추가 (찜함·안 함·비로그인·깨진 토큰) | MockMvc 통합 |
+| AC7 | `concept/wish/ConceptWishApiTest#AC7_상세의_wished는_내가_찜했는지를_보여_준다` (찜함·안 함·비로그인·깨진·만료 토큰. `ConceptDetailApiTest`의 F-10 AC7과 이름이 겹치지 않게 옮김) | MockMvc 통합 |
 | AC8, AC9 | `ConceptWishApiTest#AC8_...`, `#AC9_...` (15개 중 HIDDEN·DRAFT 제외, 찜 시각 순서·같은 시각 tie-break, 2쪽·범위 밖·0건, 없는·탈퇴 회원) | MockMvc 통합 |
 | AC10, AC11 | `ConceptWishApiTest#AC10_...`, `#AC11_...` (DRAFT·HIDDEN·없는 id × POST·DELETE, 숨김 카드 찜 행 불변, 토큰 없음·깨짐 × 2 + 공개 경로 200) | MockMvc 통합 |
 | 활동 | `feed/ActivityServiceTest#recordOnce_...` (같은 활동이 있으면 넣지 않음) | 통합 |
@@ -186,7 +187,7 @@
 - [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
 - [x] contract-checker 통과
 - [x] ui-verifier 통과 (데스크톱·모바일)
-- [ ] reviewer 지적 사항 반영
+- [x] reviewer 지적 사항 반영
 - [x] 산출물 반영: `06-화면설계서.md` SC-10 찜 버튼·SC-18 찜 절 + 스크린샷, `02-유스케이스.md` UC23("상세에서 ♥", 프로필 찜 목록, 재찜 활동), `01-요구사항정의서.md` F-12 행 확인
 - [ ] PR CI 초록 (`ConceptController`·`ConceptService`·`SecurityConfig`·`feed` 패키지·`src/api/concepts.js`가 공통 → 본문에서 @whans1996 멘션, `node scripts/owners.mjs --diff origin/develop`). PR 본문 `Closes #57`
 - [ ] 상태 DONE (PR 머지 전 마지막 커밋)
