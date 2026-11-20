@@ -54,7 +54,11 @@ async function toggle() {
   actionError.value = ''
   try {
     const result = status.value.following ? await unfollow(id) : await follow(id)
-    if (id === props.userId) status.value = result
+    if (id === props.userId) {
+      status.value = result
+      // 누를 때 마우스가 버튼 위에 있으므로, 팔로우 직후에는 "언팔로우"가 아니라 "팔로잉"을 보인다
+      hovering.value = false
+    }
   } catch (e) {
     if (id === props.userId) actionError.value = errorMessage(e)
   } finally {

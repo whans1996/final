@@ -16,19 +16,27 @@ const auth = useAuthStore()
 const list = useMoreList(fetchFeed, FEED_PAGE_SIZE)
 // 빈 피드일 때만 센다. 실패하면 null로 두고 "새 활동이 없습니다"를 보인다
 const followingCount = ref(null)
+// 빈 피드의 팔로잉 수를 세는 동안에도 "불러오는 중…"을 유지해 틀린 빈 안내가 잠깐 보이지 않게 한다
+const checking = ref(false)
 const now = ref(new Date())
+const loading = computed(() => list.loading.value || checking.value)
 
 const visibleItems = computed(() => list.items.value.filter((item) => isKnownFeedType(item.type)))
 
 async function load() {
   now.value = new Date()
-  await list.reset()
-  if (list.total.value === 0 && auth.user?.id != null) {
-    try {
-      followingCount.value = (await fetchFollowStatus(auth.user.id)).followingCount
-    } catch {
-      followingCount.value = null
+  checking.value = true
+  try {
+    await list.reset()
+    if (list.total.value === 0 && auth.user?.id != null) {
+      try {
+        followingCount.value = (await fetchFollowStatus(auth.user.id)).followingCount
+      } catch {
+        followingCount.value = null
+      }
     }
+  } finally {
+    checking.value = false
   }
 }
 
@@ -43,7 +51,7 @@ onMounted(load)
       <FeedItem v-for="item in visibleItems" :key="item.id" :item="item" :now="now" />
     </ul>
 
-    <p v-if="list.loading.value" class="status">불러오는 중…</p>
+    <p v-if="loading" class="status">불러오는 중…</p>
     <p v-else-if="list.error.value" class="form-error" role="alert">
       {{ errorMessage(list.error.value) }}
     </p>
@@ -57,7 +65,7 @@ onMounted(load)
     </template>
 
     <button
-      v-if="list.hasMore.value && !list.loading.value"
+      v-if="list.hasMore.value && !loading"
       type="button"
       class="more"
       data-action="more"

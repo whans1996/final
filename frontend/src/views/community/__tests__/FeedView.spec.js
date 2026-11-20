@@ -105,6 +105,24 @@ describe('FeedView (F-04 AC11)', () => {
     expect(wrapper.find('[data-action="browse-community"]').attributes('href')).toBe('/community')
   })
 
+  it('AC11 빈 피드는 팔로잉 수를 확인할 때까지 빈 안내 대신 "불러오는 중…"이다', async () => {
+    feedApi.fetchFeed.mockResolvedValue(page([]))
+    let resolve
+    followsApi.fetchFollowStatus.mockReturnValue(new Promise((r) => (resolve = r)))
+
+    const { wrapper } = await open()
+
+    expect(wrapper.text()).toContain('불러오는 중…')
+    expect(wrapper.text()).not.toContain('새 활동이 없습니다')
+    expect(wrapper.text()).not.toContain('아직 팔로우한 사람이 없어요')
+
+    resolve({ following: false, followerCount: 0, followingCount: 0 })
+    await flushPromises()
+
+    expect(wrapper.text()).not.toContain('불러오는 중…')
+    expect(wrapper.text()).toContain('아직 팔로우한 사람이 없어요')
+  })
+
   it('AC11 팔로우는 했지만 활동이 없으면 "새 활동이 없습니다"', async () => {
     feedApi.fetchFeed.mockResolvedValue(page([]))
 

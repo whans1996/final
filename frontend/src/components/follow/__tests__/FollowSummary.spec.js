@@ -78,6 +78,20 @@ describe('FollowSummary (F-04 AC9)', () => {
     expect(wrapper.find('[data-link="followers"]').text()).toBe('팔로워 13')
   })
 
+  it('AC9 마우스를 올린 채 팔로우하면 응답 뒤에는 "언팔로우"가 아니라 "팔로잉"이다', async () => {
+    followsApi.follow.mockResolvedValue({ following: true, followerCount: 13, followingCount: 3 })
+    const { wrapper } = await mountSummary({ userId: 7, isMe: false }, { asUser: 1 })
+
+    await button(wrapper).trigger('mouseenter')
+    await button(wrapper).trigger('click')
+    await flushPromises()
+
+    expect(button(wrapper).text()).toBe('팔로잉')
+    await button(wrapper).trigger('mouseleave')
+    await button(wrapper).trigger('mouseenter')
+    expect(button(wrapper).text()).toBe('언팔로우')
+  })
+
   it('AC9 팔로잉 버튼에 마우스를 올리면 "언팔로우"이고 누르면 언팔로우한다', async () => {
     followsApi.fetchFollowStatus.mockResolvedValue({
       following: true,
