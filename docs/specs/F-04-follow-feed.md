@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 |---|---|
-| 상태 | APPROVED <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
+| 상태 | DONE (PR #71) <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
 | 기능 ID | F-04 |
 | 우선순위 | P0 |
 | 영역 오너 | B 김준섭 (카드·소셜) |
@@ -200,5 +200,5 @@ AC11 종류별 문장 (SC-17):
 - [x] reviewer 지적 사항 반영 — 11-20, 반드시 수정 0. 권장: 빈 피드 안내 깜빡임·팔로우 직후 "언팔로우" 표시(FE), 팔로우 잠금 FOR SHARE, 피드 상대 시각 #17 댓글
 - [x] 산출물 반영: 유스케이스 UC05(멱등으로 대안 흐름 수정)·UC06, 화면 설계서 SC-17("spec에서 정할 것" 정리, 스크린샷)·SC-18(팔로우 영역, 팔로우 목록 화면), REST API 명세
 - [x] 공통 파일 변경(`ErrorCode`, `SecurityConfig`, `feed` 패키지, `routes/user.js`, `UserProfileView`) PR 본문에 @whans1996 멘션
-- [ ] PR CI 초록, `Closes #64`
+- [x] PR CI 초록, `Closes #64` (PR #71, Codex ✅ fdbfcc8)
 - [ ] 상태 DONE (PR 머지 후)

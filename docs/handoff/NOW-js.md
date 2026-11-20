@@ -4,13 +4,13 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-dh.md`)은 읽기만 한다.
 
-갱신: 2026-11-20 21:26 · 작업자: JoonseobKim · PC: js-home · 브랜치: feature/F-04-follow-feed
+갱신: 2026-11-20 21:32 · 작업자: JoonseobKim · PC: js-home · 브랜치: feature/F-04-follow-feed
 
 ---
 
 ## 현재 기능
 
-F-04 팔로우·활동 피드 — spec APPROVED `docs/specs/F-04-follow-feed.md`, `/implement` 진행 중. **AC1~AC11 모두 green**, contract-checker 불일치 0, 산출물(UC05·UC06·SC-17·SC-18) 반영, develop 병합(cf65f33, #70 하네스). **ui-verifier 통과(11-20 21시, 문제 0)** + 스크린샷 8장 화면설계서에 삽입. **`/pr-review` 점검 완료**(BE 644·계약 0·reviewer 반드시 수정 0, 권장 3건 반영 6ca0af4). 남은 것: push → PR 생성
+F-04 팔로우·활동 피드 — **PR #71 열림, CI 전부 초록, Codex ✅ fdbfcc8 (지적 없음)**, spec DONE 표시 커밋. 남은 것: 사람이 GitHub에서 머지
 
 ## 진행
 
@@ -21,9 +21,8 @@ F-04 팔로우·활동 피드 — spec APPROVED `docs/specs/F-04-follow-feed.md`
 
 ## 바로 다음 할 일
 
-1. `git push` → `node scripts/pr-screens.mjs SC-17 SC-18` 출력을 `.harness/pr-F-04.md`의 `SCREENSHOTS_PLACEHOLDER` 자리에 붙인다
-2. 사용자 확인 후 `gh pr create --base develop --title "feat(F-04): 팔로우·활동 피드" --body-file .harness/pr-F-04.md` → `gh pr checks` → `node scripts/codex-review.mjs <번호> --request --wait --status`(백그라운드)
-3. Codex COMPLETE + CI 초록 → `docs(F-04): 완료 표시 (spec DONE)` → 사람이 머지
+1. 사람이 PR #71을 GitHub에서 머지한다 (상대 PR이 먼저 develop에 머지됐으면 `git merge origin/develop` → push → CI 재확인 후)
+2. 머지 뒤 `/pickup`: `git switch develop && git pull`, #64가 `close-issues` 워크플로로 닫혔는지 확인 → 다음 B 영역 기능(`/spec`) 또는 내 이슈 #46·#51
 
 ## 막힌 점 / 결정 필요
 
