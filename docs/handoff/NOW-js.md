@@ -4,7 +4,7 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-dh.md`)은 읽기만 한다.
 
-갱신: 2026-11-20 12:02 · 작업자: JoonseobKim · PC: js-home · 브랜치: feature/F-17-community-board
+갱신: 2026-11-20 12:20 · 작업자: JoonseobKim · PC: js-home · 브랜치: feature/F-17-community-board
 
 ---
 
@@ -17,12 +17,13 @@ F-17 커뮤니티 게시판 — spec `docs/specs/F-17-community-board.md` APPROV
 - ✅ 9절 결정: `PUT`은 `@Valid` 없이 `PostService.update`가 404·403 뒤 `Validator`로 직접 검증 (spec 9절에 기록)
 - ✅ AC1~3 목록·검색 green: `com.vibenote.post` (`PostController#list`, `PostService#search`, `PostMapper.xml` findPage·count), `PostListApiTest` 6개 + `PostServiceTest`, `PUBLIC_GET_PATHS` POST 블록
 - ✅ AC4·5 상세 green: `PostService#getDetail`(조회수 +1, `updated_at` 유지), `PostDetailResponse`·첨부 DTO 2개, `ErrorCode` POST 블록 4개(POST_001·002·403·404 미리 추가), `PostDetailApiTest` 7개
+- ✅ AC6~12 작성·수정·삭제·인증 green: `PostService#create`·`update`(404→403→`Validator`→첨부)·`delete`, `PostRequest`·`PostIdResponse`, `PostWriteApiTest` 13개(+파라미터 9) + `PostAuthApiTest` 2개. **BE 끝**
 - 테스트 공통 데이터: `backend/src/test/java/com/vibenote/post/PostApiTestBase.java`
 
 ## 바로 다음 할 일
 
-1. AC6~8 작성: `PostWriteApiTest#AC6_...`~`#AC8_...` red → `PostRequest`(boardType 문자열 @Pattern, title·content strip), `PostService#create`(getActiveMember → 첨부 둘 다 400 details.conceptId → `PostMapper.existsAttachableAnalysis`/`existsPublishedConcept` → insert → `ActivityService.record(POST)`)
-2. AC9~11 수정·삭제(`Validator` 직접 호출) → AC12 인증(`PostAuthApiTest`) → FE. 커밋 전 `OpenApiExportTest`로 openapi.json 재생성해 같이 커밋
+1. FE AC13·14: `frontend/src/api/posts.js`(fetchPosts·fetchPost·createPost·updatePost·deletePost), `router/routes/community.js`, `components/community/boardTypes.js`·`BoardTabs.vue`·`PostRow.vue`, `views/community/PostListView.vue` — `views/community/__tests__/PostListView.spec.js`·`components/community/__tests__/PostRow.spec.js` red부터
+2. AC15·16 `PostDetailView`·`PostAttachment` → AC17·18 `PostWriteView`·`AttachmentPicker`·SC-10 "이 카드로 글쓰기" 버튼(`ConceptDetailView.vue`) → contract-checker·ui-verifier
 
 ## 막힌 점 / 결정 필요
 

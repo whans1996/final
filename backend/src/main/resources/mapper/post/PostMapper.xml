@@ -59,4 +59,37 @@
         LEFT JOIN concepts cn ON cn.id = p.concept_id
         WHERE p.id = #{id}
     </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+        INSERT INTO posts (user_id, board_type, title, content, analysis_id, concept_id, created_at, updated_at)
+        VALUES (#{userId}, #{boardType}, #{title}, #{content}, #{analysisId}, #{conceptId}, #{createdAt}, #{updatedAt})
+    </insert>
+
+    <!-- 통째로 바꾼다 (첨부 해제 포함). view_count·created_at은 그대로 -->
+    <update id="update">
+        UPDATE posts
+        SET board_type = #{boardType}, title = #{title}, content = #{content},
+            analysis_id = #{analysisId}, concept_id = #{conceptId}, updated_at = #{updatedAt}
+        WHERE id = #{id}
+    </update>
+
+    <!-- 댓글은 comments.post_id FK ON DELETE CASCADE로 함께 지워진다. activities 행은 남긴다 -->
+    <delete id="delete">
+        DELETE FROM posts WHERE id = #{id}
+    </delete>
+
+    <select id="findAuthorIdForUpdate" resultType="java.lang.Long">
+        SELECT user_id FROM posts WHERE id = #{id} FOR UPDATE
+    </select>
+
+    <!-- 첨부 검증 (F-17 AC8). 남의 분석·DONE 아님·삭제됨·없는 id를 구분하지 않는다 -->
+    <select id="existsAttachableAnalysis" resultType="boolean">
+        SELECT EXISTS (
+            SELECT 1 FROM analyses
+            WHERE id = #{analysisId} AND user_id = #{userId} AND status = 'DONE' AND deleted_at IS NULL)
+    </select>
+
+    <select id="existsPublishedConcept" resultType="boolean">
+        SELECT EXISTS (SELECT 1 FROM concepts WHERE id = #{conceptId} AND status = 'PUBLISHED')
+    </select>
 </mapper>
