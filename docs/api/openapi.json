@@ -1078,6 +1078,237 @@
         },
         "type" : "object"
       },
+      "PageResponsePostSummaryResponse" : {
+        "description" : "페이지 응답",
+        "properties" : {
+          "items" : {
+            "description" : "현재 페이지 항목",
+            "items" : {
+              "$ref" : "#/components/schemas/PostSummaryResponse"
+            },
+            "type" : "array"
+          },
+          "page" : {
+            "description" : "페이지 번호 (1부터)",
+            "example" : 1,
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "size" : {
+            "description" : "페이지 크기",
+            "example" : 20,
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "total" : {
+            "description" : "전체 항목 수",
+            "example" : 134,
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "PostAnalysisAttachment" : {
+        "description" : "분석 첨부",
+        "properties" : {
+          "id" : {
+            "description" : "분석 ID",
+            "example" : 15,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "projectName" : {
+            "description" : "프로젝트명 (볼 수 없으면 null)",
+            "example" : "shop-backend",
+            "type" : [ "string", "null" ]
+          },
+          "title" : {
+            "description" : "분석 제목 (볼 수 없거나 제목이 없으면 null)",
+            "example" : "쇼핑몰 과제",
+            "type" : [ "string", "null" ]
+          },
+          "viewable" : {
+            "description" : "요청한 사람이 볼 수 있는지 (삭제되지 않았고, 공개이거나 내 분석)",
+            "example" : true,
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "id", "projectName", "title", "viewable" ],
+        "type" : "object"
+      },
+      "PostConceptAttachment" : {
+        "description" : "개념 카드 첨부",
+        "properties" : {
+          "category" : {
+            "description" : "카테고리 (볼 수 없으면 null)",
+            "example" : "security",
+            "type" : [ "string", "null" ]
+          },
+          "difficulty" : {
+            "description" : "난이도 (볼 수 없으면 null)",
+            "enum" : [ "BEGINNER", "JUNIOR", "SENIOR" ],
+            "example" : "JUNIOR",
+            "type" : [ "string", "null" ]
+          },
+          "id" : {
+            "description" : "카드 ID",
+            "example" : 12,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "name" : {
+            "description" : "카드 이름 (볼 수 없으면 null)",
+            "example" : "JWT",
+            "type" : [ "string", "null" ]
+          },
+          "summary" : {
+            "description" : "한 줄 요약 (볼 수 없으면 null)",
+            "example" : "서버가 서명한 토큰으로 로그인 상태를 전달하는 방식",
+            "type" : [ "string", "null" ]
+          },
+          "viewable" : {
+            "description" : "볼 수 있는지 (공개 카드인지)",
+            "example" : true,
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "category", "difficulty", "id", "name", "summary", "viewable" ],
+        "type" : "object"
+      },
+      "PostDetailResponse" : {
+        "description" : "게시글 상세",
+        "properties" : {
+          "analysis" : {
+            "$ref" : "#/components/schemas/PostAnalysisAttachment",
+            "description" : "분석 첨부",
+            "type" : "null"
+          },
+          "authorId" : {
+            "description" : "작성자 ID (탈퇴한 회원이면 null)",
+            "example" : 7,
+            "format" : "int64",
+            "type" : [ "integer", "null" ]
+          },
+          "authorNickname" : {
+            "description" : "작성자 현재 닉네임 (탈퇴한 회원이면 \"탈퇴한 사용자\")",
+            "example" : "코딩초보",
+            "type" : "string"
+          },
+          "boardType" : {
+            "description" : "게시판 (QNA: 코드 이해 Q&A, REVIEW: 학습 후기, FREE: 자유)",
+            "enum" : [ "QNA", "REVIEW", "FREE" ],
+            "example" : "QNA",
+            "type" : "string"
+          },
+          "commentCount" : {
+            "description" : "댓글 수",
+            "example" : 3,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "concept" : {
+            "$ref" : "#/components/schemas/PostConceptAttachment",
+            "description" : "개념 카드 첨부",
+            "type" : "null"
+          },
+          "content" : {
+            "description" : "본문 (글자 그대로. 화면은 HTML로 해석하지 않는다)",
+            "example" : "같은 클래스 안에서 메서드를 호출하면 트랜잭션이 안 걸린다는데\n왜 그런지 모르겠어요.",
+            "type" : "string"
+          },
+          "createdAt" : {
+            "description" : "작성 시각",
+            "example" : "2026-11-20T14:02:11+09:00",
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "id" : {
+            "description" : "글 ID",
+            "example" : 42,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "title" : {
+            "description" : "제목",
+            "example" : "@Transactional이 안 먹는 이유가 뭔가요?",
+            "type" : "string"
+          },
+          "updatedAt" : {
+            "description" : "마지막 수정 시각 (조회수는 바꾸지 않는다)",
+            "example" : "2026-11-20T14:02:11+09:00",
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "viewCount" : {
+            "description" : "조회수 (상세 조회는 이번 조회를 더한 값)",
+            "example" : 43,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "analysis", "authorId", "authorNickname", "boardType", "commentCount", "concept", "content", "createdAt", "id", "title", "updatedAt", "viewCount" ],
+        "type" : "object"
+      },
+      "PostSummaryResponse" : {
+        "description" : "게시글 요약 (목록 항목)",
+        "properties" : {
+          "attachmentType" : {
+            "description" : "첨부 종류 (볼 수 있는지와 상관없이 알린다). 첨부가 없으면 null",
+            "enum" : [ "ANALYSIS", "CONCEPT" ],
+            "example" : "ANALYSIS",
+            "type" : [ "string", "null" ]
+          },
+          "authorId" : {
+            "description" : "작성자 ID (탈퇴한 회원이면 null)",
+            "example" : 7,
+            "format" : "int64",
+            "type" : [ "integer", "null" ]
+          },
+          "authorNickname" : {
+            "description" : "작성자 현재 닉네임 (탈퇴한 회원이면 \"탈퇴한 사용자\")",
+            "example" : "코딩초보",
+            "type" : "string"
+          },
+          "boardType" : {
+            "description" : "게시판 (QNA: 코드 이해 Q&A, REVIEW: 학습 후기, FREE: 자유)",
+            "enum" : [ "QNA", "REVIEW", "FREE" ],
+            "example" : "QNA",
+            "type" : "string"
+          },
+          "commentCount" : {
+            "description" : "댓글 수",
+            "example" : 3,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "createdAt" : {
+            "description" : "작성 시각",
+            "example" : "2026-11-20T14:02:11+09:00",
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "id" : {
+            "description" : "글 ID",
+            "example" : 42,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "title" : {
+            "description" : "제목",
+            "example" : "@Transactional이 안 먹는 이유가 뭔가요?",
+            "type" : "string"
+          },
+          "viewCount" : {
+            "description" : "조회수",
+            "example" : 42,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "attachmentType", "authorId", "authorNickname", "boardType", "commentCount", "createdAt", "id", "title", "viewCount" ],
+        "type" : "object"
+      },
       "QuizAnswerRequest" : {
         "description" : "문항 하나의 답",
         "properties" : {
@@ -2258,7 +2489,7 @@
     "/api/concepts" : {
       "get" : {
         "description" : "공개(PUBLISHED) 카드를 키워드(이름·요약 부분 일치)·카테고리·난이도로 거르고 인기순(찜 수→평점) 또는 최신순으로 페이지 조회한다. 비로그인도 쓸 수 있다.",
-        "operationId" : "list_3",
+        "operationId" : "list_4",
         "parameters" : [ {
           "description" : "이름·요약 부분 일치 검색어 (trim 후 50자 이하, 대소문자 무시)",
           "example" : "jwt",
@@ -2704,7 +2935,7 @@
     "/api/concepts/{id}" : {
       "get" : {
         "description" : "공개(PUBLISHED) 카드의 본문·예제 코드·출처와 관련 카드(최대 4개)를 조회한다. 비로그인도 쓸 수 있고, 로그인하면 내 분석(삭제되지 않은 DONE)에서 이 개념이 등장한 위치(최신 10개)를 함께 받는다. 토큰이 깨졌거나 만료되면 비로그인과 같다.",
-        "operationId" : "detail",
+        "operationId" : "detail_1",
         "parameters" : [ {
           "description" : "카드 ID",
           "example" : 57,
@@ -2741,6 +2972,135 @@
         "security" : [ ],
         "summary" : "개념 카드 상세",
         "tags" : [ "개념 카드" ]
+      }
+    },
+    "/api/posts" : {
+      "get" : {
+        "description" : "게시판 구분 없이 또는 한 게시판의 글을 최신순(작성 시각 내림차순)으로 페이지 조회한다. keyword는 제목·본문 부분 일치. 비로그인도 쓸 수 있다.",
+        "operationId" : "list_3",
+        "parameters" : [ {
+          "description" : "게시판 (QNA: 코드 이해 Q&A, REVIEW: 학습 후기, FREE: 자유). 없으면 전체",
+          "example" : "QNA",
+          "in" : "query",
+          "name" : "boardType",
+          "required" : false,
+          "schema" : {
+            "description" : "게시판 (QNA: 코드 이해 Q&A, REVIEW: 학습 후기, FREE: 자유). 없으면 전체",
+            "enum" : [ "QNA", "REVIEW", "FREE" ],
+            "example" : "QNA",
+            "pattern" : "QNA|REVIEW|FREE",
+            "type" : "string"
+          }
+        }, {
+          "description" : "제목·본문 부분 일치 검색어 (trim 후 50자 이하, 대소문자 무시)",
+          "example" : "트랜잭션",
+          "in" : "query",
+          "name" : "keyword",
+          "required" : false,
+          "schema" : {
+            "description" : "제목·본문 부분 일치 검색어 (trim 후 50자 이하, 대소문자 무시)",
+            "example" : "트랜잭션",
+            "maxLength" : 50,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        }, {
+          "description" : "페이지 번호 (1부터)",
+          "example" : 1,
+          "in" : "query",
+          "name" : "page",
+          "required" : false,
+          "schema" : {
+            "default" : 1,
+            "description" : "페이지 번호 (1부터)",
+            "example" : 1,
+            "format" : "int32",
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        }, {
+          "description" : "페이지 크기 (최대 100)",
+          "example" : 20,
+          "in" : "query",
+          "name" : "size",
+          "required" : false,
+          "schema" : {
+            "default" : 20,
+            "description" : "페이지 크기 (최대 100)",
+            "example" : 20,
+            "format" : "int32",
+            "maximum" : 100,
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PageResponsePostSummaryResponse"
+                }
+              }
+            },
+            "description" : "조회 성공"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "게시판·검색어·페이지 값 오류 (COMMON_400, details에 필드별 사유)"
+          }
+        },
+        "security" : [ ],
+        "summary" : "게시글 목록·검색",
+        "tags" : [ "커뮤니티" ]
+      }
+    },
+    "/api/posts/{postId}" : {
+      "get" : {
+        "description" : "조회수를 1 올리고 글을 돌려준다(작성자 본인도 오른다). 비로그인도 쓸 수 있고, 유효한 토큰이 있으면 분석 첨부의 볼 수 있는지 판단(내 분석)에 쓴다.",
+        "operationId" : "detail",
+        "parameters" : [ {
+          "description" : "글 ID",
+          "example" : 42,
+          "in" : "path",
+          "name" : "postId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PostDetailResponse"
+                }
+              }
+            },
+            "description" : "조회 성공"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "없는 글 (POST_404)"
+          }
+        },
+        "security" : [ ],
+        "summary" : "게시글 상세",
+        "tags" : [ "커뮤니티" ]
       }
     },
     "/api/quizzes/{quizId}/attempts" : {
@@ -3047,6 +3407,9 @@
   }, {
     "description" : "회원가입, 로그인, 토큰 재발급, 로그아웃",
     "name" : "인증"
+  }, {
+    "description" : "게시판(코드 이해 Q&A·학습 후기·자유) 글 목록·검색·상세·작성·수정·삭제",
+    "name" : "커뮤니티"
   }, {
     "description" : "공개 개념 카드 목록·검색·상세·리뷰",
     "name" : "개념 카드"

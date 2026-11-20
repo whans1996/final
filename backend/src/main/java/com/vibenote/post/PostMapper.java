@@ -2,6 +2,7 @@ package com.vibenote.post;
 
 import com.vibenote.post.domain.Post;
 import java.util.List;
+import java.util.Optional;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -20,4 +21,10 @@ public interface PostMapper {
             @Param("offset") long offset);
 
     long count(@Param("boardType") BoardType boardType, @Param("keyword") String keyword);
+
+    /** 조회수 +1. 바뀐 행 수(없는 글이면 0)를 돌려준다. updated_at은 바꾸지 않는다. */
+    int incrementViewCount(@Param("id") long id);
+
+    /** 상세. 첨부한 분석(주인·공개·삭제 여부·제목·프로젝트명)과 카드(상태·표시 필드)를 함께 읽는다. */
+    Optional<Post> findDetail(@Param("id") long id);
 }

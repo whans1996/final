@@ -34,4 +34,29 @@
         SELECT COUNT(*) FROM posts p
         <include refid="searchWhere"/>
     </select>
+
+    <!-- 조회수는 posts 행에만 더한다 (updated_at은 그대로 둔다). 없는 id면 0행 -->
+    <update id="incrementViewCount">
+        UPDATE posts SET view_count = view_count + 1, updated_at = updated_at WHERE id = #{id}
+    </update>
+
+    <select id="findDetail" resultType="com.vibenote.post.domain.Post">
+        SELECT <include refid="summaryColumns"/>,
+               p.content,
+               a.user_id AS analysis_owner_id,
+               COALESCE(a.is_public, FALSE) AS analysis_public,
+               (a.deleted_at IS NOT NULL) AS analysis_deleted,
+               a.title AS analysis_title,
+               a.project_name AS analysis_project_name,
+               cn.status AS concept_status,
+               cn.name AS concept_name,
+               cn.category AS concept_category,
+               cn.difficulty AS concept_difficulty,
+               cn.summary AS concept_summary
+        FROM posts p
+        JOIN users u ON u.id = p.user_id
+        LEFT JOIN analyses a ON a.id = p.analysis_id
+        LEFT JOIN concepts cn ON cn.id = p.concept_id
+        WHERE p.id = #{id}
+    </select>
 </mapper>

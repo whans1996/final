@@ -16,12 +16,13 @@ F-17 커뮤니티 게시판 — spec `docs/specs/F-17-community-board.md` APPROV
 
 - ✅ 9절 결정: `PUT`은 `@Valid` 없이 `PostService.update`가 404·403 뒤 `Validator`로 직접 검증 (spec 9절에 기록)
 - ✅ AC1~3 목록·검색 green: `com.vibenote.post` (`PostController#list`, `PostService#search`, `PostMapper.xml` findPage·count), `PostListApiTest` 6개 + `PostServiceTest`, `PUBLIC_GET_PATHS` POST 블록
+- ✅ AC4·5 상세 green: `PostService#getDetail`(조회수 +1, `updated_at` 유지), `PostDetailResponse`·첨부 DTO 2개, `ErrorCode` POST 블록 4개(POST_001·002·403·404 미리 추가), `PostDetailApiTest` 7개
 - 테스트 공통 데이터: `backend/src/test/java/com/vibenote/post/PostApiTestBase.java`
 
 ## 바로 다음 할 일
 
-1. AC4·5 상세: `PostDetailApiTest#AC4_...`·`#AC5_...`·`#AC3_상세...` red → `PostMapper.incrementViewCount`·`findDetail`(analyses·concepts LEFT JOIN), `PostDetailResponse`·`PostAnalysisAttachment`·`PostConceptAttachment`, `ErrorCode.POST_404`
-2. AC6~8 작성 → AC9~11 수정·삭제 → AC12 인증 (`PostWriteApiTest`, `PostAuthApiTest`) → FE
+1. AC6~8 작성: `PostWriteApiTest#AC6_...`~`#AC8_...` red → `PostRequest`(boardType 문자열 @Pattern, title·content strip), `PostService#create`(getActiveMember → 첨부 둘 다 400 details.conceptId → `PostMapper.existsAttachableAnalysis`/`existsPublishedConcept` → insert → `ActivityService.record(POST)`)
+2. AC9~11 수정·삭제(`Validator` 직접 호출) → AC12 인증(`PostAuthApiTest`) → FE. 커밋 전 `OpenApiExportTest`로 openapi.json 재생성해 같이 커밋
 
 ## 막힌 점 / 결정 필요
 
