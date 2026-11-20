@@ -178,7 +178,7 @@
 - [x] BE 구현 (green): `CommentController`, `CommentService`, `CommentMapper`(+XML), `Comment`, DTO 3종, `ErrorCode` `POST_003`·`POST_004`, `PUBLIC_GET_PATHS`
 - [x] FE 구현 (green): `api/posts.js` 함수 4개, 컴포넌트 3개, `PostDetailView` 댓글 절
 - [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
-- [ ] contract-checker 통과
+- [x] contract-checker 통과
 - [ ] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일)
 - [ ] reviewer 지적 사항 반영
 - [ ] 산출물 반영: `06-화면설계서.md` SC-15 "F-18에서 정할 것"(정렬·페이지)·모바일 버튼 문구 + 스크린샷, `docs/conventions.md` 3절 POST 코드, `02-유스케이스.md` UC41 "기획 기준" 표시 정리
