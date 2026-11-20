@@ -4,7 +4,7 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
 
-갱신: 2026-11-20 11:20 · 작업자: whans1996@naver.com · PC: dh-home · 브랜치: feature/F-15-review-plan
+갱신: 2026-11-20 11:28 · 작업자: whans1996@naver.com · PC: dh-home · 브랜치: feature/F-15-review-plan
 
 ## 현재 기능
 
@@ -19,7 +19,7 @@ F-15 복습 계획 — spec `docs/specs/F-15-review-plan.md` APPROVED, **AC1~AC1
 
 ## 바로 다음 할 일
 
-1. BE·FE 커밋 push 확인 (`git log origin/feature/F-15-review-plan`). 안 됐으면 `feat(F-15): AC1~AC8 …`(backend+docs), `feat(F-15): AC9~AC12 …`(frontend)로 커밋
+1. (완료) 커밋 6dd1841(BE)·b31a233(FE) push됨. FE 커밋 때 App.spec 헤더 메뉴 기대값에 복습 추가
 2. `contract-checker`로 spec 3절 ↔ openapi.json ↔ `src/api/reviewPlans.js` 비교
 3. BE(local)·FE dev 띄우고 `ui-verifier`: `/review-plans` 데스크톱·375px, `/concepts/{id}` 복습에 추가 버튼
 4. 산출물: 화면 설계서 SC-11 절, SC-10·SC-08 변경, UC31, ERD `review_plans` 설명 → `/pr-review`
