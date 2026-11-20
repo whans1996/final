@@ -8,7 +8,7 @@
 
 ## 현재 기능
 
-하네스 이슈 **#54** (+ #32 흡수) — 내 다른 PC 브랜치 진행 표시·`/spec` 중복 가드. 브랜치 `feature/issue-54-my-branches`. `/pr-review` 점검·수정 완료, PR 생성 사용자 확인 대기
+하네스 이슈 **#54** (+ #32 흡수) — 내 다른 PC 브랜치 진행 표시·`/spec` 중복 가드. 브랜치 `feature/issue-54-my-branches`. PR #70 열림, CI·Codex 대기
 
 ## 진행
 
@@ -18,7 +18,7 @@
 
 ## 바로 다음 할 일
 
-1. 사용자 확인 후 `gh pr create --base develop --title "chore(harness): #54 내 다른 PC 브랜치 진행 표시·/spec 중복 가드 (+#32)" --body-file .harness/pr-issue-54.md` → `gh pr checks` → Codex 루프(`node scripts/codex-review.mjs <PR> --request --wait --status` 백그라운드)
+1. **PR #70** (head be11b34) CI 진행 중·Codex 리뷰 대기. `gh pr checks 70`, `node scripts/codex-review.mjs 70 --request --wait --status`(백그라운드)로 루프. COMPLETE + CI 초록이면 사람이 GitHub에서 머지
 2. 그 뒤 #55·#17 → F-05b `/spec` (먼저 `node scripts/branches.mjs F-05b`)
 
 ## 막힌 점 / 결정 필요
