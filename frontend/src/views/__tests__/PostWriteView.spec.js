@@ -202,6 +202,21 @@ describe('PostWriteView (F-17 AC17·AC18)', () => {
     )
   })
 
+  it('AC17·AC18 미리 채울 첨부를 불러오는 동안은 폼을 열지 않아 입력이 기준 상태에 묻히지 않는다', async () => {
+    let resolve
+    conceptsApi.fetchConcept.mockReturnValue(new Promise((r) => (resolve = r)))
+    const { wrapper } = await mountWrite('/community/write?conceptId=12')
+
+    expect(wrapper.text()).toContain('불러오는 중')
+    expect(wrapper.find('form').exists()).toBe(false)
+
+    resolve({ id: 12, name: 'JWT', category: 'security' })
+    await flushPromises()
+    expect(wrapper.find('[data-role="attachment-chip"]').text()).toContain('JWT')
+    await fillForm(wrapper)
+    expect(submitButton(wrapper).element.disabled).toBe(false)
+  })
+
   it('AC18 미리 채울 첨부를 불러오지 못하면 첨부 없이 열고 안내한다', async () => {
     conceptsApi.fetchConcept.mockRejectedValue(apiError(404, { code: 'CONCEPT_404' }))
     const { wrapper, router } = await mountWrite('/community/write?conceptId=99')

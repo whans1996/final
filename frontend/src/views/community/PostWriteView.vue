@@ -28,7 +28,9 @@ const postId = isEdit ? Number(route.params.id) : null
 const form = reactive({ boardType: DEFAULT_BOARD_TYPE, title: '', content: '' })
 const attachment = ref(null)
 
-const loading = ref(isEdit)
+// 글 불러오기·첨부 미리 채우기와 기준 상태(initial) 설정이 끝날 때까지 폼을 열지 않는다.
+// 그 전에 입력하면 기준 상태에 묻혀 이탈 확인이 뜨지 않고, 첨부 없이 등록될 수 있다 (PR #61 Codex)
+const loading = ref(true)
 const loadError = ref('')
 const notice = ref('')
 const saving = ref(false)
@@ -75,8 +77,6 @@ async function loadPost() {
     attachment.value = attachmentFromPost(post)
   } catch (error) {
     loadError.value = errorMessage(error)
-  } finally {
-    loading.value = false
   }
 }
 
@@ -113,6 +113,7 @@ onMounted(async () => {
   if (isEdit) await loadPost()
   else await prefillAttachment()
   initial.value = snapshot()
+  loading.value = false
 })
 
 // 이 화면을 떠나는 이동만 확인한다. 등록·저장 성공 뒤 이동과 남의 글 돌려보내기는 묻지 않는다
