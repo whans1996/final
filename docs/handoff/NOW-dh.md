@@ -4,32 +4,30 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
 
-갱신: 2026-11-20 12:34 · 작업자: whans1996@naver.com · PC: dh-home · 브랜치: feature/F-15-review-plan
+갱신: 2026-11-20 13:35 · 작업자: whans1996@naver.com · PC: dh-home · 브랜치: feature/F-16-recommendation
 
 ## 현재 기능
 
-F-15 복습 계획 — spec **DONE (PR #59)**, CI 초록, **Codex ✅ e183d25**. 사람이 GitHub에서 Squash and merge만 남음
+F-16 맞춤 개념 카드 추천 — spec `docs/specs/F-16-recommendation.md` **APPROVED** (whans1996 11-20), 브랜치 `feature/F-16-recommendation` push됨, 구현 전
 
 ## 진행
 
-- ✅ /pr-review: verify all 통과(BE 489·FE 260), contract-checker 불일치 0, ui-verifier `/review-plans`·`/concepts/1` 데스크톱·375px 통과 → `docs/산출물/screens/SC-11-review-plan-*.png`
-- ✅ reviewer: 반드시 수정 0, 권장 3건 반영 `3363727` (다시 시도가 실패한 기간 유지, `updateStatus`에 user_id, 테스트 상수 PLAN_DATE), '무시 가능' 10건 직접 확인(조치 불필요, PR 본문 기록)
-- ✅ PR #58(F-11) 먼저 머지 → `git merge origin/develop`(06 화면설계서 SC-10 충돌 해결 `2d409d2`), openapi.json 태그 순서 재생성 `cceb16c`
-- ✅ Codex: f747ef8·e183d25 COMPLETE(지적 없음), CI 전부 초록, 완료 표시 커밋(spec DONE)
+- ✅ F-15 PR #59 머지됨 (develop 0023aeb)
+- ✅ /spec F-16 초안: AC10개, `GET /api/recommendations?size=`, V6 `recommendation_reasons.signal_key`, LLM RECOMMEND(동기 1회 배치·실패 시 RULE), SC-04 `/dashboard`(오늘 복습·추천·최근 분석), 로그인 후 `/dashboard`, SC-11 빈 상태 추천 3개
+- ✅ 사용자 결정 3건 결정로그 반영 (11-20 F-16 행), spec 승인 커밋
 
 ## 바로 다음 할 일
 
-1. 사람: PR #59 머지 직전 `git fetch && git rev-list --count HEAD..origin/develop`가 0인지 확인(아니면 merge → push → CI 초록) 후 GitHub에서 **Squash and merge**
-2. 머지 뒤 새 세션 `/pickup` → `git switch develop && git pull` → 다음 A 기능 선택 (F-16 추천 또는 F-19, `docs/기획서.md` 일정 확인) → `/spec`
+1. `/clear` 후 `/implement F-16` (Opus/high). `node scripts/next-migration.mjs`로 V6 확인 → `V6__recommendation_signal_key.sql`
+2. 첫 red: `recommendation/RecommendationScorerTest`(오답 상한 3, levelFit, 동점 순서, signalKey) → `RuleReasonsTest` → `RecommendationApiTest#AC1_…`
 
 ## 막힌 점 / 결정 필요
 
 - 사람: 이슈 #16, 노션 팀원 초대, 고아 폴더 `../final-harness` 삭제 여부
-- F-12(B) 연동은 이슈 #57 → B의 `/spec F-12`가 `addWish` 호출. F-15 PR 머지가 선행
-- 이 세션에서 프로젝트 서브에이전트(verifier 등)가 등록되지 않음 → general-purpose에 `.claude/agents/*.md`를 따르게 해서 대신함. Claude Code 재시작으로 확인
-- ui-check 로그인 상태는 `.harness/auth-quiz.json`이 유효(`auth.json`은 refresh 만료)
+- F-12(B) 미착수 → 찜 신호(`wishedCategory`, 찜 카드 제외)는 `concept_wishes`가 빌 때 0. 공통 `ConceptMapper`에 F-16 블록(`findAllPublishedSummaries`, `findWishedByUser`) 추가 예정 → PR에 @JoonseobKim 멘션
+- 프로젝트 서브에이전트 미등록 시 general-purpose에 `.claude/agents/*.md`를 따르게 해서 대신함
 
 ## 주의
 
-- B는 F-17(커뮤니티) 진행 중, SC-10에 글쓰기 버튼을 추가함 → 내 PR보다 늦게 머지되면 B가 06·ConceptDetailView 충돌 확인
+- B는 F-17(커뮤니티) /pr-review 단계. `router/index.js`(공통)를 F-16에서 고친다(`redirectTarget` 기본값, import 한 줄)
 - 리뷰 지적은 '무시 가능'도 직접 확인한다 (11-20 사용자 지시)
