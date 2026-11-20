@@ -70,9 +70,9 @@ if (judged.error || !line) {
 const n = pr.number;
 const handled = prev.handled || [];
 const waiting = () => waitingInTranscript(readText(input.transcript_path || '') || '', n);
-// 같은 head의 실패·정체 재요청(STALE)도 기다리는 프로세스가 있으면 그쪽이 재시도한다 (중복 재시도 방지)
+// 같은 head의 실패·정체 재요청이면 안내 문구만 바꾼다 (STALE은 기다리는 프로세스와 무관하게 막는다)
 const retry = isRetryLine(line);
-const act = loopAction({ line, pr: n, handled, waiting: (line.startsWith('RUNNING') || retry) && waiting() });
+const act = loopAction({ line, pr: n, handled, waiting: line.startsWith('RUNNING') && waiting() });
 save({ verdict: act.verdict, prHead: act.prHead, handled: handled.includes(act.key) ? handled : [...handled, act.key].slice(-20) });
 
 const waitCmd = `node scripts/codex-review.mjs ${n} --request --wait --status`;

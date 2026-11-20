@@ -71,7 +71,7 @@ export const MAX_REVIEW_ROUNDS = 5;
 
 /**
  * 같은 head의 실패·정체로 재시도 표시를 붙여 재요청할 판정 줄인가 (judgeReview의 retry: true, "… → 재요청").
- * 이전 커밋 리뷰의 실패·정체는 "… → head 재요청"이라 아니다. --wait 프로세스는 retry일 때만 스스로 재시도한다
+ * 이전 커밋 리뷰의 실패·정체는 "… → head 재요청"이라 아니다. codex-loop가 재요청 안내 문구를 고를 때 쓴다
  */
 export const isRetryLine = (line) => /^STALE .*(실패|정체).*→ 재요청/.test(line || '');
 
@@ -123,9 +123,10 @@ export function loopAction({ line, pr, handled = [], waiting = false }) {
   const key = `${pr}:${prHead}:${verdict}${verdict === 'STALE' && /실패|정체/.test(line) ? ':retry' : ''}`;
   const out = (action, kind) => ({ verdict, rounds, prHead, key, action, kind });
   if (handled.includes(key)) return out('none');
-  // 같은 head의 실패·정체 재요청은 기다리는 --request --wait 프로세스가 스스로 한 번 재시도한다. 막으면 두 번째 --wait가 떠 재시도 댓글이 겹친다 (reviewer).
-  // 이전 커밋 리뷰의 실패·정체(→ head 재요청)는 그 프로세스가 재시도하지 않고 끝나므로 맡기지 않는다 (Codex 리뷰)
-  if (verdict === 'STALE') return isRetryLine(line) && waiting ? out('none') : out('block', 'request');
+  // 실패·정체 재요청도 기다리는 프로세스와 무관하게 막는다. 그 프로세스가 재시도할 수 있는지(--request, 같은 head) hook이
+  // 확실히 알 수 없고, 맡겼다가 못 하면 key가 처리됨으로 남아 루프가 멈춘다 (PR #69 Codex 리뷰 2회).
+  // 대가: 두 대기 프로세스가 같은 30초 안에 판정하면 재시도 댓글이 겹칠 수 있다 (판정에는 영향 없음)
+  if (verdict === 'STALE') return out('block', 'request');
   if (verdict === 'RUNNING') return waiting ? out('none') : out('block', 'wait');
   if (verdict === 'FINDINGS') return rounds >= MAX_REVIEW_ROUNDS ? out('notify', 'limit') : out('block', 'fix');
   if (verdict === 'ERROR') return out('notify', /계정 미연결|환경 없음/.test(line) ? 'setup' : 'error');
