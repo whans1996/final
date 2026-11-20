@@ -54,6 +54,11 @@ public record ConceptDetailResponse(
                 int wishCount,
         @Schema(
                         requiredMode = Schema.RequiredMode.REQUIRED,
+                        description = "내가 찜했는지 (F-12). 비로그인·깨진 토큰이면 false",
+                        example = "false")
+                boolean wished,
+        @Schema(
+                        requiredMode = Schema.RequiredMode.REQUIRED,
                         description = "평균 별점 (0.0~5.0, 소수 1자리. 리뷰가 없으면 0.0)",
                         example = "4.5")
                 double avgRating,
@@ -74,6 +79,7 @@ public record ConceptDetailResponse(
 
     public static ConceptDetailResponse of(
             Concept concept,
+            boolean wished,
             List<ConceptAppearanceResponse> appearances,
             List<ConceptSummaryResponse> related) {
         return new ConceptDetailResponse(
@@ -86,6 +92,7 @@ public record ConceptDetailResponse(
                 concept.getExampleCode(),
                 concept.getReferenceUrl(),
                 concept.getWishCount(),
+                wished,
                 concept.getAvgRating().doubleValue(),
                 appearances,
                 related);

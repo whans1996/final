@@ -3,10 +3,12 @@ import { flushPromises } from '@vue/test-utils'
 import App from '@/App.vue'
 import UserProfileView from '@/views/UserProfileView.vue'
 import * as usersApi from '@/api/users'
+import * as conceptsApi from '@/api/concepts'
 import { useAuthStore } from '@/stores/auth'
 import { apiError, mountAt } from './viewTestUtils'
 
 vi.mock('@/api/users')
+vi.mock('@/api/concepts')
 
 const PROFILE = {
   id: 3,
@@ -26,6 +28,8 @@ function login(id) {
 describe('UserProfileView (F-03 AC9)', () => {
   beforeEach(() => {
     vi.resetAllMocks()
+    // F-12 찜 절 기본값 (0건)
+    conceptsApi.fetchUserWishes.mockResolvedValue({ items: [], page: 1, size: 12, total: 0 })
   })
 
   it('AC9 프로필 정보와 학습 통계 3개를 보여 준다', async () => {
@@ -164,5 +168,39 @@ describe('UserProfileView (F-03 AC9)', () => {
     const link = wrapper.find('header a.nickname')
     expect(link.attributes('href')).toBe('/users/3')
     expect(link.text()).toBe('코딩초보')
+  })
+})
+
+describe('UserProfileView 찜한 카드 절 (F-12 AC15)', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+    conceptsApi.fetchUserWishes.mockResolvedValue({ items: [], page: 1, size: 12, total: 4 })
+    usersApi.fetchUserStats.mockResolvedValue({
+      analysisCount: 0,
+      learnedConceptCount: 0,
+      quizAccuracy: null,
+    })
+  })
+
+  it('AC15 학습 통계 아래에 찜한 카드 절이 보인다', async () => {
+    usersApi.fetchUser.mockResolvedValue(PROFILE)
+
+    const { wrapper } = await mountAt(UserProfileView, '/users/3')
+    await flushPromises()
+
+    expect(conceptsApi.fetchUserWishes).toHaveBeenCalledWith(3, { page: 1, size: 12 })
+    expect(wrapper.find('[data-section="wishes"] h2').text()).toBe('찜한 카드 4')
+  })
+
+  it('AC15 프로필이 404면 찜한 카드 절을 그리지 않는다', async () => {
+    usersApi.fetchUser.mockRejectedValue(
+      apiError(404, { code: 'USER_404', message: '사용자를 찾을 수 없습니다.' }),
+    )
+
+    const { wrapper } = await mountAt(UserProfileView, '/users/3')
+    await flushPromises()
+
+    expect(wrapper.find('[data-section="wishes"]').exists()).toBe(false)
+    expect(conceptsApi.fetchUserWishes).not.toHaveBeenCalled()
   })
 })

@@ -5,4 +5,11 @@
     <insert id="insert">
         INSERT INTO activities (user_id, type, target_id) VALUES (#{userId}, #{type}, #{targetId})
     </insert>
+
+    <select id="exists" resultType="boolean">
+        SELECT EXISTS (
+            SELECT 1 FROM activities
+            WHERE user_id = #{userId} AND type = #{type} AND target_id = #{targetId}
+        )
+    </select>
 </mapper>

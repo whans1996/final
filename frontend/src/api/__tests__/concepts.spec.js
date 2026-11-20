@@ -8,7 +8,10 @@ import {
   fetchConcepts,
   fetchMyReview,
   fetchReviews,
+  fetchUserWishes,
+  unwishConcept,
   updateReview,
+  wishConcept,
 } from '@/api/concepts'
 
 // API 계약(docs/specs/F-09-concept-list.md 3절)과 URL·파라미터 이름이 같은지 확인한다
@@ -142,5 +145,43 @@ describe('api/concepts (F-11)', () => {
 
     expect(calls[0].method).toBe('delete')
     expect(calls[0].url).toBe('/concepts/57/reviews/me')
+  })
+})
+
+describe('api/concepts (F-12)', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
+  it('wishConcept는 POST /api/concepts/{id}/wish를 본문 없이 보내고 찜 상태를 받는다', async () => {
+    const result = { wished: true, wishCount: 13, reviewPlanDate: '2026-12-04' }
+    const calls = capture(result)
+
+    await expect(wishConcept(57)).resolves.toEqual(result)
+
+    expect(calls[0].method).toBe('post')
+    expect(calls[0].url).toBe('/concepts/57/wish')
+    expect(calls[0].data).toBeUndefined()
+  })
+
+  it('unwishConcept는 DELETE /api/concepts/{id}/wish로 바뀐 찜 수를 받는다', async () => {
+    const result = { wished: false, wishCount: 12, reviewPlanDate: null }
+    const calls = capture(result)
+
+    await expect(unwishConcept(57)).resolves.toEqual(result)
+
+    expect(calls[0].method).toBe('delete')
+    expect(calls[0].url).toBe('/concepts/57/wish')
+  })
+
+  it('fetchUserWishes는 GET /api/users/{id}/wishes에 page·size를 보낸다', async () => {
+    const page = { items: [], page: 2, size: 12, total: 13 }
+    const calls = capture(page)
+
+    await expect(fetchUserWishes(3, { page: 2, size: 12 })).resolves.toEqual(page)
+
+    expect(calls[0].method).toBe('get')
+    expect(calls[0].url).toBe('/users/3/wishes')
+    expect(calls[0].params).toEqual({ page: 2, size: 12 })
   })
 })

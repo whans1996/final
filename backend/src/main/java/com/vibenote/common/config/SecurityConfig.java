@@ -48,10 +48,11 @@ public class SecurityConfig {
 
         // ── ANALYSIS (A F-19 공개 분석) ──
 
-        // ── CONCEPT (B F-09~11) ──
+        // ── CONCEPT (B F-09~12) ──
         "/api/concepts",
         "/api/concepts/{id:\\d+}",
         "/api/concepts/{id:\\d+}/reviews", // F-11 목록만. /reviews/me는 인증 필요
+        "/api/users/{id:\\d+}/wishes", // F-12 회원의 찜 목록. 숫자 id만이라 /users/me는 열리지 않는다
 
         // ── POST (B F-17·F-18) ──
         "/api/posts",
