@@ -95,6 +95,7 @@ SSAFY 관통 프로젝트(2026-11-17 시작, 12-24 발표). Spring Boot 4 + MyBa
 | AI 없이 교대 | `node scripts/handoff.mjs [-m "메모"] [--no-push]` |
 | 기록 머리 줄·내 NOW 파일·내 이슈 영역 라벨 | `node scripts/stamp.mjs [--now\|--log\|--file\|--area]` |
 | 다음 마이그레이션 번호 | `node scripts/next-migration.mjs` (develop·원격 feature 브랜치 포함) |
+| develop 밖에서 진행 중인 브랜치 | `node scripts/branches.mjs` (내 NOW를 바꾼 원격 브랜치), `node scripts/branches.mjs F-xx` (`/spec` 전 중복 확인) |
 | 하네스 단위 테스트 | `node --test "scripts/test/*.test.mjs"` |
 | PR 스크린샷 Markdown | `node scripts/pr-screens.mjs SC-18 SC-19` (`docs/산출물/screens/` 커밋·push 후) |
 | 파일 영역·PR @멘션 대상 | `node scripts/owners.mjs [--diff origin/develop | <경로...>]` |
