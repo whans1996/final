@@ -34,6 +34,7 @@ function detail(partial) {
     exampleCode: 'String token = Jwts.builder()\n    .compact();',
     referenceUrl: 'https://docs.spring.io/jwt.html',
     wishCount: 12,
+    wished: false,
     avgRating: 4.25,
     appearances: [],
     related: [],
@@ -85,7 +86,7 @@ describe('ConceptDetailView (F-10 AC9~AC13)', () => {
     const header = wrapper.find('header')
     expect(header.text()).toContain('security')
     expect(header.text()).toContain('숙련')
-    expect(header.text()).toContain('♥ 12')
+    expect(header.text()).toContain('♡ 12') // F-12 AC12: 찜하지 않은 카드는 빈 하트
     expect(header.text()).toContain('★ 4.3')
     expect(wrapper.text()).toContain('JWT는 서명한 토큰이다.')
 
@@ -403,5 +404,51 @@ describe('ConceptDetailView 글쓰기 버튼 (F-17 AC18)', () => {
     await vi.waitFor(() =>
       expect(member.router.currentRoute.value.fullPath).toBe('/community/write?conceptId=57'),
     )
+  })
+})
+
+describe('ConceptDetailView 찜 버튼 (F-12 AC12)', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+    window.scrollTo = vi.fn()
+    conceptsApi.fetchReviews.mockResolvedValue({ items: [], page: 1, size: 10, total: 0 })
+  })
+
+  it('AC12 헤더 찜 수 자리에 WishButton이 카드의 wished·wishCount로 보인다', async () => {
+    conceptsApi.fetchConcept.mockResolvedValue(detail({ wished: true, wishCount: 13 }))
+
+    const { wrapper } = await mountDetail()
+
+    const button = wrapper.find('header [data-action="toggle-wish"]')
+    expect(button.text()).toBe('♥ 13')
+    expect(button.attributes('aria-pressed')).toBe('true')
+  })
+
+  it('AC12 관련 카드로 :id가 바뀌면 새 카드의 찜 여부와 수로 바뀐다', async () => {
+    conceptsApi.fetchConcept
+      .mockResolvedValueOnce(detail({ wished: true, wishCount: 13, related: [summary()] }))
+      .mockResolvedValueOnce(detail({ id: 58, wished: false, wishCount: 3 }))
+    const { wrapper, router } = await mountDetail()
+
+    await router.push('/concepts/58')
+    await flushPromises()
+
+    const button = wrapper.find('[data-action="toggle-wish"]')
+    expect(button.text()).toBe('♡ 3')
+    expect(button.attributes('aria-pressed')).toBe('false')
+  })
+
+  it('AC13 찜 버튼이 change를 올리면 카드의 wished·wishCount를 바꾼다', async () => {
+    conceptsApi.fetchConcept.mockResolvedValue(detail({ wished: false, wishCount: 12 }))
+    const { wrapper } = await mountDetail()
+
+    wrapper
+      .findComponent({ name: 'WishButton' })
+      .vm.$emit('change', { wished: true, wishCount: 20 })
+    await flushPromises()
+
+    const button = wrapper.find('[data-action="toggle-wish"]')
+    expect(button.text()).toBe('♥ 20')
+    expect(button.attributes('aria-pressed')).toBe('true')
   })
 })

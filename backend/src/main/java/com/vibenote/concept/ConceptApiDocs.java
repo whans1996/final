@@ -4,7 +4,7 @@ package com.vibenote.concept;
 public final class ConceptApiDocs {
 
     public static final String TAG = "개념 카드";
-    public static final String TAG_DESCRIPTION = "공개 개념 카드 목록·검색·상세·리뷰";
+    public static final String TAG_DESCRIPTION = "공개 개념 카드 목록·검색·상세·리뷰·찜";
 
     private ConceptApiDocs() {}
 }

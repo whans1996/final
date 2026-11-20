@@ -1,11 +1,12 @@
 <script setup>
-// SC-18 프로필 (F-03 AC9). 누구나 볼 수 있다. 팔로우·찜·참여 챌린지 영역은 F-04·F-12·F-25에서 더한다.
+// SC-18 프로필 (F-03 AC9, F-12 찜한 카드 절 AC15). 누구나 볼 수 있다. 팔로우·참여 챌린지 영역은 F-04·F-25에서 더한다.
 import { computed, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { fetchUser, fetchUserStats } from '@/api/users'
 import { errorCode, errorMessage } from '@/api/http'
 import { LEVELS } from '@/utils/authValidation'
+import UserWishes from '@/components/concept/UserWishes.vue'
 
 const route = useRoute()
 const auth = useAuthStore()
@@ -92,6 +93,8 @@ watch(userId, load, { immediate: true })
           <span>퀴즈 정답률</span>
         </li>
       </ul>
+
+      <UserWishes :user-id="userId" :is-me="isMe" />
     </template>
   </section>
 </template>
