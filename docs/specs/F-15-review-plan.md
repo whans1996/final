@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 |---|---|
-| 상태 | APPROVED <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
+| 상태 | DONE (PR #59) <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
 | 기능 ID | F-15 |
 | 우선순위 | P0 |
 | 영역 오너 | A 김동환 (AI·분석·학습 루프) |
@@ -215,5 +215,5 @@
 - [x] ui-verifier 통과 (데스크톱·모바일)
 - [x] reviewer 지적 사항 반영 (권장 3건)
 - [x] 산출물 반영: 화면 설계서 SC-11 절·스크린샷과 SC-10·SC-08 변경, 유스케이스 UC31(기획 기준 → 구현), ERD `review_plans` 설명(F-15 추가 경로)
-- [ ] PR CI 초록 (공통 파일 변경 @JoonseobKim 멘션)
-- [ ] 상태 DONE (PR 머지 후)
+- [x] PR CI 초록 (공통 파일 변경 @JoonseobKim 멘션)
+- [x] 상태 DONE (PR #59, Codex ✅ e183d25)
