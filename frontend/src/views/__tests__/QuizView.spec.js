@@ -214,4 +214,46 @@ describe('QuizView (F-14 SC-08)', () => {
     await flushPromises()
     expect(wrapper.findAll('[data-question]')).toHaveLength(2)
   })
+
+  it('AC13(F-20b) ?team=T로 들어오면 "팀으로 돌아가기"를 보여 주고 다시 풀어도 쿼리가 남는다', async () => {
+    quizzesApi.fetchAnalysisQuiz.mockResolvedValue(quiz())
+    quizzesApi.submitQuizAttempt.mockResolvedValue(attempt())
+    const { wrapper, router } = await mountAt(QuizView, '/analyses/42/quiz?team=12')
+    await flushPromises()
+
+    const back = () => wrapper.find('[data-action="back"]')
+    expect(back().text()).toBe('← 팀으로 돌아가기')
+    expect(back().attributes('href')).toBe('/teams/12')
+
+    await choose(wrapper, 21, 0)
+    await choose(wrapper, 22, 3)
+    await submitButton(wrapper).trigger('click')
+    await flushPromises()
+    expect(back().text()).toBe('← 팀으로 돌아가기')
+    vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+    await wrapper.find('[data-action="retry-quiz"]').trigger('click')
+    expect(router.currentRoute.value.query.team).toBe('12')
+    expect(back().attributes('href')).toBe('/teams/12')
+  })
+
+  it('AC13(F-20b) 조회가 404(ANALYSIS_404)여도 팀 링크를 보여 준다', async () => {
+    quizzesApi.fetchAnalysisQuiz.mockRejectedValue(
+      apiError(404, { code: 'ANALYSIS_404', message: '분석을 찾을 수 없습니다.' }),
+    )
+    const { wrapper } = await mountAt(QuizView, '/analyses/42/quiz?team=12')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('분석을 찾을 수 없습니다.')
+    expect(wrapper.find('[data-action="back"]').attributes('href')).toBe('/teams/12')
+  })
+
+  it('AC13(F-20b) team이 숫자가 아니면 F-14 그대로 분석으로 돌아간다', async () => {
+    quizzesApi.fetchAnalysisQuiz.mockResolvedValue(quiz())
+    const { wrapper } = await mountAt(QuizView, '/analyses/42/quiz?team=abc')
+    await flushPromises()
+
+    const back = wrapper.find('[data-action="back"]')
+    expect(back.text()).toBe('← 분석으로 돌아가기')
+    expect(back.attributes('href')).toBe('/analyses/42?tab=quiz')
+  })
 })

@@ -158,7 +158,7 @@ public class TeamService {
         return new JoinTeamResponse(teamId);
     }
 
-    /** 팀원이 스스로 떠난다. 팀장은 팀을 삭제해야 한다 (AC8). */
+    /** 팀원이 스스로 떠난다. 팀장은 팀을 삭제해야 한다 (AC8). 내가 이 팀에 공유한 분석도 해제된다 (F-20b AC8). */
     @Transactional
     public void leave(long teamId, long userId) {
         userService.getActiveMember(userId);
@@ -166,9 +166,13 @@ public class TeamService {
             throw new BusinessException(ErrorCode.TEAM_004);
         }
         teamMapper.deleteMember(teamId, userId);
+        teamMapper.deleteTeamAnalysesSharedBy(teamId, userId);
     }
 
-    /** 팀장이 팀원을 내보낸다. 자기 자신이면 TEAM_004, 대상이 그 팀 멤버가 아니면 TEAM_005 (AC8). */
+    /**
+     * 팀장이 팀원을 내보낸다. 자기 자신이면 TEAM_004, 대상이 그 팀 멤버가 아니면 TEAM_005 (AC8). 대상이 이 팀에 공유한 분석도 해제된다 (F-20b
+     * AC8).
+     */
     @Transactional
     public void removeMember(long teamId, long ownerId, long targetId) {
         userService.getActiveMember(ownerId);
@@ -179,11 +183,16 @@ public class TeamService {
         if (teamMapper.deleteMember(teamId, targetId) == 0) {
             throw new BusinessException(ErrorCode.TEAM_005);
         }
+        teamMapper.deleteTeamAnalysesSharedBy(teamId, targetId);
     }
 
-    /** 회원 탈퇴(F-03)의 트랜잭션 안에서 부른다: 팀장인 팀을 지우고(멤버 행 CASCADE) 남은 멤버 행을 지운다 (AC10). */
+    /**
+     * 회원 탈퇴(F-03)의 트랜잭션 안에서 부른다: 내가 모든 팀에 공유한 분석을 해제하고(F-20b AC8), 팀장인 팀을 지우고(멤버·공유 행 CASCADE) 남은
+     * 멤버 행을 지운다 (AC10).
+     */
     @Transactional
     public void removeAllOf(long userId) {
+        teamMapper.deleteAllTeamAnalysesSharedBy(userId);
         teamMapper.deleteTeamsOwnedBy(userId);
         teamMapper.deleteMembershipsOf(userId);
     }

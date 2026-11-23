@@ -1,10 +1,15 @@
 package com.vibenote.team;
 
+import com.vibenote.team.domain.MemberAnswer;
 import com.vibenote.team.domain.MyTeam;
+import com.vibenote.team.domain.QuestionLayer;
+import com.vibenote.team.domain.ShareTarget;
 import com.vibenote.team.domain.Team;
+import com.vibenote.team.domain.TeamAnalysis;
 import com.vibenote.team.domain.TeamMember;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -61,4 +66,46 @@ public interface TeamMapper {
 
     /** 그 회원의 남은 멤버 행을 지운다. */
     void deleteMembershipsOf(long userId);
+
+    // ── 공유 분석 (F-20b). analyses·quiz_* 테이블은 읽기만 한다 ──
+
+    /** 미삭제 분석의 주인·상태·퀴즈 유무. 없거나 삭제됐으면 empty. */
+    Optional<ShareTarget> findShareTarget(long analysisId);
+
+    boolean existsTeamAnalysis(@Param("teamId") long teamId, @Param("analysisId") long analysisId);
+
+    /** soft delete된 분석은 세지 않는다. */
+    int countTeamAnalyses(long teamId);
+
+    void insertTeamAnalysis(
+            @Param("teamId") long teamId,
+            @Param("analysisId") long analysisId,
+            @Param("sharedAt") LocalDateTime sharedAt);
+
+    /** 미삭제 공유 분석을 공유 최신순(shared_at DESC, analysis id DESC)으로. {@code my*}는 userId의 최근 풀이. */
+    List<TeamAnalysis> findTeamAnalyses(@Param("teamId") long teamId, @Param("userId") long userId);
+
+    /** 그 팀의 미삭제 공유 분석 하나. 공유되지 않았거나 삭제됐으면 null. */
+    TeamAnalysis findTeamAnalysis(
+            @Param("teamId") long teamId,
+            @Param("analysisId") long analysisId,
+            @Param("userId") long userId);
+
+    int deleteTeamAnalysis(@Param("teamId") long teamId, @Param("analysisId") long analysisId);
+
+    /** 그 회원이 그 팀에 공유한 행을 지운다 (탈퇴·내보내기). */
+    void deleteTeamAnalysesSharedBy(@Param("teamId") long teamId, @Param("userId") long userId);
+
+    /** 그 회원이 모든 팀에 공유한 행을 지운다 (회원 탈퇴). */
+    void deleteAllTeamAnalysesSharedBy(long userId);
+
+    /** userId가 멤버인 팀 중 하나에 그 미삭제 분석이 공유됐는가 (퀴즈 권한). */
+    boolean isSharedWith(@Param("userId") long userId, @Param("analysisId") long analysisId);
+
+    /** 그 퀴즈의 문항과 레이어 (id 오름차순). */
+    List<QuestionLayer> findQuestionLayers(long quizId);
+
+    /** 그 팀의 지금 멤버마다 가장 최근 풀이(created_at DESC, id DESC)와 그 답들. */
+    List<MemberAnswer> findLatestAnswers(
+            @Param("teamId") long teamId, @Param("quizId") long quizId);
 }
