@@ -9,6 +9,8 @@ import com.vibenote.analysis.dto.AnalysisStatusResponse;
 import com.vibenote.analysis.dto.AnalysisSummaryResponse;
 import com.vibenote.analysis.dto.CreateAnalysisRequest;
 import com.vibenote.analysis.dto.CreateAnalysisResponse;
+import com.vibenote.analysis.dto.UpdateAnalysisRequest;
+import com.vibenote.analysis.dto.VisibilityResponse;
 import com.vibenote.analysis.explain.AnalysisOverview;
 import com.vibenote.analysis.explain.FileExplanation;
 import com.vibenote.analysis.pipeline.SelectedFile;
@@ -31,7 +33,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-/** 분석 요청 접수, 내 분석 목록, 진행 상태 (F-05a), 결과 조회 (F-06). 파이프라인 실행은 AnalysisPipeline이 한다. */
+/**
+ * 분석 요청 접수, 내 분석 목록, 진행 상태 (F-05a), 결과 조회 (F-06), 수정·공개·삭제와 공개 분석 열람 (F-19). 파이프라인 실행은
+ * AnalysisPipeline이 한다.
+ */
 @Service
 public class AnalysisService {
 
@@ -110,11 +115,18 @@ public class AnalysisService {
         return PageResponse.of(items, query, analysisMapper.countByUser(userId));
     }
 
-    /** 내 미삭제 분석의 상태. 없거나 남의 것이거나 삭제됐으면 ANALYSIS_404. */
+    /** 볼 수 있는 분석의 상태 (F-19). 볼 수 없으면 ANALYSIS_404. */
     public AnalysisStatusResponse getStatus(long userId, long analysisId) {
+        return AnalysisStatusResponse.from(checkViewable(userId, analysisId));
+    }
+
+    /**
+     * 볼 수 있는 분석(미삭제이고 내 것이거나 공개·DONE이고 주인이 ACTIVE)을 준다 (F-19). 없거나 볼 수 없으면 존재를 드러내지 않도록
+     * ANALYSIS_404.
+     */
+    public Analysis checkViewable(long userId, long analysisId) {
         return analysisMapper
-                .findOwned(analysisId, userId)
-                .map(AnalysisStatusResponse::from)
+                .findViewable(analysisId, userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ANALYSIS_404));
     }
 
@@ -172,38 +184,76 @@ public class AnalysisService {
         }
     }
 
-    /** 내 미삭제 분석의 상세 (F-06 AC9). 진행 중이면 overview가 null일 수 있다. */
+    /** 볼 수 있는 분석의 상세 (F-06 AC9, F-19 AC9). 진행 중이면 overview가 null일 수 있다. */
     @Transactional(readOnly = true)
     public AnalysisDetailResponse getDetail(long userId, long analysisId) {
         return analysisMapper
-                .findOwnedDetail(analysisId, userId)
-                .map(AnalysisDetailResponse::from)
+                .findViewableDetail(analysisId, userId)
+                .map(d -> AnalysisDetailResponse.from(d, userId))
                 .orElseThrow(() -> new BusinessException(ErrorCode.ANALYSIS_404));
     }
 
-    /** 내 분석의 파일 목록 (content 제외, F-06 AC10). */
+    /** 볼 수 있는 분석의 파일 목록 (content 제외, F-06 AC10). */
     @Transactional(readOnly = true)
     public List<AnalysisFileSummaryResponse> listFiles(long userId, long analysisId) {
-        requireOwned(userId, analysisId);
+        checkViewable(userId, analysisId);
         return analysisMapper.findFileSummaries(analysisId).stream()
                 .map(AnalysisFileSummaryResponse::from)
                 .toList();
     }
 
-    /** 내 분석의 파일 하나 (F-06 AC11). 분석이 없으면 ANALYSIS_404, 파일이 그 분석 것이 아니면 ANALYSIS_001. */
+    /** 볼 수 있는 분석의 파일 하나 (F-06 AC11). 분석을 볼 수 없으면 ANALYSIS_404, 파일이 그 분석 것이 아니면 ANALYSIS_001. */
     @Transactional(readOnly = true)
     public AnalysisFileResponse getFile(long userId, long analysisId, long fileId) {
-        requireOwned(userId, analysisId);
+        checkViewable(userId, analysisId);
         return analysisMapper
                 .findFile(analysisId, fileId)
                 .map(AnalysisFileResponse::from)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ANALYSIS_001));
     }
 
-    private void requireOwned(long userId, long analysisId) {
-        if (analysisMapper.findOwned(analysisId, userId).isEmpty()) {
+    /** 내 분석의 제목·메모를 바꾸고 바뀐 상세를 준다 (F-19 AC1). 진행 중이어도 되고 파이프라인에는 영향이 없다. */
+    @Transactional
+    public AnalysisDetailResponse update(
+            long userId, long analysisId, UpdateAnalysisRequest request) {
+        if (analysisMapper.updateInfo(analysisId, userId, request.title(), request.memo(), now())
+                != 1) {
             throw new BusinessException(ErrorCode.ANALYSIS_404);
         }
+        return getDetail(userId, analysisId);
+    }
+
+    /**
+     * 공개 여부를 바꾼다 (F-19 AC4·AC5). 피드 활동은 새로 만들지 않는다: 완료 때 남긴 ANALYSIS 활동이 공개 여부에 따라 보이고 빠진다 (F-04
+     * AC7).
+     */
+    @Transactional
+    public VisibilityResponse updateVisibility(long userId, long analysisId, boolean isPublic) {
+        if (analysisMapper.updateVisibility(analysisId, userId, isPublic, now()) != 1) {
+            analysisMapper
+                    .findOwned(analysisId, userId)
+                    .orElseThrow(() -> new BusinessException(ErrorCode.ANALYSIS_404));
+            throw new BusinessException(ErrorCode.ANALYSIS_006);
+        }
+        return new VisibilityResponse(analysisId, isPublic);
+    }
+
+    /**
+     * 끝난(DONE·FAILED) 내 분석을 soft delete하고 파일·흐름·개념 연결을 지운다 (F-19 AC6~AC8). 퀴즈와 풀이 기록은 남긴다. 판단은
+     * UPDATE 한 문장이라 파이프라인 상태 갱신과 경쟁하지 않고, 0행이면 소유를 다시 보고 404와 409를 고른다.
+     */
+    @Transactional
+    public void delete(long userId, long analysisId) {
+        if (analysisMapper.softDelete(analysisId, userId, now()) != 1) {
+            analysisMapper
+                    .findOwned(analysisId, userId)
+                    .orElseThrow(() -> new BusinessException(ErrorCode.ANALYSIS_404));
+            throw new BusinessException(ErrorCode.ANALYSIS_005);
+        }
+        // analysis_concepts.file_id가 analysis_files를 참조하므로 개념 연결을 먼저 지운다
+        analysisMapper.deleteConceptLinks(analysisId);
+        analysisMapper.deleteFlows(analysisId);
+        analysisMapper.deleteFiles(analysisId);
     }
 
     /** DONE으로 바꾸고 피드 활동(ANALYSIS)을 남긴다. 그 사이에 이미 끝난 분석이면 아무것도 하지 않는다. */

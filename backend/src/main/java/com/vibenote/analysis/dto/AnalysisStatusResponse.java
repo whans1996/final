@@ -43,6 +43,12 @@ public record AnalysisStatusResponse(
                         nullable = true)
                 String errorMessage,
         @Schema(
+                        description =
+                                "저장소 주소(정규화). ZIP 분석이면 null. FAILED 화면의 \"저장소 보기\" 링크 (F-19 AC12)",
+                        example = "https://github.com/octo/todo-app",
+                        nullable = true)
+                String sourceUrl,
+        @Schema(
                         requiredMode = Schema.RequiredMode.REQUIRED,
                         description = "마지막 상태 변경 시각",
                         example = "2026-11-24T14:20:01+09:00")
@@ -55,6 +61,7 @@ public record AnalysisStatusResponse(
                 analysis.getProgress(),
                 analysis.getErrorCode(),
                 analysis.getErrorMessage(),
+                analysis.getSourceUrl(),
                 analysis.getUpdatedAt().atZone(ClockConfig.ZONE).toOffsetDateTime());
     }
 }

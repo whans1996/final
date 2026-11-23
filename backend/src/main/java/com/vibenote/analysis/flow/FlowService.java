@@ -116,10 +116,10 @@ public class FlowService {
         return responses(analysisId);
     }
 
-    /** 내 분석의 흐름 전체 (AC10). 분석이 진행 중이어도 조회는 된다. */
+    /** 볼 수 있는 분석(내 것 또는 공개·완료된 남의 것, F-19)의 흐름 전체 (AC10). 분석이 진행 중이어도 조회는 된다. */
     @Transactional(readOnly = true)
     public List<FlowResponse> list(long userId, long analysisId) {
-        if (analysisMapper.findOwned(analysisId, userId).isEmpty()) {
+        if (analysisMapper.findViewable(analysisId, userId).isEmpty()) {
             throw new BusinessException(ErrorCode.ANALYSIS_404);
         }
         return responses(analysisId);

@@ -4,25 +4,23 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
 
-갱신: 2026-11-23 17:50 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/F-19-analysis-manage
+갱신: 2026-11-24 07:48 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/F-19-analysis-manage
 
 ## 현재 기능
 
-**F-19 분석 관리** spec `docs/specs/F-19-analysis-manage.md` — **APPROVED (김동환 11-23)**, 브랜치 `feature/F-19-analysis-manage` push됨. 구현 시작 전
+**F-19 분석 관리** spec `docs/specs/F-19-analysis-manage.md` (APPROVED) — `/implement` 진행 중. BE 완료, FE 검증 중
 
 ## 진행
 
-- ✅ PR #88(progress W1)·#87(#86 하네스) 머지, develop 최신화
-- ✅ spec 초안 AC15개: 수정·공개(DONE만, ANALYSIS_006)·삭제(DONE·FAILED만, 진행 중 409 ANALYSIS_005) + 공개 분석 타인 읽기 전용 열람(6개 GET, 퀴즈·흐름 생성은 주인만) + #60 질문 버튼·#81 status sourceUrl. Flyway 없음
-- ✅ 결정로그 11-23 F-19 행 (AskUserQuestion 4개 답 반영)
+- ✅ BE AC1~AC12 green (`AnalysisManageApiTest` 9, `AnalysisPublicViewApiTest` 4, 전체 BE 856 통과), openapi.json 갱신, conventions 3절 ANALYSIS_005·006
+- ✅ FE 구현(미커밋): `AnalysisManagePanel.vue`(+spec), `AnalysisDetailView`(mine 분기·퀴즈 탭 제외·질문 링크·FAILED 상세 로드·status sourceUrl), `AnalysisFlowsTab`·`AnalysisFlowCard` readonly, `AnalysisListView` 공개 배지·메모 첫 줄·제목 대체. 분석 FE 테스트 91개 중 90 통과 후 1건 수정, `verify fe` 실행 중
+- 결정: 관리 영역은 상세를 불러오는 DONE·FAILED에서만 보인다 (진행 중 수정은 API만 가능, PR에 적기)
 
 ## 바로 다음 할 일
 
-1. (완료) spec 승인 커밋·push
-2. `/clear` 후 새 세션(Opus/high) `/implement F-19` (브랜치 `feature/F-19-analysis-manage`): 먼저 `AnalysisManageApiTest`·`AnalysisPublicViewApiTest` red → `AnalysisMapper.findViewable`·`AnalysisService.checkViewable`. `QuizService`는 건드리지 않는다(F-20b 충돌)
-3. F-24·F-25 학습 챌린지 `/spec`·`/implement`
-4. P0 21/21 머지 직후 새 세션 `/project-interview` → Phase 6 2차 기획 (기획서 6절)
-5. 사람: `cd backend && ./gradlew liveTest` (F-05b RepositoryArchiveFetcherLiveTest)
+1. `node scripts/verify.mjs fe` 통과 확인 → BE·FE 각각 커밋 `feat(F-19): ...` → push
+2. `contract-checker`(spec 3절 vs openapi.json vs `frontend/src/api/analyses.js`) → BE(local)+FE dev 띄워 `ui-verifier` SC-06·SC-07 주인/타인, 375px
+3. 산출물: `06-화면설계서.md` SC-06(목록 관리 없음)·SC-07, `02-유스케이스.md` UC13, `01-요구사항정의서.md` F-19 행 → `/pr-review` (`Closes #60`, `Closes #81`, ErrorCode 공통 변경 @JoonseobKim)
 
 ## 막힌 점 / 결정 필요
 

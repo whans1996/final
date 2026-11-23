@@ -2,12 +2,13 @@ package com.vibenote.analysis.domain;
 
 import com.vibenote.analysis.explain.AnalysisOverview;
 
-/** 분석 상세 조회 행: analyses + overview JSON + 파일 수 (F-06 AC9). */
+/** 분석 상세 조회 행: analyses + overview JSON + 파일 수 (F-06 AC9) + 주인 닉네임 (F-19 AC9). */
 public class AnalysisDetail extends Analysis {
 
     private AnalysisOverview overview;
     private int fileCount;
     private int explainedFileCount;
+    private String ownerNickname;
 
     public AnalysisOverview getOverview() {
         return overview;
@@ -31,5 +32,13 @@ public class AnalysisDetail extends Analysis {
 
     public void setExplainedFileCount(int explainedFileCount) {
         this.explainedFileCount = explainedFileCount;
+    }
+
+    public String getOwnerNickname() {
+        return ownerNickname;
+    }
+
+    public void setOwnerNickname(String ownerNickname) {
+        this.ownerNickname = ownerNickname;
     }
 }

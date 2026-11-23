@@ -31,10 +31,10 @@ public class AnalysisConceptService {
         this.conceptQueryService = conceptQueryService;
     }
 
-    /** 공개 카드만 위치와 함께, 검수 대기 초안은 수만. 내 미삭제 분석이 아니면 ANALYSIS_404. */
+    /** 공개 카드만 위치와 함께, 검수 대기 초안은 수만. 볼 수 있는 분석(F-19)이 아니면 ANALYSIS_404. */
     @Transactional(readOnly = true)
     public AnalysisConceptsResponse getConcepts(long userId, long analysisId) {
-        if (analysisMapper.findOwned(analysisId, userId).isEmpty()) {
+        if (analysisMapper.findViewable(analysisId, userId).isEmpty()) {
             throw new BusinessException(ErrorCode.ANALYSIS_404);
         }
         List<LinkRow> links = mapper.findByAnalysis(analysisId);
