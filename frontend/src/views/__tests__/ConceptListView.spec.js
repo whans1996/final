@@ -246,4 +246,16 @@ describe('ConceptListView (F-09 AC9~AC11)', () => {
     expect(router.currentRoute.value.query.page).toBe('5')
     expect(wrapper.text()).toContain('조건에 맞는 개념 카드가 없습니다')
   })
+
+  it('#46 응답 전에 다른 화면으로 떠나면 늦게 온 범위 초과 응답으로 주소를 바꾸지 않는다', async () => {
+    let resolve
+    conceptsApi.fetchConcepts.mockReturnValue(new Promise((r) => (resolve = r)))
+    const { router } = await mountList('/concepts?category=vue&page=99')
+
+    await router.push('/community?page=9')
+    resolve(page([], { page: 99, total: 41 }))
+    await flushPromises()
+
+    expect(router.currentRoute.value.fullPath).toBe('/community?page=9')
+  })
 })

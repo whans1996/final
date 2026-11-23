@@ -70,7 +70,8 @@ async function load() {
       total: result.total,
       itemCount: result.items.length,
     })
-    if (lastPage) {
+    // 응답 전에 다른 화면으로 떠났으면 주소를 바꾸지 않는다 (늦게 온 응답이 탐색을 일으키지 않게)
+    if (lastPage && route.name === 'concepts') {
       redirecting = true
       router.replace({ query: toQuery({ ...conditions.value, page: lastPage }) })
       return

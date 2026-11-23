@@ -283,4 +283,16 @@ describe('AdminConceptListView (F-13 AC13)', () => {
     expect(router.currentRoute.value.query.page).toBe('2')
     expect(wrapper.text()).toContain('검수할 초안이 없습니다.')
   })
+
+  it('#76 응답 전에 다른 화면으로 떠나면 늦게 온 범위 초과 응답으로 목록에 끌려오지 않는다', async () => {
+    let resolve
+    adminApi.fetchAdminConcepts.mockReturnValue(new Promise((r) => (resolve = r)))
+    const { router } = await mountList('/admin/concepts?page=3')
+
+    await router.push('/admin/concepts/new')
+    resolve(page([], { page: 3, total: 40 }))
+    await flushPromises()
+
+    expect(router.currentRoute.value.fullPath).toBe('/admin/concepts/new')
+  })
 })

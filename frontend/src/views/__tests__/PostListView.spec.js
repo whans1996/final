@@ -142,4 +142,16 @@ describe('PostListView (F-17 AC13·AC14)', () => {
     expect(wrapper.text()).toContain('트랜잭션 질문')
     expect(wrapper.text()).not.toContain('게시글이 없습니다')
   })
+
+  it('#46 응답 전에 다른 화면으로 떠나면 늦게 온 범위 초과 응답으로 주소를 바꾸지 않는다', async () => {
+    let resolve
+    postsApi.fetchPosts.mockReturnValue(new Promise((r) => (resolve = r)))
+    const { router } = await mountList('/community?boardType=QNA&page=7')
+
+    await router.push('/concepts?page=9')
+    resolve(page([], { page: 7, total: 25 }))
+    await flushPromises()
+
+    expect(router.currentRoute.value.fullPath).toBe('/concepts?page=9')
+  })
 })
