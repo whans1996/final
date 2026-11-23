@@ -25,7 +25,7 @@
 
 ## 막힌 점 / 결정 필요
 
-- 사람: 고아 폴더 `../final-harness` 삭제 (권한 분류기가 `rm -rf` 차단 → 사용자가 직접 `! rm -rf ../final-harness`), 노션 팀원 초대(노션에서 직접)
+- 사람: 노션 팀원 초대(대시보드 공유 → 김준섭 이메일, 편집 허용). `../final-harness`는 11-23 삭제함
 - 남은 로컬 브랜치 `feature/F-00-session-ops`·`feature/F-03-wrapup`은 develop 미머지라 `-d`로 안 지워짐 (그대로 둠)
 
 ## 주의
