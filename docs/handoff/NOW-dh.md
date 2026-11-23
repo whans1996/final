@@ -4,7 +4,7 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
 
-갱신: 2026-11-23 16:03 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/F-05b-analysis-url
+갱신: 2026-11-23 16:06 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/F-05b-analysis-url
 
 ## 현재 기능
 
@@ -22,14 +22,16 @@
 
 - ✅ FE AC13·14: `createAnalysis({file, sourceUrl, ...})`, SC-05 방식 라디오·주소 칸, SC-07 "저장소 보기" 링크. verify fe 통과
 
+- ✅ contract-checker 일치(링크 표시 조건만 해석 문제, 아래), 산출물 06 SC-05·SC-07·08 외부API 갱신, #24 덧글
+
 ## 바로 다음 할 일
 
-1. contract-checker(F-05b) → 불일치 수정
-2. ui-verifier: BE local + FE dev 띄우고 /analyses/new(주소 방식, 375px·1440px) 확인. 못 띄우면 사용자 요청
-3. 산출물: `docs/산출물/06-화면설계서.md` SC-05·SC-07, `08-외부API-생성형AI-활용.md` GitHub·GitLab 아카이브 API, 01 요구사항 F-05 행 확인. #24에 다운로드 실행기 스레드 덧글
-4. `/pr-review` (공통 파일 ErrorCode·application.yml 변경 → @JoonseobKim 멘션)
+1. ui-verifier SC-05 주소 방식(375·1440px) 결과 확인. 8080의 BE가 옛 빌드라 POST·SC-07 링크 E2E는 BE 재기동 후
+2. `/pr-review` (공통 파일 ErrorCode·application.yml 변경 → @JoonseobKim 멘션). liveTest(DS-02-01)는 사람이 `./gradlew liveTest`
 
 ## 막힌 점 / 결정 필요
+
+- 사람 확인: "저장소 보기" 링크는 DONE일 때만 보인다(상세는 DONE에서만 불러오는 F-06 AC13 유지). 진행 중·FAILED에도 보여야 하면 상태 응답에 sourceUrl 추가 필요
 
 - 사람: 노션 팀원 초대(대시보드 공유 → 김준섭 이메일, 편집 허용)
 - 남은 로컬 브랜치 `feature/F-00-session-ops`·`feature/F-03-wrapup`은 develop 미머지라 `-d`로 안 지워짐 (그대로 둠)

@@ -34,7 +34,10 @@ export function fetchAnalysisStatus(id) {
 
 // 결과 조회 (F-06, docs/specs/F-06-overview-explanation.md 3절). 없거나 남의 분석이면 404 ANALYSIS_404.
 
-/** 분석 상세 (overview·fileCount·explainedFileCount 포함). 진행 중이면 overview가 null일 수 있다. */
+/**
+ * 분석 상세 (overview·fileCount·explainedFileCount 포함). 진행 중이면 overview가 null일 수 있다.
+ * sourceUrl은 URL 분석의 정규화한 저장소 주소이고 ZIP 분석이면 null이다 (F-05b AC12).
+ */
 export function fetchAnalysis(id) {
   return http.get(`/analyses/${id}`).then((res) => res.data)
 }

@@ -135,14 +135,14 @@ F-06(개요·파일 설명)에서 정한 구조를 이후 단계(F-07·F-08·F-1
 
 | API | 용도 | 방식 | 보안·제한 |
 |---|---|---|---|
-| GitHub 저장소 아카이브 | 공개 저장소 코드 수집 | `https://codeload.github.com/...` ZIP 다운로드 | 허용 호스트만(SSRF 방어), 크기·파일 수 제한 |
-| GitLab 저장소 아카이브 | 공개 저장소 코드 수집 | `/-/archive/` ZIP 다운로드 | 동일 |
+| GitHub 저장소 아카이브 | 공개 저장소 기본 브랜치 코드 수집 (F-05b) | `GET https://api.github.com/repos/{owner}/{repo}/zipball` → `codeload.github.com`으로 302 → ZIP | 첫 요청은 설정의 API 주소 + 검증한 owner·repo로만 조립(사용자 입력 주소로 요청하지 않음), 리다이렉트는 같은 스킴·포트의 허용 호스트(`api.github.com`·`codeload.github.com`·`gitlab.com`)만 3회까지, 30MB·60초 상한, ZIP 시그니처 확인. 선택적 `GITHUB_TOKEN`(비인증 60회/시 → 5,000회/시)은 api 호스트 요청에만 붙인다 |
+| GitLab 저장소 아카이브 | 공개 저장소 기본 브랜치 코드 수집 (F-05b) | `GET https://gitlab.com/api/v4/projects/{URL 인코딩한 경로}/repository/archive.zip` | 동일 (토큰 없음) |
 | Gemini API | 생성형 AI | REST(JSON), `POST /v1beta/models/{model}:generateContent` | 키는 환경변수·`x-goog-api-key` 헤더, 사용량 기록, 4xx·5xx·타임아웃 시 Ollama 폴백 |
 
+- 저장소 아카이브 응답 처리: 404·401·403·그 밖 4xx → `ANALYSIS_004`(저장소 없음·비공개), 429·`x-ratelimit-remaining: 0`인 403 → `ANALYSIS_503`(요청 한도), 5xx·연결 실패·시간 초과·ZIP 아닌 본문·허용되지 않은 리다이렉트 → `ANALYSIS_502`, 30MB 초과 → `ANALYSIS_413`. 분석은 FAILED가 되고 문구가 화면에 나온다. 테스트는 JDK `HttpServer` 가짜 서버로 하고(외부 네트워크 없음), 실제 연결은 `RepositoryArchiveFetcherLiveTest`(`@Tag("live")`, DS-02-01)로 확인한다
 - Gemini 연결은 `LlmLiveTest`(`@Tag("live")`, 일반 `test`·CI에서 제외)로 확인한다. 실측은 §1.5.
 - 오류 처리: 4xx(키 오류 400·403, 모델 없음 404, 한도 429)·5xx·타임아웃·연결 실패·응답 형식 오류(안전 필터 차단 등) → `LlmUnavailableException` → 폴백, 모두 실패하면 `LLM_503` (§1.1). 키가 틀려도 조용히 Ollama로 넘어가므로 `llm_usage_logs`의 `error_message`(`Gemini 400` 등)로 확인한다
 
-(구현 후: 저장소 아카이브 요청·응답 예시)
 
 ---
 
