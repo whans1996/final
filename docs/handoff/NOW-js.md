@@ -14,13 +14,13 @@
 - ✅ BE AC1~AC11 green: `V8__teams.sql`, `team` 패키지(Controller·Service·Mapper·InviteCodeGenerator·dto·domain), `ErrorCode` TEAM_* 8개, `UserWithdrawalService`가 `TeamService.removeAllOf` 호출(AC10), openapi.json 갱신(팀 path만 추가, operationId 충돌 피하려고 메서드명 `createTeam` 등)
 - ✅ 테스트: `team/TeamApiTest`·`TeamServiceTest`(코드 충돌 재시도)·`InviteCodeGeneratorTest`·`TeamJoinConcurrencyTest`, `user/WithdrawalApiTest#AC10_*`, 메타 테스트(FlywayMigrationTest·ErrorCodeTest)에 TEAM 추가
 - ✅ conventions 3절 TEAM·8절 `팀` Tag, CODEOWNERS team 경로
-- ⏳ FE: `api/teams.js`·`router/routes/team.js`·`router/index.js`(teamRoutes 합치기)·`views/team/__tests__/TeamListView.spec.js` 작성됨(미커밋)
+- ✅ FE AC12~AC15 green: `api/teams.js`, `routes/team.js`(+`router/index.js` 합치기), `views/team/TeamListView`·`TeamDetailView`, `components/team/TeamCard`·`TeamForm`·`InviteCodeBox`·`TeamMemberList`·`teamLabels.js`, 헤더 메뉴 테스트(App·navItems)에 "팀" 추가
 
 ## 바로 다음 할 일
 
-1. `views/team/__tests__/TeamDetailView.spec.js`·`components/team/__tests__/TeamForm.spec.js` 작성 → red 확인
-2. `components/team/TeamCard.vue`·`TeamForm.vue`·`InviteCodeBox.vue`·`TeamMemberList.vue`, `views/team/TeamListView.vue`·`TeamDetailView.vue` 구현 → `node scripts/verify.mjs fe`
-3. contract-checker, ui-verifier(1280·375), 산출물(화면 설계서 SC-22·23, ERD, 요구사항 정의서) → `/pr-review`
+1. contract-checker (spec 3절 ↔ openapi.json ↔ `src/api/teams.js`)
+2. BE(local)·FE dev 서버 띄우고 ui-verifier: `/teams`·`/teams/{id}` 1280·375 (헤더 메뉴 9개라 375 가로 넘침 주의)
+3. 산출물: `docs/산출물/` 화면 설계서 SC-22·23, ERD(teams·team_members), 요구사항 정의서 F-20 행 → `/pr-review`
 
 ## 막힌 점 / 결정 필요
 

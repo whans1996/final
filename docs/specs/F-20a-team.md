@@ -234,7 +234,7 @@ CREATE TABLE team_members (
 - [x] Flyway 마이그레이션
 - [x] AC별 실패 테스트 작성 (red 확인)
 - [x] BE 구현 (green)
-- [ ] FE 구현 (green)
+- [x] FE 구현 (green)
 - [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
 - [x] `docs/conventions.md` 3절 `TEAM` 행·8절 `팀` Tag, `.github/CODEOWNERS`에 `team` 패키지·mapper·FE 폴더·`api/teams.js`·`routes/team.js` (B)
 - [ ] contract-checker 통과
