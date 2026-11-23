@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 |---|---|
-| 상태 | APPROVED <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
+| 상태 | DONE (PR #75) <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
 | 기능 ID | F-13 |
 | 우선순위 | P0 |
 | 영역 오너 | B 김준섭 (카드·소셜) |
@@ -222,7 +222,7 @@ ALTER TABLE concepts
 - [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
 - [x] contract-checker 통과
 - [x] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일)
-- [ ] reviewer 지적 사항 반영
+- [x] reviewer 지적 사항 반영 (반드시 수정 0, 권장 3건 반영 a95c115. Codex P2 2건 → #76, #77)
 - [x] 산출물 반영 (화면 설계서 SC-20·ERD concepts·유스케이스 UC50, conventions 3절)
-- [ ] PR CI 초록
-- [ ] 상태 DONE (PR 머지 후)
+- [x] PR CI 초록 + Codex ✅
+- [x] 상태 DONE (PR #75)
