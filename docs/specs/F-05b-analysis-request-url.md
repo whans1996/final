@@ -35,7 +35,7 @@ git clone 없이 아카이브 API만 쓰고(기획서 아키텍처 "저장소 �
 | AC11 | 내려받은 아카이브에 지원 코드가 없거나(README·이미지만) 지원 파일이 200개를 넘을 때 | 파이프라인이 실행되면 | F-05a와 같은 `ANALYSIS_415`·`ANALYSIS_413` (FETCHING 뒤 단계는 입력 종류와 무관) |
 | AC12 | 내 URL 분석과 ZIP 분석이 있을 때 | `GET /api/analyses/{id}` 하면 | 응답에 `sourceUrl`이 있다: URL 분석은 정규화한 주소, ZIP 분석은 `null`. 목록 `GET /api/analyses` 항목은 바뀌지 않는다 |
 | AC13 | 로그인한 회원이 | `/analyses/new`(SC-05)에서 | 입력 방식 선택("ZIP 업로드" 기본 / "저장소 주소")이 있다. 저장소 주소를 고르면 주소 입력칸(placeholder `https://github.com/owner/repo`)과 안내 "공개 GitHub·GitLab(gitlab.com) 저장소의 기본 브랜치를 분석합니다. 저장소 주소만 입력하세요."가 보인다. 주소(공백 제외)와 동의가 있어야 버튼이 활성화되고, 요청에는 `sourceUrl`만 보낸다(`file` 파트 없음). 방식을 바꾸면 다른 방식의 입력값을 비운다. 400의 `details.sourceUrl`은 주소 칸 아래에 보인다. 202면 `/analyses/{analysisId}`로 이동한다. ZIP 방식은 F-05a AC14 그대로 |
-| AC14 | 로그인한 회원이 | URL 분석의 `/analyses/:id`(SC-07)를 열면 | 제목 근처에 "저장소 보기" 링크(`href`=sourceUrl, `target="_blank"`, `rel="noopener noreferrer"`)가 있다. ZIP 분석에는 없다. 실패하면 F-05a AC15처럼 `errorMessage`(ANALYSIS_004·502·503 문구)와 "다시 요청하기"를 보여 준다 |
+| AC14 | 로그인한 회원이 | URL 분석의 `/analyses/:id`(SC-07)를 열면 | 분석이 끝났으면(DONE, 상세는 DONE에서만 불러온다 — F-06 AC13) 제목 근처에 "저장소 보기" 링크(`href`=sourceUrl, `target="_blank"`, `rel="noopener noreferrer"`)가 있다. ZIP 분석에는 없다. 실패하면 F-05a AC15처럼 `errorMessage`(ANALYSIS_004·502·503 문구)와 "다시 요청하기"를 보여 준다 |
 
 ## 3. API 계약
 
