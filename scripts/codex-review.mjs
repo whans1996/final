@@ -25,7 +25,7 @@
 //
 // 출력 첫 줄과 종료 코드:
 //   COMPLETE 0  head 커밋 리뷰 완료, 지적 없음 (또는 이관 완료, 문서만 변경)
-//   FINDINGS 2  head 커밋 리뷰 완료, 지적 있음 (지적 요약을 함께 출력)
+//   FINDINGS 2  head 커밋 리뷰 완료, 지적 있음 (지적 요약을 함께 출력). 지적 남은 커밋 뒤 문서만 바뀌었으면 그 커밋 기준 (PR #78)
 //   RUNNING  3  head 커밋 리뷰 중, 또는 head에 대한 재리뷰를 요청했고 시작을 기다리는 중,
 //               또는 결과를 기다리는 이전 커밋 이후 문서만 바뀜 (#39)
 //   STALE    4  리뷰 상태가 없거나 이전 커밋 기준, 또는 head 리뷰가 실패(failed)·정체(15분 넘게 진행·미시작)해
@@ -167,7 +167,7 @@ function report(r) {
   console.log(`${r.verdict} ${r.msg}${rounds}`);
   postStatus(r);
   if (r.verdict === 'FINDINGS') {
-    const f = findings(r.h.sha);
+    const f = findings(r.findingsSha ?? r.h.sha);
     console.log(f.length ? f.join('\n') : `(인라인 지적을 찾지 못함: gh api repos/${repo}/pulls/${pr}/reviews 확인)`);
   }
   process.exit(CODE[r.verdict]);
@@ -185,8 +185,10 @@ if (resolve) {
     console.error(`(--resolve는 head가 FINDINGS일 때만 쓴다. 지금은 ${r.verdict})`);
     report(r);
   }
-  // 남은 지적을 follow-up 이슈로 넘긴 뒤에만 실행한다 (pr-review 8-3). 이후 문서만 바꾼 커밋은 이 커밋을 기준으로 본다
-  gh(['pr', 'comment', pr, '--body', `Codex 남은 지적을 follow-up 이슈로 이관했습니다 (head ${r.h.sha.slice(0, 7)}).\n\n<!-- codex-findings-resolved: ${r.h.sha} -->`]);
+  // 남은 지적을 follow-up 이슈로 넘긴 뒤에만 실행한다 (pr-review 8-3). 이후 문서만 바꾼 커밋은 이 커밋을 기준으로 본다.
+  // 지적 커밋 뒤 문서만 바뀐 head면 마커는 지적이 달린 커밋에 단다 (judgeReview가 상태 댓글 커밋과 맞춰 본다, PR #78)
+  const target = r.findingsSha ?? r.h.sha;
+  gh(['pr', 'comment', pr, '--body', `Codex 남은 지적을 follow-up 이슈로 이관했습니다 (${target.slice(0, 7)}).\n\n<!-- codex-findings-resolved: ${target} -->`]);
   report({ ...r, verdict: 'COMPLETE', msg: `head ${r.h.sha.slice(0, 7)} 남은 지적 이관 완료 (--resolve 마커 댓글)` });
 }
 

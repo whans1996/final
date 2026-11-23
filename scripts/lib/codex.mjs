@@ -286,7 +286,7 @@ export function judgeReview({ pr, h, comments, findingTimes = () => [], docsOnly
     // 이 head에 대한 요청을 이미 달았으면 Codex가 시작하기를 기다리는 중이다 (요청을 다시 달지 않는다)
     if (reqAt) return inFlight(h.sha);
     // #39: 결과를 기다리는 이전 커밋(리뷰 중이거나 요청만 함) 이후 문서만 바뀌었으면 재요청하지 않고 그 리뷰를 기다린다.
-    // 그 리뷰가 지적 없이 끝나면 위 문서만 변경 규칙으로 COMPLETE, 지적이 있으면 STALE이 된다
+    // 그 리뷰가 지적 없이 끝나면 위 문서만 변경 규칙으로 COMPLETE, 지적이 있으면 아래 규칙으로 그 커밋의 FINDINGS가 된다
     const done = (sha) => (st?.commit_sha === sha && st.status === 'completed') || receipts.some((r) => sha.startsWith(r.sha));
     // 후보: 진행 중(또는 실패로 남은) 리뷰 커밋과 결과 없는 요청 커밋, 최근 것부터. 실패로 남은 이전 커밋 때문에
     // 더 최근 요청을 놓치지 않게 문서만 바뀐 첫 후보를 고른다 (reviewer)
@@ -298,6 +298,11 @@ export function judgeReview({ pr, h, comments, findingTimes = () => [], docsOnly
     if (pending) {
       const r = inFlight(pending, '문서만 변경');
       if (r) return r;
+    }
+    // 마지막 리뷰가 지적을 남긴 커밋 뒤에 문서만 바뀌었으면 재리뷰해도 같은 코드라 그 지적이 판정이다.
+    // STALE로 두면 지적을 보여 주지 않고 문서 커밋에 재리뷰를 쓴다 (PR #78)
+    if (st?.status === 'completed' && st.has_any_findings && docsOnlySince(st.commit_sha)) {
+      return { verdict: 'FINDINGS', findingsSha: st.commit_sha, msg: `head ${short} 문서만 변경, ${st.commit_sha.slice(0, 7)} 지적 있음` };
     }
     const seen = st?.commit_sha ? `${st.commit_sha.slice(0, 7)} 기준` : '상태 댓글 없음';
     return { verdict: 'STALE', msg: `head ${short}, Codex ${seen}` };
