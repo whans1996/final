@@ -127,6 +127,16 @@ public enum ErrorCode {
     TEAM_004(HttpStatus.BAD_REQUEST, "팀장은 팀을 떠날 수 없습니다. 팀을 삭제해 주세요."),
     /** 내보낼 대상이 그 팀 멤버가 아님 (F-20a AC8). */
     TEAM_005(HttpStatus.NOT_FOUND, "팀원을 찾을 수 없습니다."),
+    /** 그 팀에 공유되지 않은 분석, soft delete된 공유 분석 (F-20b AC4·AC7). */
+    TEAM_006(HttpStatus.NOT_FOUND, "팀에 공유된 분석을 찾을 수 없습니다."),
+    /** 같은 팀에 같은 분석을 다시 공유 (F-20b AC2). */
+    TEAM_007(HttpStatus.CONFLICT, "이미 팀에 공유한 분석입니다."),
+    /** 공유 분석이 10개인 팀에 공유 (F-20b AC2). soft delete된 분석은 세지 않는다. */
+    TEAM_008(HttpStatus.CONFLICT, "팀에 공유할 수 있는 분석은 최대 10개입니다."),
+    /** DONE이 아니거나 퀴즈가 없는 내 분석을 공유 (F-20b AC2). */
+    TEAM_009(HttpStatus.CONFLICT, "퀴즈가 있는 완료된 분석만 공유할 수 있습니다."),
+    /** 공유한 사람도 팀장도 아닌 팀원이 공유 해제 (F-20b AC4). */
+    TEAM_010(HttpStatus.FORBIDDEN, "공유한 사람이나 팀장만 해제할 수 있습니다."),
 
     // ── LLM (A) ──
     /** 개요 응답이 1회 재시도 후에도 스키마 위반. 파이프라인 FAILED 사유다 (F-06 AC5). */

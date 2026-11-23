@@ -208,13 +208,13 @@ CREATE TABLE team_analyses (
 
 `/implement`가 진행하며 체크한다.
 
-- [ ] 브랜치 `feature/F-20b-team-understanding`
-- [ ] Flyway 마이그레이션
-- [ ] AC별 실패 테스트 작성 (red 확인)
+- [x] 브랜치 `feature/F-20b-team-understanding`
+- [x] Flyway 마이그레이션
+- [x] AC별 실패 테스트 작성 (red 확인)
 - [ ] BE 구현 (green)
 - [ ] FE 구현 (green)
 - [ ] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
-- [ ] `docs/conventions.md` 3절 `TEAM` 행에 006~010
+- [x] `docs/conventions.md` 3절 `TEAM` 행에 006~010
 - [ ] contract-checker 통과
 - [ ] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일)
 - [ ] reviewer 지적 사항 반영

@@ -1484,6 +1484,90 @@
         "required" : [ "id", "level", "nickname", "role" ],
         "type" : "object"
       },
+      "MemberModuleResponse" : {
+        "description" : "멤버의 모듈별 결과",
+        "properties" : {
+          "correct" : {
+            "description" : "맞힌 문항 수",
+            "example" : 1,
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "layer" : {
+            "description" : "레이어",
+            "example" : "controller",
+            "type" : "string"
+          },
+          "total" : {
+            "description" : "문항 수",
+            "example" : 2,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "correct", "layer", "total" ],
+        "type" : "object"
+      },
+      "MemberUnderstandingResponse" : {
+        "description" : "멤버별 이해도",
+        "properties" : {
+          "lastAttempt" : {
+            "$ref" : "#/components/schemas/LastAttemptResponse",
+            "description" : "가장 최근 풀이 (안 풀었으면 null)"
+          },
+          "modules" : {
+            "description" : "레이어별 결과 (모듈 순서, 안 풀었으면 빈 배열)",
+            "items" : {
+              "$ref" : "#/components/schemas/MemberModuleResponse"
+            },
+            "type" : "array"
+          },
+          "nickname" : {
+            "description" : "닉네임",
+            "example" : "vibecoder",
+            "type" : "string"
+          },
+          "role" : {
+            "description" : "역할",
+            "enum" : [ "OWNER", "MEMBER" ],
+            "example" : "OWNER",
+            "type" : "string"
+          },
+          "userId" : {
+            "description" : "회원 ID",
+            "example" : 3,
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "modules", "nickname", "role", "userId" ],
+        "type" : "object"
+      },
+      "ModuleUnderstandingResponse" : {
+        "description" : "모듈별 팀 이해도",
+        "properties" : {
+          "correctRate" : {
+            "description" : "푼 멤버들의 정답률(0~100 정수, 반올림). 아무도 풀지 않았으면 null",
+            "example" : 75,
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "layer" : {
+            "description" : "레이어",
+            "enum" : [ "controller", "service", "mapper", "vue", "js", "config", "domain", "other" ],
+            "example" : "controller",
+            "type" : "string"
+          },
+          "questionCount" : {
+            "description" : "이 레이어의 문항 수",
+            "example" : 2,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "layer", "questionCount" ],
+        "type" : "object"
+      },
       "MyProfileResponse" : {
         "description" : "내 프로필",
         "properties" : {
@@ -2477,6 +2561,38 @@
         "required" : [ "status" ],
         "type" : "object"
       },
+      "ShareTeamAnalysisRequest" : {
+        "description" : "팀에 분석 공유 요청",
+        "properties" : {
+          "analysisId" : {
+            "description" : "공유할 내 분석 ID (DONE, 퀴즈 있음)",
+            "example" : 42,
+            "format" : "int64",
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        },
+        "required" : [ "analysisId" ],
+        "type" : "object"
+      },
+      "SharedByResponse" : {
+        "description" : "공유한 사람",
+        "properties" : {
+          "nickname" : {
+            "description" : "닉네임",
+            "example" : "vibecoder",
+            "type" : "string"
+          },
+          "userId" : {
+            "description" : "회원 ID",
+            "example" : 3,
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "nickname", "userId" ],
+        "type" : "object"
+      },
       "SignupRequest" : {
         "description" : "회원가입 요청",
         "properties" : {
@@ -2522,6 +2638,85 @@
           }
         },
         "required" : [ "id" ],
+        "type" : "object"
+      },
+      "TeamAnalysisResponse" : {
+        "description" : "팀 공유 분석",
+        "properties" : {
+          "analysisId" : {
+            "description" : "분석 ID",
+            "example" : 42,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "canUnshare" : {
+            "description" : "내가 공유한 사람이거나 팀장이면 true",
+            "example" : true,
+            "type" : "boolean"
+          },
+          "level" : {
+            "description" : "설명 수준",
+            "enum" : [ "BEGINNER", "JUNIOR", "SENIOR" ],
+            "example" : "JUNIOR",
+            "type" : "string"
+          },
+          "myLastAttempt" : {
+            "$ref" : "#/components/schemas/LastAttemptResponse",
+            "description" : "내 가장 최근 풀이 (안 풀었으면 null)"
+          },
+          "projectName" : {
+            "description" : "프로젝트 이름",
+            "example" : "spring-realworld",
+            "type" : "string"
+          },
+          "questionCount" : {
+            "description" : "퀴즈 문항 수",
+            "example" : 6,
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "sharedAt" : {
+            "description" : "공유 시각",
+            "example" : "2026-11-25T14:20:00+09:00",
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "sharedBy" : {
+            "$ref" : "#/components/schemas/SharedByResponse",
+            "description" : "공유한 사람"
+          },
+          "solvedMemberCount" : {
+            "description" : "지금 멤버 중 한 번 이상 푼 사람 수",
+            "example" : 2,
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "title" : {
+            "description" : "분석 제목 (없으면 null)",
+            "example" : "spring-realworld",
+            "type" : "string"
+          }
+        },
+        "required" : [ "analysisId", "canUnshare", "level", "projectName", "questionCount", "sharedAt", "sharedBy", "solvedMemberCount" ],
+        "type" : "object"
+      },
+      "TeamAnalysisSharedResponse" : {
+        "description" : "팀 분석 공유 결과",
+        "properties" : {
+          "analysisId" : {
+            "description" : "분석 ID",
+            "example" : 42,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "sharedAt" : {
+            "description" : "공유 시각",
+            "example" : "2026-11-25T14:20:00+09:00",
+            "format" : "date-time",
+            "type" : "string"
+          }
+        },
+        "required" : [ "analysisId", "sharedAt" ],
         "type" : "object"
       },
       "TeamCreatedResponse" : {
@@ -2656,6 +2851,60 @@
           }
         },
         "required" : [ "name" ],
+        "type" : "object"
+      },
+      "TeamUnderstandingResponse" : {
+        "description" : "팀 이해도",
+        "properties" : {
+          "analysisId" : {
+            "description" : "분석 ID",
+            "example" : 42,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "memberCount" : {
+            "description" : "지금 멤버 수",
+            "example" : 3,
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "members" : {
+            "description" : "멤버별 결과 (팀장 먼저, 가입 순)",
+            "items" : {
+              "$ref" : "#/components/schemas/MemberUnderstandingResponse"
+            },
+            "type" : "array"
+          },
+          "modules" : {
+            "description" : "레이어별 이해도 (controller, service, mapper, vue, js, config, domain, other 순서, 문항이 있는 레이어만)",
+            "items" : {
+              "$ref" : "#/components/schemas/ModuleUnderstandingResponse"
+            },
+            "type" : "array"
+          },
+          "questionCount" : {
+            "description" : "퀴즈 문항 수",
+            "example" : 4,
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "sharedBy" : {
+            "$ref" : "#/components/schemas/SharedByResponse",
+            "description" : "공유한 사람"
+          },
+          "solvedMemberCount" : {
+            "description" : "푼 멤버 수",
+            "example" : 2,
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "title" : {
+            "description" : "분석 제목 (없으면 null)",
+            "example" : "spring-realworld",
+            "type" : "string"
+          }
+        },
+        "required" : [ "analysisId", "memberCount", "members", "modules", "questionCount", "sharedBy", "solvedMemberCount" ],
         "type" : "object"
       },
       "UpdateProfileRequest" : {
@@ -5903,6 +6152,264 @@
         "tags" : [ "팀" ]
       }
     },
+    "/api/teams/{id}/analyses" : {
+      "get" : {
+        "description" : "삭제되지 않은 공유 분석을 공유 최신순으로 전부 준다 (최대 10개). solvedMemberCount는 지금 멤버 중 푼 사람 수, myLastAttempt는 내 최근 풀이다.",
+        "operationId" : "fetchTeamAnalyses",
+        "parameters" : [ {
+          "description" : "팀 ID",
+          "example" : 12,
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/TeamAnalysisResponse"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "조회 성공"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "로그인 필요, 만료·깨진 토큰, 탈퇴한 회원의 남은 토큰 (AUTH_401)"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "없는 팀이거나 내가 멤버가 아닌 팀 (TEAM_404)"
+          }
+        },
+        "summary" : "팀 공유 분석 목록",
+        "tags" : [ "팀" ]
+      },
+      "post" : {
+        "description" : "내 완료(DONE)·퀴즈 있는 분석을 팀에 공유한다. 팀원은 그 퀴즈만 풀 수 있다. 팀당 최대 10개.",
+        "operationId" : "shareTeamAnalysis",
+        "parameters" : [ {
+          "description" : "팀 ID",
+          "example" : 12,
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ShareTeamAnalysisRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TeamAnalysisSharedResponse"
+                }
+              }
+            },
+            "description" : "공유 성공"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "analysisId 없음·1 미만 (COMMON_400, details.analysisId)"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "로그인 필요, 만료·깨진 토큰, 탈퇴한 회원의 남은 토큰 (AUTH_401)"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "없는 팀이거나 내가 멤버가 아닌 팀 (TEAM_404), 없는·남의·삭제된 분석 (ANALYSIS_404)"
+          },
+          "409" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "DONE 아님·퀴즈 없음 (TEAM_009), 이미 공유 (TEAM_007), 공유 10개 (TEAM_008)"
+          }
+        },
+        "summary" : "팀에 분석 공유",
+        "tags" : [ "팀" ]
+      }
+    },
+    "/api/teams/{id}/analyses/{analysisId}" : {
+      "delete" : {
+        "description" : "공유만 해제한다. 팀원의 풀이 기록은 남는다.",
+        "operationId" : "unshareTeamAnalysis",
+        "parameters" : [ {
+          "description" : "팀 ID",
+          "example" : 12,
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "description" : "분석 ID",
+          "example" : 42,
+          "in" : "path",
+          "name" : "analysisId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "해제 성공"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "로그인 필요, 만료·깨진 토큰, 탈퇴한 회원의 남은 토큰 (AUTH_401)"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "공유한 사람도 팀장도 아님 (TEAM_010)"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "없는 팀이거나 내가 멤버가 아닌 팀 (TEAM_404), 팀에 공유되지 않았거나 삭제된 분석 (TEAM_006)"
+          }
+        },
+        "summary" : "팀 분석 공유 해제 (공유한 사람·팀장)",
+        "tags" : [ "팀" ]
+      }
+    },
+    "/api/teams/{id}/analyses/{analysisId}/understanding" : {
+      "get" : {
+        "description" : "지금 멤버마다 가장 최근 풀이로 레이어(모듈)별 정답률과 멤버 × 모듈 결과를 준다. 모듈 = 문항 개념이 연결된 파일의 레이어(없으면 other).",
+        "operationId" : "fetchTeamUnderstanding",
+        "parameters" : [ {
+          "description" : "팀 ID",
+          "example" : 12,
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "description" : "분석 ID",
+          "example" : 42,
+          "in" : "path",
+          "name" : "analysisId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TeamUnderstandingResponse"
+                }
+              }
+            },
+            "description" : "조회 성공"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "로그인 필요, 만료·깨진 토큰, 탈퇴한 회원의 남은 토큰 (AUTH_401)"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "없는 팀이거나 내가 멤버가 아닌 팀 (TEAM_404), 팀에 공유되지 않았거나 삭제된 분석 (TEAM_006)"
+          }
+        },
+        "summary" : "팀 이해도 (모듈별·멤버별)",
+        "tags" : [ "팀" ]
+      }
+    },
     "/api/teams/{id}/invite-code" : {
       "post" : {
         "description" : "새 코드를 발급한다. 이전 코드로는 더 가입할 수 없다.",
@@ -6782,11 +7289,11 @@
     "description" : "분석한 코드로 만든 객관식 퀴즈 조회, 풀이 제출·채점",
     "name" : "퀴즈"
   }, {
-    "description" : "팀 생성, 초대 코드 가입, 멤버 관리 (F-20a)",
-    "name" : "팀"
-  }, {
     "description" : "프로젝트 분석 요청, 내 분석 목록, 진행 상태, 분석 결과(개요·파일) 조회",
     "name" : "분석"
+  }, {
+    "description" : "팀 생성, 초대 코드 가입, 멤버 관리 (F-20a), 분석 공유·팀 이해도 (F-20b)",
+    "name" : "팀"
   }, {
     "description" : "퀴즈 오답·내 코드·찜한 분야·수준으로 고른 맞춤 개념 카드와 AI 추천 이유",
     "name" : "추천"

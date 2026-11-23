@@ -23,8 +23,8 @@ public interface QuizMapper {
 
     Optional<Quiz> findByAnalysis(@Param("analysisId") long analysisId);
 
-    /** 내 미삭제 분석의 퀴즈. 없거나 남의 분석이거나 분석이 삭제됐으면 empty. */
-    Optional<Quiz> findOwned(@Param("quizId") long quizId, @Param("userId") long userId);
+    /** 미삭제 분석의 퀴즈와 분석 주인 id({@code ownerId}). 없거나 분석이 삭제됐으면 empty. 권한은 호출자가 본다 (F-20b AC5). */
+    Optional<Quiz> findActive(@Param("quizId") long quizId);
 
     /** id 오름차순. */
     List<QuizQuestion> findQuestions(@Param("quizId") long quizId);

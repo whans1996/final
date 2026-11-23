@@ -82,4 +82,140 @@
     <delete id="deleteMembershipsOf">
         DELETE FROM team_members WHERE user_id = #{userId}
     </delete>
+    <!-- ── 공유 분석 (F-20b). analyses·analysis_*·quiz_* 는 읽기만 한다 ── -->
+
+    <resultMap id="shareTarget" type="com.vibenote.team.domain.ShareTarget">
+        <constructor>
+            <arg column="user_id" javaType="_long"/>
+            <arg column="status" javaType="com.vibenote.analysis.AnalysisStatus"/>
+            <arg column="has_quiz" javaType="_boolean"/>
+        </constructor>
+    </resultMap>
+
+    <select id="findShareTarget" resultMap="shareTarget">
+        SELECT a.user_id, a.status,
+               EXISTS (SELECT 1 FROM quizzes z WHERE z.analysis_id = a.id) AS has_quiz
+        FROM analyses a
+        WHERE a.id = #{analysisId} AND a.deleted_at IS NULL
+    </select>
+
+    <select id="existsTeamAnalysis" resultType="boolean">
+        SELECT EXISTS (SELECT 1 FROM team_analyses WHERE team_id = #{teamId} AND analysis_id = #{analysisId})
+    </select>
+
+    <!-- TeamAnalysisService.share는 teams FOR UPDATE 뒤에 부른다 -->
+    <select id="countTeamAnalyses" resultType="int">
+        SELECT COUNT(*)
+        FROM team_analyses ta JOIN analyses a ON a.id = ta.analysis_id AND a.deleted_at IS NULL
+        WHERE ta.team_id = #{teamId}
+    </select>
+
+    <insert id="insertTeamAnalysis">
+        INSERT INTO team_analyses (team_id, analysis_id, shared_at) VALUES (#{teamId}, #{analysisId}, #{sharedAt})
+    </insert>
+
+    <!-- solved_member_count는 지금 멤버만 센다. my_*는 요청자의 최근 풀이 -->
+    <sql id="teamAnalysisSelect">
+        SELECT a.id AS analysis_id, a.title, a.project_name, a.level,
+               a.user_id AS shared_by_user_id, u.nickname AS shared_by_nickname, ta.shared_at,
+               z.id AS quiz_id,
+               (SELECT COUNT(*) FROM quiz_questions q WHERE q.quiz_id = z.id) AS question_count,
+               (SELECT COUNT(DISTINCT qa.user_id)
+                FROM quiz_attempts qa
+                JOIN team_members tm ON tm.user_id = qa.user_id AND tm.team_id = ta.team_id
+                WHERE qa.quiz_id = z.id) AS solved_member_count,
+               my.id AS my_attempt_id, my.score AS my_score, my.total AS my_total, my.created_at AS my_created_at
+        FROM team_analyses ta
+        JOIN analyses a ON a.id = ta.analysis_id AND a.deleted_at IS NULL
+        JOIN users u ON u.id = a.user_id
+        LEFT JOIN quizzes z ON z.analysis_id = a.id
+        LEFT JOIN (
+            SELECT id, quiz_id, score, total, created_at,
+                   ROW_NUMBER() OVER (PARTITION BY quiz_id ORDER BY created_at DESC, id DESC) AS rn
+            FROM quiz_attempts
+            WHERE user_id = #{userId}
+        ) my ON my.quiz_id = z.id AND my.rn = 1
+    </sql>
+
+    <select id="findTeamAnalyses" resultType="com.vibenote.team.domain.TeamAnalysis">
+        <include refid="teamAnalysisSelect"/>
+        WHERE ta.team_id = #{teamId}
+        ORDER BY ta.shared_at DESC, a.id DESC
+    </select>
+
+    <select id="findTeamAnalysis" resultType="com.vibenote.team.domain.TeamAnalysis">
+        <include refid="teamAnalysisSelect"/>
+        WHERE ta.team_id = #{teamId} AND ta.analysis_id = #{analysisId}
+    </select>
+
+    <delete id="deleteTeamAnalysis">
+        DELETE FROM team_analyses WHERE team_id = #{teamId} AND analysis_id = #{analysisId}
+    </delete>
+
+    <delete id="deleteTeamAnalysesSharedBy">
+        DELETE ta FROM team_analyses ta
+        JOIN analyses a ON a.id = ta.analysis_id
+        WHERE ta.team_id = #{teamId} AND a.user_id = #{userId}
+    </delete>
+
+    <delete id="deleteAllTeamAnalysesSharedBy">
+        DELETE ta FROM team_analyses ta
+        JOIN analyses a ON a.id = ta.analysis_id
+        WHERE a.user_id = #{userId}
+    </delete>
+
+    <select id="isSharedWith" resultType="boolean">
+        SELECT EXISTS (
+            SELECT 1
+            FROM team_analyses ta
+            JOIN team_members tm ON tm.team_id = ta.team_id AND tm.user_id = #{userId}
+            JOIN analyses a ON a.id = ta.analysis_id AND a.deleted_at IS NULL
+            WHERE ta.analysis_id = #{analysisId}
+        )
+    </select>
+
+    <resultMap id="questionLayer" type="com.vibenote.team.domain.QuestionLayer">
+        <constructor>
+            <arg column="question_id" javaType="_long"/>
+            <arg column="layer" javaType="java.lang.String"/>
+        </constructor>
+    </resultMap>
+
+    <!-- 모듈 = 문항 개념 → 그 분석의 analysis_concepts.file_id → analysis_files.layer (PK가 (analysis_id, concept_id)라 많아야 1행) -->
+    <select id="findQuestionLayers" resultMap="questionLayer">
+        SELECT q.id AS question_id, f.layer
+        FROM quiz_questions q
+        JOIN quizzes z ON z.id = q.quiz_id
+        LEFT JOIN analysis_concepts ac ON ac.analysis_id = z.analysis_id AND ac.concept_id = q.concept_id
+        LEFT JOIN analysis_files f ON f.id = ac.file_id
+        WHERE q.quiz_id = #{quizId}
+        ORDER BY q.id
+    </select>
+
+    <resultMap id="memberAnswer" type="com.vibenote.team.domain.MemberAnswer">
+        <constructor>
+            <arg column="user_id" javaType="_long"/>
+            <arg column="attempt_id" javaType="_long"/>
+            <arg column="score" javaType="_int"/>
+            <arg column="total" javaType="_int"/>
+            <arg column="created_at" javaType="java.time.LocalDateTime"/>
+            <arg column="question_id" javaType="java.lang.Long"/>
+            <arg column="correct" javaType="java.lang.Boolean"/>
+        </constructor>
+    </resultMap>
+
+    <select id="findLatestAnswers" resultMap="memberAnswer">
+        SELECT la.user_id, la.id AS attempt_id, la.score, la.total, la.created_at,
+               ans.question_id, ans.is_correct AS correct
+        FROM (
+            SELECT qa.id, qa.user_id, qa.score, qa.total, qa.created_at,
+                   ROW_NUMBER() OVER (PARTITION BY qa.user_id ORDER BY qa.created_at DESC, qa.id DESC) AS rn
+            FROM quiz_attempts qa
+            JOIN team_members tm ON tm.user_id = qa.user_id AND tm.team_id = #{teamId}
+            WHERE qa.quiz_id = #{quizId}
+        ) la
+        LEFT JOIN quiz_answers ans ON ans.attempt_id = la.id
+        WHERE la.rn = 1
+        ORDER BY la.user_id, ans.question_id
+    </select>
 </mapper>

@@ -19,11 +19,11 @@
         SELECT id, analysis_id, created_at FROM quizzes WHERE analysis_id = #{analysisId}
     </select>
 
-    <select id="findOwned" resultType="com.vibenote.quiz.domain.Quiz">
-        SELECT z.id, z.analysis_id, z.created_at
+    <select id="findActive" resultType="com.vibenote.quiz.domain.Quiz">
+        SELECT z.id, z.analysis_id, z.created_at, a.user_id AS owner_id
         FROM quizzes z
         JOIN analyses a ON a.id = z.analysis_id
-        WHERE z.id = #{quizId} AND a.user_id = #{userId} AND a.deleted_at IS NULL
+        WHERE z.id = #{quizId} AND a.deleted_at IS NULL
     </select>
 
     <resultMap id="question" type="com.vibenote.quiz.domain.QuizQuestion">

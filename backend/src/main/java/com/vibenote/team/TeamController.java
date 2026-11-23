@@ -32,7 +32,7 @@ import org.springframework.web.bind.annotation.RestController;
  * 팀 (F-20a). 모든 엔드포인트는 로그인 필요. 판단 순서는 401 → 404 TEAM_404(없는 팀·내가 멤버가 아닌 팀) → 403 TEAM_403(팀장 전용) →
  * 400 검증이다.
  */
-@Tag(name = "팀", description = "팀 생성, 초대 코드 가입, 멤버 관리 (F-20a)")
+@Tag(name = "팀", description = "팀 생성, 초대 코드 가입, 멤버 관리 (F-20a), 분석 공유·팀 이해도 (F-20b)")
 @RestController
 public class TeamController {
 
