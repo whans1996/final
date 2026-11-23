@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 |---|---|
-| 상태 | APPROVED <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
+| 상태 | DONE (PR #90) <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
 | 기능 ID | F-20b (F-20 팀 챌린지의 2/3. 팀·초대는 F-20a(DONE), 기간 목표는 F-20c) |
 | 우선순위 | P2 |
 | 영역 오너 | B 김준섭 (카드·소셜) |
@@ -216,8 +216,8 @@ CREATE TABLE team_analyses (
 - [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
 - [x] `docs/conventions.md` 3절 `TEAM` 행에 006~010
 - [x] contract-checker 통과
-- [ ] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일)
+- [x] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일) — 빈 상태·404만. 데이터가 있는 SC-23·SC-24·SC-08 `?team=`은 머지 전 사람 확인
 - [x] reviewer 지적 사항 반영
 - [x] 산출물 반영: 화면 설계서 SC-23(공유 영역)·SC-24 추가·SC-08(`?team=`), ERD(`team_analyses`), 요구사항 정의서 F-20 행(F-20b·F-20c)
-- [ ] PR CI 초록 (A 영역 `QuizService`·`QuizMapper`·`QuizView.vue`, 공통 `ErrorCode`·conventions 변경 → @whans1996 멘션)
-- [ ] 상태 DONE (PR 머지 후)
+- [x] PR CI 초록 (A 영역 `QuizService`·`QuizMapper`·`QuizView.vue`, 공통 `ErrorCode`·conventions 변경 → @whans1996 멘션)
+- [x] 상태 DONE (PR #90, Codex ✅ a01fd24)
