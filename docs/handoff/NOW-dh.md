@@ -4,29 +4,30 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
 
-갱신: 2026-11-23 16:36 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/F-05b-analysis-url
+갱신: 2026-11-23 17:01 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/issue-86-sync-union-push
 
 ## 현재 기능
 
-**F-05b** 분석 요청 — 공개 저장소 URL 수집 (`docs/specs/F-05b-analysis-request-url.md`, **APPROVED 11-23**)
+**#86** 하네스: 자동 동기화가 union 파일(결정로그·작업로그)을 양쪽이 고친 채 합치면 push 안내 (follow-up, area:common, blocker). F-05b는 **PR #82 머지 완료 (11-23)**
 
 ## 진행
 
-- ✅ BE AC1~AC12, FE AC13·14 구현, verify all 통과, contract-checker 일치, ui-verifier SC-05 통과
-- ✅ /pr-review: reviewer 반드시 수정 1(상태 errorCode enum에 004·502·503 → 6174b3b), 권장 반영(시간 초과 단언 2.5초 9f3ece7, AC14 DONE 조건 명시·결정로그 54cfc8c, FAILED 링크는 #81)
-- ✅ **PR #82** CI 초록 + **Codex ✅ 61e6a9c** (재리뷰 2회: P1 토큰 사용 시 공개 저장소 확인, P2 정규화 길이 반영). 완료 표시 커밋(spec DONE)까지 push
+- ✅ `scripts/lib/sync.mjs` `unionMergedFiles`: 병합 커밋을 만들었고 양쪽이 고친 파일 중 `merge=union`이 있으면 "열린 PR이 있으면 지금 git push" 줄 (GitHub PR은 union 미적용 → PR #82가 CONFLICTING이었던 원인)
+- ✅ `scripts/test/sync.test.mjs` #86 테스트 2개 (양쪽 수정 → 안내, 한쪽만 → 안내 없음), 하네스 테스트 84개 통과. handoff SKILL 문구 보정
+- 다음: PR 생성 → CI·Codex 루프
 
 ## 바로 다음 할 일
 
-1. 사람: GitHub에서 PR #82 머지 (상대 PR이 먼저 develop에 들어가면 `git merge origin/develop` → push → CI 초록 확인 뒤)
-2. 사람: `cd backend && ./gradlew liveTest` (RepositoryArchiveFetcherLiveTest, DS-02-01, 미체크 항목)
-3. 머지 뒤 새 세션 `/pickup` → 다음 A 영역 기능 또는 #81·#24
+1. `/pr-review` 이어서: PR(#86 해결, `Closes #86`) CI·Codex 확인. 공통(하네스) 변경이라 @JoonseobKim 멘션
+2. 사람: `cd backend && ./gradlew liveTest` (F-05b RepositoryArchiveFetcherLiveTest, DS-02-01)
+3. 진행현황·WBS·간트가 11-19 이후 갱신 안 됨 (11-22 주간 /progress 누락). 김준섭 NOW에 "/progress는 상대 담당" → 누가 돌릴지 사람 확인
 
 ## 막힌 점 / 결정 필요
 
 - 사람: 노션 팀원 초대(대시보드 공유 → 김준섭 이메일, 편집 허용)
+- 후속: #81 SC-07 FAILED 때 저장소 링크, #24 실행기 스레드 독점
 
 ## 주의
 
-- 리뷰 지적은 '무시 가능'도 직접 확인한다 (11-20 사용자 지시) · 하네스 동결(11-23): 버그·작업 막는 문제만 고친다
+- 리뷰 지적은 '무시 가능'도 직접 확인한다 (11-20 사용자 지시) · 하네스 동결(11-23): 버그·작업 막는 문제만 고친다 (#86은 머지를 막아 해당)
 - 하네스 가드는 Bash 명령 문자열의 `core.hooksPath`를 막는다 → 테스트 파일 편집은 Edit 도구로

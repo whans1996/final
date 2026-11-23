@@ -149,6 +149,44 @@ test('다른 PC가 push한 내 브랜치 커밋을 받는다 (fast-forward)', ()
   assert.equal(sh(me, 'log', '-1', '--format=%s'), 'feat: from other pc');
 });
 
+test('양쪽이 고친 merge=union 파일을 합치면 GitHub PR 충돌을 막도록 push를 안내한다 (#86)', () => {
+  const { peer, me } = setup();
+  // .gitattributes는 develop에 있다 (실제 저장소와 같다)
+  peerMergesToDevelop(peer, '.gitattributes', 'log.md merge=union\n');
+  peerMergesToDevelop(peer, 'log.md', 'base\n');
+  sh(me, 'fetch', '-q');
+  sh(me, 'merge', '-q', 'origin/develop');
+  sh(me, 'push', '-q');
+  commit(me, 'log.md', 'base\nmine\n', 'docs: mine');
+  peerMergesToDevelop(peer, 'log.md', 'base\ntheirs\n');
+  sh(me, 'fetch', '-q');
+
+  const lines = autoSync({ cwd: me });
+
+  assert.match(lines[0], /origin\/develop의 새 커밋 1개를 자동으로 합쳤습니다/);
+  assert.ok(
+    lines.some((l) => /log\.md/.test(l) && /union/.test(l) && /git push/.test(l)),
+    `push 안내가 없다: ${lines.join(' / ')}`,
+  );
+  assert.equal(readFileSync(join(me, 'log.md'), 'utf8'), 'base\nmine\ntheirs\n');
+});
+
+test('union 파일을 한쪽만 고쳤으면 push 안내를 하지 않는다 (#86)', () => {
+  const { peer, me } = setup();
+  peerMergesToDevelop(peer, '.gitattributes', 'log.md merge=union\n');
+  peerMergesToDevelop(peer, 'log.md', 'base\n');
+  sh(me, 'fetch', '-q');
+  sh(me, 'merge', '-q', 'origin/develop');
+  commit(me, 'mine.txt', 'mine\n', 'feat: mine');
+  peerMergesToDevelop(peer, 'log.md', 'base\ntheirs\n');
+  sh(me, 'fetch', '-q');
+
+  const lines = autoSync({ cwd: me });
+
+  assert.match(lines[0], /자동으로 합쳤습니다/);
+  assert.ok(!lines.some((l) => /union/.test(l)), lines.join(' / '));
+});
+
 test('충돌하면 되돌리고 충돌 파일을 알린다', () => {
   const { peer, me } = setup();
   commit(me, 'shared.txt', 'mine\n', 'feat: mine');

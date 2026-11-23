@@ -48,6 +48,24 @@ export function mergeNotes(files) {
   );
 }
 
+/**
+ * 양쪽(내 브랜치·합친 대상)이 모두 고친 파일 중 `merge=union`인 것 (#86).
+ * 로컬 git은 union으로 충돌 없이 합치지만 GitHub PR 머지는 이 속성을 쓰지 않아, 병합 커밋을 push하기 전까지 PR이 충돌로 보인다.
+ */
+function unionMergedFiles(before, target, cwd) {
+  const base = git(['merge-base', before, target], { cwd });
+  if (!base.ok || !base.out) return [];
+  const changed = (to) => git(['diff', '--name-only', base.out, to], { cwd }).out.split('\n').filter(Boolean);
+  const theirs = new Set(changed(target));
+  const both = changed(before).filter((f) => theirs.has(f));
+  if (!both.length) return [];
+  // 출력: "<경로>: merge: union"
+  return git(['check-attr', 'merge', '--', ...both], { cwd })
+    .out.split('\n')
+    .filter((l) => l.endsWith(': merge: union'))
+    .map((l) => l.slice(0, -': merge: union'.length));
+}
+
 const firstLine = (r) => (r.status === null ? '시간 초과' : (r.err || r.out || `exit ${r.status}`).split('\n')[0]);
 
 function readState(cwd) {
@@ -79,7 +97,13 @@ function mergeOne({ ref, label, ffOnly }, cwd) {
     const notes = mergeNotes(files);
     // fast-forward가 아니라 내 쪽에 병합 커밋을 새로 만들었는지 (push가 필요한지)
     const mergeCommit = git(['rev-parse', '-q', '--verify', 'HEAD^2'], { cwd }).ok && git(['rev-parse', 'HEAD^1'], { cwd }).out === before;
-    return { ok: true, mergeCommit, line: `- ✅ ${label}의 새 커밋 ${count}개를 자동으로 합쳤습니다${notes.length ? ` (${notes.join(', ')})` : ''}.` };
+    const union = mergeCommit ? unionMergedFiles(before, target, cwd) : [];
+    return {
+      ok: true,
+      mergeCommit,
+      union,
+      line: `- ✅ ${label}의 새 커밋 ${count}개를 자동으로 합쳤습니다${notes.length ? ` (${notes.join(', ')})` : ''}.`,
+    };
   }
   const conflicts = git(['diff', '--name-only', '--diff-filter=U'], { cwd }).out.split('\n').filter(Boolean);
   // 이번에 내가 시작한 병합(MERGE_HEAD가 대상 커밋)만 되돌린다. 같은 PC의 다른 세션·터미널이 시작한 병합은 건드리지 않는다
@@ -180,16 +204,25 @@ export function autoSync({ cwd = ROOT } = {}) {
     }
     const lines = [];
     let mergeCommit = false;
+    const union = new Set();
     for (const action of plan.actions) {
       const result = mergeOne(action, cwd);
       if (result.line) lines.push(result.line);
       mergeCommit ||= Boolean(result.mergeCommit);
+      for (const f of result.union ?? []) union.add(f);
       if (!result.ok) break;
     }
     if (lines.some((l) => l.includes('마이그레이션') || l.includes('openapi.json'))) {
       lines.push('- 마이그레이션·openapi.json이 들어왔으면 `node scripts/verify.mjs be`로 확인하세요.');
     }
-    if (mergeCommit) lines.push('- 병합 커밋은 아직 push하지 않았습니다 (다음 push 때 같이 올라갑니다).');
+    if (union.size) {
+      lines.push(
+        // 세션 배너는 110자에서 자르므로 할 일(git push)을 앞에 둔다
+        `- ⚠️ 열린 PR이 있으면 지금 \`git push\`: 양쪽이 고친 ${[...union].join(', ')}는 로컬에서 merge=union으로 합쳤지만 GitHub PR은 union을 쓰지 않아 push 전까지 충돌로 보입니다 (#86).`,
+      );
+    } else if (mergeCommit) {
+      lines.push('- 병합 커밋은 아직 push하지 않았습니다 (다음 push 때 같이 올라갑니다).');
+    }
     return [...lines, ...localLines()];
   } catch {
     return [];
