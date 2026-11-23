@@ -151,24 +151,25 @@ test('다른 PC가 push한 내 브랜치 커밋을 받는다 (fast-forward)', ()
 
 test('양쪽이 고친 merge=union 파일을 합치면 GitHub PR 충돌을 막도록 push를 안내한다 (#86)', () => {
   const { peer, me } = setup();
-  // .gitattributes는 develop에 있다 (실제 저장소와 같다)
-  peerMergesToDevelop(peer, '.gitattributes', 'log.md merge=union\n');
-  peerMergesToDevelop(peer, 'log.md', 'base\n');
+  // .gitattributes는 develop에 있다 (실제 저장소와 같다). 한글 경로도 따옴표 없이 비교해야 한다
+  peerMergesToDevelop(peer, '.gitattributes', '결정로그.md merge=union\n');
+  peerMergesToDevelop(peer, '결정로그.md', 'base\n');
   sh(me, 'fetch', '-q');
   sh(me, 'merge', '-q', 'origin/develop');
   sh(me, 'push', '-q');
-  commit(me, 'log.md', 'base\nmine\n', 'docs: mine');
-  peerMergesToDevelop(peer, 'log.md', 'base\ntheirs\n');
+  commit(me, '결정로그.md', 'base\nmine\n', 'docs: mine');
+  peerMergesToDevelop(peer, '결정로그.md', 'base\ntheirs\n');
   sh(me, 'fetch', '-q');
 
   const lines = autoSync({ cwd: me });
 
   assert.match(lines[0], /origin\/develop의 새 커밋 1개를 자동으로 합쳤습니다/);
   assert.ok(
-    lines.some((l) => /log\.md/.test(l) && /union/.test(l) && /git push/.test(l)),
+    lines.some((l) => /결정로그\.md/.test(l) && /union/.test(l) && /git push/.test(l)),
     `push 안내가 없다: ${lines.join(' / ')}`,
   );
-  assert.equal(readFileSync(join(me, 'log.md'), 'utf8'), 'base\nmine\ntheirs\n');
+  assert.ok(!lines.some((l) => l.includes('push하지 않았습니다')), 'union 안내가 기존 줄을 대신한다');
+  assert.equal(readFileSync(join(me, '결정로그.md'), 'utf8'), 'base\nmine\ntheirs\n');
 });
 
 test('union 파일을 한쪽만 고쳤으면 push 안내를 하지 않는다 (#86)', () => {
@@ -185,6 +186,28 @@ test('union 파일을 한쪽만 고쳤으면 push 안내를 하지 않는다 (#8
 
   assert.match(lines[0], /자동으로 합쳤습니다/);
   assert.ok(!lines.some((l) => /union/.test(l)), lines.join(' / '));
+  assert.match(lines.at(-1), /push하지 않았습니다/);
+});
+
+test('다른 PC가 push한 내 브랜치의 union 파일과 겹쳐도 develop 병합이 아니면 PR 충돌 안내를 하지 않는다 (#86)', () => {
+  const { peer, me } = setup();
+  peerMergesToDevelop(peer, '.gitattributes', 'log.md merge=union\n');
+  peerMergesToDevelop(peer, 'log.md', 'base\n');
+  sh(me, 'fetch', '-q');
+  sh(me, 'merge', '-q', 'origin/develop');
+  sh(me, 'push', '-q');
+  const other = join(me, '..', 'other-pc');
+  sh(tmp, 'clone', '-q', '-b', 'feature/F-09-x', join(me, '..', 'origin.git'), other);
+  commit(other, 'log.md', 'base\nother pc\n', 'docs: other pc');
+  sh(other, 'push', '-q', 'origin', 'feature/F-09-x');
+  commit(me, 'log.md', 'base\nthis pc\n', 'docs: this pc');
+  sh(me, 'fetch', '-q');
+
+  const lines = autoSync({ cwd: me });
+
+  assert.match(lines[0], /원격 origin\/feature\/F-09-x의 새 커밋 1개/);
+  assert.ok(!lines.some((l) => /union/.test(l)), lines.join(' / '));
+  assert.match(lines.at(-1), /push하지 않았습니다/);
 });
 
 test('충돌하면 되돌리고 충돌 파일을 알린다', () => {

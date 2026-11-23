@@ -3,6 +3,7 @@
 //   2) 기능 브랜치(feature/·fix/)면 상대가 develop에 머지한 커밋(origin/develop) → git merge (rebase 금지 규칙 그대로)
 // 안전 규칙: 커밋 안 된 변경(추적 파일)이 있거나 병합 중이면 건드리지 않고 알리기만 한다. 충돌하면 바로 merge --abort로
 // 되돌리고 충돌 파일을 알린다. push는 하지 않는다 (다음 커밋 push 때 같이 올라간다. Codex 재리뷰를 불필요하게 일으키지 않음).
+// 단 develop 병합에서 양쪽이 고친 merge=union 파일이 있으면 GitHub PR이 충돌로 보이므로 지금 push하라고 안내한다 (#86).
 // 끄기: PC마다 `git config vibenote.autoSync false` (다시 켜기: `git config --unset vibenote.autoSync`).
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -97,7 +98,8 @@ function mergeOne({ ref, label, ffOnly }, cwd) {
     const notes = mergeNotes(files);
     // fast-forward가 아니라 내 쪽에 병합 커밋을 새로 만들었는지 (push가 필요한지)
     const mergeCommit = git(['rev-parse', '-q', '--verify', 'HEAD^2'], { cwd }).ok && git(['rev-parse', 'HEAD^1'], { cwd }).out === before;
-    const union = mergeCommit ? unionMergedFiles(before, target, cwd) : [];
+    // PR(내 브랜치 → develop) 충돌로 보이는 것은 develop을 합칠 때뿐이다. 내 원격 받기 병합은 기존 안내로 충분하다
+    const union = mergeCommit && ref === 'origin/develop' ? unionMergedFiles(before, target, cwd) : [];
     return {
       ok: true,
       mergeCommit,
