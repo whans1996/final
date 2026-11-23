@@ -75,7 +75,7 @@ describe('AnalysisManagePanel (F-19 AC13)', () => {
   it('AC13 공개 토글은 DONE일 때만 켜지고 안내 문구를 보여 준다', () => {
     expect(mountPanel().find('[data-action="visibility"]').attributes('disabled')).toBeUndefined()
     expect(mountPanel().find('[data-message="visibility-hint"]').text()).toBe(
-      '공개하면 팔로워 피드와 게시글 첨부에서 보입니다.',
+      '공개하면 팔로워 피드와 게시글 첨부에서 보이고, 로그인한 다른 회원도 이 분석의 코드와 설명을 읽을 수 있습니다.',
     )
     expect(
       mountPanel({ status: 'FAILED' }).find('[data-action="visibility"]').attributes('disabled'),

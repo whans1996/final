@@ -240,21 +240,24 @@ describe('AnalysisDetailView 결과 탭 (F-06 AC13~AC15)', () => {
     expect(analysesApi.fetchAnalysisFiles).not.toHaveBeenCalled()
   })
 
-  it('AC13 폴링 중 DONE으로 바뀌면 그때 상세를 1회 불러온다', async () => {
+  it('AC13 폴링 중 DONE으로 바뀌면 그때 상세를 다시 불러와 결과 탭을 보여 준다', async () => {
     analysesApi.fetchAnalysisStatus
       .mockResolvedValueOnce(status({ status: 'EXPLAINING', progress: 45 }))
       .mockResolvedValue(status({ status: 'DONE', progress: 100 }))
-    analysesApi.fetchAnalysis.mockResolvedValue(detail())
+    analysesApi.fetchAnalysis
+      .mockResolvedValueOnce(detail({ status: 'EXPLAINING', progress: 45, overview: null }))
+      .mockResolvedValue(detail())
 
     const { wrapper } = await mountDetail()
     expect(wrapper.text()).toContain('설명 생성 중')
-    expect(analysesApi.fetchAnalysis).not.toHaveBeenCalled()
+    // F-19 AC13: 진행 중에도 관리 영역을 위해 상세를 1회 불러온다
+    expect(analysesApi.fetchAnalysis).toHaveBeenCalledTimes(1)
     expect(wrapper.find('[role="tab"]').exists()).toBe(false)
 
     await advance(2000)
     await advance(10000)
 
-    expect(analysesApi.fetchAnalysis).toHaveBeenCalledTimes(1)
+    expect(analysesApi.fetchAnalysis).toHaveBeenCalledTimes(2)
     expect(wrapper.find('h1').text()).toBe('todo-app')
     expect(wrapper.findAll('[role="tab"]')).toHaveLength(5)
   })
@@ -528,6 +531,68 @@ describe('AnalysisDetailView 분석 관리·공개 분석 (F-19)', () => {
 
     expect(wrapper.find('[data-action="delete"]').exists()).toBe(true)
     expect(wrapper.find('[data-action="ask-community"]').exists()).toBe(false)
+  })
+
+  it('AC13 진행 중이면 관리 영역에서 제목·메모를 고칠 수 있고, 공개는 꺼져 있으며 삭제·질문은 없다', async () => {
+    analysesApi.fetchAnalysisStatus.mockResolvedValue(
+      status({ status: 'EXPLAINING', progress: 45 }),
+    )
+    analysesApi.fetchAnalysis.mockResolvedValue(
+      detail({ status: 'EXPLAINING', progress: 45, overview: null, memo: '나중에 볼 것' }),
+    )
+
+    const { wrapper } = await mountDetail()
+
+    expect(analysesApi.fetchAnalysis).toHaveBeenCalledTimes(1)
+    expect(wrapper.find('[aria-label="분석 관리"]').exists()).toBe(true)
+    expect(wrapper.find('[data-action="edit"]').exists()).toBe(true)
+    expect(wrapper.find('[data-action="visibility"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.find('[data-action="delete"]').exists()).toBe(false)
+    expect(wrapper.find('[data-action="ask-community"]').exists()).toBe(false)
+    expect(wrapper.find('[data-section="memo"]').text()).toBe('나중에 볼 것')
+    // 진행 상태 화면은 그대로다
+    expect(wrapper.text()).toContain('설명 생성 중')
+  })
+
+  it('AC13 진행 중에 상세를 못 불러오면 서버 message와 "다시 시도" 버튼을 보여 준다', async () => {
+    const message = '서버에서 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.'
+    analysesApi.fetchAnalysisStatus.mockResolvedValue(
+      status({ status: 'EXPLAINING', progress: 45 }),
+    )
+    analysesApi.fetchAnalysis
+      .mockRejectedValueOnce(apiError(500, { code: 'COMMON_500', message }))
+      .mockResolvedValue(detail({ status: 'EXPLAINING', overview: null }))
+
+    const { wrapper } = await mountDetail()
+    expect(wrapper.find('[data-error="detail"]').text()).toBe(message)
+    // 다음 폴링이 상세를 다시 부르지 않는다 (같은 단계)
+    await advance(2000)
+    expect(analysesApi.fetchAnalysis).toHaveBeenCalledTimes(1)
+
+    await wrapper.find('[data-action="retry-detail"]').trigger('click')
+    await flushPromises()
+
+    expect(analysesApi.fetchAnalysis).toHaveBeenCalledTimes(2)
+    expect(wrapper.find('[aria-label="분석 관리"]').exists()).toBe(true)
+  })
+
+  it('AC13 FAILED에서 상세를 못 불러오면 서버 message와 "다시 시도" 버튼을 보여 준다', async () => {
+    const message = '서버에서 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.'
+    analysesApi.fetchAnalysisStatus.mockResolvedValue(
+      status({ status: 'FAILED', progress: 40, errorCode: 'LLM_503', errorMessage: '실패' }),
+    )
+    analysesApi.fetchAnalysis
+      .mockRejectedValueOnce(apiError(500, { code: 'COMMON_500', message }))
+      .mockResolvedValue(detail({ status: 'FAILED', overview: null }))
+
+    const { wrapper } = await mountDetail()
+    expect(wrapper.find('[data-message="failed"]').text()).toContain('실패')
+    expect(wrapper.find('[data-error="detail"]').text()).toBe(message)
+
+    await wrapper.find('[data-action="retry-detail"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[data-action="delete"]').exists()).toBe(true)
   })
 
   it('AC13 삭제에 성공하면 내 분석 목록으로 이동한다', async () => {

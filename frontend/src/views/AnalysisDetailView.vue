@@ -81,12 +81,19 @@ const selectedFileId = computed(() => {
   return Number.isInteger(id) && id > 0 ? id : null
 })
 
-// 상세는 상태가 DONE이 된 뒤 1회만 불러온다 (결과는 다시 바뀌지 않는다)
+// 상세는 첫 상태를 받으면 1회(진행 중이면 관리 영역용, F-19 AC13), 진행 중에 불러왔으면 DONE·FAILED가 된 뒤
+// 결과를 위해 1회 더 불러온다 (결과는 다시 바뀌지 않는다). 단계는 요청할 때 정해 실패해도 같은 단계에서 다시 부르지 않는다
 let detailRequest = 0
+let detailStage = null
+
+function stageOf(value) {
+  return value === 'DONE' || value === 'FAILED' ? 'finished' : 'progress'
+}
 
 async function loadDetail() {
   const id = currentId
   const request = ++detailRequest
+  detailStage = stageOf(status.value?.status)
   detailLoading.value = true
   detailError.value = ''
   try {
@@ -126,8 +133,7 @@ async function poll(id, isCurrent) {
     if (!isCurrent()) return false
     status.value = result
     loadError.value = ''
-    const finished = result.status === 'DONE' || result.status === 'FAILED'
-    if (finished && !analysis.value && !detailLoading.value) loadDetail()
+    if (detailStage !== 'finished' && detailStage !== stageOf(result.status)) loadDetail()
     return isInProgress(result.status)
   } catch (error) {
     if (!isCurrent()) return false
@@ -157,6 +163,7 @@ watch(
     status.value = null
     analysis.value = null
     detailRequest += 1
+    detailStage = null
     detailLoading.value = false
     detailError.value = ''
     notFound.value = false
@@ -221,7 +228,7 @@ watch(
 
         <p v-if="detailLoading" class="hint">결과를 불러오는 중…</p>
         <div v-else-if="detailError" class="failed">
-          <p class="form-error" role="alert">{{ detailError }}</p>
+          <p class="form-error" role="alert" data-error="detail">{{ detailError }}</p>
           <button type="button" class="retry-button" data-action="retry-detail" @click="loadDetail">
             다시 시도
           </button>
@@ -285,6 +292,14 @@ watch(
         <p v-else class="hint">
           {{ status.progress }}% · 화면을 닫아도 분석은 계속됩니다. 내 분석에서 다시 볼 수 있습니다.
         </p>
+
+        <!-- 진행 중·FAILED의 상세는 관리 영역용이다 (F-19 AC13) -->
+        <div v-if="detailError" class="failed">
+          <p class="form-error" role="alert" data-error="detail">{{ detailError }}</p>
+          <button type="button" class="retry-button" data-action="retry-detail" @click="loadDetail">
+            다시 시도
+          </button>
+        </div>
       </div>
     </template>
   </section>

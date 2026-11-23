@@ -139,7 +139,7 @@ async function remove() {
     <p v-if="!editing" class="hint" data-message="visibility-hint">
       {{
         isDone
-          ? '공개하면 팔로워 피드와 게시글 첨부에서 보입니다.'
+          ? '공개하면 팔로워 피드와 게시글 첨부에서 보이고, 로그인한 다른 회원도 이 분석의 코드와 설명을 읽을 수 있습니다.'
           : '분석이 끝난 뒤에 공개할 수 있습니다.'
       }}
     </p>

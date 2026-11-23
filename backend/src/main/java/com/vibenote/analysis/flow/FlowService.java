@@ -1,6 +1,6 @@
 package com.vibenote.analysis.flow;
 
-import com.vibenote.analysis.AnalysisMapper;
+import com.vibenote.analysis.AnalysisService;
 import com.vibenote.analysis.AnalysisStatus;
 import com.vibenote.analysis.domain.AnalysisDetail;
 import com.vibenote.analysis.explain.ApiEndpoint;
@@ -29,19 +29,19 @@ public class FlowService {
     static final String DUPLICATE_ENDPOINT = "같은 API를 두 번 고를 수 없습니다.";
 
     private final FlowMapper flowMapper;
-    private final AnalysisMapper analysisMapper;
+    private final AnalysisService analysisService;
     private final FlowProperties properties;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
     public FlowService(
             FlowMapper flowMapper,
-            AnalysisMapper analysisMapper,
+            AnalysisService analysisService,
             FlowProperties properties,
             ApplicationEventPublisher events,
             Clock clock) {
         this.flowMapper = flowMapper;
-        this.analysisMapper = analysisMapper;
+        this.analysisService = analysisService;
         this.properties = properties;
         this.events = events;
         this.clock = clock;
@@ -119,9 +119,7 @@ public class FlowService {
     /** 볼 수 있는 분석(내 것 또는 공개·완료된 남의 것, F-19)의 흐름 전체 (AC10). 분석이 진행 중이어도 조회는 된다. */
     @Transactional(readOnly = true)
     public List<FlowResponse> list(long userId, long analysisId) {
-        if (analysisMapper.findViewable(analysisId, userId).isEmpty()) {
-            throw new BusinessException(ErrorCode.ANALYSIS_404);
-        }
+        analysisService.checkViewable(userId, analysisId);
         return responses(analysisId);
     }
 

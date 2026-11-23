@@ -1,9 +1,7 @@
 package com.vibenote.analysis.concept;
 
-import com.vibenote.analysis.AnalysisMapper;
+import com.vibenote.analysis.AnalysisService;
 import com.vibenote.analysis.concept.AnalysisConceptMapper.LinkRow;
-import com.vibenote.common.exception.BusinessException;
-import com.vibenote.common.exception.ErrorCode;
 import com.vibenote.concept.ConceptQueryService;
 import com.vibenote.concept.ConceptStatus;
 import com.vibenote.concept.dto.ConceptSummaryResponse;
@@ -18,15 +16,15 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class AnalysisConceptService {
 
-    private final AnalysisMapper analysisMapper;
+    private final AnalysisService analysisService;
     private final AnalysisConceptMapper mapper;
     private final ConceptQueryService conceptQueryService;
 
     public AnalysisConceptService(
-            AnalysisMapper analysisMapper,
+            AnalysisService analysisService,
             AnalysisConceptMapper mapper,
             ConceptQueryService conceptQueryService) {
-        this.analysisMapper = analysisMapper;
+        this.analysisService = analysisService;
         this.mapper = mapper;
         this.conceptQueryService = conceptQueryService;
     }
@@ -34,9 +32,7 @@ public class AnalysisConceptService {
     /** 공개 카드만 위치와 함께, 검수 대기 초안은 수만. 볼 수 있는 분석(F-19)이 아니면 ANALYSIS_404. */
     @Transactional(readOnly = true)
     public AnalysisConceptsResponse getConcepts(long userId, long analysisId) {
-        if (analysisMapper.findViewable(analysisId, userId).isEmpty()) {
-            throw new BusinessException(ErrorCode.ANALYSIS_404);
-        }
+        analysisService.checkViewable(userId, analysisId);
         List<LinkRow> links = mapper.findByAnalysis(analysisId);
         Map<Long, ConceptSummaryResponse> published =
                 conceptQueryService
