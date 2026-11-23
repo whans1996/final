@@ -530,7 +530,7 @@
           },
           "errorCode" : {
             "description" : "실패 사유 코드. FAILED가 아니면 null",
-            "enum" : [ "ANALYSIS_400", "ANALYSIS_413", "ANALYSIS_415", "ANALYSIS_500", "LLM_502", "LLM_503" ],
+            "enum" : [ "ANALYSIS_004", "ANALYSIS_400", "ANALYSIS_413", "ANALYSIS_415", "ANALYSIS_500", "ANALYSIS_502", "ANALYSIS_503", "LLM_502", "LLM_503" ],
             "example" : "ANALYSIS_413",
             "type" : [ "string", "null" ]
           },
