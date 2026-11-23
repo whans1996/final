@@ -295,3 +295,174 @@ describe('TeamDetailView 관리 동작 (F-20a AC15)', () => {
     expect(router.currentRoute.value.fullPath).toBe('/teams/12')
   })
 })
+
+describe('TeamDetailView 다른 팀으로 이동한 뒤 늦게 온 응답 (#84)', () => {
+  const OTHER = team({
+    id: 13,
+    name: '뷰 스터디',
+    inviteCode: 'B3NQ7TWX',
+    memberCount: 1,
+    members: [OWNER],
+  })
+
+  /** 직접 resolve·reject할 수 있는 Promise. */
+  function deferred() {
+    let resolve
+    let reject
+    const promise = new Promise((res, rej) => {
+      resolve = res
+      reject = rej
+    })
+    return { promise, resolve, reject }
+  }
+
+  /** 팀 12에서 동작을 걸어 둔 채 팀 13으로 이동한다. */
+  async function startThenMove(start) {
+    teamsApi.fetchTeam.mockImplementation(async (id) => (id === 13 ? OTHER : team()))
+    const mounted = await mountDetail()
+    await start(mounted.wrapper)
+    await flushPromises()
+    await mounted.router.push('/teams/13')
+    await flushPromises()
+    return mounted
+  }
+
+  function expectShowsOther(wrapper) {
+    expect(wrapper.find('h1').text()).toBe('뷰 스터디')
+    expect(wrapper.find('[data-role="invite-code"]').text()).toBe('B3NQ7TWX')
+    expect(wrapper.find('[data-role="member-count"]').text()).toBe('멤버 1/10')
+    expect(wrapper.find('[data-error="action"]').exists()).toBe(false)
+  }
+
+  beforeEach(() => {
+    vi.resetAllMocks()
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('#84 이동하면 이전 팀의 진행 중 상태(수정 폼, busy)를 풀고 새 팀을 보여 준다', async () => {
+    const save = deferred()
+    teamsApi.updateTeam.mockReturnValue(save.promise)
+
+    const { wrapper } = await startThenMove(async (w) => {
+      await button(w, 'edit').trigger('click')
+      await w.find('[data-form="edit"]').trigger('submit')
+    })
+
+    expect(wrapper.find('[data-form="edit"]').exists()).toBe(false)
+    expectShowsOther(wrapper)
+    expect(button(wrapper, 'edit').attributes('disabled')).toBeUndefined()
+    expect(button(wrapper, 'regenerate').attributes('disabled')).toBeUndefined()
+  })
+
+  it('#84 늦게 온 수정 응답·실패는 새 팀 화면을 바꾸지 않는다', async () => {
+    const save = deferred()
+    teamsApi.updateTeam.mockReturnValueOnce(save.promise)
+    const { wrapper } = await startThenMove(async (w) => {
+      await button(w, 'edit').trigger('click')
+      await w.find('[data-form="edit"]').trigger('submit')
+    })
+    save.resolve(team({ name: '바뀐 이름' }))
+    await flushPromises()
+    expectShowsOther(wrapper)
+
+    // 새 팀에서 수정을 연 상태에서 이전 팀의 실패가 늦게 와도 폼에 에러가 붙지 않는다
+    const failing = deferred()
+    teamsApi.updateTeam.mockReturnValueOnce(failing.promise)
+    const second = await startThenMove(async (w) => {
+      await button(w, 'edit').trigger('click')
+      await w.find('[data-form="edit"]').trigger('submit')
+    })
+    await button(second.wrapper, 'edit').trigger('click')
+    failing.reject(apiError(403, { code: 'TEAM_403', message: '팀장만 할 수 있습니다.' }))
+    await flushPromises()
+    const form = second.wrapper.find('[data-form="edit"]')
+    expect(form.find('input[name="name"]').element.value).toBe('뷰 스터디')
+    expect(second.wrapper.text()).not.toContain('팀장만 할 수 있습니다.')
+  })
+
+  it('#84 늦게 온 재발급 응답은 새 팀의 초대 코드를 바꾸지 않는다', async () => {
+    const regenerate = deferred()
+    teamsApi.regenerateInviteCode.mockReturnValue(regenerate.promise)
+    const { wrapper } = await startThenMove((w) => button(w, 'regenerate').trigger('click'))
+
+    regenerate.resolve({ inviteCode: 'P4ZR8NWE' })
+    await flushPromises()
+
+    expect(teamsApi.regenerateInviteCode).toHaveBeenCalledWith(12)
+    expectShowsOther(wrapper)
+  })
+
+  it('#84 늦게 끝난 내보내기는 이전 팀을 다시 불러와 새 팀을 덮어쓰지 않는다', async () => {
+    const remove = deferred()
+    teamsApi.removeTeamMember.mockReturnValue(remove.promise)
+    const { wrapper } = await startThenMove((w) => button(w, 'remove-member').trigger('click'))
+    teamsApi.fetchTeam.mockClear()
+
+    remove.resolve(undefined)
+    await flushPromises()
+
+    expect(teamsApi.fetchTeam).not.toHaveBeenCalled()
+    expectShowsOther(wrapper)
+  })
+
+  it('#84 늦게 끝난 삭제·탈퇴는 새 팀 화면에서 내 팀으로 끌고 가지 않는다', async () => {
+    const remove = deferred()
+    teamsApi.deleteTeam.mockReturnValue(remove.promise)
+    const owner = await startThenMove((w) => button(w, 'delete-team').trigger('click'))
+    remove.resolve(undefined)
+    await flushPromises()
+    expect(owner.router.currentRoute.value.fullPath).toBe('/teams/13')
+    expectShowsOther(owner.wrapper)
+
+    const leave = deferred()
+    teamsApi.leaveTeam.mockReturnValue(leave.promise)
+    teamsApi.fetchTeam.mockImplementation(async (id) => (id === 13 ? OTHER : team(asMember)))
+    const member = await mountDetail()
+    await button(member.wrapper, 'leave').trigger('click')
+    await member.router.push('/teams/13')
+    await flushPromises()
+    leave.resolve(undefined)
+    await flushPromises()
+    expect(member.router.currentRoute.value.fullPath).toBe('/teams/13')
+  })
+
+  it('#84 늦게 온 재발급 실패는 새 팀에 에러를 띄우지 않고 새 팀의 동작을 잠그지 않는다', async () => {
+    const regenerate = deferred()
+    teamsApi.regenerateInviteCode.mockReturnValueOnce(regenerate.promise)
+    const { wrapper } = await startThenMove((w) => button(w, 'regenerate').trigger('click'))
+
+    // 새 팀에서 재발급을 시작해 busy인 동안 이전 팀의 실패가 온다
+    const current = deferred()
+    teamsApi.regenerateInviteCode.mockReturnValueOnce(current.promise)
+    await button(wrapper, 'regenerate').trigger('click')
+    regenerate.reject(apiError(403, { code: 'TEAM_403', message: '팀장만 할 수 있습니다.' }))
+    await flushPromises()
+
+    expect(wrapper.find('[data-error="action"]').exists()).toBe(false)
+    expect(button(wrapper, 'edit').attributes('disabled')).toBeDefined()
+    current.resolve({ inviteCode: 'Q9WE2RTY' })
+    await flushPromises()
+    expect(teamsApi.regenerateInviteCode).toHaveBeenLastCalledWith(13)
+    expect(wrapper.find('[data-role="invite-code"]').text()).toBe('Q9WE2RTY')
+    expect(button(wrapper, 'edit').attributes('disabled')).toBeUndefined()
+  })
+
+  it('#84 팀 상세를 떠난 뒤 늦게 끝난 삭제는 내 팀으로 끌고 가지 않는다', async () => {
+    const remove = deferred()
+    teamsApi.deleteTeam.mockReturnValue(remove.promise)
+    teamsApi.fetchTeam.mockResolvedValue(team())
+    const { wrapper, router } = await mountDetail()
+    await button(wrapper, 'delete-team').trigger('click')
+    await router.push('/')
+    wrapper.unmount()
+
+    remove.resolve(undefined)
+    await flushPromises()
+
+    expect(router.currentRoute.value.fullPath).toBe('/')
+  })
+})

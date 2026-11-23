@@ -1,7 +1,7 @@
 <script setup>
 // SC-23 팀 상세 (F-20a AC14·AC15). 멤버만 볼 수 있다 (남의 팀·없는 팀은 404).
 // 팀장: 초대 코드 상자, 수정, 팀 삭제, 팀원 내보내기. 팀원: 팀 탈퇴. 파괴적 동작은 window.confirm으로 확인한다.
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   deleteTeam,
@@ -33,6 +33,15 @@ const editError = ref('')
 const isOwner = computed(() => team.value?.myRole === 'OWNER')
 
 let lastRequest = 0
+// 화면이 보여 주는 팀이 바뀔 때마다 올린다. 같은 컴포넌트가 다른 팀(/teams/:id)에 재사용되므로
+// 변경 동작은 시작할 때의 세대를 잡아 두고, 응답이 왔을 때 세대가 바뀌었으면 결과를 버린다 (#84).
+let generation = 0
+
+/** 지금 화면의 팀에 대한 동작인지 확인하는 함수를 돌려준다. */
+function currentTeamGuard() {
+  const started = generation
+  return () => started === generation
+}
 
 async function load(id = Number(route.params.id), { quiet = false } = {}) {
   const request = ++lastRequest
@@ -57,6 +66,8 @@ watch(
   () => route.params.id,
   (id) => {
     if (route.name !== 'team-detail') return
+    generation++
+    busy.value = false
     editing.value = false
     actionError.value = ''
     load(Number(id))
@@ -64,45 +75,54 @@ watch(
   { immediate: true },
 )
 
-/** 확인을 받은 뒤 동작을 실행하고, 실패하면 서버 메시지를 보여 준다. */
+// 다른 화면으로 떠난 뒤 늦게 끝난 삭제·탈퇴가 사용자를 /teams로 끌고 가지 않게 한다
+onBeforeUnmount(() => {
+  generation++
+})
+
+/**
+ * 확인을 받은 뒤 동작을 실행하고, 실패하면 서버 메시지를 보여 준다.
+ * `action(teamId, isCurrent)`은 응답 뒤 화면을 바꾸기 전에 `isCurrent()`를 확인한다.
+ */
 async function confirmed(message, action) {
   if (!window.confirm(message)) return
+  const isCurrent = currentTeamGuard()
   busy.value = true
   actionError.value = ''
   try {
-    await action()
+    await action(team.value.id, isCurrent)
   } catch (error) {
-    actionError.value = errorMessage(error)
+    if (isCurrent()) actionError.value = errorMessage(error)
   } finally {
-    busy.value = false
+    if (isCurrent()) busy.value = false
   }
 }
 
 function onRegenerate() {
-  return confirmed('이전 코드로는 더 가입할 수 없습니다.', async () => {
-    const { inviteCode } = await regenerateInviteCode(team.value.id)
-    team.value = { ...team.value, inviteCode }
+  return confirmed('이전 코드로는 더 가입할 수 없습니다.', async (teamId, isCurrent) => {
+    const { inviteCode } = await regenerateInviteCode(teamId)
+    if (isCurrent()) team.value = { ...team.value, inviteCode }
   })
 }
 
 function onRemove(member) {
-  return confirmed(`${member.nickname} 님을 팀에서 내보낼까요?`, async () => {
-    await removeTeamMember(team.value.id, member.userId)
-    await load(team.value.id, { quiet: true })
+  return confirmed(`${member.nickname} 님을 팀에서 내보낼까요?`, async (teamId, isCurrent) => {
+    await removeTeamMember(teamId, member.userId)
+    if (isCurrent()) await load(teamId, { quiet: true })
   })
 }
 
 function onDelete() {
-  return confirmed('팀과 멤버 정보가 모두 삭제됩니다.', async () => {
-    await deleteTeam(team.value.id)
-    await router.push('/teams')
+  return confirmed('팀과 멤버 정보가 모두 삭제됩니다.', async (teamId, isCurrent) => {
+    await deleteTeam(teamId)
+    if (isCurrent()) await router.push('/teams')
   })
 }
 
 function onLeave() {
-  return confirmed('팀에서 탈퇴할까요?', async () => {
-    await leaveTeam(team.value.id)
-    await router.push('/teams')
+  return confirmed('팀에서 탈퇴할까요?', async (teamId, isCurrent) => {
+    await leaveTeam(teamId)
+    if (isCurrent()) await router.push('/teams')
   })
 }
 
@@ -114,18 +134,22 @@ function startEdit() {
 }
 
 async function onSave(body) {
+  const isCurrent = currentTeamGuard()
   busy.value = true
   editFieldErrors.value = {}
   editError.value = ''
   try {
-    team.value = await updateTeam(team.value.id, body)
+    const updated = await updateTeam(team.value.id, body)
+    if (!isCurrent()) return
+    team.value = updated
     editing.value = false
   } catch (error) {
+    if (!isCurrent()) return
     const details = errorCode(error) === 'COMMON_400' ? errorDetails(error) : null
     if (details && Object.keys(details).length > 0) editFieldErrors.value = details
     else editError.value = errorMessage(error)
   } finally {
-    busy.value = false
+    if (isCurrent()) busy.value = false
   }
 }
 </script>
