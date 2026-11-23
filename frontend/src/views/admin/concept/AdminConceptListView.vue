@@ -1,7 +1,7 @@
 <script setup>
 // SC-20 관리자 개념 카드 목록 (F-13 AC13). 조건의 정본은 라우트 쿼리(?status=&source=&keyword=&page=)다.
 // status가 없으면 검수 대기(DRAFT) 탭이고, 전체 탭은 status=ALL로 표시해 조회 때는 status를 빼고 보낸다.
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { fetchAdminConceptCounts, fetchAdminConcepts } from '@/api/adminConcepts'
 import { errorMessage } from '@/api/http'
@@ -10,6 +10,7 @@ import AdminConceptTable from '@/components/concept/admin/AdminConceptTable.vue'
 import { CONCEPT_SOURCES } from '@/components/concept/admin/labels'
 import EmptyState from '@/components/common/EmptyState.vue'
 import PageNav from '@/components/common/PageNav.vue'
+import { overflowLastPage } from '@/utils/pagination'
 
 const PAGE_SIZE = 20
 const DEFAULT_TAB = 'DRAFT'
@@ -73,6 +74,10 @@ const emptyMessage = computed(() => {
 })
 
 let lastRequest = 0
+// 화면이 사라지면 남은 요청을 무효로 한다. 늦은 응답이 범위 보정 replace로 다음 화면을 바꾸지 않게 (Codex 리뷰)
+onBeforeUnmount(() => {
+  lastRequest++
+})
 
 // 편집 화면이 history state로 넘긴 성공 안내를 꺼내고 그 항목에서 지운다.
 // 브라우저는 새로고침해도 history.state를 유지하므로 지우지 않으면 F5마다 다시 뜬다.
@@ -87,6 +92,7 @@ function takeNotice() {
 async function load() {
   const request = ++lastRequest
   const { tab, source, keyword, page } = conditions.value
+  let redirecting = false
   loading.value = true
   loadError.value = ''
   notice.value = takeNotice()
@@ -99,13 +105,31 @@ async function load() {
       size: PAGE_SIZE,
     })
     if (request !== lastRequest) return
+    // 마지막 페이지의 카드를 처리하고 돌아와 page가 범위를 넘으면 마지막 page로 주소를 바꾼다.
+    // 성공 안내는 바꾼 history 항목의 state로 넘겨 다음 조회의 takeNotice()가 다시 꺼내게 한다 (#76)
+    const lastPage = overflowLastPage({
+      page,
+      size: PAGE_SIZE,
+      total: result.total,
+      itemCount: result.items.length,
+    })
+    // 응답 전에 다른 화면으로 떠났으면 주소를 바꾸지 않는다 (늦게 온 응답이 탐색을 일으키지 않게)
+    if (lastPage && route.name === 'admin-concepts') {
+      redirecting = true
+      router.replace({
+        name: 'admin-concepts',
+        query: toQuery({ ...conditions.value, page: lastPage }),
+        state: notice.value ? { notice: notice.value } : undefined,
+      })
+      return
+    }
     items.value = result.items
     total.value = result.total
   } catch (error) {
     if (request !== lastRequest) return
     loadError.value = errorMessage(error)
   } finally {
-    if (request === lastRequest) loading.value = false
+    if (request === lastRequest && !redirecting) loading.value = false
   }
 }
 

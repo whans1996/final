@@ -222,4 +222,71 @@ describe('ConceptListView (F-09 AC9~AC11)', () => {
 
     expect(wrapper.find('[role="alert"]').text()).toContain('입력값이 올바르지 않습니다.')
   })
+
+  it('#46 범위를 넘은 page면 마지막 페이지로 바꿔(replace) 다시 조회하고 빈 목록 안내를 보이지 않는다', async () => {
+    conceptsApi.fetchConcepts
+      .mockResolvedValueOnce(page([], { page: 99, total: 41 }))
+      .mockResolvedValue(page([concept()], { page: 3, total: 41 }))
+
+    const { wrapper, router } = await mountList('/concepts?category=vue&page=99')
+
+    expect(router.currentRoute.value.fullPath).toBe('/concepts?category=vue&page=3')
+    expect(lastCall()).toMatchObject({ category: 'vue', page: 3 })
+    expect(wrapper.findAll('.cards li')).toHaveLength(1)
+    expect(wrapper.text()).not.toContain('조건에 맞는 개념 카드가 없습니다')
+    expect(wrapper.text()).toContain('3 / 3')
+  })
+
+  it('#46 결과가 0건이면 page가 커도 다시 조회하지 않고 빈 목록 안내를 보여 준다', async () => {
+    conceptsApi.fetchConcepts.mockResolvedValue(page([], { page: 5, total: 0 }))
+
+    const { wrapper, router } = await mountList('/concepts?keyword=없는말&page=5')
+
+    expect(conceptsApi.fetchConcepts).toHaveBeenCalledTimes(1)
+    expect(router.currentRoute.value.query.page).toBe('5')
+    expect(wrapper.text()).toContain('조건에 맞는 개념 카드가 없습니다')
+  })
+
+  it('#46 응답 전에 다른 화면으로 떠나면 늦게 온 범위 초과 응답으로 주소를 바꾸지 않는다', async () => {
+    let resolve
+    conceptsApi.fetchConcepts.mockReturnValue(new Promise((r) => (resolve = r)))
+    const { router } = await mountList('/concepts?category=vue&page=99')
+
+    await router.push('/community?page=9')
+    resolve(page([], { page: 99, total: 41 }))
+    await flushPromises()
+
+    expect(router.currentRoute.value.fullPath).toBe('/community?page=9')
+  })
+
+  it('#46 보정은 push가 아닌 replace로 하고, 다시 조회가 시작될 때까지 불러오는 중을 유지한다', async () => {
+    conceptsApi.fetchConcepts.mockResolvedValueOnce(page([concept()], { total: 41 }))
+    const { wrapper, router } = await mountList('/concepts')
+    // 이동을 멈춰 두고 보정 직후 화면을 본다 (다시 조회 전)
+    const replace = vi.spyOn(router, 'replace').mockResolvedValue(undefined)
+    const push = vi.spyOn(router, 'push')
+    conceptsApi.fetchConcepts.mockResolvedValueOnce(page([], { page: 99, total: 41 }))
+
+    await router.push('/concepts?category=vue&page=99')
+    await flushPromises()
+
+    expect(replace).toHaveBeenCalledWith({ query: { category: 'vue', page: '3' } })
+    expect(push).toHaveBeenCalledTimes(1) // 테스트가 부른 push뿐
+    expect(wrapper.text()).toContain('불러오는 중')
+    expect(wrapper.text()).not.toContain('조건에 맞는 개념 카드가 없습니다')
+  })
+
+  it('#46 화면을 떠났다가 같은 목록으로 돌아오면 떠난 화면의 늦은 응답으로 주소를 바꾸지 않는다 (Codex 리뷰)', async () => {
+    let resolve
+    conceptsApi.fetchConcepts.mockReturnValue(new Promise((r) => (resolve = r)))
+    const { wrapper, router } = await mountList('/concepts?category=vue&page=99')
+
+    await router.push('/concepts/57')
+    wrapper.unmount()
+    await router.push('/concepts?page=9')
+    resolve(page([], { page: 99, total: 41 }))
+    await flushPromises()
+
+    expect(router.currentRoute.value.fullPath).toBe('/concepts?page=9')
+  })
 })
