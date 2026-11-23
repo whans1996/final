@@ -110,6 +110,24 @@ public enum ErrorCode {
     /** 남의 댓글 수정·삭제 (F-18 AC9). 글 작성자여도 같고, 형식 검증(400)보다 먼저 판단한다. */
     POST_004(HttpStatus.FORBIDDEN, "본인이 쓴 댓글만 수정·삭제할 수 있습니다."),
 
+    // ── TEAM (B F-20) ──
+    /** 없는 팀, 내가 멤버가 아닌 팀. 남의 팀은 존재 여부를 드러내지 않는다 (F-20a AC4). */
+    TEAM_404(HttpStatus.NOT_FOUND, "팀을 찾을 수 없습니다."),
+    /** 팀원이 수정·삭제·재발급·내보내기 (F-20a AC7~AC9). 형식 검증(400)보다 먼저 판단한다. */
+    TEAM_403(HttpStatus.FORBIDDEN, "팀장만 할 수 있습니다."),
+    /** 없는 코드, 재발급·삭제로 무효가 된 코드 (F-20a AC5). */
+    TEAM_001(HttpStatus.NOT_FOUND, "유효하지 않은 초대 코드입니다."),
+    /** 이미 멤버인 팀에 가입 (F-20a AC5). */
+    TEAM_409(HttpStatus.CONFLICT, "이미 가입한 팀입니다."),
+    /** 10명인 팀에 가입 (F-20a AC6). */
+    TEAM_002(HttpStatus.CONFLICT, "팀 인원이 가득 찼습니다. (최대 10명)"),
+    /** 5개 팀에 속한 회원의 생성·가입 (F-20a AC6). TEAM_002보다 먼저 본다. */
+    TEAM_003(HttpStatus.CONFLICT, "더 이상 팀에 속할 수 없습니다. (최대 5개)"),
+    /** 팀장의 탈퇴·자기 내보내기 (F-20a AC8). */
+    TEAM_004(HttpStatus.BAD_REQUEST, "팀장은 팀을 떠날 수 없습니다. 팀을 삭제해 주세요."),
+    /** 내보낼 대상이 그 팀 멤버가 아님 (F-20a AC8). */
+    TEAM_005(HttpStatus.NOT_FOUND, "팀원을 찾을 수 없습니다."),
+
     // ── LLM (A) ──
     /** 개요 응답이 1회 재시도 후에도 스키마 위반. 파이프라인 FAILED 사유다 (F-06 AC5). */
     LLM_502(HttpStatus.BAD_GATEWAY, "AI 응답 형식이 올바르지 않아 설명을 만들지 못했습니다. 다시 요청해 주세요."),

@@ -4,6 +4,7 @@ import com.vibenote.auth.AuthService;
 import com.vibenote.common.exception.BusinessException;
 import com.vibenote.common.exception.ErrorCode;
 import com.vibenote.follow.FollowService;
+import com.vibenote.team.TeamService;
 import com.vibenote.user.domain.User;
 import java.util.Map;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -23,19 +24,25 @@ public class UserWithdrawalService {
     private final PasswordEncoder passwordEncoder;
     private final AuthService authService;
     private final FollowService followService;
+    private final TeamService teamService;
 
     public UserWithdrawalService(
             UserService userService,
             PasswordEncoder passwordEncoder,
             AuthService authService,
-            FollowService followService) {
+            FollowService followService,
+            TeamService teamService) {
         this.userService = userService;
         this.passwordEncoder = passwordEncoder;
         this.authService = authService;
         this.followService = followService;
+        this.teamService = teamService;
     }
 
-    /** 비밀번호가 맞으면 한 트랜잭션에서 마스킹, 모든 기기의 Refresh 토큰 폐기, 팔로우 양방향 삭제를 한다. 틀리면 USER_001. */
+    /**
+     * 비밀번호가 맞으면 한 트랜잭션에서 마스킹, 모든 기기의 Refresh 토큰 폐기, 팔로우 양방향 삭제, 팀 정리(팀장인 팀 삭제·멤버 행 삭제, F-20a AC10)를
+     * 한다. 틀리면 USER_001.
+     */
     @Transactional
     public void withdraw(long userId, String password) {
         User user = userService.getActiveMember(userId);
@@ -46,5 +53,6 @@ public class UserWithdrawalService {
         userService.markWithdrawn(userId);
         authService.revokeAll(userId);
         followService.removeAllOf(userId);
+        teamService.removeAllOf(userId);
     }
 }

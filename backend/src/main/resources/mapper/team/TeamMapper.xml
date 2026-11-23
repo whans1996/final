@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.vibenote.team.TeamMapper">
+
+    <insert id="insertTeam" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO teams (name, description, owner_id, invite_code, created_at, updated_at)
+        VALUES (#{name}, #{description}, #{ownerId}, #{inviteCode}, #{createdAt}, #{createdAt})
+    </insert>
+
+    <insert id="insertMember">
+        INSERT INTO team_members (team_id, user_id, role, joined_at)
+        VALUES (#{teamId}, #{userId}, #{role}, #{joinedAt})
+    </insert>
+
+    <sql id="teamColumns">
+        id, name, description, owner_id, invite_code, created_at
+    </sql>
+
+    <select id="findById" resultType="com.vibenote.team.domain.Team">
+        SELECT <include refid="teamColumns"/> FROM teams WHERE id = #{teamId}
+    </select>
+
+    <select id="findByIdForUpdate" resultType="com.vibenote.team.domain.Team">
+        SELECT <include refid="teamColumns"/> FROM teams WHERE id = #{teamId} FOR UPDATE
+    </select>
+
+    <select id="findByInviteCodeForUpdate" resultType="com.vibenote.team.domain.Team">
+        SELECT <include refid="teamColumns"/> FROM teams WHERE invite_code = #{inviteCode} FOR UPDATE
+    </select>
+
+    <select id="findRole" resultType="com.vibenote.team.TeamRole">
+        SELECT role FROM team_members WHERE team_id = #{teamId} AND user_id = #{userId}
+    </select>
+
+    <!-- 가입(TeamService.join)은 teams FOR UPDATE 뒤에 부르고, 일반 SELECT라 읽기 시점 규칙은 join Javadoc을 따른다 -->
+    <select id="countMembers" resultType="int">
+        SELECT COUNT(*) FROM team_members WHERE team_id = #{teamId}
+    </select>
+
+    <select id="countTeamsOf" resultType="int">
+        SELECT COUNT(*) FROM team_members WHERE user_id = #{userId}
+    </select>
+
+    <select id="findMembers" resultType="com.vibenote.team.domain.TeamMember">
+        SELECT m.user_id, u.nickname, u.level, m.role, m.joined_at
+        FROM team_members m JOIN users u ON u.id = m.user_id
+        WHERE m.team_id = #{teamId}
+        ORDER BY (m.role = 'OWNER') DESC, m.joined_at ASC, m.user_id ASC
+    </select>
+
+    <select id="findMyTeams" resultType="com.vibenote.team.domain.MyTeam">
+        SELECT t.id, t.name, t.description, m.role AS my_role,
+               (SELECT COUNT(*) FROM team_members c WHERE c.team_id = t.id) AS member_count,
+               o.nickname AS owner_nickname, m.joined_at
+        FROM team_members m
+        JOIN teams t ON t.id = m.team_id
+        JOIN users o ON o.id = t.owner_id
+        WHERE m.user_id = #{userId}
+        ORDER BY m.joined_at DESC, t.id DESC
+    </select>
+
+    <update id="updateInfo">
+        UPDATE teams SET name = #{name}, description = #{description} WHERE id = #{teamId}
+    </update>
+
+    <update id="updateInviteCode">
+        UPDATE teams SET invite_code = #{inviteCode} WHERE id = #{teamId}
+    </update>
+
+    <delete id="deleteMember">
+        DELETE FROM team_members WHERE team_id = #{teamId} AND user_id = #{userId}
+    </delete>
+
+    <delete id="deleteTeam">
+        DELETE FROM teams WHERE id = #{teamId}
+    </delete>
+
+    <delete id="deleteTeamsOwnedBy">
+        DELETE FROM teams WHERE owner_id = #{userId}
+    </delete>
+
+    <delete id="deleteMembershipsOf">
+        DELETE FROM team_members WHERE user_id = #{userId}
+    </delete>
+</mapper>
