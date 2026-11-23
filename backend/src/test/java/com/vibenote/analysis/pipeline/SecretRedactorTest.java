@@ -398,6 +398,75 @@ class SecretRedactorTest {
     }
 
     @Test
+    void 이슈16_key로_끝나는_설정_키의_값을_가린다() {
+        String yml =
+                String.join(
+                        "\n",
+                        "jwt:",
+                        "  key: k1-value",
+                        "  private-key: k2-value",
+                        "aws:",
+                        "  access_key: k3-value",
+                        "  signingKey: k4-value",
+                        "  privatekey: k5-value",
+                        "  accesskey: k6-value");
+        String properties =
+                String.join(
+                        "\n",
+                        "cloud.aws.access-key=p1-value",
+                        "encryption.key=p2-value",
+                        "MASTER_KEY=p3-value");
+
+        assertThat(SecretRedactor.redact("application.yml", yml))
+                .isEqualTo(
+                        String.join(
+                                "\n",
+                                "jwt:",
+                                "  key: [REDACTED]",
+                                "  private-key: [REDACTED]",
+                                "aws:",
+                                "  access_key: [REDACTED]",
+                                "  signingKey: [REDACTED]",
+                                "  privatekey: [REDACTED]",
+                                "  accesskey: [REDACTED]"));
+        assertThat(SecretRedactor.redact("application.properties", properties))
+                .isEqualTo(
+                        String.join(
+                                "\n",
+                                "cloud.aws.access-key=[REDACTED]",
+                                "encryption.key=[REDACTED]",
+                                "MASTER_KEY=[REDACTED]"));
+    }
+
+    @Test
+    void 이슈16_비밀이_아닌_key_설정과_key로_끝나는_일반_단어는_그대로_둔다() {
+        String yml =
+                String.join(
+                        "\n",
+                        "cache:",
+                        "  cache-key: users",
+                        "  key-prefix: app",
+                        "  keys: a",
+                        "rabbit:",
+                        "  routing-key: orders",
+                        "  partitionKey: id",
+                        "  sort_key: created",
+                        "db:",
+                        "  primary-key: id",
+                        "  foreign-key: user_id",
+                        "ssh:",
+                        "  public-key: ssh-ed25519 AAAA",
+                        "zoo:",
+                        "  monkey: george",
+                        "  hockey: puck");
+        String properties = "spring.cache.redis.key-prefix=app\nkafka.routing.key.cache-key=x";
+
+        assertThat(SecretRedactor.redact("application.yml", yml)).isEqualTo(yml);
+        assertThat(SecretRedactor.redact("application.properties", properties))
+                .isEqualTo(properties);
+    }
+
+    @Test
     void AC6_설정_파일이_아니면_키_이름_규칙은_적용하지_않는다() {
         String code = "String password = \"hunter2\";";
 

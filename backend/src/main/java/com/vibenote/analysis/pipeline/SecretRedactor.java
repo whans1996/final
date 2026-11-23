@@ -11,8 +11,8 @@ import java.util.stream.Collectors;
 /**
  * 저장·LLM 전송 전에 키로 보이는 값을 {@code [REDACTED]}로 바꾼다 (F-05a 5.2절, AC6).
  *
- * <p>모든 파일: 알려진 키 형식. 설정 파일(.yml·.yaml·.properties): 키 이름에 password·secret 등이 들어간 항목의 값. 값이 비어 있거나
- * 기본값 없는 환경변수 참조({@code ${NAME}})면 그대로 두고, {@code ${NAME:기본값}}이면 기본값만 가린다.
+ * <p>모든 파일: 알려진 키 형식. 설정 파일(.yml·.yaml·.properties): 키 이름에 password·secret 등이 들어가거나 마지막 단어가 key인
+ * 항목의 값. 값이 비어 있거나 기본값 없는 환경변수 참조({@code ${NAME}})면 그대로 두고, {@code ${NAME:기본값}}이면 기본값만 가린다.
  *
  * <p>설정 파일은 두 번 가린다. 1차는 줄 단위(형식이 깨져도 동작), 2차는 실제 파서로 비밀 키 아래 값을 모아 본문 전체에서 가린다({@link
  * ConfigSecretValues}).
@@ -64,7 +64,33 @@ public final class SecretRedactor {
             Pattern.compile("[|>][-+0-9]{0,2}[ \\t]*(?:#.*)?");
 
     private static final List<String> SECRET_KEYWORDS =
-            List.of("password", "secret", "api-key", "apikey", "api_key", "token", "credential");
+            List.of(
+                    "password",
+                    "secret",
+                    "api-key",
+                    "apikey",
+                    "api_key",
+                    "token",
+                    "credential",
+                    "privatekey",
+                    "accesskey");
+
+    /**
+     * 마지막 단어가 key인 키 이름 ({@code key}, {@code private-key}, {@code ACCESS_KEY}, {@code aws.key},
+     * {@code signingKey}). 단어 경계를 보므로 monkey·hockey는 걸리지 않는다 (#16).
+     */
+    private static final Pattern KEY_SUFFIX = Pattern.compile("(?:^|[-_.])(?i:key)$|[a-z0-9]Key$");
+
+    /** key로 끝나도 비밀이 아닌 이름. 마지막 점 뒤 부분에서 구분자를 빼고 소문자로 비교한다 (#16). */
+    private static final Set<String> NON_SECRET_KEY_NAMES =
+            Set.of(
+                    "cachekey",
+                    "routingkey",
+                    "partitionkey",
+                    "sortkey",
+                    "primarykey",
+                    "foreignkey",
+                    "publickey");
 
     /** 기본값 없는 환경변수 참조 하나: {@code ${NAME}} (따옴표 허용). */
     private static final Pattern PLAIN_ENV_REF =
@@ -202,7 +228,11 @@ public final class SecretRedactor {
 
     static boolean isSecretKey(String key) {
         String lower = key.toLowerCase(Locale.ROOT);
-        return SECRET_KEYWORDS.stream().anyMatch(lower::contains);
+        if (SECRET_KEYWORDS.stream().anyMatch(lower::contains)) {
+            return true;
+        }
+        String lastName = lower.substring(lower.lastIndexOf('.') + 1).replaceAll("[-_]", "");
+        return KEY_SUFFIX.matcher(key).find() && !NON_SECRET_KEY_NAMES.contains(lastName);
     }
 
     /** 값에서 가려야 할 부분. 비었거나 기본값 없는 환경변수 참조면 null, {@code ${NAME:기본값}}이면 기본값(비면 null). */
