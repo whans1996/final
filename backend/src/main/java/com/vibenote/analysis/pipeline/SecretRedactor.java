@@ -11,8 +11,8 @@ import java.util.stream.Collectors;
 /**
  * 저장·LLM 전송 전에 키로 보이는 값을 {@code [REDACTED]}로 바꾼다 (F-05a 5.2절, AC6).
  *
- * <p>모든 파일: 알려진 키 형식. 설정 파일(.yml·.yaml·.properties): 키 이름에 password·secret 등이 들어간 항목의 값. 값이 비어 있거나
- * 기본값 없는 환경변수 참조({@code ${NAME}})면 그대로 두고, {@code ${NAME:기본값}}이면 기본값만 가린다.
+ * <p>모든 파일: 알려진 키 형식. 설정 파일(.yml·.yaml·.properties): 키 이름에 password·secret 등이 들어가거나 마지막 단어가 key인
+ * 항목의 값. 값이 비어 있거나 기본값 없는 환경변수 참조({@code ${NAME}})면 그대로 두고, {@code ${NAME:기본값}}이면 기본값만 가린다.
  *
  * <p>설정 파일은 두 번 가린다. 1차는 줄 단위(형식이 깨져도 동작), 2차는 실제 파서로 비밀 키 아래 값을 모아 본문 전체에서 가린다({@link
  * ConfigSecretValues}).
@@ -64,7 +64,36 @@ public final class SecretRedactor {
             Pattern.compile("[|>][-+0-9]{0,2}[ \\t]*(?:#.*)?");
 
     private static final List<String> SECRET_KEYWORDS =
-            List.of("password", "secret", "api-key", "apikey", "api_key", "token", "credential");
+            List.of(
+                    "password",
+                    "secret",
+                    "api-key",
+                    "apikey",
+                    "api_key",
+                    "token",
+                    "credential",
+                    "privatekey",
+                    "accesskey");
+
+    /**
+     * 마지막 단어가 key인 키 이름 ({@code key}, {@code private-key}, {@code ACCESS_KEY}, {@code aws.key},
+     * {@code signingKey}, {@code JWTKey}). 단어 경계를 보므로 monkey·hockey는 걸리지 않는다 (#16).
+     */
+    private static final Pattern KEY_SUFFIX =
+            Pattern.compile("(?:^|[-_.])(?i:key)$|[A-Za-z0-9]Key$");
+
+    /** 공백이 아닌 글자 덩어리. 값 범위를 통째로 가릴 때 줄바꿈·들여쓰기를 남긴다. */
+    private static final Pattern NON_SPACE = Pattern.compile("\\S+");
+
+    /** key 규칙({@link #endsWithKeyWord})으로만 비밀인 값 중 본문 전체에서 가릴 토큰의 최소 길이. */
+    static final int MIN_KEY_SUFFIX_TOKEN = 8;
+
+    /**
+     * key로 끝나도 비밀이 아닌 이름. 마지막 점 뒤 부분에서 구분자를 빼고 소문자로 비교한다 (#16). primary-key는 Azure 계정 키 이름이라 넣지
+     * 않는다.
+     */
+    private static final Set<String> NON_SECRET_KEY_NAMES =
+            Set.of("cachekey", "routingkey", "partitionkey", "sortkey", "foreignkey", "publickey");
 
     /** 기본값 없는 환경변수 참조 하나: {@code ${NAME}} (따옴표 허용). */
     private static final Pattern PLAIN_ENV_REF =
@@ -84,18 +113,54 @@ public final class SecretRedactor {
         String lower = path.toLowerCase(Locale.ROOT);
         boolean yaml = lower.endsWith(".yml") || lower.endsWith(".yaml");
         if (yaml || lower.endsWith(".properties")) {
-            Set<String> secrets =
+            ConfigSecretValues.Found found =
                     yaml
                             ? ConfigSecretValues.fromYaml(result)
                             : ConfigSecretValues.fromProperties(result);
+            Set<String> secrets = found.tokens();
             // 이스케이프·줄 이음으로 해석한 값이 원문 글자와 다르면 위치를 찾을 수 없으므로 파일 전체를 가린다
             String source = result;
             if (secrets.stream().anyMatch(secret -> !source.contains(secret))) {
                 return REDACTED;
             }
+            result = redactLocated(result, found.located());
             result = redactEverywhere(redactConfigValues(result, yaml), secrets);
+            // 이스케이프·줄 이음으로 쓴 properties 키는 1차가 못 알아본다. 짧은 key 규칙 값이 남았으면 파일 전체를 가린다
+            if (!yaml && ConfigSecretValues.hasShortSuffixSecrets(result)) {
+                return REDACTED;
+            }
         }
         return result;
+    }
+
+    /**
+     * 짧은 key 규칙 값이 든 YAML 값의 범위를 통째로 가린다 (#16). 공백·줄바꿈만 남기고 나머지 글자 덩어리를 모두 바꾼다. 토큰을 단어 경계로 골라 바꾸면
+     * 이스케이프({@code "\tabc"})나 긴 비밀의 일부({@code abc-defghijk})에서 경계가 어긋나 새므로 범위 전체를 본다 (Codex 리뷰).
+     */
+    private static String redactLocated(String content, List<ConfigSecretValues.Located> located) {
+        if (located.isEmpty()) {
+            return content;
+        }
+        // 앞에서부터 한 번 훑어 이어 붙인다. 별칭으로 같은 값이 두 번 잡히면(겹치는 범위) 한 번만 바꾼다
+        List<ConfigSecretValues.Located> sorted =
+                located.stream()
+                        .sorted(Comparator.comparingInt(ConfigSecretValues.Located::start))
+                        .toList();
+        StringBuilder result = new StringBuilder(content.length());
+        int copied = 0;
+        for (ConfigSecretValues.Located value : sorted) {
+            if (value.start() < copied) {
+                continue;
+            }
+            String segment = content.substring(value.start(), value.end());
+            result.append(content, copied, value.start())
+                    .append(
+                            NON_SPACE
+                                    .matcher(segment)
+                                    .replaceAll(Matcher.quoteReplacement(REDACTED)));
+            copied = value.end();
+        }
+        return result.append(content, copied, content.length()).toString();
     }
 
     /** 파서로 모은 비밀 토큰을 단어 경계 기준으로 본문 전체에서 가린다. 긴 토큰부터 맞춘다. */
@@ -106,6 +171,11 @@ public final class SecretRedactor {
         if (secrets.size() > MAX_SECRET_TOKENS) {
             return REDACTED;
         }
+        return replaceTokens(content, secrets);
+    }
+
+    /** 토큰을 단어 경계 기준으로 가린다. 긴 토큰부터 맞춘다. */
+    private static String replaceTokens(String content, Set<String> secrets) {
         String alternatives =
                 secrets.stream()
                         .sorted(
@@ -201,8 +271,29 @@ public final class SecretRedactor {
     }
 
     static boolean isSecretKey(String key) {
-        String lower = key.toLowerCase(Locale.ROOT);
+        return hasSecretKeyword(key) || endsWithKeyWord(key);
+    }
+
+    /** 키 이름에 password·secret 등이 들어 있다. 이 키의 값은 길이와 상관없이 본문 전체에서 가린다. */
+    static boolean hasSecretKeyword(String key) {
+        String lower = unquote(key).toLowerCase(Locale.ROOT);
         return SECRET_KEYWORDS.stream().anyMatch(lower::contains);
+    }
+
+    /**
+     * 마지막 단어가 key이고 예외 이름이 아니다 (#16). 이 키의 값은 그 줄에서 가리고, 본문 전체 치환은 {@link #MIN_KEY_SUFFIX_TOKEN}자
+     * 이상만 한다 ({@code key: id} 때문에 파일 곳곳의 id가 가려지지 않게).
+     */
+    static boolean endsWithKeyWord(String key) {
+        String name = unquote(key);
+        String lower = name.toLowerCase(Locale.ROOT);
+        String lastName = lower.substring(lower.lastIndexOf('.') + 1).replaceAll("[-_]", "");
+        return KEY_SUFFIX.matcher(name).find() && !NON_SECRET_KEY_NAMES.contains(lastName);
+    }
+
+    /** 줄 단위 1차 마스킹은 YAML 키를 따옴표째 넘긴다. */
+    private static String unquote(String key) {
+        return key.replaceAll("^['\"]|['\"]$", "");
     }
 
     /** 값에서 가려야 할 부분. 비었거나 기본값 없는 환경변수 참조면 null, {@code ${NAME:기본값}}이면 기본값(비면 null). */
