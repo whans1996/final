@@ -15,7 +15,7 @@
 - ✅ BE `b3c00cd` (AC1~AC12, BE 856 통과), FE `0d9a382` (AC12~AC15, FE 576 통과)
 - ✅ contract-checker 불일치 0건
 - ✅ 산출물 반영(커밋): `01-요구사항정의서` F-19 행, `02-유스케이스` UC13, `06-화면설계서` SC-06·SC-07(관리 영역·공개 분석 열람 절 추가)
-- 🟡 ui-verifier 실행 중 (SC-06·SC-07 주인/타인, 375px, 스크린샷 `docs/산출물/screens/SC-06-list-public-*`, `SC-07-manage-*`, `SC-07-public-view-*`)
+- ✅ ui-verifier 실패 0건 (주인·타인, 375px scrollWidth 375), 스크린샷 8장 커밋 `1c84757`
 - 결정: 관리 영역은 상세를 불러오는 DONE·FAILED에서만 보인다 (진행 중 수정은 API만 가능, PR에 적기)
 
 ## 바로 다음 할 일
