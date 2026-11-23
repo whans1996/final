@@ -4,7 +4,7 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
 
-갱신: 2026-11-23 14:27 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/issue-16-secret-key-suffix
+갱신: 2026-11-23 14:33 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/issue-16-secret-key-suffix
 
 ## 현재 기능
 
@@ -17,10 +17,11 @@
 - ✅ `SecretRedactor.isSecretKey`: 키워드에 `privatekey`·`accesskey` 추가, `KEY_SUFFIX`(단어 경계 기준, camelCase 포함) + 예외 `NON_SECRET_KEY_NAMES`(cache·routing·partition·sort·foreign·public key) → 파이프라인 테스트 green
 - ✅ F-05a spec 5.2절 규칙·10절 결정 반영, 결정로그 2줄(#16, 하네스 동결)
 - ✅ 커밋 `fix(F-05a): #16 …` (be 652 통과), `/pr-review`: verify all 통과, reviewer 반드시 수정 2건 반영(예외에서 primary-key 제외: Azure 계정 키 / 1차 마스킹 YAML 따옴표 키) + 테스트 `이슈16_해석할_수_없는_yml에서도_따옴표_키의_key_규칙을_적용한다`
+- ✅ 권장 반영(사용자 승인): key 규칙으로만 비밀인 값은 2차 전역 치환 8자 이상만(`ConfigSecretValues.Context` PLAIN·KEY_SUFFIX·KEYWORD, `SecretRedactor.MIN_KEY_SUFFIX_TOKEN`), `JWTKey` 형태, 2차 경로 테스트 6개
 
 ## 바로 다음 할 일
 
-1. reviewer 권장 1~4 사용자 판단 대기(특히 권장1: 맨 `key`의 짧은 값이 2차 전역 치환으로 파일 곳곳을 가림 → 8자 이상만 전역 치환 안). 그 뒤 PR 설명 `.harness/pr-issue-16.md` → push → PR (Closes #16, 멘션 불필요)
+1. PR 설명 `.harness/pr-issue-16.md` 작성 → push → PR (Closes #16, 멘션 불필요) → CI·Codex 루프
 2. 머지 뒤 F-05b `/spec` (`branches.mjs F-05b` ✅ 중복 없음 확인됨)
 
 ## 막힌 점 / 결정 필요

@@ -443,6 +443,89 @@ class SecretRedactorTest {
     }
 
     @Test
+    void 이슈16_대문자_약어_뒤의_Key도_가린다() {
+        String yml = "JWTKey: a1-value\nhmac:\n  HMACKey: a2-value";
+
+        assertThat(SecretRedactor.redact("application.yml", yml))
+                .isEqualTo("JWTKey: [REDACTED]\nhmac:\n  HMACKey: [REDACTED]");
+    }
+
+    @Test
+    void 이슈16_key_규칙으로만_비밀인_짧은_값은_그_줄만_가린다() {
+        String yml =
+                String.join(
+                        "\n",
+                        "sort:",
+                        "  key: id",
+                        "id: 5",
+                        "user-id: 3",
+                        "# id comment",
+                        "selector:",
+                        "  - key: app",
+                        "labels:",
+                        "  app: web");
+
+        assertThat(SecretRedactor.redact("application.yml", yml))
+                .isEqualTo(
+                        String.join(
+                                "\n",
+                                "sort:",
+                                "  key: [REDACTED]",
+                                "id: 5",
+                                "user-id: 3",
+                                "# id comment",
+                                "selector:",
+                                "  - key: [REDACTED]",
+                                "labels:",
+                                "  app: web"));
+    }
+
+    @Test
+    void 이슈16_key_규칙으로_비밀인_8자_이상_값은_본문_전체에서_가린다() {
+        String yml =
+                String.join(
+                        "\n",
+                        "\"private-key\": \"long-key-1\"",
+                        "jwt:",
+                        "  key:",
+                        "    value: long-key-2",
+                        "copy: long-key-1 long-key-2");
+
+        assertThat(SecretRedactor.redact("application.yml", yml))
+                .isEqualTo(
+                        String.join(
+                                "\n",
+                                "\"private-key\": [REDACTED]",
+                                "jwt:",
+                                "  key:",
+                                "    value: [REDACTED]",
+                                "copy: [REDACTED] [REDACTED]"));
+    }
+
+    @Test
+    void 이슈16_비밀_키워드의_짧은_값은_지금처럼_본문_전체에서_가린다() {
+        String yml = "password: pw1\nurl: db?user=pw1";
+
+        assertThat(SecretRedactor.redact("application.yml", yml))
+                .isEqualTo("password: [REDACTED]\nurl: db?user=[REDACTED]");
+    }
+
+    @Test
+    void 이슈16_예외_이름_아래_하위_매핑은_가리지_않는다() {
+        String yml = "cache-key:\n  value: plain-value-1\nother: plain-value-1";
+
+        assertThat(SecretRedactor.redact("application.yml", yml)).isEqualTo(yml);
+    }
+
+    @Test
+    void 이슈16_properties_공백_구분_key_항목을_가린다() {
+        String properties = "private-key long-key-3\ncopy=long-key-3";
+
+        assertThat(SecretRedactor.redact("application.properties", properties))
+                .isEqualTo("private-key [REDACTED]\ncopy=[REDACTED]");
+    }
+
+    @Test
     void 이슈16_해석할_수_없는_yml에서도_따옴표_키의_key_규칙을_적용한다() {
         String yml = "\"private-key\": q1-value\n'key': q2-value\nbroken: [unclosed";
 

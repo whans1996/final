@@ -77,9 +77,13 @@ public final class SecretRedactor {
 
     /**
      * 마지막 단어가 key인 키 이름 ({@code key}, {@code private-key}, {@code ACCESS_KEY}, {@code aws.key},
-     * {@code signingKey}). 단어 경계를 보므로 monkey·hockey는 걸리지 않는다 (#16).
+     * {@code signingKey}, {@code JWTKey}). 단어 경계를 보므로 monkey·hockey는 걸리지 않는다 (#16).
      */
-    private static final Pattern KEY_SUFFIX = Pattern.compile("(?:^|[-_.])(?i:key)$|[a-z0-9]Key$");
+    private static final Pattern KEY_SUFFIX =
+            Pattern.compile("(?:^|[-_.])(?i:key)$|[A-Za-z0-9]Key$");
+
+    /** key 규칙({@link #endsWithKeyWord})으로만 비밀인 값 중 본문 전체에서 가릴 토큰의 최소 길이. */
+    static final int MIN_KEY_SUFFIX_TOKEN = 8;
 
     /**
      * key로 끝나도 비밀이 아닌 이름. 마지막 점 뒤 부분에서 구분자를 빼고 소문자로 비교한다 (#16). primary-key는 Azure 계정 키 이름이라 넣지
@@ -223,14 +227,29 @@ public final class SecretRedactor {
     }
 
     static boolean isSecretKey(String key) {
-        // 줄 단위 1차 마스킹은 YAML 키를 따옴표째 넘긴다
-        String name = key.replaceAll("^['\"]|['\"]$", "");
+        return hasSecretKeyword(key) || endsWithKeyWord(key);
+    }
+
+    /** 키 이름에 password·secret 등이 들어 있다. 이 키의 값은 길이와 상관없이 본문 전체에서 가린다. */
+    static boolean hasSecretKeyword(String key) {
+        String lower = unquote(key).toLowerCase(Locale.ROOT);
+        return SECRET_KEYWORDS.stream().anyMatch(lower::contains);
+    }
+
+    /**
+     * 마지막 단어가 key이고 예외 이름이 아니다 (#16). 이 키의 값은 그 줄에서 가리고, 본문 전체 치환은 {@link #MIN_KEY_SUFFIX_TOKEN}자
+     * 이상만 한다 ({@code key: id} 때문에 파일 곳곳의 id가 가려지지 않게).
+     */
+    static boolean endsWithKeyWord(String key) {
+        String name = unquote(key);
         String lower = name.toLowerCase(Locale.ROOT);
-        if (SECRET_KEYWORDS.stream().anyMatch(lower::contains)) {
-            return true;
-        }
         String lastName = lower.substring(lower.lastIndexOf('.') + 1).replaceAll("[-_]", "");
         return KEY_SUFFIX.matcher(name).find() && !NON_SECRET_KEY_NAMES.contains(lastName);
+    }
+
+    /** 줄 단위 1차 마스킹은 YAML 키를 따옴표째 넘긴다. */
+    private static String unquote(String key) {
+        return key.replaceAll("^['\"]|['\"]$", "");
     }
 
     /** 값에서 가려야 할 부분. 비었거나 기본값 없는 환경변수 참조면 null, {@code ${NAME:기본값}}이면 기본값(비면 null). */
