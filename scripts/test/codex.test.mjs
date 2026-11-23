@@ -224,6 +224,21 @@ test('리뷰 결과를 기다리는 커밋 뒤에 문서만 push하면 재요청
   assert.equal(judge([summary(PREV, 'completed', { at: 0 })], { now: 1, docsOnly: [PREV] }).verdict, 'COMPLETE');
 });
 
+test('지적이 남은 리뷰 커밋 뒤에 문서만 push하면 STALE이 아니라 그 커밋의 FINDINGS다 (PR #78)', () => {
+  const findings = [summary(PREV, 'completed', { findings: true })];
+  const r = judge(findings, { docsOnly: [PREV] });
+  assert.equal(r.verdict, 'FINDINGS');
+  assert.equal(r.findingsSha, PREV);
+  assert.match(r.msg, /^head 1111111 문서만 변경, 2222222 지적 있음/);
+  // 그 뒤 코드가 바뀌었으면 원래대로 재요청
+  assert.equal(judge(findings).verdict, 'STALE');
+  // head에 재리뷰를 요청했으면 그 리뷰를 기다린다
+  assert.equal(judge([...findings, req(HEAD, 0)], { now: 2, docsOnly: [PREV] }).verdict, 'RUNNING');
+  // PREV 지적을 이관(--resolve 마커는 지적 커밋 sha)했으면 문서만 변경으로 COMPLETE
+  const resolved = human('whans1996', iso(1), `이관\n\n<!-- codex-findings-resolved: ${PREV} -->`);
+  assert.equal(judge([...findings, resolved], { now: 2, docsOnly: [PREV] }).verdict, 'COMPLETE');
+});
+
 test('실패·정체 재시도 댓글은 재리뷰 횟수에 넣지 않는다 (reviewer: 자동 리뷰 실패 뒤 재시도가 1회로 셈)', () => {
   // PR 생성 때 돈 자동 리뷰(요청 마커 없음)가 실패 → 재시도
   assert.equal(requestCount([summary(HEAD, 'failed', { at: 0 }), req(HEAD, 1, { retry: true })]), 0);
