@@ -1,6 +1,220 @@
 {
   "components" : {
     "schemas" : {
+      "AdminChallengeCreateResponse" : {
+        "description" : "챌린지 등록 결과",
+        "properties" : {
+          "id" : {
+            "description" : "새 챌린지 ID",
+            "example" : 7,
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "id" ],
+        "type" : "object"
+      },
+      "AdminChallengeRequest" : {
+        "description" : "관리자 챌린지 등록·수정 요청 (multipart/form-data)",
+        "properties" : {
+          "description" : {
+            "description" : "설명 (2,000자 이하, 비면 null)",
+            "example" : "분석한 프로젝트의 퀴즈를 12월 안에 10번 풀어 보세요.",
+            "maxLength" : 2000,
+            "minLength" : 0,
+            "type" : [ "string", "null" ]
+          },
+          "endDate" : {
+            "description" : "종료일 yyyy-MM-dd. 시작일 이후, 기간(양 끝 포함) 90일 이하. 등록할 때와 종료일을 바꿀 때는 오늘 이후",
+            "example" : "2026-12-31",
+            "format" : "date",
+            "minLength" : 1,
+            "pattern" : "\\d{4}-\\d{2}-\\d{2}",
+            "type" : "string"
+          },
+          "goalType" : {
+            "description" : "목표 유형 (REVIEW_COUNT 개념 복습, QUIZ_COUNT 퀴즈, ANALYSIS_COUNT 분석). 시작한 챌린지는 바꿀 수 없음",
+            "enum" : [ "REVIEW_COUNT", "QUIZ_COUNT", "ANALYSIS_COUNT" ],
+            "example" : "QUIZ_COUNT",
+            "minLength" : 1,
+            "pattern" : "REVIEW_COUNT|QUIZ_COUNT|ANALYSIS_COUNT",
+            "type" : "string"
+          },
+          "goalValue" : {
+            "description" : "목표값 (1~1,000). 시작한 챌린지는 바꿀 수 없음",
+            "example" : 10,
+            "maximum" : 1000,
+            "minLength" : 1,
+            "minimum" : 1,
+            "pattern" : "[1-9]\\d{0,2}|1000",
+            "type" : "string"
+          },
+          "image" : {
+            "description" : "대표 이미지 (jpg·png·webp, 2MB 이하, 확장자·MIME·내용이 일치). 수정 때 생략하면 기존 이미지를 유지한다",
+            "format" : "binary",
+            "type" : [ "string", "null" ]
+          },
+          "removeImage" : {
+            "default" : "false",
+            "description" : "수정 전용. true면 기존 이미지를 지운다 (image와 함께 보낼 수 없음)",
+            "enum" : [ "true", "false" ],
+            "pattern" : "true|false",
+            "type" : "string"
+          },
+          "startDate" : {
+            "description" : "시작일 yyyy-MM-dd (과거 허용). 시작한 챌린지는 바꿀 수 없음",
+            "example" : "2026-12-01",
+            "format" : "date",
+            "minLength" : 1,
+            "pattern" : "\\d{4}-\\d{2}-\\d{2}",
+            "type" : "string"
+          },
+          "title" : {
+            "description" : "제목 (앞뒤 공백 제거 후 1~100자)",
+            "example" : "12월 퀴즈 챌린지",
+            "maxLength" : 100,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "endDate", "goalType", "goalValue", "startDate", "title" ],
+        "type" : "object"
+      },
+      "AdminChallengeResponse" : {
+        "description" : "관리자 챌린지 상세",
+        "properties" : {
+          "createdAt" : {
+            "description" : "등록 시각",
+            "example" : "2026-11-24T08:50:00+09:00",
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "description" : {
+            "description" : "설명 (없으면 null)",
+            "example" : "분석한 프로젝트의 퀴즈를 12월 안에 10번 풀어 보세요.",
+            "type" : [ "string", "null" ]
+          },
+          "endDate" : {
+            "description" : "종료일 (포함)",
+            "example" : "2026-12-31",
+            "format" : "date",
+            "type" : "string"
+          },
+          "goalType" : {
+            "description" : "목표 유형 (REVIEW_COUNT 개념 복습, QUIZ_COUNT 퀴즈, ANALYSIS_COUNT 분석)",
+            "enum" : [ "REVIEW_COUNT", "QUIZ_COUNT", "ANALYSIS_COUNT" ],
+            "example" : "QUIZ_COUNT",
+            "type" : "string"
+          },
+          "goalValue" : {
+            "description" : "목표값",
+            "example" : 10,
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "id" : {
+            "description" : "챌린지 ID",
+            "example" : 7,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "imageUrl" : {
+            "description" : "대표 이미지 공개 주소 (없으면 null)",
+            "example" : "/uploads/challenges/3f2b9c1e-8a4d-4f7e-9b1a-2c5d6e7f8a90.png",
+            "type" : [ "string", "null" ]
+          },
+          "participantCount" : {
+            "description" : "참여자 수",
+            "example" : 0,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "startDate" : {
+            "description" : "시작일",
+            "example" : "2026-12-01",
+            "format" : "date",
+            "type" : "string"
+          },
+          "status" : {
+            "description" : "상태 (UPCOMING 예정, ONGOING 진행 중, ENDED 종료). 오늘(Asia/Seoul) 기준으로 계산",
+            "enum" : [ "UPCOMING", "ONGOING", "ENDED" ],
+            "example" : "UPCOMING",
+            "type" : "string"
+          },
+          "title" : {
+            "description" : "제목",
+            "example" : "12월 퀴즈 챌린지",
+            "type" : "string"
+          },
+          "updatedAt" : {
+            "description" : "수정 시각",
+            "example" : "2026-11-24T08:50:00+09:00",
+            "format" : "date-time",
+            "type" : "string"
+          }
+        },
+        "required" : [ "createdAt", "description", "endDate", "goalType", "goalValue", "id", "imageUrl", "participantCount", "startDate", "status", "title", "updatedAt" ],
+        "type" : "object"
+      },
+      "AdminChallengeSummaryResponse" : {
+        "description" : "관리자 챌린지 목록 항목",
+        "properties" : {
+          "endDate" : {
+            "description" : "종료일 (포함)",
+            "example" : "2026-12-31",
+            "format" : "date",
+            "type" : "string"
+          },
+          "goalType" : {
+            "description" : "목표 유형 (REVIEW_COUNT 개념 복습, QUIZ_COUNT 퀴즈, ANALYSIS_COUNT 분석)",
+            "enum" : [ "REVIEW_COUNT", "QUIZ_COUNT", "ANALYSIS_COUNT" ],
+            "example" : "QUIZ_COUNT",
+            "type" : "string"
+          },
+          "goalValue" : {
+            "description" : "목표값",
+            "example" : 10,
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "id" : {
+            "description" : "챌린지 ID",
+            "example" : 7,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "imageUrl" : {
+            "description" : "대표 이미지 공개 주소 (없으면 null)",
+            "example" : "/uploads/challenges/3f2b9c1e-8a4d-4f7e-9b1a-2c5d6e7f8a90.png",
+            "type" : [ "string", "null" ]
+          },
+          "participantCount" : {
+            "description" : "참여자 수",
+            "example" : 0,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "startDate" : {
+            "description" : "시작일",
+            "example" : "2026-12-01",
+            "format" : "date",
+            "type" : "string"
+          },
+          "status" : {
+            "description" : "상태 (UPCOMING 예정, ONGOING 진행 중, ENDED 종료). 오늘(Asia/Seoul) 기준으로 계산",
+            "enum" : [ "UPCOMING", "ONGOING", "ENDED" ],
+            "example" : "UPCOMING",
+            "type" : "string"
+          },
+          "title" : {
+            "description" : "제목",
+            "example" : "12월 퀴즈 챌린지",
+            "type" : "string"
+          }
+        },
+        "required" : [ "endDate", "goalType", "goalValue", "id", "imageUrl", "participantCount", "startDate", "status", "title" ],
+        "type" : "object"
+      },
       "AdminConceptCreateResponse" : {
         "description" : "카드 생성 결과",
         "properties" : {
@@ -1702,6 +1916,37 @@
         "required" : [ "id", "joinedAt", "memberCount", "myRole", "name", "ownerNickname" ],
         "type" : "object"
       },
+      "PageResponseAdminChallengeSummaryResponse" : {
+        "description" : "페이지 응답",
+        "properties" : {
+          "items" : {
+            "description" : "현재 페이지 항목",
+            "items" : {
+              "$ref" : "#/components/schemas/AdminChallengeSummaryResponse"
+            },
+            "type" : "array"
+          },
+          "page" : {
+            "description" : "페이지 번호 (1부터)",
+            "example" : 1,
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "size" : {
+            "description" : "페이지 크기",
+            "example" : 20,
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "total" : {
+            "description" : "전체 항목 수",
+            "example" : 134,
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
       "PageResponseAdminConceptSummaryResponse" : {
         "description" : "페이지 응답",
         "properties" : {
@@ -3115,6 +3360,377 @@
   },
   "openapi" : "3.1.0",
   "paths" : {
+    "/api/admin/challenges" : {
+      "get" : {
+        "description" : "상태(오늘 기준으로 계산)로 거르고 시작일 최신순(같으면 id 역순)으로 페이지 조회한다. 항목마다 참여자 수가 있다.",
+        "operationId" : "list_6",
+        "parameters" : [ {
+          "description" : "상태 (없으면 전체). 오늘(Asia/Seoul)과 기간으로 계산한다",
+          "example" : "ONGOING",
+          "in" : "query",
+          "name" : "status",
+          "required" : false,
+          "schema" : {
+            "description" : "상태 (없으면 전체). 오늘(Asia/Seoul)과 기간으로 계산한다",
+            "enum" : [ "UPCOMING", "ONGOING", "ENDED" ],
+            "example" : "ONGOING",
+            "pattern" : "UPCOMING|ONGOING|ENDED",
+            "type" : "string"
+          }
+        }, {
+          "description" : "페이지 번호 (1부터)",
+          "example" : 1,
+          "in" : "query",
+          "name" : "page",
+          "required" : false,
+          "schema" : {
+            "default" : 1,
+            "description" : "페이지 번호 (1부터)",
+            "example" : 1,
+            "format" : "int32",
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        }, {
+          "description" : "페이지 크기 (최대 100)",
+          "example" : 20,
+          "in" : "query",
+          "name" : "size",
+          "required" : false,
+          "schema" : {
+            "default" : 20,
+            "description" : "페이지 크기 (최대 100)",
+            "example" : 20,
+            "format" : "int32",
+            "maximum" : 100,
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PageResponseAdminChallengeSummaryResponse"
+                }
+              }
+            },
+            "description" : "조회 성공"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "상태·페이지 값 오류 (COMMON_400, details에 필드별 사유)"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "토큰 없음·만료 (AUTH_401)"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "ADMIN이 아님 (AUTH_403)"
+          }
+        },
+        "summary" : "관리자 챌린지 목록",
+        "tags" : [ "관리자" ]
+      },
+      "post" : {
+        "description" : "기간·목표·대표 이미지(선택)로 챌린지를 만든다. 종료일은 오늘 이후, 기간은 90일 이하이고 시작일은 과거여도 된다. 이미지는 /uploads/challenges/{UUID}.{ext}로 공개된다.",
+        "operationId" : "create_5",
+        "requestBody" : {
+          "content" : {
+            "multipart/form-data" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AdminChallengeRequest"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AdminChallengeCreateResponse"
+                }
+              }
+            },
+            "description" : "등록 성공"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "입력값·이미지 오류 (COMMON_400, details에 필드별 사유, 이미지는 details.image)"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "토큰 없음·만료 (AUTH_401)"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "ADMIN이 아님 (AUTH_403)"
+          },
+          "413" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "요청 크기 한도 초과 (COMMON_413, 파일 10MB·요청 12MB)"
+          }
+        },
+        "summary" : "챌린지 등록",
+        "tags" : [ "관리자" ]
+      }
+    },
+    "/api/admin/challenges/{id}" : {
+      "delete" : {
+        "description" : "언제든 실제로 지운다. 참여 기록도 함께 지워지고 대표 이미지 파일도 지운다.",
+        "operationId" : "delete_4",
+        "parameters" : [ {
+          "description" : "챌린지 ID",
+          "example" : 7,
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "삭제 성공"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "토큰 없음·만료 (AUTH_401)"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "ADMIN이 아님 (AUTH_403)"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "없는 챌린지 (CHALLENGE_404)"
+          }
+        },
+        "summary" : "챌린지 삭제",
+        "tags" : [ "관리자" ]
+      },
+      "get" : {
+        "description" : "설명·상태·참여자 수·등록·수정 시각을 포함한다.",
+        "operationId" : "detail_2",
+        "parameters" : [ {
+          "description" : "챌린지 ID",
+          "example" : 7,
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AdminChallengeResponse"
+                }
+              }
+            },
+            "description" : "조회 성공"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "토큰 없음·만료 (AUTH_401)"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "ADMIN이 아님 (AUTH_403)"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "없는 챌린지 (CHALLENGE_404)"
+          }
+        },
+        "summary" : "관리자 챌린지 상세",
+        "tags" : [ "관리자" ]
+      },
+      "put" : {
+        "description" : "전체 교체한다. image가 없고 removeImage가 false면 기존 이미지를 유지한다. 시작한(진행 중·종료) 챌린지는 목표 유형·목표값·시작일을 바꿀 수 없다. 종료일 ≥ 오늘은 종료일이 바뀔 때만 검사한다.",
+        "operationId" : "update_4",
+        "parameters" : [ {
+          "description" : "챌린지 ID",
+          "example" : 7,
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "multipart/form-data" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AdminChallengeRequest"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AdminChallengeResponse"
+                }
+              }
+            },
+            "description" : "수정 성공"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "입력값·이미지 오류, image와 removeImage=true를 함께 보냄 (COMMON_400, details에 필드별 사유)"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "토큰 없음·만료 (AUTH_401)"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "ADMIN이 아님 (AUTH_403)"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "없는 챌린지 (CHALLENGE_404)"
+          },
+          "409" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "시작한 챌린지의 목표 유형·목표값·시작일 변경 (CHALLENGE_001)"
+          },
+          "413" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "요청 크기 한도 초과 (COMMON_413, 파일 10MB·요청 12MB)"
+          }
+        },
+        "summary" : "챌린지 수정",
+        "tags" : [ "관리자" ]
+      }
+    },
     "/api/admin/concepts" : {
       "get" : {
         "description" : "상태와 상관없이 모든 카드를 상태·출처·키워드(이름·요약 부분 일치)로 거르고 수정일 최신순으로 페이지 조회한다.",
@@ -3717,7 +4333,7 @@
     "/api/analyses/{id}" : {
       "delete" : {
         "description" : "끝난(DONE·FAILED) 내 분석을 지운다. 파일·실행 흐름·개념 연결은 지우고 퀴즈 풀이 기록과 일일 한도 집계는 남긴다.",
-        "operationId" : "delete_4",
+        "operationId" : "delete_5",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -3814,7 +4430,7 @@
       },
       "patch" : {
         "description" : "내 분석의 제목(100자)·메모(1000자)를 보낸 값으로 바꾼다 (누락·빈 문자열은 null). 진행 중이어도 되고 파이프라인에는 영향이 없다.",
-        "operationId" : "update_4",
+        "operationId" : "update_5",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -4531,7 +5147,7 @@
     "/api/concepts" : {
       "get" : {
         "description" : "공개(PUBLISHED) 카드를 키워드(이름·요약 부분 일치)·카테고리·난이도로 거르고 인기순(찜 수→평점) 또는 최신순으로 페이지 조회한다. 비로그인도 쓸 수 있다.",
-        "operationId" : "list_6",
+        "operationId" : "list_7",
         "parameters" : [ {
           "description" : "이름·요약 부분 일치 검색어 (trim 후 50자 이하, 대소문자 무시)",
           "example" : "jwt",
@@ -5077,7 +5693,7 @@
     "/api/concepts/{id}" : {
       "get" : {
         "description" : "공개(PUBLISHED) 카드의 본문·예제 코드·출처와 관련 카드(최대 4개)를 조회한다. 비로그인도 쓸 수 있고, 로그인하면 내 분석(삭제되지 않은 DONE)에서 이 개념이 등장한 위치(최신 10개)를 함께 받는다. 토큰이 깨졌거나 만료되면 비로그인과 같다.",
-        "operationId" : "detail_2",
+        "operationId" : "detail_3",
         "parameters" : [ {
           "description" : "카드 ID",
           "example" : 57,

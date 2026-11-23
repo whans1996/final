@@ -4,21 +4,22 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
 
-갱신: 2026-11-24 08:40 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/F-24-challenge-admin
+갱신: 2026-11-24 08:54 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/F-24-challenge-admin
 
 ## 현재 기능
 
-**F-24 학습 챌린지 관리** spec `docs/specs/F-24-challenge-admin.md` — **APPROVED** 김동환 11-24 (AC1~AC13)
+**F-24 학습 챌린지 관리** spec `docs/specs/F-24-challenge-admin.md` — **APPROVED**, `/implement` 진행 중. 이번 세션 목표: BE AC1~AC10 → FE AC11~AC13
 
 ## 진행
 
-- ✅ F-19 PR #93 머지(11-24 08:35), #60·#81 닫힘
-- ✅ F-24 spec 초안: 관리자 CRUD 5개 API(multipart), 이미지 jpg·png·webp 2MB, `/uploads/challenges/**`만 정적 제공(analysis-tmp 유출 방지, AC10), 마이그레이션 없음(V1에 테이블 있음)
-- ✅ 사용자 결정 4건 → 결정로그 11-24 행: 실제 삭제 · 시작 후 목표·시작일 잠금(409 `CHALLENGE_001`) · 종료일 ≥ 오늘·90일 이하 · 이미지 선택
+- ✅ BE AC1~AC10 green (84개): `challenge/admin/AdminChallengeController·Service·dto`, `ChallengeMapper`(+XML), `ChallengeStatus`·`ChallengeGoalType`·`ChallengeImageStorage`, `common/config/WebConfig`(`/uploads/challenges/**`만), `ErrorCode` CHALLENGE_404·001, openapi.json·conventions 3절
+- 설계: 요청 검증은 서비스에서 `Validator`로 (404 → 400 → 409 순서), 이미지는 `afterCompletion`(커밋 → 이전 파일, 롤백 → 새 파일 삭제). API 테스트는 `@Transactional` 없이 `@AfterEach` 정리
+- 🟡 FE 시작: `api/adminChallenges.js`(+spec), `components/challenge/admin/labels.js`·`validation.js` 작성(미커밋)
 
 ## 바로 다음 할 일
 
-1. `/clear` → 새 세션(Opus/high) `/implement F-24`. 시작은 `AdminChallengeApiTest#AC1_...`(red)와 `ChallengeImageStorageTest`, 이어서 `UploadResourceTest`(AC10)
+1. FE: `AdminChallengeStatusTabs`·`AdminChallengeTable`·`AdminChallengeForm`(미리보기 createObjectURL/revoke), `views/admin/challenge/AdminChallengeListView`(삭제 확인 모달, 브라우저 confirm 금지)·`EditView`, `routes/challenge.js` adminChildren(order 20). 테스트는 `views/__tests__/AdminChallenge*.spec.js`(viewTestUtils 재사용), `components/challenge/admin/__tests__/`
+2. 그다음 contract-checker, ui-verifier, Chrome으로 SC-21 스크린샷, 산출물(SC-21·UC51)
 
 ## 막힌 점 / 결정 필요
 
@@ -26,6 +27,6 @@
 
 ## 주의
 
+- 공통 변경(PR에서 @JoonseobKim): `ErrorCode`(CHALLENGE 블록), `common/config/WebConfig`(신규), `UploadResourceTest`(신규)
 - 리뷰 지적은 '무시 가능'도 직접 확인한다 (11-20 사용자 지시) · 하네스 동결(11-23): 버그·작업 막는 문제만 고친다
-- 하네스 가드는 Bash 명령 문자열의 `core.hooksPath`를 막는다 → 테스트 파일 편집은 Edit 도구로
-- B의 F-20c도 다음 마이그레이션 V10을 노림 (F-24는 마이그레이션 없음)
+- Bash heredoc에 따옴표가 섞인 긴 Java를 넣으면 파싱 실패 → Write 도구로

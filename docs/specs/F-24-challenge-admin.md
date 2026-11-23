@@ -214,13 +214,13 @@
 
 `/implement`가 진행하며 체크한다.
 
-- [ ] 브랜치 `feature/F-24-challenge-admin`
-- [ ] Flyway 마이그레이션 (없음 확인)
-- [ ] AC별 실패 테스트 작성 (red 확인)
-- [ ] BE 구현 (green)
+- [x] 브랜치 `feature/F-24-challenge-admin`
+- [x] Flyway 마이그레이션 (없음 확인)
+- [x] AC별 실패 테스트 작성 (red 확인)
+- [x] BE 구현 (green)
 - [ ] FE 구현 (green)
-- [ ] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
-- [ ] `docs/conventions.md` 3절 CHALLENGE 에러 코드
+- [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
+- [x] `docs/conventions.md` 3절 CHALLENGE 에러 코드
 - [ ] contract-checker 통과
 - [ ] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일)
 - [ ] reviewer 지적 사항 반영
