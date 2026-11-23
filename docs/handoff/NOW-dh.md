@@ -4,7 +4,7 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
 
-갱신: 2026-11-23 13:19 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/issue-55-json-body-limit
+갱신: 2026-11-23 13:25 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/issue-55-json-body-limit
 
 ## 현재 기능
 
@@ -14,19 +14,18 @@
 
 - ✅ (PR #70 #54·#32 11-20 머지, 이슈 닫힘 확인. 이 PC는 F-14 wip에 멈춰 있어 develop으로 맞춤)
 - ✅ 방식: Jackson (사용자 결정). Boot 4.1 속성 `spring.jackson.factory.constraints.read.max-document-length: 1048576`(application.yml) — 커스터마이저 코드 불필요
-- ✅ `GlobalExceptionHandler.handleNotReadable`: 원인 체인에 `StreamConstraintsException`이면 413 `COMMON_413`, 아니면 400. ErrorCode 추가 없음 (COMMON_413 메시지 "업로드할 수 있는 크기를 넘었습니다."는 그대로)
+- ✅ `GlobalExceptionHandler.handleNotReadable`: 원인 체인에 `StreamConstraintsException`이면 413 `COMMON_413`, 아니면 400. ErrorCode 추가 없음. COMMON_413 메시지는 "요청 크기가 허용 범위를 넘었습니다."로 일반화 (사용자 결정, 결정로그)
 - ✅ 테스트: `GlobalExceptionHandlerTest.본문이_Jackson_읽기_한도를_넘으면_413`, `common/RequestBodyLimitTest`(로그인 1MB+1KB → 413, 1MB−1KB → 413 아님). `verify.mjs be` 통과
 - ✅ `docs/conventions.md` 3절 COMMON_413 설명 갱신
 
 ## 바로 다음 할 일
 
-1. `/pr-review` (새 세션 권장) → PR 본문 `Closes #55`, 공통 코드 변경(application.yml·GlobalExceptionHandler·conventions)으로 @JoonseobKim 멘션. 알릴 점: 한도는 Spring 매퍼 전체라 Gemini/Ollama RestClient 응답에도 1MB가 걸림(출력 토큰 한도상 무관)
+1. `/pr-review` (새 세션 권장) → PR 본문 `Closes #55`, 공통 코드 변경(application.yml·GlobalExceptionHandler·ErrorCode 메시지·conventions)으로 @JoonseobKim 멘션. 알릴 점: 한도는 Spring 매퍼 전체라 Gemini/Ollama RestClient 응답에도 1MB가 걸림(출력 토큰 한도상 무관)
 2. 그 뒤 #17 (created_at 시간대) → F-05b `/spec` (먼저 `node scripts/branches.mjs F-05b`)
 
 ## 막힌 점 / 결정 필요
 
 - 사람: 이슈 #16, 노션 팀원 초대, 고아 폴더 `../final-harness` 삭제 여부, 하네스 동결 원칙 결정로그 추가 여부, 로컬 옛 브랜치 4개(F-07, F-14, common-notify-per-person, issue-54) 정리 여부
-- COMMON_413 메시지를 "요청 크기가…"로 일반화할지 (지금은 업로드 문구 유지)
 
 ## 주의
 
