@@ -122,4 +122,25 @@ class SeedConceptsTest extends IntegrationTestBase {
                 .containsEntry("status", "HIDDEN")
                 .containsEntry("summary", fileSummary);
     }
+
+    /**
+     * F-13 AC12: AI가 먼저 DRAFT 초안으로 만든 이름이 나중에 시드 파일에 들어오면, 시드 카드로서 파일의 PUBLISHED가 된다. 관리자가 정한
+     * PUBLISHED·HIDDEN만 유지하고 검수 전 초안은 승격한다 (리뷰 권장 반영).
+     */
+    @Test
+    @Transactional
+    void AC12_시드에_새로_들어온_AI_초안_이름은_PUBLISHED_SEED가_된다() throws IOException {
+        String name = "예외 처리와 커스텀 예외";
+        jdbc.update("UPDATE concepts SET status = 'DRAFT', source = 'AI' WHERE name = ?", name);
+
+        String sql =
+                new ClassPathResource("db/migration/R__seed_concepts.sql")
+                        .getContentAsString(StandardCharsets.UTF_8)
+                        .strip();
+        jdbc.execute(sql.endsWith(";") ? sql.substring(0, sql.length() - 1) : sql);
+
+        assertThat(jdbc.queryForMap("SELECT status, source FROM concepts WHERE name = ?", name))
+                .containsEntry("status", "PUBLISHED")
+                .containsEntry("source", "SEED");
+    }
 }

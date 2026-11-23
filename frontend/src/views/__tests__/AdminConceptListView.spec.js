@@ -235,4 +235,22 @@ describe('AdminConceptListView (F-13 AC13)', () => {
     await flushPromises()
     expect(wrapper.find('[role="status"]').text()).toBe('저장했습니다.')
   })
+
+  it('AC13 성공 안내는 한 번만 보이고 history state에서 지워 새로고침 때 다시 뜨지 않는다', async () => {
+    const { router } = await mountList()
+    await router.push({
+      name: 'admin-concepts',
+      query: { status: 'ALL' },
+      state: { notice: '공개했습니다.' },
+    })
+    await flushPromises()
+
+    expect(router.options.history.state.notice).toBeFalsy()
+    expect(router.options.history.location).toBe('/admin/concepts?status=ALL')
+
+    // 새로고침: 같은 history 항목에서 화면을 다시 띄운다
+    const reloaded = await mountAt(AdminConceptListView, '/admin/concepts?status=ALL')
+    await flushPromises()
+    expect(reloaded.wrapper.find('[role="status"]').exists()).toBe(false)
+  })
 })

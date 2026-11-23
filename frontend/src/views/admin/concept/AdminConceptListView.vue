@@ -74,12 +74,22 @@ const emptyMessage = computed(() => {
 
 let lastRequest = 0
 
+// 편집 화면이 history state로 넘긴 성공 안내를 꺼내고 그 항목에서 지운다.
+// 브라우저는 새로고침해도 history.state를 유지하므로 지우지 않으면 F5마다 다시 뜬다.
+function takeNotice() {
+  const history = router.options.history
+  const message = history.state?.notice
+  if (!message) return ''
+  history.replace(history.location, { ...history.state, notice: null })
+  return message
+}
+
 async function load() {
   const request = ++lastRequest
   const { tab, source, keyword, page } = conditions.value
   loading.value = true
   loadError.value = ''
-  notice.value = router.options.history.state?.notice ?? ''
+  notice.value = takeNotice()
   try {
     const result = await fetchAdminConcepts({
       status: tab === 'ALL' ? '' : tab,
