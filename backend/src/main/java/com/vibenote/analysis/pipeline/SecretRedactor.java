@@ -134,14 +134,15 @@ public final class SecretRedactor {
     }
 
     /**
-     * 짧은 토큰을 그 값이 있는 범위 안에서만 가린다 (#16). 범위 안에 토큰이 글자 그대로 없거나 범위가 {@link #MAX_SECRET_TOKENS}개를 넘으면
-     * null(파일 전체를 가리라는 뜻).
+     * 짧은 토큰을 그 값이 있는 범위 안에서만 가린다 (#16). 범위 안에 토큰이 글자 그대로 없거나 토큰이 모두 {@link #MAX_SECRET_TOKENS}개를
+     * 넘으면 null(파일 전체를 가리라는 뜻).
      */
     private static String redactLocated(String content, List<ConfigSecretValues.Located> located) {
         if (located.isEmpty()) {
             return content;
         }
-        if (located.size() > MAX_SECRET_TOKENS) {
+        // 범위 수가 아니라 토큰 수로 센다. 값 하나에 토큰이 수만 개여도 상한을 넘지 못하게 (Codex 리뷰)
+        if (located.stream().mapToInt(value -> value.tokens().size()).sum() > MAX_SECRET_TOKENS) {
             return null;
         }
         // 앞에서부터 한 번 훑어 이어 붙인다. 별칭으로 같은 값이 두 번 잡히면(겹치는 범위) 한 번만 바꾼다

@@ -550,6 +550,31 @@ class SecretRedactorTest {
     }
 
     @Test
+    void 이슈16_값_하나에_짧은_토큰이_아주_많아도_선형_시간에_끝나고_상한을_넘으면_파일_전체를_가린다() {
+        String yml =
+                "key:\n  value: \""
+                        + IntStream.range(0, 40_000)
+                                .mapToObj(i -> String.format("t%05d", i))
+                                .collect(Collectors.joining(" "))
+                        + "\"";
+
+        String redacted =
+                assertTimeoutPreemptively(
+                        Duration.ofSeconds(3), () -> SecretRedactor.redact("application.yml", yml));
+
+        assertThat(redacted).isEqualTo("[REDACTED]");
+    }
+
+    @Test
+    void 이슈16_비밀_키_아래_yml_set의_원소를_가린다() {
+        String yml = "secret: !!set\n  ? hunter2\nprivate-key: !!set\n  ? abc1234\nname: x";
+
+        assertThat(SecretRedactor.redact("application.yml", yml))
+                .doesNotContain("hunter2", "abc1234")
+                .contains("name: x");
+    }
+
+    @Test
     void 이슈16_key_규칙으로_비밀인_8자_이상_값은_본문_전체에서_가린다() {
         String yml =
                 String.join(

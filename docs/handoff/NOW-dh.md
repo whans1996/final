@@ -4,7 +4,7 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
 
-갱신: 2026-11-23 14:45 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/issue-16-secret-key-suffix
+갱신: 2026-11-23 15:01 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/issue-16-secret-key-suffix
 
 ## 현재 기능
 
@@ -21,8 +21,9 @@
 
 ## 바로 다음 할 일
 
-1. **PR #78** 열림 (Closes #16). Codex 1차 P1(짧은 값이 다음 줄·하위 매핑 원래 자리에서 샘) → 13075dc에서 YAML compose 노드 위치(`ConfigSecretValues.Located`)로 수정, 재리뷰 대기(`node scripts/codex-review.mjs 78 --request --wait --status`). CI `gh pr checks 78` 초록 + Codex COMPLETE면 GitHub에서 머지, 머지 뒤 #16 닫힘 확인
-2. 머지 뒤 F-05b `/spec` (`branches.mjs F-05b` ✅ 중복 없음 확인됨)
+1. **PR #78** 열림 (Closes #16). Codex 3차까지 지적 반영(P1 원래 자리 누출, P2 이스케이프 properties 키·위치 변환 선형·토큰 상한·!!set 회귀). 같은 주제 3회라 사용자 승인 받고 4차 재리뷰. **다음 지적이 나오면 고치지 말고 사용자에게 이슈 이관 여부를 묻는다**. CI `gh pr checks 78` 초록 + Codex COMPLETE면 GitHub에서 머지, 머지 뒤 #16 닫힘 확인
+2. **PR #80** 하네스(codex-review 지적 커밋 뒤 문서만 변경 → FINDINGS) Codex ✅ 574138e, CI BE 확인 뒤 머지
+3. 머지 뒤 F-05b `/spec` (`branches.mjs F-05b` ✅ 중복 없음 확인됨)
 
 ## 막힌 점 / 결정 필요
 

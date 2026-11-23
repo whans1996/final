@@ -161,6 +161,10 @@ final class ConfigSecretValues {
                     return;
                 }
                 for (NodeTuple entry : map.getValue()) {
+                    // !!set은 원소를 키(값은 null)로 담는다. loadAll 때처럼 원소를 값으로 본다 (Codex 리뷰)
+                    if (Tag.SET.equals(map.getTag())) {
+                        collect(entry.getKeyNode(), context);
+                    }
                     Context child =
                             entry.getKeyNode() instanceof ScalarNode key
                                     ? contextOf(key.getValue(), context)
