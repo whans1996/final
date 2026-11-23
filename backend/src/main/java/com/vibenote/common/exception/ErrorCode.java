@@ -70,6 +70,10 @@ public enum ErrorCode {
     CONCEPT_001(HttpStatus.NOT_FOUND, "작성한 리뷰가 없습니다."),
     /** 한 카드에 두 번째 리뷰 (F-11 AC6, UNIQUE (concept_id, user_id)). */
     CONCEPT_409(HttpStatus.CONFLICT, "이미 이 카드에 리뷰를 남겼습니다."),
+    /** 관리자 카드 생성·수정 시 같은 이름(trim 후)의 카드가 있음. details.name (F-13 AC6). */
+    CONCEPT_002(HttpStatus.CONFLICT, "같은 이름의 개념 카드가 이미 있습니다."),
+    /** PUBLISHED·HIDDEN 카드를 DRAFT로 되돌리거나 삭제 (F-13 AC8·AC10). 찜·리뷰 CASCADE 삭제를 막는다. */
+    CONCEPT_003(HttpStatus.CONFLICT, "공개되었거나 숨긴 카드는 검수 대기로 되돌리거나 삭제할 수 없습니다."),
 
     // ── QUIZ (A F-14) ──
     /** 없는 퀴즈, 남의·삭제된 분석의 퀴즈, 또는 내 분석이지만 퀴즈가 없음(생성 실패·QUIZ 전) (F-14 AC5·AC8). */

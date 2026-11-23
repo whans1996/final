@@ -3,6 +3,7 @@ package com.vibenote.concept;
 import com.vibenote.common.Level;
 import com.vibenote.concept.domain.Concept;
 import com.vibenote.concept.domain.ConceptAppearance;
+import com.vibenote.concept.domain.ConceptStatusCount;
 import java.util.List;
 import java.util.Optional;
 import org.apache.ibatis.annotations.Mapper;
@@ -80,4 +81,47 @@ public interface ConceptMapper {
             @Param("category") String category,
             @Param("excludeIds") List<Long> excludeIds,
             @Param("limit") int limit);
+
+    // F-13 관리자 카드 관리
+
+    /**
+     * 관리자 목록 (상태 무관). keyword는 {@code !}로 이스케이프된 값이고, null인 조건은 걸지 않는다. updated_at DESC, id DESC.
+     * 요약 컬럼 + status·source·updated_at만 채운다.
+     */
+    List<Concept> findForAdmin(
+            @Param("status") ConceptStatus status,
+            @Param("source") ConceptSource source,
+            @Param("keyword") String keyword,
+            @Param("size") int size,
+            @Param("offset") long offset);
+
+    /** {@link #findForAdmin}과 같은 조건의 개수. */
+    long countForAdmin(
+            @Param("status") ConceptStatus status,
+            @Param("source") ConceptSource source,
+            @Param("keyword") String keyword);
+
+    /** 카드가 있는 상태만 행이 나온다 (없는 상태는 호출자가 0으로 채운다). */
+    List<ConceptStatusCount> countByStatus();
+
+    /** 카드를 잠그고 읽는다. PUT·DELETE에서 상태 확인과 변경 사이에 다른 요청이 끼지 않게 한다. */
+    Optional<Concept> findByIdForUpdate(long id);
+
+    /** 같은 이름(콜레이션 기준)의 다른 카드가 있는지. excludeId가 null이면 모든 카드와 비교한다. */
+    boolean existsByName(@Param("name") String name, @Param("excludeId") Long excludeId);
+
+    /**
+     * 관리자 작성 카드 INSERT (source=ADMIN). 생성된 id를 {@code concept.id}에 채운다. 이름이 겹치면
+     * DuplicateKeyException.
+     */
+    void insertByAdmin(Concept concept);
+
+    /** 내용·상태를 바꾼다. source·wish_count·avg_rating은 건드리지 않는다. */
+    void updateByAdmin(Concept concept);
+
+    /** DRAFT 카드만 지운다 (analysis_concepts는 FK CASCADE). 지운 행 수. */
+    int deleteDraft(long id);
+
+    /** 카드에 연결된 분석 수 (analysis_concepts PK가 (analysis_id, concept_id)라 행 수 = 분석 수). */
+    long countLinkedAnalyses(long conceptId);
 }

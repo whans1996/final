@@ -91,7 +91,7 @@ public class ConceptService {
      * LIKE 패턴의 와일드카드를 글자 그대로 찾도록 {@code !}로 이스케이프한다 (SQL은 {@code ESCAPE '!'}). MySQL 기본 모드에서 백슬래시가
      * 문자열 이스케이프라 쓰지 않는다.
      */
-    static String escapeLike(String keyword) {
+    public static String escapeLike(String keyword) {
         return keyword.replace("!", "!!").replace("%", "!%").replace("_", "!_");
     }
 }

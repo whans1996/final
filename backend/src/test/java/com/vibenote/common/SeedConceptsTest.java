@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 시드 개념 카드(DS-05, {@code R__seed_concepts.sql})가 데이터셋 규칙대로 들어갔는지 확인한다.
@@ -94,5 +95,52 @@ class SeedConceptsTest extends IntegrationTestBase {
                         Integer.class);
 
         assertThat(blank).isZero();
+    }
+
+    /**
+     * F-13 AC12: 관리자가 숨긴 시드 카드는 시드 파일이 다시 적용돼도 HIDDEN 그대로이고, 내용은 파일 기준으로 덮어써진다. Flyway처럼 파일 전체를 한
+     * 문장으로 실행한다 (끝의 세미콜론만 뗀다).
+     */
+    @Test
+    @Transactional
+    void AC12_시드_재적용해도_숨긴_카드는_HIDDEN() throws IOException {
+        String name = "예외 처리와 커스텀 예외";
+        String fileSummary =
+                jdbc.queryForObject(
+                        "SELECT summary FROM concepts WHERE name = ?", String.class, name);
+        jdbc.update(
+                "UPDATE concepts SET status = 'HIDDEN', summary = '관리자가 고친 요약' WHERE name = ?",
+                name);
+
+        String sql =
+                new ClassPathResource("db/migration/R__seed_concepts.sql")
+                        .getContentAsString(StandardCharsets.UTF_8)
+                        .strip();
+        jdbc.execute(sql.endsWith(";") ? sql.substring(0, sql.length() - 1) : sql);
+
+        assertThat(jdbc.queryForMap("SELECT status, summary FROM concepts WHERE name = ?", name))
+                .containsEntry("status", "HIDDEN")
+                .containsEntry("summary", fileSummary);
+    }
+
+    /**
+     * F-13 AC12: AI가 먼저 DRAFT 초안으로 만든 이름이 나중에 시드 파일에 들어오면, 시드 카드로서 파일의 PUBLISHED가 된다. 관리자가 정한
+     * PUBLISHED·HIDDEN만 유지하고 검수 전 초안은 승격한다 (리뷰 권장 반영).
+     */
+    @Test
+    @Transactional
+    void AC12_시드에_새로_들어온_AI_초안_이름은_PUBLISHED_SEED가_된다() throws IOException {
+        String name = "예외 처리와 커스텀 예외";
+        jdbc.update("UPDATE concepts SET status = 'DRAFT', source = 'AI' WHERE name = ?", name);
+
+        String sql =
+                new ClassPathResource("db/migration/R__seed_concepts.sql")
+                        .getContentAsString(StandardCharsets.UTF_8)
+                        .strip();
+        jdbc.execute(sql.endsWith(";") ? sql.substring(0, sql.length() - 1) : sql);
+
+        assertThat(jdbc.queryForMap("SELECT status, source FROM concepts WHERE name = ?", name))
+                .containsEntry("status", "PUBLISHED")
+                .containsEntry("source", "SEED");
     }
 }
