@@ -28,6 +28,8 @@
 | comments | 댓글 | posts 1:N, users 1:N | F-18 |
 | challenges | 학습 챌린지 (기간, 이미지, 목표 유형·값) | users(작성 관리자) 1:N | F-24 |
 | challenge_participants | 챌린지 참여와 달성도 | challenges N:M users | F-25 |
+| teams | 팀 (이름 30자, 소개 200자, 팀장 `owner_id`, 초대 코드 `invite_code` CHAR(8) UNIQUE — I·O·0·1을 뺀 32자에서 생성, 재발급하면 이전 코드는 무효, V8). 팀장이 탈퇴하면 팀을 지운다 | users(팀장) 1:N | F-20a |
+| team_members | 팀 멤버 PK `(team_id, user_id)`, 역할 `OWNER`·`MEMBER`(역할의 정본, 팀당 OWNER 1명·위임 없음), 가입 시각. 팀당 10명·1인 5팀은 서비스가 `teams` 행 잠금 후 센다. 팀 삭제·회원 탈퇴 시 지워진다(FK CASCADE·탈퇴 정리, V8) | teams N:M users | F-20a |
 | llm_usage_logs | LLM 호출 사용량 | users 1:N | NF-07 |
 
 ## 정규화 메모

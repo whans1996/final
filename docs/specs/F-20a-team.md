@@ -237,9 +237,9 @@ CREATE TABLE team_members (
 - [x] FE 구현 (green)
 - [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
 - [x] `docs/conventions.md` 3절 `TEAM` 행·8절 `팀` Tag, `.github/CODEOWNERS`에 `team` 패키지·mapper·FE 폴더·`api/teams.js`·`routes/team.js` (B)
-- [ ] contract-checker 통과
-- [ ] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일)
+- [x] contract-checker 통과
+- [x] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일)
 - [ ] reviewer 지적 사항 반영
-- [ ] 산출물 반영: 화면 설계서 SC-22·SC-23, ERD(`teams`·`team_members`), 요구사항 정의서 F-20 행(F-20a·F-20b)
+- [x] 산출물 반영: 화면 설계서 SC-22·SC-23, ERD(`teams`·`team_members`), 요구사항 정의서 F-20 행(F-20a·F-20b)
 - [ ] PR CI 초록 (공통 파일 `UserWithdrawalService`·`ErrorCode`·conventions 변경 → @whans1996 멘션)
 - [ ] 상태 DONE (PR 머지 후)
