@@ -1,13 +1,13 @@
 # NOW — 김준섭 현재 작업 스냅샷
 
 > 김준섭(B 영역: 카드·소셜) 전용. 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
-갱신: 2026-11-24 07:56 · 작업자: JoonseobKim · PC: js-home · 브랜치: feature/F-20b-team-understanding
+갱신: 2026-11-24 07:59 · 작업자: JoonseobKim · PC: js-home · 브랜치: feature/F-20b-team-understanding
 
 ---
 
 ## 현재 기능
 
-**F-20b** 팀 공동 분석 이해도 (`docs/specs/F-20b-team-understanding.md`, APPROVED 11-24) — **PR #90** 열림 (CI·Codex 대기)
+**F-20b** 팀 공동 분석 이해도 (`docs/specs/F-20b-team-understanding.md`, APPROVED 11-24) — **PR #90** CI 초록·Codex ✅ a01fd24, spec DONE 표시(6a504e5). 머지 대기
 
 ## 진행
 
@@ -18,10 +18,9 @@
 
 ## 바로 다음 할 일
 
-1. Codex 루프: `node scripts/codex-review.mjs 90 --request --wait --status` (run_in_background) → FINDINGS면 spec·보안 위반만 고치고 나머지는 follow-up 이관
-2. CI 확인 `gh pr checks 90`
-3. 사람 확인: 로컬에서 DONE 분석을 팀에 공유해 SC-23 항목·SC-24·SC-08 `?team=` 화면 점검 + SC-24 스크린샷
-4. COMPLETE·CI 초록이면 `docs(F-20b): 완료 표시 (spec DONE)` 커밋 → 머지(사람)
+1. 사람 확인 후 머지: 로컬에서 DONE 분석을 팀에 공유해 SC-23 항목·SC-24(막대·표)·SC-08 `?team=` 화면 점검. 상대 PR이 먼저 머지됐으면 `git merge origin/develop` → push → CI 재확인
+2. 머지 뒤: SC-24 스크린샷을 찍어 `06-화면설계서.md`에 넣기(docs PR 또는 다음 기능 PR), #89(SC-24 제목 projectName) 처리
+3. 다음 기능: F-20c(팀 기간 목표) `/spec`
 
 ## 막힌 점 / 결정 필요
 
