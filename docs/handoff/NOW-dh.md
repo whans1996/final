@@ -4,31 +4,30 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
 
-갱신: 2026-11-23 17:24 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/common-progress-1123
+갱신: 2026-11-23 17:49 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/F-19-analysis-manage
 
 ## 현재 기능
 
-**주간 `/progress` (W1 마감) + 2차 기획 단계 준비**: 진행현황·WBS·간트 갱신, 기획서 Phase 6(6절)·결정로그·`idea` 라벨 (11-23 결정)
+**F-19 분석 관리** spec `docs/specs/F-19-analysis-manage.md` — **APPROVED (김동환 11-23)**, 브랜치 `feature/F-19-analysis-manage` push됨. 구현 시작 전
 
 ## 진행
 
-- ✅ 진행현황: P0 18/21, 남은 P0 F-19·F-24·F-25(모두 A, 재분배 안 함), M1 11/20 달성, 산출물 5/13, follow-up 열림 8·7일 넘음 0
-- ✅ WBS·간트 실적 11/23 기준 (계획 외 2.6 F-00b·3.17 F-20a 추가)
-- ✅ 2차 기획: 기획서 진행 상태 Phase 6 ⬜ + 6절(시작 조건·준비물·트랙 4개·백로그 표), 결정로그 행, GitHub 라벨 `idea` 생성
-- 🟡 push → PR `docs: 진행현황 갱신 (W1)·2차 기획 단계` (@JoonseobKim 멘션), CI 초록이면 사람이 머지
+- ✅ PR #88(progress W1)·#87(#86 하네스) 머지, develop 최신화
+- ✅ spec 초안 AC15개: 수정·공개(DONE만, ANALYSIS_006)·삭제(DONE·FAILED만, 진행 중 409 ANALYSIS_005) + 공개 분석 타인 읽기 전용 열람(6개 GET, 퀴즈·흐름 생성은 주인만) + #60 질문 버튼·#81 status sourceUrl. Flyway 없음
+- ✅ 결정로그 11-23 F-19 행 (AskUserQuestion 4개 답 반영)
 
 ## 바로 다음 할 일
 
-1. progress PR 머지 → `git switch develop && git pull`
-2. 새 세션(Opus/high)에서 `/spec F-19` 분석 관리 (제목·메모 수정, 공개/비공개, soft delete, 기획서 3절 `PATCH·DELETE /api/analyses/{id}`, `/visibility`). 관련 이슈 흡수 후보 #60, #81
+1. (완료) spec 승인 커밋·push
+2. `/clear` 후 새 세션(Opus/high) `/implement F-19` (브랜치 `feature/F-19-analysis-manage`): 먼저 `AnalysisManageApiTest`·`AnalysisPublicViewApiTest` red → `AnalysisMapper.findViewable`·`AnalysisService.checkViewable`. `QuizService`는 건드리지 않는다(F-20b 충돌)
 3. F-24·F-25 학습 챌린지 `/spec`·`/implement`
-4. **P0 21/21 머지 직후 새 세션에서 `/project-interview` → Phase 6 2차 기획** (검증·확장·UI·AI, 기획서 6절 준비물 먼저). F-21은 거기서 다시 판단
-5. 사람: `cd backend && ./gradlew liveTest` (F-05b RepositoryArchiveFetcherLiveTest, DS-02-01)
+4. P0 21/21 머지 직후 새 세션 `/project-interview` → Phase 6 2차 기획 (기획서 6절)
+5. 사람: `cd backend && ./gradlew liveTest` (F-05b RepositoryArchiveFetcherLiveTest)
 
 ## 막힌 점 / 결정 필요
 
-- 사람: 노션 팀원 초대(대시보드 공유 → 김준섭 이메일, 편집 허용), #77 담당(F-08 A·F-13 B 걸침)
-- 아이디어가 떠오르면 `gh issue create --label idea --title "[AI] ..."` (follow-up 라벨 붙이지 않음)
+- spec 9절: 09-데이터셋 "탈퇴 시 분석 삭제" 문구 vs F-03 비활성화만 → 구현 PR에서 follow-up. F-17 첨부 viewable이 주인 탈퇴를 안 봄 → 김준섭에게 알림
+- 사람: 노션 팀원 초대, #77 담당(F-08 A·F-13 B 걸침)
 
 ## 주의
 
