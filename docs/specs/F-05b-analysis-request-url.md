@@ -223,7 +223,7 @@ F-05a 5.3절 문구(ANALYSIS_400·413·415·500)는 그대로다.
 - [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
 - [x] `.env.example`(`GITHUB_TOKEN`), `docs/conventions.md` 3절 에러 코드
 - [x] contract-checker 통과
-- [ ] ui-verifier 통과 (데스크톱·모바일)
+- [x] ui-verifier 통과 (데스크톱·모바일) — SC-05 주소 방식. SC-07 링크는 단위 테스트(8080 BE 옛 빌드)
 - [ ] reviewer 지적 사항 반영 (SSRF·토큰 누출 중점)
 - [ ] 산출물 반영: `06-화면설계서.md` SC-05·SC-07, `01-요구사항정의서` F-05 행 확인, `08-외부API-생성형AI-활용.md`에 GitHub·GitLab 아카이브 API 사용
 - [ ] liveTest 수동 확인 (DS-02-01)
