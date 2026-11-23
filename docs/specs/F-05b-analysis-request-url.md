@@ -215,13 +215,13 @@ F-05a 5.3절 문구(ANALYSIS_400·413·415·500)는 그대로다.
 
 `/implement`가 진행하며 체크한다.
 
-- [ ] 브랜치 `feature/F-05b-analysis-url`
-- [ ] Flyway 마이그레이션 — 없음
-- [ ] AC별 실패 테스트 작성 (red 확인) — BE AC1~12, FE AC13~14
-- [ ] BE 구현 (green) — `RepositoryUrl`, `RepositoryArchiveFetcher`, `AnalysisService`·`AnalysisPipeline.fetch`, `ErrorCode` 3개, 상세 `sourceUrl`
+- [x] 브랜치 `feature/F-05b-analysis-url`
+- [x] Flyway 마이그레이션 — 없음
+- [ ] AC별 실패 테스트 작성 (red 확인) — BE AC1~12 ✅, FE AC13~14
+- [x] BE 구현 (green) — `RepositoryUrl`, `RepositoryArchiveFetcher`, `AnalysisService`·`AnalysisPipeline.fetch`, `ErrorCode` 3개, 상세 `sourceUrl`
 - [ ] FE 구현 (green)
-- [ ] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
-- [ ] `.env.example`(`GITHUB_TOKEN`), `docs/conventions.md` 3절 에러 코드
+- [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
+- [x] `.env.example`(`GITHUB_TOKEN`), `docs/conventions.md` 3절 에러 코드
 - [ ] contract-checker 통과
 - [ ] ui-verifier 통과 (데스크톱·모바일)
 - [ ] reviewer 지적 사항 반영 (SSRF·토큰 누출 중점)

@@ -70,6 +70,19 @@ abstract class AnalysisTestSupport extends IntegrationTestBase {
                 "SELECT MAX(id) FROM analyses WHERE user_id = ?", Long.class, userId);
     }
 
+    /** 막 접수된 저장소 URL 분석 행 (F-05b). sourceUrl은 정규화한 주소로 넣는다. */
+    long insertUrlAnalysis(long userId, String sourceUrl) {
+        jdbc.update(
+                "INSERT INTO analyses (user_id, source_type, source_url, project_name, title,"
+                    + " level, status, created_at) VALUES (?, 'URL', ?, 'repo', 'repo', 'BEGINNER',"
+                    + " 'FETCHING', ?)",
+                userId,
+                sourceUrl,
+                LocalDateTime.now(KST).withNano(0));
+        return jdbc.queryForObject(
+                "SELECT MAX(id) FROM analyses WHERE user_id = ?", Long.class, userId);
+    }
+
     Map<String, Object> analysisRow(long id) {
         return jdbc.queryForMap("SELECT * FROM analyses WHERE id = ?", id);
     }

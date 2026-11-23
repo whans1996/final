@@ -4,7 +4,7 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
 
-갱신: 2026-11-23 15:50 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/F-05b-analysis-url
+갱신: 2026-11-23 15:59 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/F-05b-analysis-url
 
 ## 현재 기능
 
@@ -16,12 +16,15 @@
 - ✅ AC2 형식: `analysis/fetch/RepositoryUrl`(+`InvalidRepositoryUrlException`), `RepositoryUrlTest` 43개 green
 - ✅ AC4~AC10 수집기: `RepositoryArchiveFetcher`·`FetchProperties`, ErrorCode ANALYSIS_004·502·503, yml `analysis.fetch`, `.env.example` GITHUB_TOKEN. `RepositoryArchiveFetcherTest`(가짜 서버 `FakeRepositoryServer`) 23개 green
 - 교훈: 시간 초과로 취소한 작업 스레드가 끊긴 본문을 EOF로 읽고 파일을 남김 → `download()`가 스레드 종료 뒤 실패면 직접 삭제
+- ✅ AC1~3·12 요청 API: `CreateAnalysisRequest.of(file, sourceUrl, level, consent)`, `AnalysisService.request`(requestZip 이름 변경), `Analysis.newUrl`, 상세 `sourceUrl`, openapi.json 갱신. `AnalysisControllerTest` F05b_* 7개
+- ✅ AC4·5·6·11 파이프라인: `AnalysisPipeline.fetch` URL 분기. `AnalysisPipelineTest` F05b_* 5개(static 가짜 서버 + `@DynamicPropertySource`). analysis 패키지 316개 green
+- ✅ `RepositoryArchiveFetcherLiveTest`(@Tag live, DS-02-01 dev) 작성, 아직 실행 안 함. conventions 3절 코드 3개
 
 ## 바로 다음 할 일
 
-1. `AnalysisControllerTest`에 F-05b AC1~3·12 추가 → `CreateAnalysisRequest.of(file, sourceUrl, level, consent)`, `AnalysisService` 입력 종류별 접수, `Analysis.newUrl`, 상세 `sourceUrl`. 기존 AC2 file 없음 문구가 "ZIP 파일을 올리거나 저장소 주소를 입력하세요."로 바뀜
-2. `AnalysisPipelineTest`에 URL 분석(가짜 서버 + `@DynamicPropertySource`) AC4·6·11 → `AnalysisPipeline.fetch` 분기
-3. FE AC13·14
+1. FE AC13: `frontend/src/api/analyses.js` `createAnalysis({file, sourceUrl, level, consent})` + `src/api/__tests__/analyses.spec.js`, `AnalysisRequestView.vue` 방식 라디오·주소 칸 + `src/views/__tests__/AnalysisRequestView.spec.js`
+2. FE AC14: `AnalysisDetailView.vue` "저장소 보기" 링크 + spec 테스트
+3. 마무리: contract-checker, ui-verifier, 산출물(06 SC-05·SC-07, 08 외부API), #24에 "다운로드도 실행기 스레드 최대 60초" 덧글
 
 ## 막힌 점 / 결정 필요
 

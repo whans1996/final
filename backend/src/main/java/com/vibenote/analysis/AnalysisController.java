@@ -34,7 +34,10 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-/** 분석 요청(ZIP), 내 분석 목록, 진행 상태 (F-05a), 상세·파일 조회 (F-06), 개념 조회 (F-08). 수정·삭제·공개는 F-19. */
+/**
+ * 분석 요청(ZIP F-05a·저장소 URL F-05b), 내 분석 목록, 진행 상태 (F-05a), 상세·파일 조회 (F-06), 개념 조회 (F-08). 수정·삭제·공개는
+ * F-19.
+ */
 @Tag(name = "분석", description = "프로젝트 분석 요청, 내 분석 목록, 진행 상태, 분석 결과(개요·파일·개념) 조회")
 @RestController
 @RequestMapping("/api/analyses")
@@ -50,14 +53,16 @@ public class AnalysisController {
     }
 
     @Operation(
-            summary = "분석 요청 (ZIP)",
+            summary = "분석 요청 (ZIP·저장소 URL)",
             description =
-                    "ZIP을 접수하고 바로 202를 준다. 코드 수집·필터·선별은 백그라운드에서 진행되며 상태는 /api/analyses/{id}/status로"
-                            + " 확인한다. 하루(Asia/Seoul) 5회까지이며 FAILED는 세지 않는다.")
+                    "ZIP 파일(file) 또는 공개 GitHub·GitLab(gitlab.com) 저장소 주소(sourceUrl) 중 하나를 접수하고 바로"
+                            + " 202를 준다. 저장소는 기본 브랜치 아카이브를 백그라운드 FETCHING 단계에서 받는다. 코드 수집·필터·선별은"
+                            + " 백그라운드에서 진행되며 상태는 /api/analyses/{id}/status로 확인한다. 하루(Asia/Seoul)"
+                            + " 5회까지(ZIP·URL 합산)이며 FAILED는 세지 않는다.")
     @ApiResponse(responseCode = "202", description = "접수됨")
     @ApiResponse(
             responseCode = "400",
-            description = "검증 실패 (COMMON_400, details.file·consent·level)",
+            description = "검증 실패 (COMMON_400, details.file·sourceUrl·consent·level)",
             content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     @ApiResponse(
             responseCode = "401",
@@ -75,9 +80,20 @@ public class AnalysisController {
     @ResponseStatus(HttpStatus.ACCEPTED)
     public CreateAnalysisResponse create(
             @AuthenticationPrincipal AuthUser user,
-            @Parameter(description = "프로젝트 ZIP (.zip, 10MB 이하)")
+            @Parameter(description = "프로젝트 ZIP (.zip, 10MB 이하). sourceUrl과 둘 중 하나만 보낸다")
                     @RequestPart(value = "file", required = false)
                     MultipartFile file,
+            @Parameter(
+                            description =
+                                    "공개 GitHub·GitLab(gitlab.com) 저장소 주소 (500자 이하, 브랜치·파일 경로 없이)."
+                                            + " file과 둘 중 하나만 보낸다",
+                            schema =
+                                    @Schema(
+                                            type = "string",
+                                            maxLength = 500,
+                                            example = "https://github.com/octo/todo-app"))
+                    @RequestPart(value = "sourceUrl", required = false)
+                    String sourceUrl,
             @Parameter(
                             description = "분석 수준. 생략하면 내 프로필 수준",
                             schema =
@@ -95,8 +111,8 @@ public class AnalysisController {
                                             allowableValues = {"true"}))
                     @RequestPart(value = "consent", required = false)
                     String consent) {
-        return analysisService.requestZip(
-                user.id(), CreateAnalysisRequest.of(file, level, consent));
+        return analysisService.request(
+                user.id(), CreateAnalysisRequest.of(file, sourceUrl, level, consent));
     }
 
     @Operation(summary = "내 분석 목록", description = "삭제하지 않은 내 분석을 요청 시각 최신순으로 준다.")
