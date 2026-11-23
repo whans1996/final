@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 |---|---|
-| 상태 | APPROVED <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
+| 상태 | DONE (PR #83) <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
 | 기능 ID | F-20a (F-20 팀 챌린지의 1/2. 공동 분석 이해도·기간 목표는 F-20b) |
 | 우선순위 | P2 |
 | 영역 오너 | B 김준섭 (카드·소셜) |
@@ -239,7 +239,7 @@ CREATE TABLE team_members (
 - [x] `docs/conventions.md` 3절 `TEAM` 행·8절 `팀` Tag, `.github/CODEOWNERS`에 `team` 패키지·mapper·FE 폴더·`api/teams.js`·`routes/team.js` (B)
 - [x] contract-checker 통과
 - [x] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일)
-- [ ] reviewer 지적 사항 반영
+- [x] reviewer 지적 사항 반영 (반드시 수정 0, 권장 3건 b41b717, Codex P2 1건 → #84)
 - [x] 산출물 반영: 화면 설계서 SC-22·SC-23, ERD(`teams`·`team_members`), 요구사항 정의서 F-20 행(F-20a·F-20b)
-- [ ] PR CI 초록 (공통 파일 `UserWithdrawalService`·`ErrorCode`·conventions 변경 → @whans1996 멘션)
-- [ ] 상태 DONE (PR 머지 후)
+- [x] PR CI 초록 (공통 파일 `UserWithdrawalService`·`ErrorCode`·conventions 변경 → @whans1996 멘션)
+- [x] 상태 DONE (PR #83)
