@@ -1,6 +1,5 @@
 package com.vibenote.common;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -29,12 +28,13 @@ class RequestBodyLimitTest extends IntegrationTestBase {
 
     @Test
     void 한도_안의_큰_본문은_기존처럼_처리된다() throws Exception {
+        // 본문을 끝까지 읽어 서비스에 닿으면 없는 이메일이라 401 AUTH_001이 난다
         mockMvc.perform(
                         post("/api/auth/login")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(loginBody(LIMIT - 1024)))
-                .andExpect(
-                        result -> assertThat(result.getResponse().getStatus()).isNotEqualTo(413));
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("AUTH_001"));
     }
 
     /** 전체 길이가 대략 {@code length} 바이트인 로그인 본문 (비밀번호를 늘린다). */
