@@ -1,7 +1,7 @@
 <script setup>
 // SC-20 관리자 개념 카드 목록 (F-13 AC13). 조건의 정본은 라우트 쿼리(?status=&source=&keyword=&page=)다.
 // status가 없으면 검수 대기(DRAFT) 탭이고, 전체 탭은 status=ALL로 표시해 조회 때는 status를 빼고 보낸다.
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { fetchAdminConceptCounts, fetchAdminConcepts } from '@/api/adminConcepts'
 import { errorMessage } from '@/api/http'
@@ -74,6 +74,10 @@ const emptyMessage = computed(() => {
 })
 
 let lastRequest = 0
+// 화면이 사라지면 남은 요청을 무효로 한다. 늦은 응답이 범위 보정 replace로 다음 화면을 바꾸지 않게 (Codex 리뷰)
+onBeforeUnmount(() => {
+  lastRequest++
+})
 
 // 편집 화면이 history state로 넘긴 성공 안내를 꺼내고 그 항목에서 지운다.
 // 브라우저는 새로고침해도 history.state를 유지하므로 지우지 않으면 F5마다 다시 뜬다.

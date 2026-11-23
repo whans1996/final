@@ -318,4 +318,18 @@ describe('AdminConceptListView (F-13 AC13)', () => {
     expect(wrapper.text()).toContain('불러오는 중')
     expect(wrapper.text()).not.toContain('검수할 초안이 없습니다.')
   })
+
+  it('#76 화면을 떠났다가 같은 목록으로 돌아오면 떠난 화면의 늦은 응답으로 주소를 바꾸지 않는다 (Codex 리뷰)', async () => {
+    let resolve
+    adminApi.fetchAdminConcepts.mockReturnValue(new Promise((r) => (resolve = r)))
+    const { wrapper, router } = await mountList('/admin/concepts?page=3')
+
+    await router.push('/admin/concepts/new')
+    wrapper.unmount()
+    await router.push('/admin/concepts')
+    resolve(page([], { page: 3, total: 40 }))
+    await flushPromises()
+
+    expect(router.currentRoute.value.fullPath).toBe('/admin/concepts')
+  })
 })

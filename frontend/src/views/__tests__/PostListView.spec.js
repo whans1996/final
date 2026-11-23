@@ -170,4 +170,18 @@ describe('PostListView (F-17 AC13·AC14)', () => {
     expect(wrapper.text()).toContain('불러오는 중')
     expect(wrapper.text()).not.toContain('게시글이 없습니다')
   })
+
+  it('#46 화면을 떠났다가 같은 목록으로 돌아오면 떠난 화면의 늦은 응답으로 주소를 바꾸지 않는다 (Codex 리뷰)', async () => {
+    let resolve
+    postsApi.fetchPosts.mockReturnValue(new Promise((r) => (resolve = r)))
+    const { wrapper, router } = await mountList('/community?boardType=QNA&page=7')
+
+    await router.push('/community/42')
+    wrapper.unmount()
+    await router.push('/community?page=9')
+    resolve(page([], { page: 7, total: 25 }))
+    await flushPromises()
+
+    expect(router.currentRoute.value.fullPath).toBe('/community?page=9')
+  })
 })

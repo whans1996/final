@@ -1,6 +1,6 @@
 <script setup>
 // SC-09 개념 카드 목록·검색 (F-09 AC9~AC11). 공개 화면. 조건의 정본은 라우트 쿼리이고 쿼리가 바뀔 때마다 다시 조회한다.
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { fetchConcepts } from '@/api/concepts'
 import { errorMessage } from '@/api/http'
@@ -54,6 +54,10 @@ function toQuery({ keyword, category, difficulty, sort, page }) {
 
 // 조건을 빠르게 바꿀 때 늦게 도착한 이전 요청의 응답은 버린다
 let lastRequest = 0
+// 화면이 사라지면 남은 요청을 무효로 한다. 늦은 응답이 범위 보정 replace로 다음 화면을 바꾸지 않게 (Codex 리뷰)
+onBeforeUnmount(() => {
+  lastRequest++
+})
 
 async function load() {
   const request = ++lastRequest
