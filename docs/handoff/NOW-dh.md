@@ -4,26 +4,29 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
 
-갱신: 2026-11-20 18:01 · 작업자: whans1996@naver.com · PC: dh-home · 브랜치: feature/issue-54-my-branches
+갱신: 2026-11-23 13:19 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/issue-55-json-body-limit
 
 ## 현재 기능
 
-하네스 이슈 **#54** (+ #32 흡수) — 내 다른 PC 브랜치 진행 표시·`/spec` 중복 가드. 브랜치 `feature/issue-54-my-branches`. **PR #70 Codex ✅ 5be8f51** (재리뷰 2회), CI Backend 검증만 진행 중 → 초록이면 사람이 머지
+공통 이슈 **#55** JSON 요청 본문 전역 크기 제한. 브랜치 `feature/issue-55-json-body-limit`. 구현·테스트 green, 커밋 완료 → `/pr-review`
 
 ## 진행
 
-- ✅ 구현(be38ea0): `peer.mjs` `myBranchNows`·`myBranchLines`·`featureOnRemotes`, `latestPeerNow` 원격 브랜치별 비교(#32-1), `developChanges` 절단 제거(#32-2), session-start 섹션, `scripts/branches.mjs`
-- ✅ `/pr-review`: verifier 81/81·`verify.mjs all` 통과. reviewer 반드시 수정 2건(5d1cdb5: #32-1 테스트 squash 재현, 가드 판정 불가 null), 권장 5건 모두 반영(edb0dc2, 사용자 결정: 지금 브랜치·squash 잔여 제외, 3초 상한, 커밋 시각)
-- ✅ PR #70 (Closes #54, #32). Codex 1회차 P2 2건(뒤처진 브랜치의 물려받은 spec 오탐, 브랜치 조회 실패 거짓 ✅) 이 PR에서 수정(5be8f51) → 2회차 COMPLETE
+- ✅ (PR #70 #54·#32 11-20 머지, 이슈 닫힘 확인. 이 PC는 F-14 wip에 멈춰 있어 develop으로 맞춤)
+- ✅ 방식: Jackson (사용자 결정). Boot 4.1 속성 `spring.jackson.factory.constraints.read.max-document-length: 1048576`(application.yml) — 커스터마이저 코드 불필요
+- ✅ `GlobalExceptionHandler.handleNotReadable`: 원인 체인에 `StreamConstraintsException`이면 413 `COMMON_413`, 아니면 400. ErrorCode 추가 없음 (COMMON_413 메시지 "업로드할 수 있는 크기를 넘었습니다."는 그대로)
+- ✅ 테스트: `GlobalExceptionHandlerTest.본문이_Jackson_읽기_한도를_넘으면_413`, `common/RequestBodyLimitTest`(로그인 1MB+1KB → 413, 1MB−1KB → 413 아님). `verify.mjs be` 통과
+- ✅ `docs/conventions.md` 3절 COMMON_413 설명 갱신
 
 ## 바로 다음 할 일
 
-1. `gh pr checks 70`로 CI 초록 확인 → 사람이 GitHub에서 머지 (상대 PR이 먼저 머지되면 `git merge origin/develop` → push 후 CI 재확인). 머지 뒤 `/pickup`이 #54·#32 닫힘 확인
-2. 그 뒤 #55·#17 → F-05b `/spec` (먼저 `node scripts/branches.mjs F-05b`)
+1. `/pr-review` (새 세션 권장) → PR 본문 `Closes #55`, 공통 코드 변경(application.yml·GlobalExceptionHandler·conventions)으로 @JoonseobKim 멘션. 알릴 점: 한도는 Spring 매퍼 전체라 Gemini/Ollama RestClient 응답에도 1MB가 걸림(출력 토큰 한도상 무관)
+2. 그 뒤 #17 (created_at 시간대) → F-05b `/spec` (먼저 `node scripts/branches.mjs F-05b`)
 
 ## 막힌 점 / 결정 필요
 
-- 사람: 이슈 #16, 노션 팀원 초대, 고아 폴더 `../final-harness` 삭제 여부, 하네스 동결 원칙(막거나 거짓 정보 주는 버그만) 결정로그 추가 여부
+- 사람: 이슈 #16, 노션 팀원 초대, 고아 폴더 `../final-harness` 삭제 여부, 하네스 동결 원칙 결정로그 추가 여부, 로컬 옛 브랜치 4개(F-07, F-14, common-notify-per-person, issue-54) 정리 여부
+- COMMON_413 메시지를 "요청 크기가…"로 일반화할지 (지금은 업로드 문구 유지)
 
 ## 주의
 

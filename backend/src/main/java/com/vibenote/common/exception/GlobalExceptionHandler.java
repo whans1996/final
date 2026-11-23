@@ -21,6 +21,7 @@ import org.springframework.web.multipart.MultipartException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
+import tools.jackson.core.exc.StreamConstraintsException;
 
 /** 모든 예외를 {@code {code, message, details}} 형식으로 변환한다. 스택 트레이스는 응답에 넣지 않는다. */
 @RestControllerAdvice
@@ -72,8 +73,18 @@ public class GlobalExceptionHandler {
         return respond(ErrorCode.COMMON_400, details.isEmpty() ? null : details);
     }
 
+    /** 본문을 읽지 못한 경우. Jackson 읽기 한도(본문 1MB 등, application.yml)를 넘었으면 413, 나머지는 400. */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleNotReadable(HttpMessageNotReadableException e) {
+        for (Throwable t = e.getCause(); t != null; t = t.getCause()) {
+            if (t instanceof StreamConstraintsException) {
+                return respond(ErrorCode.COMMON_413, null);
+            }
+        }
+        return respond(ErrorCode.COMMON_400, null);
+    }
+
     @ExceptionHandler({
-        HttpMessageNotReadableException.class,
         MissingServletRequestParameterException.class,
         MissingServletRequestPartException.class,
         MethodArgumentTypeMismatchException.class
