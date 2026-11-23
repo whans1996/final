@@ -481,6 +481,38 @@ class SecretRedactorTest {
     }
 
     @Test
+    void 이슈16_다음_줄_값과_하위_매핑의_짧은_값도_원래_자리에서_가린다() {
+        String yml =
+                String.join(
+                        "\n",
+                        "private-key:",
+                        "  abc1234",
+                        "jwt:",
+                        "  key:",
+                        "    value: abc1234",
+                        "    list:",
+                        "      - \"s1 s2\"",
+                        "signingKey:",
+                        "  ${SIGNING:dflt}",
+                        "other: abc1234");
+
+        assertThat(SecretRedactor.redact("application.yml", yml))
+                .isEqualTo(
+                        String.join(
+                                "\n",
+                                "private-key:",
+                                "  [REDACTED]",
+                                "jwt:",
+                                "  key:",
+                                "    value: [REDACTED]",
+                                "    list:",
+                                "      - \"[REDACTED] [REDACTED]\"",
+                                "signingKey:",
+                                "  ${SIGNING:[REDACTED]}",
+                                "other: abc1234"));
+    }
+
+    @Test
     void 이슈16_key_규칙으로_비밀인_8자_이상_값은_본문_전체에서_가린다() {
         String yml =
                 String.join(

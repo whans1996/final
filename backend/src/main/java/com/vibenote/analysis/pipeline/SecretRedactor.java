@@ -110,18 +110,51 @@ public final class SecretRedactor {
         String lower = path.toLowerCase(Locale.ROOT);
         boolean yaml = lower.endsWith(".yml") || lower.endsWith(".yaml");
         if (yaml || lower.endsWith(".properties")) {
-            Set<String> secrets =
+            ConfigSecretValues.Found found =
                     yaml
                             ? ConfigSecretValues.fromYaml(result)
                             : ConfigSecretValues.fromProperties(result);
+            Set<String> secrets = found.tokens();
             // 이스케이프·줄 이음으로 해석한 값이 원문 글자와 다르면 위치를 찾을 수 없으므로 파일 전체를 가린다
             String source = result;
             if (secrets.stream().anyMatch(secret -> !source.contains(secret))) {
                 return REDACTED;
             }
+            result = redactLocated(result, found.located());
+            if (result == null) {
+                return REDACTED;
+            }
             result = redactEverywhere(redactConfigValues(result, yaml), secrets);
         }
         return result;
+    }
+
+    /** 짧은 토큰을 그 값이 있는 범위 안에서만 가린다 (#16). 범위 안에 토큰이 글자 그대로 없으면 null(파일 전체를 가리라는 뜻). */
+    private static String redactLocated(String content, List<ConfigSecretValues.Located> located) {
+        if (located.isEmpty()) {
+            return content;
+        }
+        StringBuilder result = new StringBuilder(content);
+        // 뒤에서부터 바꿔 앞쪽 범위의 위치가 밀리지 않게 한다. 별칭으로 같은 값이 두 번 잡히면 한 번만 바꾼다
+        List<ConfigSecretValues.Located> sorted =
+                located.stream()
+                        .sorted(
+                                Comparator.comparingInt(ConfigSecretValues.Located::start)
+                                        .reversed())
+                        .toList();
+        int previousStart = Integer.MAX_VALUE;
+        for (ConfigSecretValues.Located value : sorted) {
+            if (value.end() > previousStart) {
+                continue;
+            }
+            String segment = content.substring(value.start(), value.end());
+            if (value.tokens().stream().anyMatch(token -> !segment.contains(token))) {
+                return null;
+            }
+            result.replace(value.start(), value.end(), replaceTokens(segment, value.tokens()));
+            previousStart = value.start();
+        }
+        return result.toString();
     }
 
     /** 파서로 모은 비밀 토큰을 단어 경계 기준으로 본문 전체에서 가린다. 긴 토큰부터 맞춘다. */
@@ -132,6 +165,11 @@ public final class SecretRedactor {
         if (secrets.size() > MAX_SECRET_TOKENS) {
             return REDACTED;
         }
+        return replaceTokens(content, secrets);
+    }
+
+    /** 토큰을 단어 경계 기준으로 가린다. 긴 토큰부터 맞춘다. */
+    private static String replaceTokens(String content, Set<String> secrets) {
         String alternatives =
                 secrets.stream()
                         .sorted(
