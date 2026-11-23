@@ -9,6 +9,11 @@ public record TeamUnderstandingResponse(
         @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "분석 ID", example = "42")
                 long analysisId,
         @Schema(description = "분석 제목 (없으면 null)", example = "spring-realworld") String title,
+        @Schema(
+                        requiredMode = Schema.RequiredMode.REQUIRED,
+                        description = "프로젝트 이름 (제목이 없을 때 대신 보여 준다)",
+                        example = "spring-realworld")
+                String projectName,
         @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "공유한 사람")
                 SharedByResponse sharedBy,
         @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "퀴즈 문항 수", example = "4")

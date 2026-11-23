@@ -196,13 +196,13 @@ CREATE TABLE team_challenges (
 
 `/implement`가 진행하며 체크한다.
 
-- [ ] 브랜치 `feature/F-20c-team-challenge`
-- [ ] Flyway 마이그레이션 (+ `FlywayMigrationTest` 테이블 목록)
-- [ ] AC별 실패 테스트 작성 (red 확인)
-- [ ] BE 구현 (green)
+- [x] 브랜치 `feature/F-20c-team-challenge`
+- [x] Flyway 마이그레이션 (+ `FlywayMigrationTest` 테이블 목록)
+- [x] AC별 실패 테스트 작성 (red 확인)
+- [x] BE 구현 (green)
 - [ ] FE 구현 (green)
-- [ ] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
-- [ ] `docs/conventions.md` 3절 `TEAM` 행에 011~013
+- [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
+- [x] `docs/conventions.md` 3절 `TEAM` 행에 011~013
 - [ ] contract-checker 통과
 - [ ] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일)
 - [ ] reviewer 지적 사항 반영

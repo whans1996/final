@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- F-20c 팀 기간 목표. analyses·quizzes·quiz_attempts 는 읽기만 하고, soft delete된 분석의 목표는 모든 곳에서 거른다 -->
+<mapper namespace="com.vibenote.team.TeamChallengeMapper">
+
+    <select id="isShared" resultType="boolean">
+        SELECT EXISTS (
+            SELECT 1
+            FROM team_analyses ta
+            JOIN analyses a ON a.id = ta.analysis_id AND a.deleted_at IS NULL
+            WHERE ta.team_id = #{teamId} AND ta.analysis_id = #{analysisId}
+        )
+    </select>
+
+    <select id="existsOpen" resultType="boolean">
+        SELECT EXISTS (
+            SELECT 1 FROM team_challenges
+            WHERE team_id = #{teamId} AND analysis_id = #{analysisId} AND end_date &gt;= #{today}
+        )
+    </select>
+
+    <!-- TeamChallengeService.create는 teams FOR UPDATE 뒤에 부른다 -->
+    <select id="countByTeam" resultType="int">
+        SELECT COUNT(*)
+        FROM team_challenges c
+        JOIN analyses a ON a.id = c.analysis_id AND a.deleted_at IS NULL
+        WHERE c.team_id = #{teamId}
+    </select>
+
+    <insert id="insert">
+        INSERT INTO team_challenges (team_id, analysis_id, start_date, end_date, target_rate, created_by, created_at)
+        VALUES (#{teamId}, #{analysisId}, #{startDate}, #{endDate}, #{targetRate}, #{createdBy}, #{createdAt})
+    </insert>
+
+    <sql id="challengeFilter">
+        WHERE c.team_id = #{teamId}
+        <if test="analysisId != null">AND c.analysis_id = #{analysisId}</if>
+        <if test="challengeId != null">AND c.id = #{challengeId}</if>
+    </sql>
+
+    <select id="findChallenges" resultType="com.vibenote.team.domain.TeamChallenge">
+        SELECT c.id, c.analysis_id, a.title, a.project_name, c.start_date, c.end_date, c.target_rate, c.created_at
+        FROM team_challenges c
+        JOIN analyses a ON a.id = c.analysis_id AND a.deleted_at IS NULL
+        <include refid="challengeFilter"/>
+    </select>
+
+    <resultMap id="periodAttempt" type="com.vibenote.team.domain.PeriodAttempt">
+        <constructor>
+            <arg column="challenge_id" javaType="_long"/>
+            <arg column="user_id" javaType="_long"/>
+            <arg column="attempt_id" javaType="_long"/>
+            <arg column="score" javaType="_int"/>
+            <arg column="total" javaType="_int"/>
+            <arg column="created_at" javaType="java.time.LocalDateTime"/>
+        </constructor>
+    </resultMap>
+
+    <!-- 기간 = start_date 00:00 이상, end_date 다음 날 00:00 미만 (DB 세션 시간대 +09:00). 지금 멤버만 -->
+    <select id="findPeriodAttempts" resultMap="periodAttempt">
+        SELECT challenge_id, user_id, attempt_id, score, total, created_at
+        FROM (
+            SELECT c.id AS challenge_id, qa.user_id, qa.id AS attempt_id, qa.score, qa.total, qa.created_at,
+                   ROW_NUMBER() OVER (PARTITION BY c.id, qa.user_id ORDER BY qa.created_at DESC, qa.id DESC) AS rn
+            FROM team_challenges c
+            JOIN analyses a ON a.id = c.analysis_id AND a.deleted_at IS NULL
+            JOIN quizzes z ON z.analysis_id = c.analysis_id
+            JOIN quiz_attempts qa ON qa.quiz_id = z.id
+                 AND qa.created_at &gt;= c.start_date
+                 AND qa.created_at &lt; c.end_date + INTERVAL 1 DAY
+            JOIN team_members tm ON tm.team_id = c.team_id AND tm.user_id = qa.user_id
+            <include refid="challengeFilter"/>
+        ) latest
+        WHERE rn = 1
+    </select>
+
+    <delete id="delete">
+        DELETE c FROM team_challenges c
+        JOIN analyses a ON a.id = c.analysis_id AND a.deleted_at IS NULL
+        WHERE c.team_id = #{teamId} AND c.id = #{challengeId}
+    </delete>
+</mapper>
