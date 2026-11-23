@@ -429,4 +429,40 @@ describe('TeamDetailView 다른 팀으로 이동한 뒤 늦게 온 응답 (#84)'
     await flushPromises()
     expect(member.router.currentRoute.value.fullPath).toBe('/teams/13')
   })
+
+  it('#84 늦게 온 재발급 실패는 새 팀에 에러를 띄우지 않고 새 팀의 동작을 잠그지 않는다', async () => {
+    const regenerate = deferred()
+    teamsApi.regenerateInviteCode.mockReturnValueOnce(regenerate.promise)
+    const { wrapper } = await startThenMove((w) => button(w, 'regenerate').trigger('click'))
+
+    // 새 팀에서 재발급을 시작해 busy인 동안 이전 팀의 실패가 온다
+    const current = deferred()
+    teamsApi.regenerateInviteCode.mockReturnValueOnce(current.promise)
+    await button(wrapper, 'regenerate').trigger('click')
+    regenerate.reject(apiError(403, { code: 'TEAM_403', message: '팀장만 할 수 있습니다.' }))
+    await flushPromises()
+
+    expect(wrapper.find('[data-error="action"]').exists()).toBe(false)
+    expect(button(wrapper, 'edit').attributes('disabled')).toBeDefined()
+    current.resolve({ inviteCode: 'Q9WE2RTY' })
+    await flushPromises()
+    expect(teamsApi.regenerateInviteCode).toHaveBeenLastCalledWith(13)
+    expect(wrapper.find('[data-role="invite-code"]').text()).toBe('Q9WE2RTY')
+    expect(button(wrapper, 'edit').attributes('disabled')).toBeUndefined()
+  })
+
+  it('#84 팀 상세를 떠난 뒤 늦게 끝난 삭제는 내 팀으로 끌고 가지 않는다', async () => {
+    const remove = deferred()
+    teamsApi.deleteTeam.mockReturnValue(remove.promise)
+    teamsApi.fetchTeam.mockResolvedValue(team())
+    const { wrapper, router } = await mountDetail()
+    await button(wrapper, 'delete-team').trigger('click')
+    await router.push('/')
+    wrapper.unmount()
+
+    remove.resolve(undefined)
+    await flushPromises()
+
+    expect(router.currentRoute.value.fullPath).toBe('/')
+  })
 })

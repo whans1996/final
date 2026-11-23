@@ -1,7 +1,7 @@
 <script setup>
 // SC-23 팀 상세 (F-20a AC14·AC15). 멤버만 볼 수 있다 (남의 팀·없는 팀은 404).
 // 팀장: 초대 코드 상자, 수정, 팀 삭제, 팀원 내보내기. 팀원: 팀 탈퇴. 파괴적 동작은 window.confirm으로 확인한다.
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   deleteTeam,
@@ -74,6 +74,11 @@ watch(
   },
   { immediate: true },
 )
+
+// 다른 화면으로 떠난 뒤 늦게 끝난 삭제·탈퇴가 사용자를 /teams로 끌고 가지 않게 한다
+onBeforeUnmount(() => {
+  generation++
+})
 
 /**
  * 확인을 받은 뒤 동작을 실행하고, 실패하면 서버 메시지를 보여 준다.
