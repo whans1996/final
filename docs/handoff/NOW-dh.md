@@ -4,7 +4,7 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
 
-갱신: 2026-11-23 15:41 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/F-05b-analysis-url
+갱신: 2026-11-23 15:50 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/F-05b-analysis-url
 
 ## 현재 기능
 
@@ -12,15 +12,16 @@
 
 ## 진행
 
-- ✅ PR #78(#16) 11-23 머지, #16 닫힘. 로컬 브랜치 삭제, develop 최신
-- ✅ F-05b spec 초안: AC14개(BE 12·FE 2), Flyway 없음, 새 에러 코드 ANALYSIS_004·502·503, 상세 응답 `sourceUrl` 추가
-- ✅ 사용자 결정 4건(기본 브랜치만·뒤 경로 400, 아카이브 30MB, 선택적 `GITHUB_TOKEN`, #24 흡수 안 함) → spec 10절·결정로그 1줄
-- ✅ spec 승인(whans1996 11-23), 브랜치 `feature/F-05b-analysis-url`에 `docs(F-05b): spec 승인` 커밋·push
+- ✅ spec 승인(11-23), 브랜치 `feature/F-05b-analysis-url`
+- ✅ AC2 형식: `analysis/fetch/RepositoryUrl`(+`InvalidRepositoryUrlException`), `RepositoryUrlTest` 43개 green
+- ✅ AC4~AC10 수집기: `RepositoryArchiveFetcher`·`FetchProperties`, ErrorCode ANALYSIS_004·502·503, yml `analysis.fetch`, `.env.example` GITHUB_TOKEN. `RepositoryArchiveFetcherTest`(가짜 서버 `FakeRepositoryServer`) 23개 green
+- 교훈: 시간 초과로 취소한 작업 스레드가 끊긴 본문을 EOF로 읽고 파일을 남김 → `download()`가 스레드 종료 뒤 실패면 직접 삭제
 
 ## 바로 다음 할 일
 
-1. `/clear` 후 `/implement F-05b` (Opus/high): `backend/src/test/java/com/vibenote/analysis/fetch/RepositoryUrlTest`(AC2 허용·거부 주소 표, 정규화, 이름)부터 red → `RepositoryUrl.parse` 구현
-2. 이어서 `RepositoryArchiveFetcherTest`(JDK HttpServer 가짜 서버, AC4~AC10) → `AnalysisControllerTest` AC1~3·12 → `AnalysisPipelineTest` AC4·6·11 → FE AC13·14
+1. `AnalysisControllerTest`에 F-05b AC1~3·12 추가 → `CreateAnalysisRequest.of(file, sourceUrl, level, consent)`, `AnalysisService` 입력 종류별 접수, `Analysis.newUrl`, 상세 `sourceUrl`. 기존 AC2 file 없음 문구가 "ZIP 파일을 올리거나 저장소 주소를 입력하세요."로 바뀜
+2. `AnalysisPipelineTest`에 URL 분석(가짜 서버 + `@DynamicPropertySource`) AC4·6·11 → `AnalysisPipeline.fetch` 분기
+3. FE AC13·14
 
 ## 막힌 점 / 결정 필요
 
