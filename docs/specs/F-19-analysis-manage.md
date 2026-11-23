@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 |---|---|
-| 상태 | APPROVED <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
+| 상태 | DONE (PR #93) <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
 | 기능 ID | F-19 |
 | 우선순위 | P0 |
 | 영역 오너 | A 김동환 (AI·분석·학습 루프) |
@@ -192,5 +192,5 @@
 - [x] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일)
 - [x] reviewer 지적 사항 반영
 - [x] 산출물 반영 (`06-화면설계서.md` SC-06·SC-07, `02-유스케이스.md` UC13 대안 흐름, `01-요구사항정의서.md` F-19 행 "공개 분석 열람")
-- [ ] PR CI 초록 (`Closes #60`, `Closes #81`)
-- [ ] 상태 DONE (PR 머지 후)
+- [x] PR CI 초록 (`Closes #60`, `Closes #81`)
+- [x] 상태 DONE (PR #93)

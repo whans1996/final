@@ -4,25 +4,23 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
 
-갱신: 2026-11-24 08:11 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/F-19-analysis-manage
+갱신: 2026-11-24 08:25 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/F-19-analysis-manage
 
 ## 현재 기능
 
-**F-19 분석 관리** spec `docs/specs/F-19-analysis-manage.md` (APPROVED) — `/pr-review` 중: reviewer 반영·push 완료, PR 생성 사용자 확인 대기
+**F-19 분석 관리** spec `docs/specs/F-19-analysis-manage.md` (DONE 표시) — **PR #93** CI 초록·Codex ✅ 8c11ad2, 머지 대기
 
 ## 진행
 
-- ✅ AC1~AC15 커밋(`b3c00cd`·`0d9a382`·`1c84757`), contract-checker 0건
-- ✅ reviewer 반영 `6c35690`: 진행 중에도 관리 영역(`AnalysisDetailView.vue` `detailStage`), 상세 오류 "다시 시도", 공개 안내 문구 확장, `checkViewable` 일원화. spec AC13·화면설계서·결정로그 11-24. BE 856·FE 579 통과
-- ✅ SC-07-manage 스크린샷을 Chrome으로 재촬영 `b472093` (DONE만, 진행 중은 단위 테스트로 검증)
-- ✅ follow-up #91(탈퇴 시 분석·09-데이터셋 문구, area:A), #92(F-17 첨부 viewable 탈퇴, area:B 김준섭)
-- ✅ PR 설명 완성 `.harness/pr-F-19.md` (스크린샷 8장 포함)
+- ✅ AC1~AC15 + reviewer 반영(`6c35690`), 스크린샷 Chrome 재촬영(`b472093`), follow-up #91·#92
+- ✅ PR #90(F-20b) 먼저 머지 → `git merge origin/develop`(`8c11ad2`), openapi.json 충돌은 `OpenApiExportTest`로 재생성. F-20b SQL이 `deleted_at IS NULL`로 F-19 삭제를 거름 확인. verify all 통과
+- ✅ CI 전부 초록, Codex COMPLETE 8c11ad2 (재리뷰 1회), spec DONE (PR #93) 표시
 
 ## 바로 다음 할 일
 
-1. 사용자 확인 후 `gh pr create --base develop --title "feat(F-19): 분석 수정·공개·삭제와 공개 분석 열람" --body-file .harness/pr-F-19.md`
-2. `gh pr checks` 1회 확인 → `node scripts/codex-review.mjs <PR> --request --wait --status`를 백그라운드로 → Codex 루프 (`/pr-review` 8단계)
-3. 김준섭 PR #90이 먼저 머지되면 머지 전 `git merge origin/develop` → push → CI 재확인
+1. 사람이 GitHub에서 PR #93 머지 (그 전에 develop에 새 머지가 있으면 `git merge origin/develop` → push → CI·Codex 재확인)
+2. 머지 후 `git switch develop && git pull`, #60·#81이 닫혔는지 확인 (안 닫혔으면 `gh issue close <n> --comment "PR #93로 해결"`)
+3. `/clear` 후 새 세션 `/pickup` → 다음 A 영역 P0(F-24·F-25) 중 선택해 `/spec`
 
 ## 막힌 점 / 결정 필요
 
