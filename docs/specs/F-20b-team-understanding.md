@@ -32,7 +32,7 @@
 |---|---|---|---|
 | AC1 | 팀 T의 멤버 U가 자기 `DONE` 분석 A(퀴즈 있음)를 가졌을 때 | `POST /api/teams/{T}/analyses` `{analysisId: A}`를 보내면 | 201과 `{analysisId: A, sharedAt}`을 받고 `team_analyses(T, A)` 한 행이 생긴다. 같은 A를 U가 속한 다른 팀 T2에도 공유할 수 있다 (팀마다 한 행) |
 | AC2 | 팀 T의 멤버 U가 | 공유 요청이 잘못되면 | `analysisId`가 없거나 1 미만 → 400 `COMMON_400`(`details.analysisId`). 없는 분석·**남의 분석**·soft delete된 분석 → 404 `ANALYSIS_404`. 내 분석이지만 `DONE`이 아니거나 퀴즈가 없음(`quizzes` 행 없음) → 409 `TEAM_009` "퀴즈가 있는 완료된 분석만 공유할 수 있습니다.". 이미 T에 공유됨 → 409 `TEAM_007` "이미 팀에 공유한 분석입니다.". T의 공유 분석이 이미 10개(soft delete된 분석은 세지 않음) → 409 `TEAM_008` "팀에 공유할 수 있는 분석은 최대 10개입니다.". 멤버가 아닌 회원은 무엇을 보내든 404 `TEAM_404`. 어느 경우든 행은 생기지 않는다. 상한은 `teams` 행을 `SELECT … FOR UPDATE`로 잠근 뒤 센다 (F-20a 가입과 같은 방식, 동시성 테스트는 범위 밖) |
-| AC3 | T에 A1(U 공유, 11/24)·A2(V 공유, 11/25)·A3(W 공유 후 soft delete)이 있고 U가 A1을 1회, V가 A1을 2회 풀었을 때 | 멤버 U가 `GET /api/teams/{T}/analyses`를 요청하면 | 200과 배열 `[A2, A1]`(`shared_at DESC, analysis id DESC`)을 받고 A3은 없다. 항목은 3절 `TeamAnalysisResponse`(`analysisId, title, projectName, level, sharedBy{userId,nickname}, sharedAt, questionCount, solvedMemberCount, myLastAttempt, canUnshare`)다. A1의 `solvedMemberCount`는 **지금 멤버** 중 풀이가 1건 이상인 사람 수 2, `myLastAttempt`는 U 자신의 가장 최근 풀이(`created_at DESC, id DESC`)의 `{score,total,createdAt}`이고 안 풀었으면 `null`. `canUnshare`는 요청자가 공유한 사람이거나 팀장이면 `true`. 공유가 없으면 `[]`. 멤버가 아니면 404 `TEAM_404` |
+| AC3 | T에 A1(U 공유, 11/24)·A2(V 공유, 11/25)·A3(W 공유 후 soft delete)이 있고 U가 A1을 1회, V가 A1을 2회 풀었을 때 | 멤버 U가 `GET /api/teams/{T}/analyses`를 요청하면 | 200과 배열 `[A2, A1]`(`shared_at DESC, analysis id DESC`)을 받고 A3은 없다. 항목은 3절 `TeamAnalysisResponse`(`analysisId, title, projectName, level, sharedBy{userId,nickname}, sharedAt, questionCount, solvedMemberCount, myLastAttempt, canUnshare`)다. A1의 `solvedMemberCount`는 **지금 멤버** 중 풀이가 1건 이상인 사람 수 2, `myLastAttempt`는 U 자신의 가장 최근 풀이(`created_at DESC, id DESC`)의 `{attemptId,score,total,createdAt}`(F-14 `LastAttemptResponse`)이고 안 풀었으면 `null`. `canUnshare`는 요청자가 공유한 사람이거나 팀장이면 `true`. 공유가 없으면 `[]`. 멤버가 아니면 404 `TEAM_404` |
 | AC4 | T에 V가 공유한 A가 있을 때 | V 또는 팀장 U가 `DELETE /api/teams/{T}/analyses/{A}`를 보내면 / 다른 팀원 W가 보내면 / T에 공유되지 않은 분석 id를 보내면 | 204이고 `team_analyses(T, A)`만 지워진다 (`quiz_attempts`는 그대로) / 403 `TEAM_010` "공유한 사람이나 팀장만 해제할 수 있습니다." / 404 `TEAM_006` "팀에 공유된 분석을 찾을 수 없습니다.". 멤버가 아니면 404 `TEAM_404` |
 | AC5 | T에 U가 공유한 A(퀴즈 Q)가 있고 W가 T의 팀원일 때 | W가 `GET /api/analyses/{A}/quiz` → `POST /api/quizzes/{Q}/attempts`를 보내면 | 조회 200(`lastAttempt`는 **W 자신**의 최근 풀이), 제출 201이고 `quiz_attempts.user_id = W`로 저장되며 W가 틀린 공개 개념은 **W의** 복습 계획(`reason=WRONG`)에 들어간다 (F-14 AC6·AC7 그대로). 판단은 `QuizService`가 "분석 주인이거나 `TeamAnalysisAccess.isSharedWith(userId, analysisId)`"로 한다. 같은 W라도 공유가 해제됐거나 W가 T를 떠났거나 A가 soft delete되면 조회 404 `ANALYSIS_404`·제출 404 `QUIZ_404`(F-14와 같음). T 멤버가 아닌 회원도 같다. **퀴즈 외 분석 API**(`GET /api/analyses/{A}`, `/status`, `/files`, `/files/{fileId}`, `/concepts`, `/flows`)는 W에게 계속 404 `ANALYSIS_404`다 |
 | AC6 | A의 퀴즈가 4문항이고 q1·q2는 개념 C1(→ controller 파일), q3은 C2(→ service 파일), q4는 개념 NULL일 때. T의 멤버 U(팀장)는 처음에 0/4, 그다음 q1·q3만 맞힘(최근), V는 q1·q2·q4 맞힘, W는 안 풂 | 멤버가 `GET /api/teams/{T}/analyses/{A}/understanding`을 요청하면 | 200과 3절 `TeamUnderstandingResponse`. `questionCount` 4, `memberCount` 3, `solvedMemberCount` 2. `modules`는 레이어 순서(`controller, service, mapper, vue, js, config, domain, other`) 중 문항이 있는 것만: `controller {questionCount:2, correctRate:75}`(U 1/2 + V 2/2 = 3/4), `service {1, 50}`, `other {1, 50}`. `correctRate`는 푼 멤버들의 해당 레이어 맞힌 수 합 ÷ 문항 수 합 × 100을 반올림한 정수다. `members`는 F-20a 상세와 같은 순서(팀장 먼저, `joined_at ASC, user id ASC`)이고 U는 `lastAttempt {score:2,total:4}`·`modules [{controller,1,2},{service,1,1},{other,0,1}]`, W는 `lastAttempt null`·`modules []` |
@@ -80,7 +80,7 @@
     "sharedAt": "2026-11-25T14:20:00+09:00",
     "questionCount": 6,
     "solvedMemberCount": 2,
-    "myLastAttempt": { "score": 4, "total": 6, "createdAt": "2026-11-25T15:02:00+09:00" },
+    "myLastAttempt": { "attemptId": 15, "score": 4, "total": 6, "createdAt": "2026-11-25T15:02:00+09:00" },
     "canUnshare": true
   }
 ]
@@ -112,7 +112,7 @@
   "members": [
     {
       "userId": 3, "nickname": "vibecoder", "role": "OWNER",
-      "lastAttempt": { "score": 2, "total": 4, "createdAt": "2026-11-25T15:02:00+09:00" },
+      "lastAttempt": { "attemptId": 16, "score": 2, "total": 4, "createdAt": "2026-11-25T15:02:00+09:00" },
       "modules": [
         { "layer": "controller", "correct": 1, "total": 2 },
         { "layer": "service", "correct": 1, "total": 1 },
@@ -215,9 +215,9 @@ CREATE TABLE team_analyses (
 - [x] FE 구현 (green)
 - [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
 - [x] `docs/conventions.md` 3절 `TEAM` 행에 006~010
-- [ ] contract-checker 통과
+- [x] contract-checker 통과
 - [ ] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일)
 - [ ] reviewer 지적 사항 반영
-- [ ] 산출물 반영: 화면 설계서 SC-23(공유 영역)·SC-24 추가·SC-08(`?team=`), ERD(`team_analyses`), 요구사항 정의서 F-20 행(F-20b·F-20c)
+- [x] 산출물 반영: 화면 설계서 SC-23(공유 영역)·SC-24 추가·SC-08(`?team=`), ERD(`team_analyses`), 요구사항 정의서 F-20 행(F-20b·F-20c)
 - [ ] PR CI 초록 (A 영역 `QuizService`·`QuizMapper`·`QuizView.vue`, 공통 `ErrorCode`·conventions 변경 → @whans1996 멘션)
 - [ ] 상태 DONE (PR 머지 후)
