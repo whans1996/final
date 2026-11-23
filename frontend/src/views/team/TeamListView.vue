@@ -25,8 +25,11 @@ const joining = ref(false)
 const joinFieldError = ref('')
 const joinError = ref('')
 
+// 공백을 먼저 빼고 8자로 자른다. 입력란에 maxlength를 두지 않는 것은 브라우저가 붙여 넣는 순간 공백을 포함해
+// 8자로 잘라 " K7M2QX9P"가 7자 코드가 되기 때문이다 (8자 제한은 이 함수가 맡는다).
 function normalizeCode(value) {
   return String(value ?? '')
+    .replace(/\s+/g, '')
     .toUpperCase()
     .slice(0, INVITE_CODE_LENGTH)
 }
@@ -141,7 +144,6 @@ async function onJoin() {
               type="text"
               autocomplete="off"
               autocapitalize="characters"
-              :maxlength="INVITE_CODE_LENGTH"
               placeholder="예: K7M2QX9P"
               @input="onCodeInput"
             />

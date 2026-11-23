@@ -130,6 +130,12 @@ public class TeamService {
     /**
      * 코드(이미 앞뒤 공백 제거·대문자)로 가입한다 (AC5·AC6). 팀 행을 배타 잠금한 뒤 인원을 세므로 9명인 팀에 둘이 동시에 가입해도 한 명만 들어간다. 이미
      * 멤버면 TEAM_409, 내가 5개 팀에 속했으면 TEAM_003, 팀이 10명이면 TEAM_002 순으로 본다.
+     *
+     * <p><b>잠금보다 앞에 일반 SELECT를 두지 않는다.</b> REPEATABLE READ에서는 트랜잭션의 첫 일반 SELECT가 읽기 시점(read view)을
+     * 정한다. 지금은 두 잠금(users·teams FOR UPDATE) 뒤의 {@code findRole}이 첫 일반 SELECT라 {@code countMembers}가
+     * 앞선 가입이 커밋된 뒤의 인원을 센다. 잠금 앞에 조회를 넣거나 {@code lockActiveMember}를 {@code getActiveMember}로 바꾸면 예전
+     * 스냅샷을 세어 11명이 될 수 있다. {@code COUNT … FOR SHARE}로 바꾸지 않은 것은 탈퇴의 {@code deleteMembershipsOf}가
+     * teams 잠금 없이 team_members를 지우므로 공유 잠금이 늘면 교착 가능성이 생기기 때문이다.
      */
     @Transactional
     public JoinTeamResponse join(long userId, String inviteCode) {

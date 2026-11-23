@@ -26,8 +26,11 @@ class TeamServiceTest extends TeamTestSupport {
     @Autowired Validator validator;
     @Autowired Clock clock;
 
+    /** 생성기가 아직 내주지 않은 코드. 테스트가 정확히 몇 번 뽑았는지 확인한다. */
+    private Deque<String> queue;
+
     private TeamService serviceWith(String... codes) {
-        Deque<String> queue = new ArrayDeque<>(List.of(codes));
+        queue = new ArrayDeque<>(List.of(codes));
         InviteCodeGenerator stub =
                 new InviteCodeGenerator() {
                     @Override
@@ -74,10 +77,13 @@ class TeamServiceTest extends TeamTestSupport {
         long other = insertUser("f20other");
         insertTeam(other, "기존 팀", "DUPL0001", BASE);
         long u = insertUser("f20owner");
-        TeamService service = serviceWith("DUPL0001", "DUPL0001", "DUPL0001", "DUPL0001");
+        // 처음 1회 + 다시 시도 3회 = 정확히 4번 뽑고, 5번째 코드(FRESH005)는 쓰지 않는다
+        TeamService service =
+                serviceWith("DUPL0001", "DUPL0001", "DUPL0001", "DUPL0001", "FRESH005");
 
         assertThatThrownBy(() -> service.create(u, new TeamRequest("새 팀", null)))
                 .isInstanceOf(DuplicateKeyException.class);
+        assertThat(queue).containsExactly("FRESH005");
         assertThat(count("SELECT COUNT(*) FROM teams WHERE owner_id = ?", u)).isZero();
     }
 }

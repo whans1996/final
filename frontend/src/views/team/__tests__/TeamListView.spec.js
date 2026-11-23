@@ -167,9 +167,27 @@ describe('TeamListView 만들기·가입 (F-20a AC13)', () => {
       '200',
     )
     const code = joinForm(wrapper).find('input[name="inviteCode"]')
-    expect(code.attributes('maxlength')).toBe('8')
     await code.setValue('ab12cd')
     expect(code.element.value).toBe('AB12CD')
+    await code.setValue('ab12cd34ef')
+    expect(code.element.value).toBe('AB12CD34')
+  })
+
+  it('AC13 공백이 섞인 코드를 붙여 넣어도 공백을 빼고 8자를 남긴다', async () => {
+    teamsApi.joinTeam.mockResolvedValue({ teamId: 7 })
+    const { wrapper } = await mountList()
+    const code = joinForm(wrapper).find('input[name="inviteCode"]')
+
+    await code.setValue(' k7m2 qx9p ')
+    expect(code.element.value).toBe('K7M2QX9P')
+    await joinForm(wrapper).trigger('submit')
+    await flushPromises()
+    expect(teamsApi.joinTeam).toHaveBeenCalledWith('K7M2QX9P')
+  })
+
+  it('AC13 ?code=에 공백이 섞여 있어도 공백을 빼고 채운다', async () => {
+    const { wrapper } = await mountList('/teams?code=%20k7m2qx9p%20')
+    expect(joinForm(wrapper).find('input[name="inviteCode"]').element.value).toBe('K7M2QX9P')
   })
 
   it('AC13 이름이 공백뿐이거나 코드가 비면 버튼이 비활성이고 요청 중에도 비활성이다', async () => {

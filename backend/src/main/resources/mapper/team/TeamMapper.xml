@@ -32,6 +32,7 @@
         SELECT role FROM team_members WHERE team_id = #{teamId} AND user_id = #{userId}
     </select>
 
+    <!-- 가입(TeamService.join)은 teams FOR UPDATE 뒤에 부르고, 일반 SELECT라 읽기 시점 규칙은 join Javadoc을 따른다 -->
     <select id="countMembers" resultType="int">
         SELECT COUNT(*) FROM team_members WHERE team_id = #{teamId}
     </select>
