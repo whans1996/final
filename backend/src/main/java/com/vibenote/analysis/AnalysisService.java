@@ -68,11 +68,12 @@ public class AnalysisService {
     }
 
     /**
-     * 한도 확인 → 행 INSERT → 임시 파일 저장을 한 트랜잭션으로 하고, 커밋된 뒤 파이프라인이 시작된다 (AnalysisPipelineLauncher). 회원 행을
-     * 잠가 같은 회원의 동시 요청이 한도를 함께 통과하지 못하게 한다.
+     * 한도 확인 → 행 INSERT → (ZIP만) 임시 파일 저장을 한 트랜잭션으로 하고, 커밋된 뒤 파이프라인이 시작된다
+     * (AnalysisPipelineLauncher). 회원 행을 잠가 같은 회원의 동시 요청이 한도를 함께 통과하지 못하게 한다. 저장소 URL은 여기서 외부 요청을 하지
+     * 않고 FETCHING 단계에서 받는다 (F-05b AC1).
      */
     @Transactional
-    public CreateAnalysisResponse requestZip(long userId, CreateAnalysisRequest request) {
+    public CreateAnalysisResponse request(long userId, CreateAnalysisRequest request) {
         User user = userService.lockActiveMember(userId);
         LocalDateTime now = now();
         int limit = properties.dailyLimit();
@@ -85,10 +86,17 @@ public class AnalysisService {
 
         Level level = request.level() != null ? request.level() : user.getLevel();
         Analysis analysis =
-                Analysis.newZip(
-                        userId, projectName(request.file().getOriginalFilename()), level, now);
+                request.repository() != null
+                        ? Analysis.newUrl(userId, request.repository(), level, now)
+                        : Analysis.newZip(
+                                userId,
+                                projectName(request.file().getOriginalFilename()),
+                                level,
+                                now);
         analysisMapper.insert(analysis);
-        tempFiles.save(analysis.getId(), request.file());
+        if (request.file() != null) {
+            tempFiles.save(analysis.getId(), request.file());
+        }
         events.publishEvent(new AnalysisRequestedEvent(analysis.getId()));
         return new CreateAnalysisResponse(analysis.getId(), analysis.getStatus());
     }

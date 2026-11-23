@@ -364,4 +364,196 @@ class AnalysisControllerTest extends AnalysisTestSupport {
                     .andExpect(jsonPath("$.code").value("ANALYSIS_404"));
         }
     }
+
+    // ═════════════ F-05b 저장소 URL (docs/specs/F-05b-analysis-request-url.md) ═════════════
+
+    private static final String GITHUB_URL = "https://github.com/octo/todo-app";
+
+    private long postUrl(long userId, String sourceUrl) throws Exception {
+        MvcResult result =
+                mockMvc.perform(
+                                request(userId)
+                                        .part(part("sourceUrl", sourceUrl))
+                                        .part(part("consent", "true")))
+                        .andExpect(status().isAccepted())
+                        .andExpect(jsonPath("$.analysisId").isNumber())
+                        .andExpect(jsonPath("$.status").value("FETCHING"))
+                        .andReturn();
+        return objectMapper
+                .readTree(result.getResponse().getContentAsString())
+                .get("analysisId")
+                .asLong();
+    }
+
+    private void expectDetail(
+            long me, MockMultipartHttpServletRequestBuilder builder, String field, String message)
+            throws Exception {
+        List<Path> tempFilesBefore = tempFiles();
+        mockMvc.perform(builder)
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON_400"))
+                .andExpect(jsonPath("$.details." + field).value(message));
+        assertThat(countAnalyses(me)).isZero();
+        assertThat(tempFiles()).isEqualTo(tempFilesBefore);
+    }
+
+    @Test
+    void F05b_AC1_저장소_URL을_보내면_202와_analysisId를_받는다() throws Exception {
+        long me = createUser("b1me", "JUNIOR");
+        List<Path> tempFilesBefore = tempFiles();
+
+        long id = postUrl(me, "https://github.com/octo/todo-app.git/");
+
+        Map<String, Object> row = analysisRow(id);
+        assertThat(((Number) row.get("user_id")).longValue()).isEqualTo(me);
+        assertThat(row.get("source_type")).isEqualTo("URL");
+        assertThat(row.get("source_url")).isEqualTo(GITHUB_URL);
+        assertThat(row.get("project_name")).isEqualTo("todo-app");
+        assertThat(row.get("title")).isEqualTo("todo-app");
+        assertThat(row.get("level")).isEqualTo("JUNIOR");
+        assertThat(row.get("status")).isEqualTo("FETCHING");
+        assertThat(((Number) row.get("progress")).intValue()).isZero();
+        assertThat(tempFiles()).isEqualTo(tempFilesBefore);
+        verify(pipeline, timeout(2000).times(1)).run(id);
+    }
+
+    @Test
+    void F05b_AC1_GitLab_주소와_level을_저장한다() throws Exception {
+        long me = createUser("b1gitlab", "BEGINNER");
+
+        MvcResult result =
+                mockMvc.perform(
+                                request(me)
+                                        .part(
+                                                part(
+                                                        "sourceUrl",
+                                                        "https://gitlab.com/group/sub/my-app"))
+                                        .part(part("level", "SENIOR"))
+                                        .part(part("consent", "true")))
+                        .andExpect(status().isAccepted())
+                        .andReturn();
+        long id =
+                objectMapper
+                        .readTree(result.getResponse().getContentAsString())
+                        .get("analysisId")
+                        .asLong();
+
+        Map<String, Object> row = analysisRow(id);
+        assertThat(row.get("source_url")).isEqualTo("https://gitlab.com/group/sub/my-app");
+        assertThat(row.get("project_name")).isEqualTo("my-app");
+        assertThat(row.get("level")).isEqualTo("SENIOR");
+    }
+
+    @Test
+    void F05b_AC2_ZIP과_주소를_둘_다_보내거나_둘_다_없으면_400() throws Exception {
+        long me = createUser("b2both", "JUNIOR");
+
+        expectDetail(
+                me,
+                request(me)
+                        .file(file("todo.zip", sampleZip()))
+                        .part(part("sourceUrl", GITHUB_URL))
+                        .part(part("consent", "true")),
+                "sourceUrl",
+                "ZIP 파일과 저장소 주소 중 하나만 보내세요.");
+        expectDetail(
+                me,
+                request(me).part(part("consent", "true")),
+                "file",
+                "ZIP 파일을 올리거나 저장소 주소를 입력하세요.");
+        verify(pipeline, never()).run(anyLong());
+    }
+
+    @Test
+    void F05b_AC2_규칙을_어긴_주소는_details_sourceUrl() throws Exception {
+        long me = createUser("b2url", "JUNIOR");
+        Map<String, String> cases =
+                Map.of(
+                        "https://lab.ssafy.com/octo/todo-app",
+                        "GitHub(github.com)나 GitLab(gitlab.com)의 공개 저장소만 분석할 수 있습니다.",
+                        "ftp://github.com/octo/todo-app",
+                        "https://로 시작하는 GitHub·GitLab 저장소 주소를 입력하세요.",
+                        "https://github.com/octo/todo-app/tree/dev",
+                        "저장소 주소만 입력하세요. 브랜치·파일 경로(/tree/…, /blob/…)는 지원하지 않습니다.",
+                        "https://github.com/octo/..",
+                        "저장소 주소 형식이 올바르지 않습니다. 예: https://github.com/owner/repo",
+                        "   ",
+                        "저장소 주소를 입력하세요.",
+                        "https://github.com/octo/" + "r".repeat(477),
+                        "저장소 주소는 500자 이하로 입력하세요.");
+
+        for (Map.Entry<String, String> c : cases.entrySet()) {
+            expectDetail(
+                    me,
+                    request(me).part(part("sourceUrl", c.getKey())).part(part("consent", "true")),
+                    "sourceUrl",
+                    c.getValue());
+        }
+        verify(pipeline, never()).run(anyLong());
+    }
+
+    @Test
+    void F05b_AC2_주소_동의_수준_오류를_함께_모은다() throws Exception {
+        long me = createUser("b2all", "JUNIOR");
+
+        mockMvc.perform(
+                        request(me)
+                                .part(part("sourceUrl", "https://octo.github.io/todo-app"))
+                                .part(part("level", "EXPERT")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.details.sourceUrl").isString())
+                .andExpect(jsonPath("$.details.consent").isString())
+                .andExpect(jsonPath("$.details.level").isString())
+                .andExpect(jsonPath("$.details.file").doesNotExist());
+        assertThat(countAnalyses(me)).isZero();
+    }
+
+    @Test
+    void F05b_AC3_한도는_ZIP과_URL을_합쳐_세고_토큰이_없으면_401() throws Exception {
+        long me = createUser("b3limit", "JUNIOR");
+        for (int i = 0; i < 4; i++) {
+            insertAnalysis(me, "DONE", null, false, "zip" + i);
+        }
+        postUrl(me, GITHUB_URL);
+
+        mockMvc.perform(
+                        request(me)
+                                .part(part("sourceUrl", GITHUB_URL))
+                                .part(part("consent", "true")))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(jsonPath("$.code").value("ANALYSIS_429"));
+        mockMvc.perform(
+                        request(me)
+                                .file(file("todo.zip", sampleZip()))
+                                .part(part("consent", "true")))
+                .andExpect(status().isTooManyRequests());
+        assertThat(countAnalyses(me)).isEqualTo(5);
+
+        mockMvc.perform(
+                        multipart(URL)
+                                .part(part("sourceUrl", GITHUB_URL))
+                                .part(part("consent", "true")))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("AUTH_401"));
+    }
+
+    @Test
+    void F05b_AC12_상세에_sourceUrl이_있고_목록_항목은_그대로다() throws Exception {
+        long me = createUser("b12", "JUNIOR");
+        long zipId = insertAnalysis(me, "DONE", null, false, "zip-app");
+        long urlId = postUrl(me, "https://www.github.com/octo/todo-app");
+
+        mockMvc.perform(get(URL + "/{id}", urlId).header(HttpHeaders.AUTHORIZATION, bearer(me)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sourceType").value("URL"))
+                .andExpect(jsonPath("$.sourceUrl").value(GITHUB_URL));
+        mockMvc.perform(get(URL + "/{id}", zipId).header(HttpHeaders.AUTHORIZATION, bearer(me)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sourceType").value("ZIP"))
+                .andExpect(jsonPath("$.sourceUrl").value(nullValue()));
+        mockMvc.perform(get(URL).header(HttpHeaders.AUTHORIZATION, bearer(me)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[0].sourceType").exists())
+                .andExpect(jsonPath("$.items[0].sourceUrl").doesNotExist());
+    }
 }

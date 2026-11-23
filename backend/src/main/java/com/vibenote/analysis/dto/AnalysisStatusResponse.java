@@ -26,10 +26,13 @@ public record AnalysisStatusResponse(
                         example = "ANALYSIS_413",
                         nullable = true,
                         allowableValues = {
+                            "ANALYSIS_004",
                             "ANALYSIS_400",
                             "ANALYSIS_413",
                             "ANALYSIS_415",
                             "ANALYSIS_500",
+                            "ANALYSIS_502",
+                            "ANALYSIS_503",
                             "LLM_502",
                             "LLM_503"
                         })

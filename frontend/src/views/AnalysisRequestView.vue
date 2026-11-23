@@ -1,6 +1,7 @@
 <script setup>
-// SC-05 분석 요청 (F-05a AC14). ZIP과 Gemini 전송 동의를 받아 접수하고, 202면 진행 상태 화면으로 간다.
-import { computed, ref } from 'vue'
+// SC-05 분석 요청 (F-05a AC14, F-05b AC13). ZIP 또는 공개 저장소 주소와 Gemini 전송 동의를 받아 접수하고,
+// 202면 진행 상태 화면으로 간다.
+import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { createAnalysis } from '@/api/analyses'
@@ -14,22 +15,43 @@ const FILE_TOO_LARGE = '10MB 이하의 ZIP 파일만 올릴 수 있습니다.'
 const auth = useAuthStore()
 const router = useRouter()
 
+const SOURCES = [
+  { value: 'ZIP', label: 'ZIP 업로드' },
+  { value: 'URL', label: '저장소 주소' },
+]
+
+const source = ref('ZIP')
 const file = ref(null)
+const sourceUrl = ref('')
 const level = ref(auth.level)
 const consent = ref(false)
 const submitting = ref(false)
 const formError = ref('')
 const fieldErrors = ref({})
 
+const isUrl = computed(() => source.value === 'URL')
+const trimmedUrl = computed(() => sourceUrl.value.trim())
 const fileTooLarge = computed(() => !!file.value && file.value.size > MAX_FILE_BYTES)
 const fileError = computed(() => (fileTooLarge.value ? FILE_TOO_LARGE : fieldErrors.value.file))
-const canSubmit = computed(
-  () => !!file.value && !fileTooLarge.value && consent.value && !submitting.value,
+const hasSource = computed(() =>
+  isUrl.value ? !!trimmedUrl.value : !!file.value && !fileTooLarge.value,
 )
+const canSubmit = computed(() => hasSource.value && consent.value && !submitting.value)
+
+// 방식을 바꾸면 다른 방식의 입력값과 그 필드 오류를 비운다 (ZIP 칸은 v-if로 다시 그려져 선택이 사라진다)
+watch(source, () => {
+  file.value = null
+  sourceUrl.value = ''
+  fieldErrors.value = { ...fieldErrors.value, file: undefined, sourceUrl: undefined }
+})
 
 function onFileChange(event) {
   file.value = event.target.files?.[0] ?? null
   fieldErrors.value = { ...fieldErrors.value, file: undefined }
+}
+
+function onUrlInput() {
+  fieldErrors.value = { ...fieldErrors.value, sourceUrl: undefined }
 }
 
 async function onSubmit() {
@@ -38,11 +60,11 @@ async function onSubmit() {
   fieldErrors.value = {}
   submitting.value = true
   try {
-    const { analysisId } = await createAnalysis({
-      file: file.value,
-      level: level.value,
-      consent: true,
-    })
+    const { analysisId } = await createAnalysis(
+      isUrl.value
+        ? { sourceUrl: trimmedUrl.value, level: level.value, consent: true }
+        : { file: file.value, level: level.value, consent: true },
+    )
     await router.push({ name: 'analysis-detail', params: { id: analysisId } })
   } catch (error) {
     formError.value = errorMessage(error)
@@ -57,13 +79,53 @@ async function onSubmit() {
   <section class="request">
     <h1>분석 요청</h1>
     <p class="hint">
-      AI로 만든 프로젝트를 ZIP으로 올리면 주요 파일을 골라 내 수준에 맞게 설명해 드립니다.
+      AI로 만든 프로젝트를 ZIP으로 올리거나 공개 저장소 주소를 입력하면 주요 파일을 골라 내 수준에
+      맞게 설명해 드립니다.
     </p>
 
     <form class="card" novalidate @submit.prevent="onSubmit">
       <p v-if="formError" class="form-error" role="alert">{{ formError }}</p>
 
-      <label class="field">
+      <fieldset class="sources">
+        <legend>입력 방식</legend>
+        <label
+          v-for="item in SOURCES"
+          :key="item.value"
+          class="source"
+          :class="{ selected: source === item.value }"
+        >
+          <input v-model="source" type="radio" name="source" :value="item.value" />
+          <span>{{ item.label }}</span>
+        </label>
+      </fieldset>
+
+      <label v-if="isUrl" class="field">
+        <span>저장소 주소</span>
+        <input
+          v-model="sourceUrl"
+          name="sourceUrl"
+          type="url"
+          inputmode="url"
+          autocomplete="off"
+          maxlength="500"
+          placeholder="https://github.com/owner/repo"
+          :aria-invalid="!!fieldErrors.sourceUrl"
+          @input="onUrlInput"
+        />
+        <small v-if="fieldErrors.sourceUrl" class="field-error" data-error="sourceUrl">
+          {{ fieldErrors.sourceUrl }}
+        </small>
+        <small class="hint">
+          공개 GitHub·GitLab(gitlab.com) 저장소의 기본 브랜치를 분석합니다. 저장소 주소만
+          입력하세요.
+        </small>
+        <small class="hint">
+          하루 5회 · 지원 스택 Java/Spring/MyBatis/JavaScript/Vue · 코드 파일 200개 · 10MB 이하 ·
+          저장소 아카이브 30MB 이하
+        </small>
+      </label>
+
+      <label v-else class="field">
         <span>프로젝트 ZIP 파일</span>
         <input
           name="file"
@@ -164,6 +226,32 @@ async function onSubmit() {
 .form-error {
   color: var(--color-danger);
   font-weight: 400;
+}
+
+.sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: 0;
+  border: none;
+}
+
+.sources legend {
+  font-weight: 600;
+}
+
+.source {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.source.selected {
+  border-color: var(--color-primary);
 }
 
 .levels {

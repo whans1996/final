@@ -54,6 +54,33 @@ describe('api/analyses (F-05a)', () => {
     expect(calls[0].data.has('level')).toBe(false)
   })
 
+  it('F-05b AC13 file이 없으면 sourceUrl 파트를 보내고 file 파트는 보내지 않는다', async () => {
+    const calls = capture({ analysisId: 57, status: 'FETCHING' })
+
+    await createAnalysis({
+      sourceUrl: 'https://github.com/octo/todo-app',
+      level: 'SENIOR',
+      consent: true,
+    })
+
+    expect(calls[0].method).toBe('post')
+    expect(calls[0].url).toBe('/analyses')
+    const form = calls[0].data
+    expect(form.get('sourceUrl')).toBe('https://github.com/octo/todo-app')
+    expect(form.has('file')).toBe(false)
+    expect(form.get('level')).toBe('SENIOR')
+    expect(form.get('consent')).toBe('true')
+  })
+
+  it('F-05b AC13 file이 있으면 sourceUrl 파트를 보내지 않는다', async () => {
+    const calls = capture({ analysisId: 1, status: 'FETCHING' })
+
+    await createAnalysis({ file: new File(['PK'], 'a.zip'), consent: true })
+
+    expect(calls[0].data.has('file')).toBe(true)
+    expect(calls[0].data.has('sourceUrl')).toBe(false)
+  })
+
   it('AC16 fetchAnalyses는 GET /api/analyses에 page·size 쿼리를 붙인다', async () => {
     const calls = capture({ items: [], page: 2, size: 20, total: 0 })
 

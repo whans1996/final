@@ -63,6 +63,17 @@ analysis:
   max-total-bytes: 10MB
   max-file-bytes: 1MB
   max-selected-files: 30
+  # 공개 저장소 URL 수집 (docs/specs/F-05b-analysis-request-url.md 5.1절). 첫 요청은 아래 API 주소로만 하고,
+  # 리다이렉트는 같은 스킴·포트의 allowed-hosts만 따라간다 (SSRF 방어)
+  fetch:
+    github-api-base: https://api.github.com
+    gitlab-api-base: https://gitlab.com/api/v4
+    allowed-hosts: [api.github.com, codeload.github.com, gitlab.com]
+    github-token: ${GITHUB_TOKEN:}
+    max-archive-bytes: 30MB
+    connect-timeout: 5s
+    timeout: 60s
+    max-redirects: 3
   # EXPLAINING 단계 (docs/specs/F-06-overview-explanation.md 5절): 파일 6개씩 묶어 설명, 프롬프트 입력 길이 상한
   explain:
     batch-size: 6

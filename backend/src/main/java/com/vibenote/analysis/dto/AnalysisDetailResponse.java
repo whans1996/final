@@ -19,6 +19,11 @@ public record AnalysisDetailResponse(
         @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "입력 종류", example = "ZIP")
                 SourceType sourceType,
         @Schema(
+                        description = "저장소 주소(정규화). ZIP 분석이면 null (F-05b AC12)",
+                        example = "https://github.com/octo/todo-app",
+                        nullable = true)
+                String sourceUrl,
+        @Schema(
                         requiredMode = Schema.RequiredMode.REQUIRED,
                         description = "분석 수준",
                         example = "JUNIOR")
@@ -65,6 +70,7 @@ public record AnalysisDetailResponse(
                 a.getTitle(),
                 a.getProjectName(),
                 a.getSourceType(),
+                a.getSourceUrl(),
                 a.getLevel(),
                 a.getStatus(),
                 a.getProgress(),

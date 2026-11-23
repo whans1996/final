@@ -436,3 +436,53 @@ describe('AnalysisDetailView 결과 탭 (F-06 AC13~AC15)', () => {
     expect(wrapper.find('[data-action="start-quiz"]').attributes('href')).toBe('/analyses/42/quiz')
   })
 })
+
+describe('AnalysisDetailView 저장소 링크 (F-05b AC14)', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('AC14 URL 분석이면 제목 근처에 새 탭으로 여는 "저장소 보기" 링크가 있다', async () => {
+    analysesApi.fetchAnalysisStatus.mockResolvedValue(status({ status: 'DONE', progress: 100 }))
+    analysesApi.fetchAnalysis.mockResolvedValue(
+      detail({ sourceType: 'URL', sourceUrl: 'https://github.com/octo/todo-app' }),
+    )
+
+    const { wrapper } = await mountDetail()
+
+    const link = wrapper.find('[data-action="source"]')
+    expect(link.exists()).toBe(true)
+    expect(link.text()).toBe('저장소 보기')
+    expect(link.attributes('href')).toBe('https://github.com/octo/todo-app')
+    expect(link.attributes('target')).toBe('_blank')
+    expect(link.attributes('rel')).toBe('noopener noreferrer')
+  })
+
+  it('AC14 ZIP 분석에는 링크가 없다', async () => {
+    analysesApi.fetchAnalysisStatus.mockResolvedValue(status({ status: 'DONE', progress: 100 }))
+    analysesApi.fetchAnalysis.mockResolvedValue(detail({ sourceUrl: null }))
+
+    const { wrapper } = await mountDetail()
+
+    expect(wrapper.find('h1').text()).toBe('todo-app')
+    expect(wrapper.find('[data-action="source"]').exists()).toBe(false)
+  })
+
+  it('AC14 저장소 수집에 실패하면 errorMessage와 다시 요청하기를 보여 준다', async () => {
+    const message =
+      '저장소를 찾을 수 없습니다. 공개 저장소인지, 주소가 맞는지, 기본 브랜치에 코드가 있는지 확인해 주세요.'
+    analysesApi.fetchAnalysisStatus.mockResolvedValue(
+      status({ status: 'FAILED', progress: 5, errorCode: 'ANALYSIS_004', errorMessage: message }),
+    )
+
+    const { wrapper } = await mountDetail()
+
+    expect(wrapper.find('[data-message="failed"]').text()).toContain(message)
+    expect(wrapper.find('[data-action="retry"]').text()).toBe('다시 요청하기')
+  })
+})
