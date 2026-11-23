@@ -2,14 +2,14 @@
 
 | 항목 | 값 |
 |---|---|
-| 상태 | DRAFT <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
+| 상태 | APPROVED <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
 | 기능 ID | F-20b (F-20 팀 챌린지의 2/3. 팀·초대는 F-20a(DONE), 기간 목표는 F-20c) |
 | 우선순위 | P2 |
 | 영역 오너 | B 김준섭 (카드·소셜) |
 | 관련 필수 요구사항 | ⑫ 확장 (팀 챌린지. 필수 ⑫는 F-14·F-15·F-24·F-25가 충족) |
 | 의존 spec | F-20a 팀(`TeamService`·`team_members`), F-14 퀴즈(`QuizService.getQuiz`·`submit`, `QuizView.vue`), F-08 개념 연결(`analysis_concepts.file_id`), F-06 레이어(`analysis_files.layer`, FE `utils/layers.js`), F-05a 내 분석 목록(`GET /api/analyses`). **A 영역 변경 2곳**: `QuizService`의 조회·제출 권한 판단, `QuizView.vue`의 돌아가기 링크 (PR에서 @whans1996 멘션) |
 | 관련 이슈 | 없음 |
-| 승인 | (승인한 사람, 날짜) |
+| 승인 | 김준섭 2026-11-24 |
 
 ## 1. 목적
 
