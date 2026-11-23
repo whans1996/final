@@ -4,7 +4,7 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
 
-갱신: 2026-11-23 17:10 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/issue-86-sync-union-push
+갱신: 2026-11-23 17:11 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/issue-86-sync-union-push
 
 ## 현재 기능
 
@@ -20,7 +20,7 @@
 
 1. 사람: PR #87 CI 초록 확인 뒤 GitHub에서 머지
 2. 사람: `cd backend && ./gradlew liveTest` (F-05b RepositoryArchiveFetcherLiveTest, DS-02-01)
-3. 진행현황·WBS·간트가 11-19 이후 갱신 안 됨 (11-22 주간 /progress 누락). 김준섭 NOW에 "/progress는 상대 담당" → 누가 돌릴지 사람 확인
+3. **`/progress`는 김동환 담당 (11-23 사용자 결정)**: 새 세션(Sonnet 또는 Opus/medium)에서 `/progress` → develop 기준 별도 docs PR로 진행현황·WBS·간트·README 갱신 (11-19 이후 F-05b·F-20a 등 미반영, 11-22 점검 누락)
 
 ## 막힌 점 / 결정 필요
 
