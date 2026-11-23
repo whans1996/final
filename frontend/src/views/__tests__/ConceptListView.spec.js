@@ -222,4 +222,28 @@ describe('ConceptListView (F-09 AC9~AC11)', () => {
 
     expect(wrapper.find('[role="alert"]').text()).toContain('입력값이 올바르지 않습니다.')
   })
+
+  it('#46 범위를 넘은 page면 마지막 페이지로 바꿔(replace) 다시 조회하고 빈 목록 안내를 보이지 않는다', async () => {
+    conceptsApi.fetchConcepts
+      .mockResolvedValueOnce(page([], { page: 99, total: 41 }))
+      .mockResolvedValue(page([concept()], { page: 3, total: 41 }))
+
+    const { wrapper, router } = await mountList('/concepts?category=vue&page=99')
+
+    expect(router.currentRoute.value.fullPath).toBe('/concepts?category=vue&page=3')
+    expect(lastCall()).toMatchObject({ category: 'vue', page: 3 })
+    expect(wrapper.findAll('.cards li')).toHaveLength(1)
+    expect(wrapper.text()).not.toContain('조건에 맞는 개념 카드가 없습니다')
+    expect(wrapper.text()).toContain('3 / 3')
+  })
+
+  it('#46 결과가 0건이면 page가 커도 다시 조회하지 않고 빈 목록 안내를 보여 준다', async () => {
+    conceptsApi.fetchConcepts.mockResolvedValue(page([], { page: 5, total: 0 }))
+
+    const { wrapper, router } = await mountList('/concepts?keyword=없는말&page=5')
+
+    expect(conceptsApi.fetchConcepts).toHaveBeenCalledTimes(1)
+    expect(router.currentRoute.value.query.page).toBe('5')
+    expect(wrapper.text()).toContain('조건에 맞는 개념 카드가 없습니다')
+  })
 })

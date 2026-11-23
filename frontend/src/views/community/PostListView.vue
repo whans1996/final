@@ -10,6 +10,7 @@ import PostRow from '@/components/community/PostRow.vue'
 import { isBoardType } from '@/components/community/boardTypes'
 import EmptyState from '@/components/common/EmptyState.vue'
 import PageNav from '@/components/common/PageNav.vue'
+import { overflowLastPage } from '@/utils/pagination'
 
 const PAGE_SIZE = 20
 const WRITE_PATH = '/community/write'
@@ -52,19 +53,32 @@ let lastRequest = 0
 
 async function load() {
   const request = ++lastRequest
+  let redirecting = false
   loading.value = true
   loadError.value = ''
   keywordInput.value = conditions.value.keyword
   try {
     const result = await fetchPosts({ ...conditions.value, size: PAGE_SIZE })
     if (request !== lastRequest) return
+    // 범위를 넘은 page면 마지막 page로 주소를 바꾼다. 쿼리 watch가 다시 조회하는 동안 로딩을 유지한다 (#46)
+    const lastPage = overflowLastPage({
+      page: conditions.value.page,
+      size: PAGE_SIZE,
+      total: result.total,
+      itemCount: result.items.length,
+    })
+    if (lastPage) {
+      redirecting = true
+      router.replace({ query: toQuery({ ...conditions.value, page: lastPage }) })
+      return
+    }
     items.value = result.items
     total.value = result.total
   } catch (error) {
     if (request !== lastRequest) return
     loadError.value = errorMessage(error)
   } finally {
-    if (request === lastRequest) loading.value = false
+    if (request === lastRequest && !redirecting) loading.value = false
   }
 }
 

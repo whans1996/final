@@ -129,4 +129,17 @@ describe('PostListView (F-17 AC13·AC14)', () => {
     await flushPromises()
     await vi.waitFor(() => expect(member.router.currentRoute.value.path).toBe('/community/write'))
   })
+
+  it('#46 범위를 넘은 page면 마지막 페이지로 바꿔(replace) 다시 조회하고 빈 목록 안내를 보이지 않는다', async () => {
+    postsApi.fetchPosts
+      .mockResolvedValueOnce(page([], { page: 7, total: 25 }))
+      .mockResolvedValue(page([post()], { page: 2, total: 25 }))
+
+    const { wrapper, router } = await mountList('/community?boardType=QNA&page=7')
+
+    expect(router.currentRoute.value.fullPath).toBe('/community?boardType=QNA&page=2')
+    expect(lastCall()).toMatchObject({ boardType: 'QNA', page: 2 })
+    expect(wrapper.text()).toContain('트랜잭션 질문')
+    expect(wrapper.text()).not.toContain('게시글이 없습니다')
+  })
 })
