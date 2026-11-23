@@ -258,4 +258,21 @@ describe('ConceptListView (F-09 AC9~AC11)', () => {
 
     expect(router.currentRoute.value.fullPath).toBe('/community?page=9')
   })
+
+  it('#46 보정은 push가 아닌 replace로 하고, 다시 조회가 시작될 때까지 불러오는 중을 유지한다', async () => {
+    conceptsApi.fetchConcepts.mockResolvedValueOnce(page([concept()], { total: 41 }))
+    const { wrapper, router } = await mountList('/concepts')
+    // 이동을 멈춰 두고 보정 직후 화면을 본다 (다시 조회 전)
+    const replace = vi.spyOn(router, 'replace').mockResolvedValue(undefined)
+    const push = vi.spyOn(router, 'push')
+    conceptsApi.fetchConcepts.mockResolvedValueOnce(page([], { page: 99, total: 41 }))
+
+    await router.push('/concepts?category=vue&page=99')
+    await flushPromises()
+
+    expect(replace).toHaveBeenCalledWith({ query: { category: 'vue', page: '3' } })
+    expect(push).toHaveBeenCalledTimes(1) // 테스트가 부른 push뿐
+    expect(wrapper.text()).toContain('불러오는 중')
+    expect(wrapper.text()).not.toContain('조건에 맞는 개념 카드가 없습니다')
+  })
 })

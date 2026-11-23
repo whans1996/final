@@ -154,4 +154,20 @@ describe('PostListView (F-17 AC13·AC14)', () => {
 
     expect(router.currentRoute.value.fullPath).toBe('/concepts?page=9')
   })
+
+  it('#46 보정은 push가 아닌 replace로 하고, 다시 조회가 시작될 때까지 불러오는 중을 유지한다', async () => {
+    postsApi.fetchPosts.mockResolvedValueOnce(page([post()], { total: 25 }))
+    const { wrapper, router } = await mountList('/community')
+    const replace = vi.spyOn(router, 'replace').mockResolvedValue(undefined)
+    const push = vi.spyOn(router, 'push')
+    postsApi.fetchPosts.mockResolvedValueOnce(page([], { page: 7, total: 25 }))
+
+    await router.push('/community?boardType=QNA&page=7')
+    await flushPromises()
+
+    expect(replace).toHaveBeenCalledWith({ query: { boardType: 'QNA', page: '2' } })
+    expect(push).toHaveBeenCalledTimes(1)
+    expect(wrapper.text()).toContain('불러오는 중')
+    expect(wrapper.text()).not.toContain('게시글이 없습니다')
+  })
 })

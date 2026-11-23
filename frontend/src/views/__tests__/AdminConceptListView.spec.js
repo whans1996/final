@@ -295,4 +295,27 @@ describe('AdminConceptListView (F-13 AC13)', () => {
 
     expect(router.currentRoute.value.fullPath).toBe('/admin/concepts/new')
   })
+
+  it('#76 보정은 push가 아닌 replace로 하고, 다시 조회가 시작될 때까지 불러오는 중을 유지한다', async () => {
+    const { wrapper, router } = await mountList()
+    const replace = vi.spyOn(router, 'replace').mockResolvedValue(undefined)
+    const push = vi.spyOn(router, 'push')
+    adminApi.fetchAdminConcepts.mockResolvedValueOnce(page([], { page: 3, total: 40 }))
+
+    await router.push({
+      name: 'admin-concepts',
+      query: { page: '3' },
+      state: { notice: '삭제했습니다.' },
+    })
+    await flushPromises()
+
+    expect(replace).toHaveBeenCalledWith({
+      name: 'admin-concepts',
+      query: { page: '2' },
+      state: { notice: '삭제했습니다.' },
+    })
+    expect(push).toHaveBeenCalledTimes(1)
+    expect(wrapper.text()).toContain('불러오는 중')
+    expect(wrapper.text()).not.toContain('검수할 초안이 없습니다.')
+  })
 })
