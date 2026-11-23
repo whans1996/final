@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 |---|---|
-| 상태 | APPROVED <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
+| 상태 | DONE (PR #82) <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
 | 기능 ID | F-05b (F-05를 a·b로 분할. F-05a = ZIP 업로드와 수집·필터·선별 파이프라인, DONE) |
 | 우선순위 | P0 |
 | 영역 오너 | A 김동환 (AI·분석·학습 루프) |
@@ -224,8 +224,8 @@ F-05a 5.3절 문구(ANALYSIS_400·413·415·500)는 그대로다.
 - [x] `.env.example`(`GITHUB_TOKEN`), `docs/conventions.md` 3절 에러 코드
 - [x] contract-checker 통과
 - [x] ui-verifier 통과 (데스크톱·모바일) — SC-05 주소 방식. SC-07 링크는 단위 테스트(8080 BE 옛 빌드)
-- [ ] reviewer 지적 사항 반영 (SSRF·토큰 누출 중점)
-- [ ] 산출물 반영: `06-화면설계서.md` SC-05·SC-07, `01-요구사항정의서` F-05 행 확인, `08-외부API-생성형AI-활용.md`에 GitHub·GitLab 아카이브 API 사용
+- [x] reviewer 지적 사항 반영 (SSRF·토큰 누출 중점) — 상태 errorCode enum, 시간 단언 2.5초, AC14 DONE 조건(#81). Codex P1 토큰 사용 시 공개 확인·P2 정규화 길이
+- [x] 산출물 반영: `06-화면설계서.md` SC-05·SC-07, `01-요구사항정의서` F-05 행 확인, `08-외부API-생성형AI-활용.md`에 GitHub·GitLab 아카이브 API 사용
 - [ ] liveTest 수동 확인 (DS-02-01)
-- [ ] PR CI 초록
-- [ ] 상태 DONE (PR 머지 후)
+- [x] PR CI 초록 (61e6a9c), Codex ✅ 61e6a9c
+- [x] 상태 DONE (PR #82)
