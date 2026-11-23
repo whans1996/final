@@ -71,7 +71,7 @@
 /frontend/src/router/routes/challenge.js     @whans1996
 /frontend/src/router/routes/reviewplan.js    @whans1996
 
-# ── B 김준섭: 팔로우·커뮤니티 (카드 F-09~13은 공통 기반 위 concept 하위 폴더) ──
+# ── B 김준섭: 팔로우·커뮤니티·팀 (카드 F-09~13은 공통 기반 위 concept 하위 폴더) ──
 **/vibenote/follow/                          @JoonseobKim
 **/vibenote/community/                       @JoonseobKim
 /backend/src/main/resources/mapper/follow/   @JoonseobKim
@@ -79,6 +79,12 @@
 /frontend/src/views/community/               @JoonseobKim
 /frontend/src/components/community/          @JoonseobKim
 /frontend/src/router/routes/community.js     @JoonseobKim
+**/vibenote/team/                            @JoonseobKim
+/backend/src/main/resources/mapper/team/     @JoonseobKim
+/frontend/src/views/team/                    @JoonseobKim
+/frontend/src/components/team/               @JoonseobKim
+/frontend/src/api/teams.js                   @JoonseobKim
+/frontend/src/router/routes/team.js          @JoonseobKim
 
 # ── 하네스 (A가 유지보수) ─────────────────────────────────
 /.claude/                                    @whans1996

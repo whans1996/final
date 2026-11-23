@@ -7,6 +7,7 @@ import static org.mockito.Mockito.mock;
 import com.vibenote.auth.AuthService;
 import com.vibenote.common.Level;
 import com.vibenote.follow.FollowService;
+import com.vibenote.team.TeamService;
 import com.vibenote.user.domain.User;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
@@ -19,7 +20,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 class UserWithdrawalServiceTest {
 
     @Test
-    void AC6_회원_행을_먼저_잠근_뒤_토큰과_팔로우를_지운다() {
+    void AC6_회원_행을_먼저_잠근_뒤_토큰과_팔로우와_팀을_지운다() {
         UserService userService = mock(UserService.class);
         User user = User.newMember("user@example.com", "hashed", "코딩초보", Level.BEGINNER);
         user.setId(1L);
@@ -28,13 +29,16 @@ class UserWithdrawalServiceTest {
         given(encoder.matches("vibe1234", "hashed")).willReturn(true);
         AuthService authService = mock(AuthService.class);
         FollowService followService = mock(FollowService.class);
+        TeamService teamService = mock(TeamService.class);
 
-        new UserWithdrawalService(userService, encoder, authService, followService)
+        new UserWithdrawalService(userService, encoder, authService, followService, teamService)
                 .withdraw(1L, "vibe1234");
 
-        InOrder order = inOrder(userService, authService, followService);
+        InOrder order = inOrder(userService, authService, followService, teamService);
         order.verify(userService).markWithdrawn(1L);
         order.verify(authService).revokeAll(1L);
         order.verify(followService).removeAllOf(1L);
+        // F-20a AC10: 팀장인 팀 삭제와 멤버 행 정리도 users 행을 잠근 뒤에 한다
+        order.verify(teamService).removeAllOf(1L);
     }
 }

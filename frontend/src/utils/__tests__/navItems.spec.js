@@ -18,12 +18,13 @@ describe('navItems (F-00b AC8)', () => {
     ])
   })
 
-  it('AC8 로그인하면 대시보드(F-16 AC9)·개념 카드·커뮤니티(F-17 AC13)·피드(F-04 AC11)·분석 요청·내 분석·복습(F-15 AC12)을 본다', () => {
+  it('AC8 로그인하면 대시보드(F-16 AC9)·개념 카드·커뮤니티(F-17 AC13)·피드(F-04 AC11)·팀(F-20a AC12)·분석 요청·내 분석·복습(F-15 AC12)을 본다', () => {
     expect(navItems(routes, user)).toEqual([
       { label: '대시보드', to: '/dashboard' },
       { label: '개념 카드', to: '/concepts' },
       { label: '커뮤니티', to: '/community' },
       { label: '피드', to: '/feed' },
+      { label: '팀', to: '/teams' },
       { label: '분석 요청', to: '/analyses/new' },
       { label: '내 분석', to: '/analyses' },
       { label: '복습', to: '/review-plans' },
@@ -36,6 +37,7 @@ describe('navItems (F-00b AC8)', () => {
       { label: '개념 카드', to: '/concepts' },
       { label: '커뮤니티', to: '/community' },
       { label: '피드', to: '/feed' },
+      { label: '팀', to: '/teams' },
       { label: '분석 요청', to: '/analyses/new' },
       { label: '내 분석', to: '/analyses' },
       { label: '복습', to: '/review-plans' },
