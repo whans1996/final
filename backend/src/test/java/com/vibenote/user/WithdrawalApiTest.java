@@ -203,4 +203,62 @@ class WithdrawalApiTest extends UserTestSupport {
         assertThat(refreshTokenMapper.insert(other, "b".repeat(64), 60)).isEqualTo(1);
         assertThat(count("SELECT COUNT(*) FROM refresh_tokens WHERE user_id = ?", me)).isZero();
     }
+
+    // ── F-20a AC10: 회원 탈퇴 시 팀 정리 ──
+
+    private long team(long ownerId, String code) {
+        long teamId =
+                insert(
+                        "INSERT INTO teams (name, owner_id, invite_code) VALUES ('팀', ?, ?)",
+                        ownerId,
+                        code);
+        teamMember(teamId, ownerId, "OWNER");
+        return teamId;
+    }
+
+    private void teamMember(long teamId, long userId, String role) {
+        jdbc.update(
+                "INSERT INTO team_members (team_id, user_id, role) VALUES (?, ?, ?)",
+                teamId,
+                userId,
+                role);
+    }
+
+    @Test
+    void AC10_F20a_탈퇴하면_팀장인_팀은_삭제되고_멤버_행이_지워진다() throws Exception {
+        long me = createUser("user@example.com", "코딩초보");
+        long v = createUser("v@example.com", "회원브이");
+        long w = createUser("w@example.com", "회원더블유");
+        long t1 = team(me, "WDRW0001");
+        teamMember(t1, v, "MEMBER");
+        long t2 = team(w, "WDRW0002");
+        teamMember(t2, me, "MEMBER");
+        teamMember(t2, v, "MEMBER");
+
+        withdraw(me, "{\"password\":\"" + PASSWORD + "\"}").andExpect(status().isNoContent());
+
+        assertThat(count("SELECT COUNT(*) FROM teams WHERE id = ?", t1)).isZero();
+        assertThat(count("SELECT COUNT(*) FROM team_members WHERE user_id = ?", me)).isZero();
+        assertThat(count("SELECT COUNT(*) FROM team_members WHERE team_id = ?", t2)).isEqualTo(2);
+        mockMvc.perform(get("/api/users/me/teams").header("Authorization", bearer(v)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].id").value(t2))
+                .andExpect(jsonPath("$[0].memberCount").value(2));
+    }
+
+    @Test
+    void AC10_F20a_비밀번호가_틀려_탈퇴에_실패하면_팀과_멤버는_그대로다() throws Exception {
+        long me = createUser("user@example.com", "코딩초보");
+        long v = createUser("v@example.com", "회원브이");
+        long t1 = team(me, "WDRW0001");
+        teamMember(t1, v, "MEMBER");
+
+        withdraw(me, "{\"password\":\"wrong1234\"}")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("USER_001"));
+
+        assertThat(count("SELECT COUNT(*) FROM teams WHERE id = ?", t1)).isEqualTo(1);
+        assertThat(count("SELECT COUNT(*) FROM team_members WHERE team_id = ?", t1)).isEqualTo(2);
+    }
 }

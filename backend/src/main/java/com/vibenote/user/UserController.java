@@ -88,8 +88,8 @@ public class UserController {
     @Operation(
             summary = "회원 탈퇴",
             description =
-                    "현재 비밀번호를 확인한 뒤 비활성화(WITHDRAWN)하고 이메일·닉네임·소개를 마스킹한다. 모든 기기의 Refresh 토큰과 팔로우 관계를"
-                            + " 지우고, 작성한 글·댓글·리뷰와 퀴즈 기록은 남긴다. 같은 이메일로 다시 가입할 수 있다.")
+                    "현재 비밀번호를 확인한 뒤 비활성화(WITHDRAWN)하고 이메일·닉네임·소개를 마스킹한다. 모든 기기의 Refresh 토큰과 팔로우 관계,"
+                        + " 팀 멤버 정보(팀장인 팀은 삭제)를 지우고, 작성한 글·댓글·리뷰와 퀴즈 기록은 남긴다. 같은 이메일로 다시 가입할 수 있다.")
     @ApiResponse(
             responseCode = "204",
             description = "탈퇴 성공",
