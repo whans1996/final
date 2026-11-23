@@ -188,9 +188,9 @@
 - [x] FE 구현 (green)
 - [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
 - [x] `docs/conventions.md` 3절 `ANALYSIS_005`·`ANALYSIS_006`
-- [ ] contract-checker 통과
-- [ ] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일)
+- [x] contract-checker 통과
+- [x] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일)
 - [ ] reviewer 지적 사항 반영
-- [ ] 산출물 반영 (`06-화면설계서.md` SC-06·SC-07, `02-유스케이스.md` UC13 대안 흐름, `01-요구사항정의서.md` F-19 행 "공개 분석 열람")
+- [x] 산출물 반영 (`06-화면설계서.md` SC-06·SC-07, `02-유스케이스.md` UC13 대안 흐름, `01-요구사항정의서.md` F-19 행 "공개 분석 열람")
 - [ ] PR CI 초록 (`Closes #60`, `Closes #81`)
 - [ ] 상태 DONE (PR 머지 후)
