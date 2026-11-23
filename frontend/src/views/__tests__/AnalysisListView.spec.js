@@ -26,6 +26,7 @@ function item(partial) {
     status: 'DONE',
     progress: 100,
     isPublic: false,
+    memo: null,
     createdAt: '2026-11-24T14:20:00+09:00',
     ...partial,
   }
@@ -158,5 +159,42 @@ describe('AnalysisListView (F-05a AC16)', () => {
     await flushPromises()
 
     expect(wrapper.find('header').text()).not.toContain('내 분석')
+  })
+})
+
+describe('AnalysisListView 공개 배지·메모 (F-19 AC15)', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+  })
+
+  it('AC15 공개 분석에 "공개" 배지, 메모가 있으면 첫 줄을 보여 준다', async () => {
+    analysesApi.fetchAnalyses.mockResolvedValue(
+      page([
+        item({ id: 1, isPublic: true, memo: '\nJWT 필터 순서\n둘째 줄' }),
+        item({ id: 2, isPublic: false, memo: null }),
+      ]),
+    )
+
+    const { wrapper } = await mountList()
+
+    const [pub, priv] = wrapper.findAll('[data-analysis-id]')
+    expect(pub.find('[data-badge="public"]').text()).toBe('공개')
+    expect(pub.find('[data-section="memo"]').text()).toBe('JWT 필터 순서')
+    expect(priv.find('[data-badge="public"]').exists()).toBe(false)
+    expect(priv.find('[data-section="memo"]').exists()).toBe(false)
+  })
+
+  it('AC15 제목이 없으면 프로젝트 이름, 그것도 없으면 "제목 없는 분석"을 보여 준다', async () => {
+    analysesApi.fetchAnalyses.mockResolvedValue(
+      page([
+        item({ id: 1, title: null, projectName: 'shop' }),
+        item({ id: 2, title: null, projectName: null }),
+      ]),
+    )
+
+    const { wrapper } = await mountList()
+
+    const titles = wrapper.findAll('.title').map((t) => t.text())
+    expect(titles).toEqual(['shop', '제목 없는 분석'])
   })
 })
