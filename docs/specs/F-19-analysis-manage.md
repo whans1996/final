@@ -181,7 +181,7 @@
 
 `/implement`가 진행하며 체크한다.
 
-- [ ] 브랜치 `feature/F-19-analysis-manage`
+- [x] 브랜치 `feature/F-19-analysis-manage`
 - [ ] Flyway 마이그레이션 (없음)
 - [ ] AC별 실패 테스트 작성 (red 확인)
 - [ ] BE 구현 (green)

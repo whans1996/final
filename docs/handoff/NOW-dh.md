@@ -4,7 +4,7 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
 
-갱신: 2026-11-23 17:49 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/F-19-analysis-manage
+갱신: 2026-11-23 17:50 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/F-19-analysis-manage
 
 ## 현재 기능
 
