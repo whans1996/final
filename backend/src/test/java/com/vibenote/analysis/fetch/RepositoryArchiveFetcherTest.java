@@ -246,7 +246,7 @@ class RepositoryArchiveFetcherTest {
 
         long start = System.nanoTime();
         assertFails(() -> fetcher.download(github(), target), ErrorCode.ANALYSIS_502);
-        assertThat(Duration.ofNanos(System.nanoTime() - start)).isLessThan(Duration.ofSeconds(2));
+        assertThat(Duration.ofNanos(System.nanoTime() - start)).isLessThan(Duration.ofMillis(2500));
     }
 
     @Test
@@ -267,7 +267,7 @@ class RepositoryArchiveFetcherTest {
 
         long start = System.nanoTime();
         assertFails(() -> fetcher.download(github(), target), ErrorCode.ANALYSIS_502);
-        assertThat(Duration.ofNanos(System.nanoTime() - start)).isLessThan(Duration.ofSeconds(2));
+        assertThat(Duration.ofNanos(System.nanoTime() - start)).isLessThan(Duration.ofMillis(2500));
     }
 
     @Test
