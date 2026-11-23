@@ -11,6 +11,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,6 +23,9 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
+import tools.jackson.core.StreamReadConstraints;
+import tools.jackson.core.json.JsonFactory;
+import tools.jackson.databind.json.JsonMapper;
 
 /** 예외가 {@code {code, message, details}} 형식과 올바른 상태 코드로 바뀌는지 확인한다 (Spring 컨텍스트 없이 실행). */
 class GlobalExceptionHandlerTest {
@@ -61,6 +65,32 @@ class GlobalExceptionHandlerTest {
         mockMvc.perform(post("/sample/body").contentType(MediaType.APPLICATION_JSON).content("{"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("COMMON_400"));
+    }
+
+    @Test
+    void 본문이_Jackson_읽기_한도를_넘으면_413() throws Exception {
+        JsonMapper limited =
+                JsonMapper.builder(
+                                JsonFactory.builder()
+                                        .streamReadConstraints(
+                                                StreamReadConstraints.builder()
+                                                        .maxDocumentLength(1000)
+                                                        .build())
+                                        .build())
+                        .build();
+        MockMvc limitedMvc =
+                MockMvcBuilders.standaloneSetup(new SampleController())
+                        .setControllerAdvice(new GlobalExceptionHandler())
+                        .setMessageConverters(new JacksonJsonHttpMessageConverter(limited))
+                        .build();
+
+        limitedMvc
+                .perform(
+                        post("/sample/body")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"name\": \"" + "a".repeat(20_000) + "\"}"))
+                .andExpect(status().isContentTooLarge())
+                .andExpect(jsonPath("$.code").value("COMMON_413"));
     }
 
     @Test
