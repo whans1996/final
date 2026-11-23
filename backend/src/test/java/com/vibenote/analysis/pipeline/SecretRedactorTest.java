@@ -507,9 +507,9 @@ class SecretRedactorTest {
                                 "  key:",
                                 "    value: [REDACTED]",
                                 "    list:",
-                                "      - \"[REDACTED] [REDACTED]\"",
+                                "      - [REDACTED] [REDACTED]",
                                 "signingKey:",
-                                "  ${SIGNING:[REDACTED]}",
+                                "  [REDACTED]",
                                 "other: abc1234"));
     }
 
@@ -535,7 +535,7 @@ class SecretRedactorTest {
     }
 
     @Test
-    void 이슈16_짧은_값이_아주_많아도_선형_시간에_끝나고_상한을_넘으면_파일_전체를_가린다() {
+    void 이슈16_짧은_값이_아주_많아도_선형_시간에_모두_가린다() {
         String yml =
                 "key:\n"
                         + IntStream.range(0, 40_000)
@@ -546,11 +546,27 @@ class SecretRedactorTest {
                 assertTimeoutPreemptively(
                         Duration.ofSeconds(3), () -> SecretRedactor.redact("application.yml", yml));
 
-        assertThat(redacted).isEqualTo("[REDACTED]");
+        assertThat(redacted).doesNotContain("abc").startsWith("key:\n  - [REDACTED]\n");
     }
 
     @Test
-    void 이슈16_값_하나에_짧은_토큰이_아주_많아도_선형_시간에_끝나고_상한을_넘으면_파일_전체를_가린다() {
+    void 이슈16_이스케이프가_앞에_붙은_짧은_값도_가린다() {
+        String yml = "key:\n  value: \"\\tabc1234\"";
+
+        assertThat(SecretRedactor.redact("application.yml", yml)).doesNotContain("abc1234");
+    }
+
+    @Test
+    void 이슈16_짧은_값과_긴_비밀이_한_값에_있어도_긴_비밀이_쪼개져_새지_않는다() {
+        String yml = "key:\n  value: \"abc abc-defghijk\"\nother: abc-defghijk";
+
+        assertThat(SecretRedactor.redact("application.yml", yml))
+                .doesNotContain("defghijk")
+                .contains("other: [REDACTED]");
+    }
+
+    @Test
+    void 이슈16_값_하나에_짧은_토큰이_아주_많아도_선형_시간에_모두_가린다() {
         String yml =
                 "key:\n  value: \""
                         + IntStream.range(0, 40_000)
@@ -562,7 +578,7 @@ class SecretRedactorTest {
                 assertTimeoutPreemptively(
                         Duration.ofSeconds(3), () -> SecretRedactor.redact("application.yml", yml));
 
-        assertThat(redacted).isEqualTo("[REDACTED]");
+        assertThat(redacted).doesNotContain("t00000", "t39999");
     }
 
     @Test

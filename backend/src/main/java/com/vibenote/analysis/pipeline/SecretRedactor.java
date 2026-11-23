@@ -82,6 +82,9 @@ public final class SecretRedactor {
     private static final Pattern KEY_SUFFIX =
             Pattern.compile("(?:^|[-_.])(?i:key)$|[A-Za-z0-9]Key$");
 
+    /** 공백이 아닌 글자 덩어리. 값 범위를 통째로 가릴 때 줄바꿈·들여쓰기를 남긴다. */
+    private static final Pattern NON_SPACE = Pattern.compile("\\S+");
+
     /** key 규칙({@link #endsWithKeyWord})으로만 비밀인 값 중 본문 전체에서 가릴 토큰의 최소 길이. */
     static final int MIN_KEY_SUFFIX_TOKEN = 8;
 
@@ -121,9 +124,6 @@ public final class SecretRedactor {
                 return REDACTED;
             }
             result = redactLocated(result, found.located());
-            if (result == null) {
-                return REDACTED;
-            }
             result = redactEverywhere(redactConfigValues(result, yaml), secrets);
             // 이스케이프·줄 이음으로 쓴 properties 키는 1차가 못 알아본다. 짧은 key 규칙 값이 남았으면 파일 전체를 가린다
             if (!yaml && ConfigSecretValues.hasShortSuffixSecrets(result)) {
@@ -134,16 +134,12 @@ public final class SecretRedactor {
     }
 
     /**
-     * 짧은 토큰을 그 값이 있는 범위 안에서만 가린다 (#16). 범위 안에 토큰이 글자 그대로 없거나 토큰이 모두 {@link #MAX_SECRET_TOKENS}개를
-     * 넘으면 null(파일 전체를 가리라는 뜻).
+     * 짧은 key 규칙 값이 든 YAML 값의 범위를 통째로 가린다 (#16). 공백·줄바꿈만 남기고 나머지 글자 덩어리를 모두 바꾼다. 토큰을 단어 경계로 골라 바꾸면
+     * 이스케이프({@code "\tabc"})나 긴 비밀의 일부({@code abc-defghijk})에서 경계가 어긋나 새므로 범위 전체를 본다 (Codex 리뷰).
      */
     private static String redactLocated(String content, List<ConfigSecretValues.Located> located) {
         if (located.isEmpty()) {
             return content;
-        }
-        // 범위 수가 아니라 토큰 수로 센다. 값 하나에 토큰이 수만 개여도 상한을 넘지 못하게 (Codex 리뷰)
-        if (located.stream().mapToInt(value -> value.tokens().size()).sum() > MAX_SECRET_TOKENS) {
-            return null;
         }
         // 앞에서부터 한 번 훑어 이어 붙인다. 별칭으로 같은 값이 두 번 잡히면(겹치는 범위) 한 번만 바꾼다
         List<ConfigSecretValues.Located> sorted =
@@ -157,11 +153,11 @@ public final class SecretRedactor {
                 continue;
             }
             String segment = content.substring(value.start(), value.end());
-            if (value.tokens().stream().anyMatch(token -> !segment.contains(token))) {
-                return null;
-            }
             result.append(content, copied, value.start())
-                    .append(replaceTokens(segment, value.tokens()));
+                    .append(
+                            NON_SPACE
+                                    .matcher(segment)
+                                    .replaceAll(Matcher.quoteReplacement(REDACTED)));
             copied = value.end();
         }
         return result.append(content, copied, content.length()).toString();

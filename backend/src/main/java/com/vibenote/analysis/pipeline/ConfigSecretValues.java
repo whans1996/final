@@ -27,8 +27,8 @@ import org.yaml.snakeyaml.nodes.Tag;
  *
  * <p>값은 공백 단위 토큰으로 나눈다 (여러 줄 값은 본문에 그대로 나타나지 않으므로). 기본값 없는 {@code ${NAME}}은 빼고 {@code ${NAME:기본값}}은
  * 기본값만 넣는다. 숫자·불리언은 넣지 않는다 ({@code token-validity: 86400} 때문에 같은 숫자가 파일 전체에서 가려지지 않게). key 규칙으로만
- * 비밀인 키 아래의 {@link SecretRedactor#MIN_KEY_SUFFIX_TOKEN}자 미만 토큰은 본문 전체가 아니라 YAML 값이 있는 자리({@link
- * Located})에서만 가린다 (#16).
+ * 비밀인 키 아래 값에 {@link SecretRedactor#MIN_KEY_SUFFIX_TOKEN}자 미만 토큰이 있으면 그 값은 본문 전체가 아니라 YAML 값이 있는
+ * 범위({@link Located})를 통째로 가린다 (#16).
  */
 final class ConfigSecretValues {
 
@@ -39,11 +39,11 @@ final class ConfigSecretValues {
         KEYWORD
     }
 
-    /** 2차 마스킹 대상. tokens는 본문 전체에서, located는 그 범위 안에서만 가린다. */
+    /** 2차 마스킹 대상. tokens는 본문 전체에서 가리고, located는 범위를 통째로 가린다. */
     record Found(Set<String> tokens, List<Located> located) {}
 
-    /** 본문 [start, end) 범위(YAML 값 하나)에서만 가릴 토큰. */
-    record Located(int start, int end, Set<String> tokens) {}
+    /** 통째로 가릴 본문 [start, end) 범위 (YAML 값 하나). */
+    record Located(int start, int end) {}
 
     private ConfigSecretValues() {}
 
@@ -185,8 +185,7 @@ final class ConfigSecretValues {
                     located.add(
                             new Located(
                                     charIndex(scalar.getStartMark().getIndex()),
-                                    charIndex(scalar.getEndMark().getIndex()),
-                                    local));
+                                    charIndex(scalar.getEndMark().getIndex())));
                 }
             }
         }
