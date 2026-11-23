@@ -4,29 +4,27 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
 
-갱신: 2026-11-23 15:30 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/issue-16-secret-key-suffix
+갱신: 2026-11-23 15:41 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/F-05b-analysis-url
 
 ## 현재 기능
 
-내 영역 이슈 **#16** 설정 마스킹에서 `key`로 끝나는 키도 가림 (사용자 11-23 추천안 승인). 같은 브랜치에 결정로그 "하네스 동결" 한 줄 (사용자 승인)
+**F-05b** 분석 요청 — 공개 저장소 URL 수집 (`docs/specs/F-05b-analysis-request-url.md`, **APPROVED 11-23**)
 
 ## 진행
 
-- ✅ PR #74(#17)·PR #80(하네스 codex-review 지적 커밋 뒤 문서만 변경 → FINDINGS) 11-23 머지. 머지된 로컬 브랜치 25개 삭제(`git branch -d`)
-- ✅ `SecretRedactorTest`에 `이슈16_key로_끝나는_설정_키의_값을_가린다`(red 확인)·`이슈16_비밀이_아닌_key_설정과_key로_끝나는_일반_단어는_그대로_둔다` 추가
-- ✅ `SecretRedactor.isSecretKey`: 키워드에 `privatekey`·`accesskey` 추가, `KEY_SUFFIX`(단어 경계 기준, camelCase 포함) + 예외 `NON_SECRET_KEY_NAMES`(cache·routing·partition·sort·foreign·public key) → 파이프라인 테스트 green
-- ✅ F-05a spec 5.2절 규칙·10절 결정 반영, 결정로그 2줄(#16, 하네스 동결)
-- ✅ 커밋 `fix(F-05a): #16 …` (be 652 통과), `/pr-review`: verify all 통과, reviewer 반드시 수정 2건 반영(예외에서 primary-key 제외: Azure 계정 키 / 1차 마스킹 YAML 따옴표 키) + 테스트 `이슈16_해석할_수_없는_yml에서도_따옴표_키의_key_규칙을_적용한다`
-- ✅ 권장 반영(사용자 승인): key 규칙으로만 비밀인 값은 2차 전역 치환 8자 이상만(`ConfigSecretValues.Context` PLAIN·KEY_SUFFIX·KEYWORD, `SecretRedactor.MIN_KEY_SUFFIX_TOKEN`), `JWTKey` 형태, 2차 경로 테스트 6개
+- ✅ PR #78(#16) 11-23 머지, #16 닫힘. 로컬 브랜치 삭제, develop 최신
+- ✅ F-05b spec 초안: AC14개(BE 12·FE 2), Flyway 없음, 새 에러 코드 ANALYSIS_004·502·503, 상세 응답 `sourceUrl` 추가
+- ✅ 사용자 결정 4건(기본 브랜치만·뒤 경로 400, 아카이브 30MB, 선택적 `GITHUB_TOKEN`, #24 흡수 안 함) → spec 10절·결정로그 1줄
+- ✅ spec 승인(whans1996 11-23), 브랜치 `feature/F-05b-analysis-url`에 `docs(F-05b): spec 승인` 커밋·push
 
 ## 바로 다음 할 일
 
-1. **PR #78** (Closes #16) **Codex ✅ 3fc5895** (재리뷰 6회, 6회째는 사용자 승인). develop(#79) 합쳐 push → `gh pr checks 78` 초록이면 사람이 GitHub에서 머지, 머지 뒤 #16 닫힘 확인
-2. 머지 뒤 F-05b `/spec` (`branches.mjs F-05b` ✅ 중복 없음 확인됨)
+1. `/clear` 후 `/implement F-05b` (Opus/high): `backend/src/test/java/com/vibenote/analysis/fetch/RepositoryUrlTest`(AC2 허용·거부 주소 표, 정규화, 이름)부터 red → `RepositoryUrl.parse` 구현
+2. 이어서 `RepositoryArchiveFetcherTest`(JDK HttpServer 가짜 서버, AC4~AC10) → `AnalysisControllerTest` AC1~3·12 → `AnalysisPipelineTest` AC4·6·11 → FE AC13·14
 
 ## 막힌 점 / 결정 필요
 
-- 사람: 노션 팀원 초대(대시보드 공유 → 김준섭 이메일, 편집 허용). `../final-harness`는 11-23 삭제함
+- 사람: 노션 팀원 초대(대시보드 공유 → 김준섭 이메일, 편집 허용)
 - 남은 로컬 브랜치 `feature/F-00-session-ops`·`feature/F-03-wrapup`은 develop 미머지라 `-d`로 안 지워짐 (그대로 둠)
 
 ## 주의
