@@ -253,4 +253,83 @@ describe('AdminConceptListView (F-13 AC13)', () => {
     await flushPromises()
     expect(reloaded.wrapper.find('[role="status"]').exists()).toBe(false)
   })
+
+  it('#76 마지막 페이지의 카드를 처리하고 돌아와 page가 범위를 넘으면 마지막 페이지로 바꾸고 안내를 유지한다', async () => {
+    const { wrapper, router } = await mountList()
+    adminApi.fetchAdminConcepts
+      .mockResolvedValueOnce(page([], { page: 3, total: 40 }))
+      .mockResolvedValue(page([concept()], { page: 2, total: 40 }))
+
+    await router.push({
+      name: 'admin-concepts',
+      query: { page: '3' },
+      state: { notice: '공개했습니다.' },
+    })
+    await flushPromises()
+
+    expect(router.currentRoute.value.fullPath).toBe('/admin/concepts?page=2')
+    expect(lastCall()).toMatchObject({ status: 'DRAFT', page: 2 })
+    expect(wrapper.findAll('tbody tr')).toHaveLength(1)
+    expect(wrapper.find('[role="status"]').text()).toBe('공개했습니다.')
+    expect(router.options.history.state.notice).toBeFalsy()
+  })
+
+  it('#76 결과가 0건이면 page가 커도 다시 조회하지 않고 빈 목록 안내를 보여 준다', async () => {
+    adminApi.fetchAdminConcepts.mockResolvedValue(page([], { page: 2, total: 0 }))
+
+    const { wrapper, router } = await mountList('/admin/concepts?page=2')
+
+    expect(adminApi.fetchAdminConcepts).toHaveBeenCalledTimes(1)
+    expect(router.currentRoute.value.query.page).toBe('2')
+    expect(wrapper.text()).toContain('검수할 초안이 없습니다.')
+  })
+
+  it('#76 응답 전에 다른 화면으로 떠나면 늦게 온 범위 초과 응답으로 목록에 끌려오지 않는다', async () => {
+    let resolve
+    adminApi.fetchAdminConcepts.mockReturnValue(new Promise((r) => (resolve = r)))
+    const { router } = await mountList('/admin/concepts?page=3')
+
+    await router.push('/admin/concepts/new')
+    resolve(page([], { page: 3, total: 40 }))
+    await flushPromises()
+
+    expect(router.currentRoute.value.fullPath).toBe('/admin/concepts/new')
+  })
+
+  it('#76 보정은 push가 아닌 replace로 하고, 다시 조회가 시작될 때까지 불러오는 중을 유지한다', async () => {
+    const { wrapper, router } = await mountList()
+    const replace = vi.spyOn(router, 'replace').mockResolvedValue(undefined)
+    const push = vi.spyOn(router, 'push')
+    adminApi.fetchAdminConcepts.mockResolvedValueOnce(page([], { page: 3, total: 40 }))
+
+    await router.push({
+      name: 'admin-concepts',
+      query: { page: '3' },
+      state: { notice: '삭제했습니다.' },
+    })
+    await flushPromises()
+
+    expect(replace).toHaveBeenCalledWith({
+      name: 'admin-concepts',
+      query: { page: '2' },
+      state: { notice: '삭제했습니다.' },
+    })
+    expect(push).toHaveBeenCalledTimes(1)
+    expect(wrapper.text()).toContain('불러오는 중')
+    expect(wrapper.text()).not.toContain('검수할 초안이 없습니다.')
+  })
+
+  it('#76 화면을 떠났다가 같은 목록으로 돌아오면 떠난 화면의 늦은 응답으로 주소를 바꾸지 않는다 (Codex 리뷰)', async () => {
+    let resolve
+    adminApi.fetchAdminConcepts.mockReturnValue(new Promise((r) => (resolve = r)))
+    const { wrapper, router } = await mountList('/admin/concepts?page=3')
+
+    await router.push('/admin/concepts/new')
+    wrapper.unmount()
+    await router.push('/admin/concepts')
+    resolve(page([], { page: 3, total: 40 }))
+    await flushPromises()
+
+    expect(router.currentRoute.value.fullPath).toBe('/admin/concepts')
+  })
 })

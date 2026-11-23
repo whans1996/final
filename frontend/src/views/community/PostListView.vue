@@ -1,6 +1,6 @@
 <script setup>
 // SC-14 커뮤니티 글 목록 (F-17 AC13·AC14). 공개 화면. 조건의 정본은 라우트 쿼리이고 쿼리가 바뀔 때마다 다시 조회한다.
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { fetchPosts } from '@/api/posts'
 import { errorMessage } from '@/api/http'
@@ -10,6 +10,7 @@ import PostRow from '@/components/community/PostRow.vue'
 import { isBoardType } from '@/components/community/boardTypes'
 import EmptyState from '@/components/common/EmptyState.vue'
 import PageNav from '@/components/common/PageNav.vue'
+import { overflowLastPage } from '@/utils/pagination'
 
 const PAGE_SIZE = 20
 const WRITE_PATH = '/community/write'
@@ -49,22 +50,40 @@ function toQuery({ boardType, keyword, page }) {
 
 // 조건을 빠르게 바꿀 때 늦게 도착한 이전 요청의 응답은 버린다
 let lastRequest = 0
+// 화면이 사라지면 남은 요청을 무효로 한다. 늦은 응답이 범위 보정 replace로 다음 화면을 바꾸지 않게 (Codex 리뷰)
+onBeforeUnmount(() => {
+  lastRequest++
+})
 
 async function load() {
   const request = ++lastRequest
+  let redirecting = false
   loading.value = true
   loadError.value = ''
   keywordInput.value = conditions.value.keyword
   try {
     const result = await fetchPosts({ ...conditions.value, size: PAGE_SIZE })
     if (request !== lastRequest) return
+    // 범위를 넘은 page면 마지막 page로 주소를 바꾼다. 쿼리 watch가 다시 조회하는 동안 로딩을 유지한다 (#46)
+    const lastPage = overflowLastPage({
+      page: conditions.value.page,
+      size: PAGE_SIZE,
+      total: result.total,
+      itemCount: result.items.length,
+    })
+    // 응답 전에 다른 화면으로 떠났으면 주소를 바꾸지 않는다 (늦게 온 응답이 탐색을 일으키지 않게)
+    if (lastPage && route.name === 'community') {
+      redirecting = true
+      router.replace({ query: toQuery({ ...conditions.value, page: lastPage }) })
+      return
+    }
     items.value = result.items
     total.value = result.total
   } catch (error) {
     if (request !== lastRequest) return
     loadError.value = errorMessage(error)
   } finally {
-    if (request === lastRequest) loading.value = false
+    if (request === lastRequest && !redirecting) loading.value = false
   }
 }
 

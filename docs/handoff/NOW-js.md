@@ -1,26 +1,26 @@
 # NOW — 김준섭 현재 작업 스냅샷
 
 > 김준섭(B 영역: 카드·소셜) 전용. 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
-갱신: 2026-11-23 14:33 · 작업자: JoonseobKim · PC: js-home · 브랜치: feature/F-13-admin-concepts
+갱신: 2026-11-23 15:21 · 작업자: JoonseobKim · PC: js-home · 브랜치: feature/issue-76-page-overflow
 
 ---
 
 ## 현재 기능
 
-F-13 관리자 카드 관리 — **PR #75 열림** (spec `docs/specs/F-13-admin-concepts.md`, `Closes #51`, @whans1996 멘션). /pr-review 점검 끝: verify all 통과, reviewer 반드시 수정 0·권장 3건 반영(a95c115), contract-checker 실질 불일치 0. **Codex ✅ 0fa0038 (P2 2건 → #76, #77)**. **CI 초록**, spec DONE 표시 완료. 남은 것: GitHub에서 머지
+follow-up 이슈 **#46 + #76** 범위를 넘은 page 보정 (F-09·F-17·F-13 목록, FE만, API 변경 없음). **PR #79 열림** (Closes #46, #76, @whans1996 멘션). /pr-review: verify all 통과, reviewer 반드시 수정 1(늦은 응답 replace → ea9620e)·권장 2(4d76e27) 반영, contract-checker 생략(API 없음). Codex P2 1건(떠난 화면 인스턴스의 늦은 응답) 사용자 승인으로 이번 PR에서 반영(6c5ded2, onBeforeUnmount lastRequest++). **Codex ✅ 6c5ded2 · CI 초록** → GitHub에서 머지만 남음 내 영역 P0 기능(F-01~04, F-09~13, F-17, F-18)은 전부 DONE, F-13 PR #75 머지·#51 닫힘
 
 ## 진행
 
-- ✅ BE AC1~AC12 (V7 `concept_source_admin`, ErrorCode `CONCEPT_002`·`003`, `R__seed_concepts.sql` status 보존)
-- ✅ FE AC13 목록(b832207), AC14·AC15 편집(5339550) + contract-checker 지적 2건(저장·삭제 중 404 → 없는 카드 안내, 폼에 없는 details 키는 submit-error)
-- ✅ 산출물: SC-20(스크린샷 4장 `screens/SC-20-{list,edit}-{1280,375}.png`), ERD concepts ADMIN, UC50
-- ✅ 리뷰 권장 반영(a95c115): 시드 upsert는 DRAFT만 PUBLISHED로 승격(`IF(concepts.status='DRAFT',…)`), `AdminConceptRequestTest` 카테고리 regex 고정, 목록 성공 안내를 history state에서 지움
-- 테스트: FE `AdminConceptListView`(13)·`AdminConceptEditView`(14)·`AdminConceptForm`(6), BE `AdminConceptApiTest`(63)·`AdminConceptServiceTest`·`SeedConceptsTest#AC12`
+- ✅ 공용 판정 `frontend/src/utils/pagination.js` `overflowLastPage({page,size,total,itemCount})` + `utils/__tests__/pagination.spec.js`
+- ✅ `ConceptListView`·`PostListView`(b1c5a7a, #46): 빈 목록·total>0·page>마지막이면 `router.replace`로 마지막 page, 리다이렉트 중엔 loading 유지
+- ✅ `AdminConceptListView`(047bd65, #76): 같은 보정 + 성공 안내를 replace의 `state.notice`로 넘겨 유지
+- ✅ replace 직전 `route.name` 확인(ea9620e, 떠난 화면에서 늦은 응답이 탐색 X), replace·로딩 유지 고정 테스트(4d76e27)
+- 테스트: `ConceptListView.spec`·`PostListView.spec`·`AdminConceptListView.spec`의 `#46`·`#76` 케이스 (수정 전 red 확인), verify fe 통과
 
 ## 바로 다음 할 일
 
-1. 사람이 GitHub에서 PR #75 머지 (develop이 그 사이 바뀌었으면 먼저 `git merge origin/develop` → push → CI 초록). 머지 뒤 #51 닫힘 확인, 다음 기능 `/pickup`
-2. 로컬 정리(선택): 화면 점검용 테스트 회원 `ui-admin@example.test`(ADMIN)·초안 카드 id 171 "[UI점검] 낙관적 락"이 로컬 DB에 있다
+1. 사람이 GitHub에서 PR #79 머지 (spec 없음이라 완료 표시 커밋 불필요). 상대 PR #78이 먼저 머지돼 `docs/작업로그.md`가 충돌하면 `git merge origin/develop`(union) → push → CI 초록 후 머지
+2. 머지 뒤 #46·#76 닫힘 확인. 남은 내 기능은 P2 F-20(팀 챌린지)뿐 → 진행 여부를 사용자에게 묻는다
 
 ## 막힌 점 / 결정 필요
 
@@ -28,6 +28,5 @@ F-13 관리자 카드 관리 — **PR #75 열림** (spec `docs/specs/F-13-admin-
 
 ## 주의
 
-- 공통 파일: `ConceptSource`(ADMIN), `ErrorCode` CONCEPT 블록, `ConceptMapper` B 블록, `ConceptService.escapeLike` public, FE `router/routes/concept.js` adminChildren, concept/** 공동 소유
-- 목록 URL의 전체 탭은 FE 전용 `?status=ALL`(API에는 status 생략). 편집 저장 후 `history.state.back`의 목록 조건으로 돌아간다
-- MyBatis constructor resultMap에서 primitive long은 `javaType="_long"`
+- A 영역 `AnalysisListView`도 PageNav 목록이지만 이번 범위에서 제외 (필요하면 `overflowLastPage` 재사용 가능하다고 PR에 적기)
+- 로컬 DB에 화면 점검용 `ui-admin@example.test`(ADMIN)·초안 카드 id 171이 남아 있다

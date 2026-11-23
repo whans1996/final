@@ -129,4 +129,59 @@ describe('PostListView (F-17 AC13·AC14)', () => {
     await flushPromises()
     await vi.waitFor(() => expect(member.router.currentRoute.value.path).toBe('/community/write'))
   })
+
+  it('#46 범위를 넘은 page면 마지막 페이지로 바꿔(replace) 다시 조회하고 빈 목록 안내를 보이지 않는다', async () => {
+    postsApi.fetchPosts
+      .mockResolvedValueOnce(page([], { page: 7, total: 25 }))
+      .mockResolvedValue(page([post()], { page: 2, total: 25 }))
+
+    const { wrapper, router } = await mountList('/community?boardType=QNA&page=7')
+
+    expect(router.currentRoute.value.fullPath).toBe('/community?boardType=QNA&page=2')
+    expect(lastCall()).toMatchObject({ boardType: 'QNA', page: 2 })
+    expect(wrapper.text()).toContain('트랜잭션 질문')
+    expect(wrapper.text()).not.toContain('게시글이 없습니다')
+  })
+
+  it('#46 응답 전에 다른 화면으로 떠나면 늦게 온 범위 초과 응답으로 주소를 바꾸지 않는다', async () => {
+    let resolve
+    postsApi.fetchPosts.mockReturnValue(new Promise((r) => (resolve = r)))
+    const { router } = await mountList('/community?boardType=QNA&page=7')
+
+    await router.push('/concepts?page=9')
+    resolve(page([], { page: 7, total: 25 }))
+    await flushPromises()
+
+    expect(router.currentRoute.value.fullPath).toBe('/concepts?page=9')
+  })
+
+  it('#46 보정은 push가 아닌 replace로 하고, 다시 조회가 시작될 때까지 불러오는 중을 유지한다', async () => {
+    postsApi.fetchPosts.mockResolvedValueOnce(page([post()], { total: 25 }))
+    const { wrapper, router } = await mountList('/community')
+    const replace = vi.spyOn(router, 'replace').mockResolvedValue(undefined)
+    const push = vi.spyOn(router, 'push')
+    postsApi.fetchPosts.mockResolvedValueOnce(page([], { page: 7, total: 25 }))
+
+    await router.push('/community?boardType=QNA&page=7')
+    await flushPromises()
+
+    expect(replace).toHaveBeenCalledWith({ query: { boardType: 'QNA', page: '2' } })
+    expect(push).toHaveBeenCalledTimes(1)
+    expect(wrapper.text()).toContain('불러오는 중')
+    expect(wrapper.text()).not.toContain('게시글이 없습니다')
+  })
+
+  it('#46 화면을 떠났다가 같은 목록으로 돌아오면 떠난 화면의 늦은 응답으로 주소를 바꾸지 않는다 (Codex 리뷰)', async () => {
+    let resolve
+    postsApi.fetchPosts.mockReturnValue(new Promise((r) => (resolve = r)))
+    const { wrapper, router } = await mountList('/community?boardType=QNA&page=7')
+
+    await router.push('/community/42')
+    wrapper.unmount()
+    await router.push('/community?page=9')
+    resolve(page([], { page: 7, total: 25 }))
+    await flushPromises()
+
+    expect(router.currentRoute.value.fullPath).toBe('/community?page=9')
+  })
 })
