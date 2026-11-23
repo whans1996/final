@@ -19,24 +19,28 @@ export function createAnalysis({ file, sourceUrl, level, consent }) {
   return http.post('/analyses', form, { timeout: UPLOAD_TIMEOUT_MS }).then((res) => res.data)
 }
 
-/** 내 분석 목록 (최신순). @returns {Promise<{ items: object[], page: number, size: number, total: number }>} */
+/** 내 분석 목록 (최신순). 항목에 memo(F-19)가 있다. @returns {Promise<{ items: object[], page: number, size: number, total: number }>} */
 export function fetchAnalyses({ page, size }) {
   return http.get('/analyses', { params: { page, size } }).then((res) => res.data)
 }
 
 /**
- * 진행 상태. 없거나 남의 분석이면 404 ANALYSIS_404.
- * @returns {Promise<{ analysisId: number, status: string, progress: number, errorCode: string|null, errorMessage: string|null, updatedAt: string }>}
+ * 진행 상태. 없거나 볼 수 없는 분석이면 404 ANALYSIS_404.
+ * sourceUrl은 URL 분석의 저장소 주소이고 ZIP 분석이면 null이다 (FAILED 화면의 "저장소 보기", F-19 AC12).
+ * @returns {Promise<{ analysisId: number, status: string, progress: number, errorCode: string|null, errorMessage: string|null, sourceUrl: string|null, updatedAt: string }>}
  */
 export function fetchAnalysisStatus(id) {
   return http.get(`/analyses/${id}/status`).then((res) => res.data)
 }
 
-// 결과 조회 (F-06, docs/specs/F-06-overview-explanation.md 3절). 없거나 남의 분석이면 404 ANALYSIS_404.
+// 결과 조회 (F-06, docs/specs/F-06-overview-explanation.md 3절). 내 분석과 공개·완료된 남의 분석을 볼 수 있고 (F-19),
+// 없거나 볼 수 없으면 404 ANALYSIS_404.
 
 /**
  * 분석 상세 (overview·fileCount·explainedFileCount 포함). 진행 중이면 overview가 null일 수 있다.
  * sourceUrl은 URL 분석의 정규화한 저장소 주소이고 ZIP 분석이면 null이다 (F-05b AC12).
+ * mine은 내 분석인지, owner는 주인 `{ id, nickname }`, memo는 주인에게만 온다 (남이면 null, F-19 AC9·AC11).
+ * @returns {Promise<{ id: number, title: string|null, memo: string|null, mine: boolean, owner: { id: number, nickname: string }, projectName: string|null, sourceType: string, sourceUrl: string|null, level: string, status: string, progress: number, isPublic: boolean, errorCode: string|null, errorMessage: string|null, createdAt: string, fileCount: number, explainedFileCount: number, overview: object|null }>}
  */
 export function fetchAnalysis(id) {
   return http.get(`/analyses/${id}`).then((res) => res.data)
@@ -79,4 +83,27 @@ export function requestAnalysisFlows(id, endpoints) {
  */
 export function fetchAnalysisConcepts(id) {
   return http.get(`/analyses/${id}/concepts`).then((res) => res.data)
+}
+
+// 분석 관리 (F-19, docs/specs/F-19-analysis-manage.md 3절). 주인만 되고, 남의 분석·삭제·없음은 404 ANALYSIS_404.
+
+/**
+ * 제목·메모를 보낸 값으로 바꾼다 (빈 문자열은 null). 400 COMMON_400(title 100자·memo 1000자 초과).
+ * @returns {Promise<object>} 바뀐 상세 (fetchAnalysis와 같은 형식)
+ */
+export function updateAnalysis(id, { title, memo }) {
+  return http.patch(`/analyses/${id}`, { title, memo }).then((res) => res.data)
+}
+
+/**
+ * 공개 여부. 공개는 DONE일 때만 되고 아니면 409 ANALYSIS_006.
+ * @returns {Promise<{ id: number, isPublic: boolean }>}
+ */
+export function updateVisibility(id, isPublic) {
+  return http.patch(`/analyses/${id}/visibility`, { isPublic }).then((res) => res.data)
+}
+
+/** 삭제 (204). 진행 중이면 409 ANALYSIS_005. 퀴즈 풀이 기록은 남는다. */
+export function deleteAnalysis(id) {
+  return http.delete(`/analyses/${id}`).then(() => undefined)
 }

@@ -68,8 +68,8 @@ public class FlowController {
     @Operation(
             summary = "실행 흐름 목록",
             description =
-                    "이 분석의 흐름 전체(id 오름차순). DONE이 아니면 summary·steps는 null. 화면은 PENDING이 있으면 3초마다 다시"
-                            + " 부른다.")
+                    "내 분석 또는 공개·완료된 남의 분석의 흐름 전체(id 오름차순). DONE이 아니면 summary·steps는 null. 화면은"
+                            + " PENDING이 있으면 3초마다 다시 부른다.")
     @ApiResponse(responseCode = "200", description = "조회 성공 (흐름이 없으면 빈 배열)")
     @ApiResponse(
             responseCode = "401",
@@ -77,7 +77,7 @@ public class FlowController {
             content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     @ApiResponse(
             responseCode = "404",
-            description = "없는 분석, 다른 회원의 분석, 삭제된 분석 (ANALYSIS_404)",
+            description = "없는 분석, 삭제된 분석, 볼 수 없는 남의 분석(비공개·미완료·주인 탈퇴) (ANALYSIS_404)",
             content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     @GetMapping
     public List<FlowResponse> list(@AuthenticationPrincipal AuthUser user, @PathVariable long id) {

@@ -1,5 +1,5 @@
 <script setup>
-// SC-06 내 분석 목록 (F-05a AC16). 수정·삭제·공개 설정은 F-19에서 붙는다.
+// SC-06 내 분석 목록 (F-05a AC16). 공개 배지와 메모 첫 줄을 보여 준다 (F-19 AC15). 수정·삭제·공개 설정은 SC-07에서만 한다.
 import { onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { fetchAnalyses } from '@/api/analyses'
@@ -19,6 +19,11 @@ const loadError = ref('')
 
 function levelLabel(level) {
   return LEVELS.find((l) => l.value === level)?.label ?? level
+}
+
+/** 메모의 첫 줄 (빈 줄은 건너뛴다). 없으면 null. */
+function memoFirstLine(memo) {
+  return memo?.split('\n').find((line) => line.trim() !== '') ?? null
 }
 
 /** '2026-11-24T14:20:00+09:00' → '2026.11.24' */
@@ -79,7 +84,15 @@ onMounted(() => load(1))
             class="card"
             :data-analysis-id="analysis.id"
           >
-            <strong class="title">{{ analysis.title }}</strong>
+            <span class="title-row">
+              <strong class="title">
+                {{ analysis.title ?? analysis.projectName ?? '제목 없는 분석' }}
+              </strong>
+              <span v-if="analysis.isPublic" class="public" data-badge="public">공개</span>
+            </span>
+            <span v-if="memoFirstLine(analysis.memo)" class="memo" data-section="memo">
+              {{ memoFirstLine(analysis.memo) }}
+            </span>
             <span class="meta">
               {{ levelLabel(analysis.level) }} · {{ formatDate(analysis.createdAt) }}
             </span>
@@ -151,8 +164,33 @@ onMounted(() => load(1))
   border-color: var(--color-primary);
 }
 
+.title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
 .title {
   overflow-wrap: anywhere;
+}
+
+.public {
+  flex-shrink: 0;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius);
+  color: var(--color-primary);
+  font-size: 0.8em;
+  font-weight: 600;
+}
+
+.memo {
+  overflow: hidden;
+  color: var(--color-text-muted);
+  font-size: 0.9em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .meta {

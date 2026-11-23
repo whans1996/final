@@ -330,3 +330,33 @@ describe('AnalysisFlowsTab (F-07)', () => {
     expect(wrapper.findAll('input[type="checkbox"]')).toHaveLength(4)
   })
 })
+
+describe('AnalysisFlowsTab 읽기 전용 (F-19 AC14)', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+  })
+
+  it('AC14 readonly면 API 선택·만들기·다시 만들기를 숨기고 흐름 카드만 보여 준다', async () => {
+    analysesApi.fetchAnalysisFlows.mockResolvedValue([
+      flow({ id: 7, status: 'DONE', summary: '할 일을 만듭니다.', steps: [] }),
+      flow({ id: 8, method: 'GET', status: 'FAILED', errorMessage: '실패했습니다.' }),
+    ])
+
+    const wrapper = await mountTab({ readonly: true })
+
+    expect(wrapper.find('[aria-label="API 선택"]').exists()).toBe(false)
+    expect(wrapper.find('[data-action="request-flows"]').exists()).toBe(false)
+    expect(wrapper.find('[data-action="retry-flow"]').exists()).toBe(false)
+    expect(wrapper.text()).toContain('할 일을 만듭니다.')
+    expect(wrapper.text()).toContain('실패했습니다.')
+  })
+
+  it('AC14 readonly이고 흐름이 없으면 안내 문구를 보여 준다', async () => {
+    analysesApi.fetchAnalysisFlows.mockResolvedValue([])
+
+    const wrapper = await mountTab({ readonly: true })
+
+    expect(wrapper.text()).toContain('아직 만든 실행 흐름이 없습니다.')
+    expect(wrapper.findAll('input[type="checkbox"]')).toHaveLength(0)
+  })
+})
