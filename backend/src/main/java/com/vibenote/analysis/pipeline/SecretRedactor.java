@@ -81,16 +81,12 @@ public final class SecretRedactor {
      */
     private static final Pattern KEY_SUFFIX = Pattern.compile("(?:^|[-_.])(?i:key)$|[a-z0-9]Key$");
 
-    /** key로 끝나도 비밀이 아닌 이름. 마지막 점 뒤 부분에서 구분자를 빼고 소문자로 비교한다 (#16). */
+    /**
+     * key로 끝나도 비밀이 아닌 이름. 마지막 점 뒤 부분에서 구분자를 빼고 소문자로 비교한다 (#16). primary-key는 Azure 계정 키 이름이라 넣지
+     * 않는다.
+     */
     private static final Set<String> NON_SECRET_KEY_NAMES =
-            Set.of(
-                    "cachekey",
-                    "routingkey",
-                    "partitionkey",
-                    "sortkey",
-                    "primarykey",
-                    "foreignkey",
-                    "publickey");
+            Set.of("cachekey", "routingkey", "partitionkey", "sortkey", "foreignkey", "publickey");
 
     /** 기본값 없는 환경변수 참조 하나: {@code ${NAME}} (따옴표 허용). */
     private static final Pattern PLAIN_ENV_REF =
@@ -227,12 +223,14 @@ public final class SecretRedactor {
     }
 
     static boolean isSecretKey(String key) {
-        String lower = key.toLowerCase(Locale.ROOT);
+        // 줄 단위 1차 마스킹은 YAML 키를 따옴표째 넘긴다
+        String name = key.replaceAll("^['\"]|['\"]$", "");
+        String lower = name.toLowerCase(Locale.ROOT);
         if (SECRET_KEYWORDS.stream().anyMatch(lower::contains)) {
             return true;
         }
         String lastName = lower.substring(lower.lastIndexOf('.') + 1).replaceAll("[-_]", "");
-        return KEY_SUFFIX.matcher(key).find() && !NON_SECRET_KEY_NAMES.contains(lastName);
+        return KEY_SUFFIX.matcher(name).find() && !NON_SECRET_KEY_NAMES.contains(lastName);
     }
 
     /** 값에서 가려야 할 부분. 비었거나 기본값 없는 환경변수 참조면 null, {@code ${NAME:기본값}}이면 기본값(비면 null). */

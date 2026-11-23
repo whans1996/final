@@ -409,7 +409,9 @@ class SecretRedactorTest {
                         "  access_key: k3-value",
                         "  signingKey: k4-value",
                         "  privatekey: k5-value",
-                        "  accesskey: k6-value");
+                        "  accesskey: k6-value",
+                        "azure:",
+                        "  primary-key: k7-value");
         String properties =
                 String.join(
                         "\n",
@@ -428,7 +430,9 @@ class SecretRedactorTest {
                                 "  access_key: [REDACTED]",
                                 "  signingKey: [REDACTED]",
                                 "  privatekey: [REDACTED]",
-                                "  accesskey: [REDACTED]"));
+                                "  accesskey: [REDACTED]",
+                                "azure:",
+                                "  primary-key: [REDACTED]"));
         assertThat(SecretRedactor.redact("application.properties", properties))
                 .isEqualTo(
                         String.join(
@@ -436,6 +440,14 @@ class SecretRedactorTest {
                                 "cloud.aws.access-key=[REDACTED]",
                                 "encryption.key=[REDACTED]",
                                 "MASTER_KEY=[REDACTED]"));
+    }
+
+    @Test
+    void 이슈16_해석할_수_없는_yml에서도_따옴표_키의_key_규칙을_적용한다() {
+        String yml = "\"private-key\": q1-value\n'key': q2-value\nbroken: [unclosed";
+
+        assertThat(SecretRedactor.redact("application.yml", yml))
+                .isEqualTo("\"private-key\": [REDACTED]\n'key': [REDACTED]\nbroken: [unclosed");
     }
 
     @Test
@@ -452,7 +464,6 @@ class SecretRedactorTest {
                         "  partitionKey: id",
                         "  sort_key: created",
                         "db:",
-                        "  primary-key: id",
                         "  foreign-key: user_id",
                         "ssh:",
                         "  public-key: ssh-ed25519 AAAA",

@@ -4,7 +4,7 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
 
-갱신: 2026-11-23 14:12 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/issue-16-secret-key-suffix
+갱신: 2026-11-23 14:27 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/issue-16-secret-key-suffix
 
 ## 현재 기능
 
@@ -14,13 +14,13 @@
 
 - ✅ PR #74(#17) 11-23 머지, #17 닫힘. 머지된 로컬 브랜치 25개 삭제(`git branch -d`)
 - ✅ `SecretRedactorTest`에 `이슈16_key로_끝나는_설정_키의_값을_가린다`(red 확인)·`이슈16_비밀이_아닌_key_설정과_key로_끝나는_일반_단어는_그대로_둔다` 추가
-- ✅ `SecretRedactor.isSecretKey`: 키워드에 `privatekey`·`accesskey` 추가, `KEY_SUFFIX`(단어 경계 기준, camelCase 포함) + 예외 `NON_SECRET_KEY_NAMES`(cache·routing·partition·sort·primary·foreign·public key) → 파이프라인 테스트 green
+- ✅ `SecretRedactor.isSecretKey`: 키워드에 `privatekey`·`accesskey` 추가, `KEY_SUFFIX`(단어 경계 기준, camelCase 포함) + 예외 `NON_SECRET_KEY_NAMES`(cache·routing·partition·sort·foreign·public key) → 파이프라인 테스트 green
 - ✅ F-05a spec 5.2절 규칙·10절 결정 반영, 결정로그 2줄(#16, 하네스 동결)
-- 🟡 `verify.mjs be` 전체 실행 중 → 통과하면 커밋 `fix(analysis): #16 key로 끝나는 설정 키도 비밀로 가림`
+- ✅ 커밋 `fix(F-05a): #16 …` (be 652 통과), `/pr-review`: verify all 통과, reviewer 반드시 수정 2건 반영(예외에서 primary-key 제외: Azure 계정 키 / 1차 마스킹 YAML 따옴표 키) + 테스트 `이슈16_해석할_수_없는_yml에서도_따옴표_키의_key_규칙을_적용한다`
 
 ## 바로 다음 할 일
 
-1. 커밋 후 `/pr-review` (Closes #16). 공통 코드 아님 → 멘션 불필요
+1. reviewer 권장 1~4 사용자 판단 대기(특히 권장1: 맨 `key`의 짧은 값이 2차 전역 치환으로 파일 곳곳을 가림 → 8자 이상만 전역 치환 안). 그 뒤 PR 설명 `.harness/pr-issue-16.md` → push → PR (Closes #16, 멘션 불필요)
 2. 머지 뒤 F-05b `/spec` (`branches.mjs F-05b` ✅ 중복 없음 확인됨)
 
 ## 막힌 점 / 결정 필요
