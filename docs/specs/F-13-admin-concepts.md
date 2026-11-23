@@ -220,9 +220,9 @@ ALTER TABLE concepts
 - [x] BE 구현 (green)
 - [x] FE 구현 (green)
 - [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
-- [ ] contract-checker 통과
-- [ ] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일)
+- [x] contract-checker 통과
+- [x] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일)
 - [ ] reviewer 지적 사항 반영
-- [ ] 산출물 반영 (화면 설계서 SC-20·ERD concepts·유스케이스 UC50, conventions 3절)
+- [x] 산출물 반영 (화면 설계서 SC-20·ERD concepts·유스케이스 UC50, conventions 3절)
 - [ ] PR CI 초록
 - [ ] 상태 DONE (PR 머지 후)

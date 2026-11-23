@@ -240,6 +240,38 @@ describe('AdminConceptEditView (F-13 AC14·AC15)', () => {
     expect(router.options.history.state.notice).toBe('초안을 삭제했습니다.')
   })
 
+  it('AC15 저장·삭제 중 404(다른 관리자가 먼저 지움)도 없는 카드 안내로 바꾼다', async () => {
+    adminApi.fetchAdminConcept.mockResolvedValue(detail())
+    adminApi.updateAdminConcept.mockRejectedValue(
+      apiError(404, { code: 'CONCEPT_404', message: '개념 카드를 찾을 수 없습니다.' }),
+    )
+    const { wrapper } = await mountEdit('/admin/concepts/91/edit')
+
+    await click(wrapper, '공개')
+
+    expect(wrapper.text()).toContain('카드를 찾을 수 없습니다.')
+    expect(wrapper.find('[data-action="back-to-list"]').exists()).toBe(true)
+    expect(wrapper.find('form').exists()).toBe(false)
+  })
+
+  it('AC15 폼에 칸이 없는 details 키(status 등)는 서버 메시지를 버튼 위에 함께 보인다', async () => {
+    adminApi.createAdminConcept.mockRejectedValue(
+      apiError(400, {
+        code: 'COMMON_400',
+        message: '입력값이 올바르지 않습니다.',
+        details: { status: '허용되지 않은 값', name: '이름을 입력하세요.' },
+      }),
+    )
+    const { wrapper } = await mountEdit('/admin/concepts/new')
+
+    await click(wrapper, '공개')
+
+    expect(wrapper.find('[data-error-for="name"]').text()).toBe('이름을 입력하세요.')
+    expect(wrapper.find('[data-testid="submit-error"]').text()).toBe(
+      '입력값이 올바르지 않습니다. (status: 허용되지 않은 값)',
+    )
+  })
+
   it('AC15 없는 카드(404)는 안내와 목록 링크를 보인다', async () => {
     adminApi.fetchAdminConcept.mockRejectedValue(
       apiError(404, { code: 'CONCEPT_404', message: '개념 카드를 찾을 수 없습니다.' }),

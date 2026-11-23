@@ -143,11 +143,29 @@ async function save(nextStatus) {
     const unchanged = !isNew && nextStatus === status.value
     await backToList(unchanged ? '저장했습니다.' : SAVED_NOTICES[nextStatus])
   } catch (error) {
-    const details = errorDetails(error)
-    if (Object.keys(details).length > 0) fieldErrors.value = details
-    else submitError.value = errorMessage(error)
+    showSubmitError(error)
   } finally {
     saving.value = false
+  }
+}
+
+/** 404는 없는 카드 안내로, 폼 칸이 있는 details는 필드 아래에, 나머지는 서버 메시지로 버튼 위에 보인다 */
+function showSubmitError(error) {
+  if (errorCode(error) === 'CONCEPT_404') {
+    notFound.value = true
+    return
+  }
+  const details = errorDetails(error)
+  const fields = Object.keys(EMPTY)
+  fieldErrors.value = Object.fromEntries(
+    Object.entries(details).filter(([key]) => fields.includes(key)),
+  )
+  const others = Object.entries(details).filter(([key]) => !fields.includes(key))
+  if (others.length > 0) {
+    const reasons = others.map(([key, reason]) => `${key}: ${reason}`).join(', ')
+    submitError.value = `${errorMessage(error)} (${reasons})`
+  } else if (Object.keys(details).length === 0) {
+    submitError.value = errorMessage(error)
   }
 }
 
@@ -162,7 +180,7 @@ async function remove() {
     await deleteAdminConcept(conceptId)
     await backToList('초안을 삭제했습니다.')
   } catch (error) {
-    submitError.value = errorMessage(error)
+    showSubmitError(error)
   } finally {
     saving.value = false
   }
