@@ -20,6 +20,10 @@ const busy = ref(false)
 const actionError = ref('')
 
 const sharedIds = computed(() => (items.value ?? []).map((a) => a.analysisId))
+// 불러오는 중·실패에는 개수를 모르므로 "0/10"으로 오해하지 않게 숫자를 빼고 보여 준다
+const countLabel = computed(() =>
+  items.value ? `공유 분석 ${items.value.length}/${MAX_TEAM_ANALYSES}` : '공유 분석',
+)
 const full = computed(() => (items.value?.length ?? 0) >= MAX_TEAM_ANALYSES)
 
 let lastRequest = 0
@@ -48,6 +52,9 @@ watch(
   { immediate: true },
 )
 
+// 팀원을 내보낸 뒤처럼 부모가 목록을 다시 불러와야 할 때 쓴다 (내보낸 사람의 공유는 서버가 지운다, F-20b AC8)
+defineExpose({ load })
+
 async function onUnshare(item) {
   if (!window.confirm('이 분석의 공유를 해제할까요? 팀원의 풀이 기록은 남습니다.')) return
   const teamId = props.teamId
@@ -67,7 +74,9 @@ async function onUnshare(item) {
 <template>
   <section class="team-analyses">
     <div class="head">
-      <h2 data-role="shared-count">공유 분석 {{ items?.length ?? 0 }}/{{ MAX_TEAM_ANALYSES }}</h2>
+      <h2 data-role="shared-count">
+        {{ countLabel }}
+      </h2>
       <TeamAnalysisPicker
         v-if="items"
         :team-id="teamId"

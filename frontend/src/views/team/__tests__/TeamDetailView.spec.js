@@ -568,4 +568,30 @@ describe('TeamDetailView SC-23 공유 분석 (F-20b AC10)', () => {
     expect(teamsApi.fetchTeamAnalyses).toHaveBeenCalledTimes(2)
     expect(items(wrapper)).toHaveLength(0)
   })
+
+  it('AC10 팀원을 내보내면 그 사람이 공유한 분석이 빠지도록 공유 목록도 다시 불러온다 (F-20b AC8)', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    teamsApi.fetchTeam
+      .mockResolvedValueOnce(team())
+      .mockResolvedValueOnce(team({ memberCount: 1, members: [OWNER] }))
+    teamsApi.fetchTeamAnalyses.mockResolvedValueOnce([shared()]).mockResolvedValueOnce([])
+    teamsApi.removeTeamMember.mockResolvedValue(undefined)
+    const { wrapper } = await mountDetail()
+    expect(items(wrapper)).toHaveLength(1)
+
+    await button(wrapper, 'remove-member').trigger('click')
+    await flushPromises()
+
+    expect(teamsApi.fetchTeamAnalyses).toHaveBeenCalledTimes(2)
+    expect(items(wrapper)).toHaveLength(0)
+  })
+
+  it('AC10 목록을 불러오는 중이거나 실패하면 공유 개수를 보여 주지 않는다', async () => {
+    teamsApi.fetchTeamAnalyses.mockRejectedValue(
+      apiError(500, { code: 'COMMON_500', message: '서버 오류입니다.' }),
+    )
+    const { wrapper } = await mountDetail()
+
+    expect(wrapper.find('[data-role="shared-count"]').text()).toBe('공유 분석')
+  })
 })

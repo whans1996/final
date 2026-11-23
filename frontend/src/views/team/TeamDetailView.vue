@@ -32,6 +32,8 @@ const editing = ref(false)
 const editFieldErrors = ref({})
 const editError = ref('')
 
+const analysisList = ref(null)
+
 const isOwner = computed(() => team.value?.myRole === 'OWNER')
 
 let lastRequest = 0
@@ -110,7 +112,8 @@ function onRegenerate() {
 function onRemove(member) {
   return confirmed(`${member.nickname} 님을 팀에서 내보낼까요?`, async (teamId, isCurrent) => {
     await removeTeamMember(teamId, member.userId)
-    if (isCurrent()) await load(teamId, { quiet: true })
+    if (!isCurrent()) return
+    await Promise.all([load(teamId, { quiet: true }), analysisList.value?.load()])
   })
 }
 
@@ -210,7 +213,7 @@ async function onSave(body) {
         />
       </section>
 
-      <TeamAnalysisList :team-id="team.id" :member-count="team.memberCount" />
+      <TeamAnalysisList ref="analysisList" :team-id="team.id" :member-count="team.memberCount" />
 
       <div class="actions">
         <template v-if="isOwner">
