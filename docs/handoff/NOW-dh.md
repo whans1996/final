@@ -4,7 +4,7 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
 
-갱신: 2026-11-23 13:58 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/issue-17-db-session-tz
+갱신: 2026-11-23 14:00 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/issue-17-db-session-tz
 
 ## 현재 기능
 
@@ -23,7 +23,7 @@
 
 ## 바로 다음 할 일
 
-1. /pr-review 점검 끝(verify all 통과, reviewer 반드시 수정 0, 권장 2건 반영). 사용자 확인 후 `gh pr create --base develop --title "fix(common): #17 DB 세션 시간대를 +09:00으로 고정" --body-file .harness/pr-issue-17.md` → CI·Codex 루프 (Closes #17, @JoonseobKim 멘션: IntegrationTestBase·application.yml 공통)
+1. **PR #74** 열림 (Closes #17, @JoonseobKim 멘션). /pr-review 점검 끝(verify all 통과, reviewer 반드시 수정 0, 권장 2건 반영). Codex ✅ a350002 (지적 없음). CI BE 진행 중 → `gh pr checks 74` 초록이면 GitHub에서 머지, 머지 뒤 #17 닫힘 확인 (Closes #17, @JoonseobKim 멘션: IntegrationTestBase·application.yml 공통)
 2. 그 뒤 F-05b `/spec` (먼저 `node scripts/branches.mjs F-05b`)
 
 ## 막힌 점 / 결정 필요
