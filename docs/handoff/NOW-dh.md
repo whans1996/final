@@ -4,7 +4,7 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
 
-갱신: 2026-11-23 15:12 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/issue-16-secret-key-suffix
+갱신: 2026-11-23 15:21 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/issue-16-secret-key-suffix
 
 ## 현재 기능
 
@@ -12,7 +12,7 @@
 
 ## 진행
 
-- ✅ PR #74(#17) 11-23 머지, #17 닫힘. 머지된 로컬 브랜치 25개 삭제(`git branch -d`)
+- ✅ PR #74(#17)·PR #80(하네스 codex-review 지적 커밋 뒤 문서만 변경 → FINDINGS) 11-23 머지. 머지된 로컬 브랜치 25개 삭제(`git branch -d`)
 - ✅ `SecretRedactorTest`에 `이슈16_key로_끝나는_설정_키의_값을_가린다`(red 확인)·`이슈16_비밀이_아닌_key_설정과_key로_끝나는_일반_단어는_그대로_둔다` 추가
 - ✅ `SecretRedactor.isSecretKey`: 키워드에 `privatekey`·`accesskey` 추가, `KEY_SUFFIX`(단어 경계 기준, camelCase 포함) + 예외 `NON_SECRET_KEY_NAMES`(cache·routing·partition·sort·foreign·public key) → 파이프라인 테스트 green
 - ✅ F-05a spec 5.2절 규칙·10절 결정 반영, 결정로그 2줄(#16, 하네스 동결)
@@ -21,9 +21,8 @@
 
 ## 바로 다음 할 일
 
-1. **PR #78** 열림 (Closes #16). Codex 4차 P1 2건(단어 경계: 이스케이프·긴 비밀 조각)으로 사용자 결정 → 짧은 값이 든 YAML 값 범위를 통째로 가림(`SecretRedactor.redactLocated`, `NON_SPACE`). 5차(상한) 재리뷰 대기. **또 지적이 나오면 고치지 말고 사용자에게 묻는다**. CI `gh pr checks 78` 초록 + Codex COMPLETE면 GitHub에서 머지, 머지 뒤 #16 닫힘 확인
-2. **PR #80** 하네스(codex-review 지적 커밋 뒤 문서만 변경 → FINDINGS) Codex ✅ 574138e, CI 초록 → 사람이 GitHub에서 머지
-3. 머지 뒤 F-05b `/spec` (`branches.mjs F-05b` ✅ 중복 없음 확인됨)
+1. **PR #78** 열림 (Closes #16). Codex 4차 P1 2건(단어 경계: 이스케이프·긴 비밀 조각)으로 사용자 결정 → 짧은 값이 든 YAML 값 범위를 통째로 가림(`SecretRedactor.redactLocated`, `NON_SPACE`). 5차 P2(복합 YAML 키 회귀, `keyContext`) 고침 → 사용자 승인으로 6회째 재리뷰 대기. **또 지적이 나오면 이슈로 이관(--resolve) 후 머지** (사용자 결정). CI `gh pr checks 78` 초록 + Codex COMPLETE면 GitHub에서 머지, 머지 뒤 #16 닫힘 확인
+2. 머지 뒤 F-05b `/spec` (`branches.mjs F-05b` ✅ 중복 없음 확인됨)
 
 ## 막힌 점 / 결정 필요
 

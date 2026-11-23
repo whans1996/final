@@ -165,11 +165,7 @@ final class ConfigSecretValues {
                     if (Tag.SET.equals(map.getTag())) {
                         collect(entry.getKeyNode(), context);
                     }
-                    Context child =
-                            entry.getKeyNode() instanceof ScalarNode key
-                                    ? contextOf(key.getValue(), context)
-                                    : context;
-                    collect(entry.getValueNode(), child);
+                    collect(entry.getValueNode(), keyContext(entry.getKeyNode(), context));
                 }
             } else if (node instanceof SequenceNode sequence) {
                 if (!first(sequence, context)) {
@@ -211,6 +207,43 @@ final class ConfigSecretValues {
                 }
             }
             return charOffsets == null ? codePointIndex : charOffsets[codePointIndex];
+        }
+
+        /**
+         * 키 노드의 문맥. 목록·매핑을 키로 쓰면({@code ? [password]}) 안의 이름 중 가장 강한 문맥을 쓴다. loadAll 때 키 전체를 문자열로
+         * 검사하던 것을 이어 받는다 (Codex 리뷰).
+         */
+        private static Context keyContext(Node key, Context parent) {
+            if (key instanceof ScalarNode scalar) {
+                return contextOf(scalar.getValue(), parent);
+            }
+            Context strongest = parent;
+            for (String name : scalarsIn(key, Collections.newSetFromMap(new IdentityHashMap<>()))) {
+                Context context = contextOf(name, parent);
+                if (context.compareTo(strongest) > 0) {
+                    strongest = context;
+                }
+            }
+            return strongest;
+        }
+
+        /** 노드 아래 스칼라 값 전부. 별칭이 순환해도 노드마다 한 번만 본다. */
+        private static List<String> scalarsIn(Node node, Set<Node> seen) {
+            List<String> names = new ArrayList<>();
+            if (!seen.add(node)) {
+                return names;
+            }
+            if (node instanceof ScalarNode scalar) {
+                names.add(scalar.getValue());
+            } else if (node instanceof SequenceNode sequence) {
+                sequence.getValue().forEach(item -> names.addAll(scalarsIn(item, seen)));
+            } else if (node instanceof MappingNode map) {
+                for (NodeTuple entry : map.getValue()) {
+                    names.addAll(scalarsIn(entry.getKeyNode(), seen));
+                    names.addAll(scalarsIn(entry.getValueNode(), seen));
+                }
+            }
+            return names;
         }
 
         private boolean first(Node node, Context context) {

@@ -582,6 +582,24 @@ class SecretRedactorTest {
     }
 
     @Test
+    void 이슈16_목록이나_매핑을_키로_쓴_yml도_안의_이름으로_비밀을_판정한다() {
+        String yml =
+                String.join(
+                        "\n",
+                        "? [password]",
+                        ": hunter2",
+                        "? {private-key: a}",
+                        ": abc1234",
+                        "? [cache-key]",
+                        ": users",
+                        "name: x");
+
+        assertThat(SecretRedactor.redact("application.yml", yml))
+                .doesNotContain("hunter2", "abc1234")
+                .contains(": users", "name: x");
+    }
+
+    @Test
     void 이슈16_비밀_키_아래_yml_set의_원소를_가린다() {
         String yml = "secret: !!set\n  ? hunter2\nprivate-key: !!set\n  ? abc1234\nname: x";
 
