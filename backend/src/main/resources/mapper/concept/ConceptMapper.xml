@@ -122,4 +122,76 @@
         LIMIT #{limit}
     </select>
 
+    <!-- F-13 관리자 카드 관리 -->
+
+    <sql id="adminSearchWhere">
+        <where>
+            <if test="status != null">AND status = #{status}</if>
+            <if test="source != null">AND source = #{source}</if>
+            <if test="keyword != null">
+                AND (name LIKE CONCAT('%', #{keyword}, '%') ESCAPE '!'
+                     OR summary LIKE CONCAT('%', #{keyword}, '%') ESCAPE '!')
+            </if>
+        </where>
+    </sql>
+
+    <select id="findForAdmin" resultType="com.vibenote.concept.domain.Concept">
+        SELECT <include refid="summaryColumns"/>, status, source, updated_at
+        FROM concepts
+        <include refid="adminSearchWhere"/>
+        ORDER BY updated_at DESC, id DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="countForAdmin" resultType="long">
+        SELECT COUNT(*) FROM concepts
+        <include refid="adminSearchWhere"/>
+    </select>
+
+    <resultMap id="statusCount" type="com.vibenote.concept.domain.ConceptStatusCount">
+        <constructor>
+            <arg column="status" javaType="com.vibenote.concept.ConceptStatus"/>
+            <arg column="cnt" javaType="_long"/>
+        </constructor>
+    </resultMap>
+
+    <select id="countByStatus" resultMap="statusCount">
+        SELECT status, COUNT(*) AS cnt FROM concepts GROUP BY status
+    </select>
+
+    <select id="findByIdForUpdate" resultType="com.vibenote.concept.domain.Concept">
+        SELECT <include refid="columns"/> FROM concepts WHERE id = #{id} FOR UPDATE
+    </select>
+
+    <select id="existsByName" resultType="boolean">
+        SELECT EXISTS (
+            SELECT 1 FROM concepts
+            WHERE name = #{name}
+            <if test="excludeId != null">AND id &lt;&gt; #{excludeId}</if>
+        )
+    </select>
+
+    <insert id="insertByAdmin" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO concepts (name, category, difficulty, summary, body, example_code, status, source,
+                              reference_url)
+        VALUES (#{name}, #{category}, #{difficulty}, #{summary}, #{body}, #{exampleCode}, #{status},
+                'ADMIN', #{referenceUrl})
+    </insert>
+
+    <update id="updateByAdmin">
+        UPDATE concepts
+        SET name = #{name}, category = #{category}, difficulty = #{difficulty}, summary = #{summary},
+            body = #{body}, example_code = #{exampleCode}, reference_url = #{referenceUrl},
+            status = #{status}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteDraft">
+        DELETE FROM concepts WHERE id = #{id} AND status = 'DRAFT'
+    </delete>
+
+    <select id="countLinkedAnalyses" resultType="long">
+        SELECT COUNT(*) FROM analysis_concepts WHERE concept_id = #{conceptId}
+    </select>
+
 </mapper>
