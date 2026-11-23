@@ -2,6 +2,7 @@ package com.vibenote.analysis.domain;
 
 import com.vibenote.analysis.AnalysisStatus;
 import com.vibenote.analysis.SourceType;
+import com.vibenote.analysis.fetch.RepositoryUrl;
 import com.vibenote.common.Level;
 import java.time.LocalDateTime;
 
@@ -34,6 +35,15 @@ public class Analysis {
         analysis.level = level;
         analysis.status = AnalysisStatus.FETCHING;
         analysis.createdAt = createdAt;
+        return analysis;
+    }
+
+    /** 막 접수된 저장소 URL 분석 (F-05b AC1). 주소는 정규화한 값, 이름은 마지막 조각이다. */
+    public static Analysis newUrl(
+            long userId, RepositoryUrl repository, Level level, LocalDateTime createdAt) {
+        Analysis analysis = newZip(userId, repository.name(), level, createdAt);
+        analysis.sourceType = SourceType.URL;
+        analysis.sourceUrl = repository.normalized();
         return analysis;
     }
 

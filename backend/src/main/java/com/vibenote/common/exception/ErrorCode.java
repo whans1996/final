@@ -54,6 +54,15 @@ public enum ErrorCode {
             "분석할 수 있는 코드가 없습니다. Java·Spring·MyBatis·JavaScript·Vue 프로젝트만 지원합니다."),
     /** 예기치 못한 오류, 실행기 거절, 서버 재시작. */
     ANALYSIS_500(HttpStatus.INTERNAL_SERVER_ERROR, "분석 중 오류가 발생했습니다. 다시 요청해 주세요."),
+    // 아래 3개도 FAILED 사유다. 저장소 URL 수집(FETCHING)에서만 쓴다 (F-05b 5.2절).
+    /** 저장소가 없거나 비공개이거나 비어 있음 (404·401·403(한도 아님)·그 밖 4xx). */
+    ANALYSIS_004(
+            HttpStatus.NOT_FOUND, "저장소를 찾을 수 없습니다. 공개 저장소인지, 주소가 맞는지, 기본 브랜치에 코드가 있는지 확인해 주세요."),
+    /** 5xx, 연결 실패, 시간 초과, ZIP이 아닌 본문, 허용되지 않은 리다이렉트. */
+    ANALYSIS_502(HttpStatus.BAD_GATEWAY, "저장소에서 코드를 받지 못했습니다. 잠시 뒤 다시 요청하거나 ZIP으로 올려 주세요."),
+    /** 저장소 서비스 요청 한도 초과 (429, 403 + x-ratelimit-remaining: 0). */
+    ANALYSIS_503(
+            HttpStatus.SERVICE_UNAVAILABLE, "저장소 서비스의 요청 한도를 넘었습니다. 잠시 뒤 다시 요청하거나 ZIP으로 올려 주세요."),
     /** 분석은 내 것이지만 fileId가 그 분석의 파일이 아님 (F-06 AC11). */
     ANALYSIS_001(HttpStatus.NOT_FOUND, "파일을 찾을 수 없습니다."),
     /** 실행 흐름을 요청한 API가 개요 apis에 없음 (F-07 AC8). */

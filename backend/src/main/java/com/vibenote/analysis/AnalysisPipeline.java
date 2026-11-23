@@ -10,6 +10,8 @@ import com.vibenote.analysis.explain.ApiDetector;
 import com.vibenote.analysis.explain.ExplainProperties;
 import com.vibenote.analysis.explain.FileExplainer;
 import com.vibenote.analysis.explain.OverviewExplainer;
+import com.vibenote.analysis.fetch.RepositoryArchiveFetcher;
+import com.vibenote.analysis.fetch.RepositoryUrl;
 import com.vibenote.analysis.pipeline.AnalysisFailedException;
 import com.vibenote.analysis.pipeline.FileSelector;
 import com.vibenote.analysis.pipeline.SecretRedactor;
@@ -43,6 +45,7 @@ public class AnalysisPipeline {
     private final AnalysisService analysisService;
     private final AnalysisTempFiles tempFiles;
     private final ZipArchiveReader zipReader;
+    private final RepositoryArchiveFetcher archiveFetcher;
     private final AnalysisProperties properties;
     private final List<Stage> stages;
     private final OverviewExplainer overviewExplainer;
@@ -64,6 +67,7 @@ public class AnalysisPipeline {
             AnalysisService analysisService,
             AnalysisTempFiles tempFiles,
             ZipArchiveReader zipReader,
+            RepositoryArchiveFetcher archiveFetcher,
             AnalysisProperties properties,
             OverviewExplainer overviewExplainer,
             FileExplainer fileExplainer,
@@ -77,6 +81,7 @@ public class AnalysisPipeline {
         this.analysisService = analysisService;
         this.tempFiles = tempFiles;
         this.zipReader = zipReader;
+        this.archiveFetcher = archiveFetcher;
         this.properties = properties;
         this.overviewExplainer = overviewExplainer;
         this.fileExplainer = fileExplainer;
@@ -126,10 +131,16 @@ public class AnalysisPipeline {
         }
     }
 
-    /** ZIP은 요청 때 이미 받아 두었다. URL 수집(F-05b)은 여기서 아카이브를 내려받는다. */
+    /**
+     * ZIP은 요청 때 이미 받아 두었다. 저장소 URL(F-05b)은 여기서 기본 브랜치 아카이브를 같은 임시 경로로 받으므로, 이후 단계·{@code finally}
+     * 삭제·재시작 복구가 그대로 적용된다.
+     */
     private void fetch(Context context) {
         Path archive = tempFiles.path(context.analysisId);
-        if (!Files.isRegularFile(archive)) {
+        Analysis analysis = analysisService.findForPipeline(context.analysisId);
+        if (analysis.getSourceType() == SourceType.URL) {
+            archiveFetcher.download(RepositoryUrl.parse(analysis.getSourceUrl()), archive);
+        } else if (!Files.isRegularFile(archive)) {
             throw new IllegalStateException("분석 임시 파일 없음: " + archive);
         }
         context.archive = archive;

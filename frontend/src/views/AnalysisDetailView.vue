@@ -39,6 +39,11 @@ const detailLoading = ref(false)
 const detailError = ref('')
 
 const isDone = computed(() => status.value?.status === 'DONE')
+// URL 분석의 정규화한 저장소 주소 (F-05b AC14). 서버가 https 주소만 저장하지만 href에 넣으므로 한 번 더 거른다
+const sourceLink = computed(() => {
+  const url = analysis.value?.sourceUrl
+  return typeof url === 'string' && url.startsWith('https://') ? url : null
+})
 const activeTab = computed(() =>
   TABS.some((t) => t.name === route.query.tab) ? route.query.tab : 'overview',
 )
@@ -143,6 +148,16 @@ watch(
   <section class="detail" :class="{ wide: isDone }">
     <RouterLink :to="{ name: 'analyses' }" class="back">← 내 분석</RouterLink>
     <h1>{{ isDone ? (analysis?.title ?? '분석 결과') : '분석 진행 상태' }}</h1>
+    <a
+      v-if="isDone && sourceLink"
+      :href="sourceLink"
+      target="_blank"
+      rel="noopener noreferrer"
+      class="source-link"
+      data-action="source"
+    >
+      저장소 보기
+    </a>
 
     <p v-if="notFound" class="form-error" data-message="not-found">분석을 찾을 수 없습니다.</p>
     <p v-else-if="loading" class="hint">불러오는 중…</p>
@@ -311,6 +326,12 @@ watch(
 }
 
 .back {
+  font-size: 0.9em;
+}
+
+.source-link {
+  display: inline-block;
+  margin-bottom: var(--space-2);
   font-size: 0.9em;
 }
 

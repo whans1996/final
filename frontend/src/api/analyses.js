@@ -1,17 +1,19 @@
 import http from '@/api/http'
 
-// 분석 요청(ZIP)·목록·진행 상태 (F-05a, docs/specs/F-05a-analysis-request-zip.md 3절)
+// 분석 요청(ZIP F-05a·저장소 URL F-05b)·목록·진행 상태 (docs/specs/F-05a-analysis-request-zip.md·F-05b 3절)
 
 // 10MB 업로드는 느린 회선에서 기본 15초를 넘길 수 있다
 const UPLOAD_TIMEOUT_MS = 60000
 
 /**
- * multipart로 `file`·`level`·`consent` 파트를 보낸다. level을 생략하면 서버가 내 프로필 수준을 쓴다.
+ * multipart로 `file` 또는 `sourceUrl` 파트 하나와 `level`·`consent` 파트를 보낸다. file이 있으면 file을,
+ * 없으면 sourceUrl을 보낸다. level을 생략하면 서버가 내 프로필 수준을 쓴다.
  * @returns {Promise<{ analysisId: number, status: string }>} 202
  */
-export function createAnalysis({ file, level, consent }) {
+export function createAnalysis({ file, sourceUrl, level, consent }) {
   const form = new FormData()
-  form.append('file', file)
+  if (file) form.append('file', file)
+  else form.append('sourceUrl', sourceUrl)
   if (level) form.append('level', level)
   form.append('consent', String(consent))
   return http.post('/analyses', form, { timeout: UPLOAD_TIMEOUT_MS }).then((res) => res.data)
@@ -32,7 +34,10 @@ export function fetchAnalysisStatus(id) {
 
 // 결과 조회 (F-06, docs/specs/F-06-overview-explanation.md 3절). 없거나 남의 분석이면 404 ANALYSIS_404.
 
-/** 분석 상세 (overview·fileCount·explainedFileCount 포함). 진행 중이면 overview가 null일 수 있다. */
+/**
+ * 분석 상세 (overview·fileCount·explainedFileCount 포함). 진행 중이면 overview가 null일 수 있다.
+ * sourceUrl은 URL 분석의 정규화한 저장소 주소이고 ZIP 분석이면 null이다 (F-05b AC12).
+ */
 export function fetchAnalysis(id) {
   return http.get(`/analyses/${id}`).then((res) => res.data)
 }

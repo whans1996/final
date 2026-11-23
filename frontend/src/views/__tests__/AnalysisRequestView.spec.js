@@ -177,3 +177,103 @@ describe('AnalysisRequestView (F-05a AC14)', () => {
     expect(wrapper.find('[data-error="level"]').text()).toBe('허용되지 않은 수준입니다.')
   })
 })
+
+describe('AnalysisRequestView 저장소 주소 (F-05b AC13)', () => {
+  const REPO = 'https://github.com/octo/todo-app'
+
+  beforeEach(() => {
+    vi.resetAllMocks()
+  })
+
+  async function chooseSource(wrapper, value) {
+    await wrapper.find(`input[name="source"][value="${value}"]`).setValue(true)
+  }
+
+  it('AC13 입력 방식은 ZIP 업로드가 기본이고, 저장소 주소를 고르면 주소 칸과 안내를 보여 준다', async () => {
+    const { wrapper } = await mountRequest()
+
+    expect(wrapper.find('input[name="source"][value="ZIP"]').element.checked).toBe(true)
+    expect(wrapper.find('input[name="sourceUrl"]').exists()).toBe(false)
+    expect(wrapper.find('input[name="file"]').exists()).toBe(true)
+
+    await chooseSource(wrapper, 'URL')
+
+    const input = wrapper.find('input[name="sourceUrl"]')
+    expect(input.exists()).toBe(true)
+    expect(input.attributes('placeholder')).toBe('https://github.com/owner/repo')
+    expect(wrapper.text()).toContain(
+      '공개 GitHub·GitLab(gitlab.com) 저장소의 기본 브랜치를 분석합니다. 저장소 주소만 입력하세요.',
+    )
+    expect(wrapper.text()).toContain('저장소 아카이브 30MB 이하')
+    expect(wrapper.find('input[name="file"]').exists()).toBe(false)
+  })
+
+  it('AC13 주소(공백 제외)와 동의가 모두 있어야 버튼이 활성화된다', async () => {
+    const { wrapper } = await mountRequest()
+    await chooseSource(wrapper, 'URL')
+    await wrapper.find('input[name="consent"]').setValue(true)
+
+    expect(submitButton(wrapper).attributes('disabled')).toBeDefined()
+    await wrapper.find('input[name="sourceUrl"]').setValue('   ')
+    expect(submitButton(wrapper).attributes('disabled')).toBeDefined()
+    await wrapper.find('input[name="sourceUrl"]').setValue(REPO)
+    expect(submitButton(wrapper).attributes('disabled')).toBeUndefined()
+    await wrapper.find('input[name="consent"]').setValue(false)
+    expect(submitButton(wrapper).attributes('disabled')).toBeDefined()
+  })
+
+  it('AC13 202면 sourceUrl만 보내고 /analyses/{analysisId}로 이동한다', async () => {
+    const { wrapper, router } = await mountRequest()
+    analysesApi.createAnalysis.mockResolvedValue({ analysisId: 57, status: 'FETCHING' })
+
+    await chooseSource(wrapper, 'URL')
+    await wrapper.find('input[name="sourceUrl"]').setValue(`  ${REPO}  `)
+    await wrapper.find('input[name="level"][value="SENIOR"]').setValue(true)
+    await wrapper.find('input[name="consent"]').setValue(true)
+    await submitForm(wrapper)
+
+    expect(analysesApi.createAnalysis).toHaveBeenCalledWith({
+      sourceUrl: REPO,
+      level: 'SENIOR',
+      consent: true,
+    })
+    await vi.waitFor(() => expect(router.currentRoute.value.path).toBe('/analyses/57'))
+  })
+
+  it('AC13 방식을 바꾸면 다른 방식의 입력값을 비운다', async () => {
+    const { wrapper } = await mountRequest()
+    await wrapper.find('input[name="consent"]').setValue(true)
+
+    await chooseFile(wrapper, zipFile())
+    expect(submitButton(wrapper).attributes('disabled')).toBeUndefined()
+    await chooseSource(wrapper, 'URL')
+    await wrapper.find('input[name="sourceUrl"]').setValue(REPO)
+    await chooseSource(wrapper, 'ZIP')
+    expect(submitButton(wrapper).attributes('disabled')).toBeDefined()
+
+    await chooseSource(wrapper, 'URL')
+    expect(wrapper.find('input[name="sourceUrl"]').element.value).toBe('')
+    expect(submitButton(wrapper).attributes('disabled')).toBeDefined()
+  })
+
+  it('AC13 400의 details.sourceUrl을 주소 칸 아래에 보여 준다', async () => {
+    const { wrapper } = await mountRequest()
+    const message =
+      '저장소 주소만 입력하세요. 브랜치·파일 경로(/tree/…, /blob/…)는 지원하지 않습니다.'
+    analysesApi.createAnalysis.mockRejectedValue(
+      apiError(400, {
+        code: 'COMMON_400',
+        message: '입력값이 올바르지 않습니다.',
+        details: { sourceUrl: message },
+      }),
+    )
+
+    await chooseSource(wrapper, 'URL')
+    await wrapper.find('input[name="sourceUrl"]').setValue(`${REPO}/tree/dev`)
+    await wrapper.find('input[name="consent"]').setValue(true)
+    await submitForm(wrapper)
+
+    expect(wrapper.find('[data-error="sourceUrl"]').text()).toBe(message)
+    expect(wrapper.find('input[name="sourceUrl"]').attributes('aria-invalid')).toBe('true')
+  })
+})

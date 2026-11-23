@@ -8,6 +8,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 
+import com.vibenote.analysis.fetch.FakeRepositoryServer;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -16,9 +17,12 @@ import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.convention.TestBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
@@ -335,5 +339,136 @@ class AnalysisPipelineTest extends AnalysisTestSupport {
                     .as("analysis %d", id)
                     .isEqualTo(FIXED_NOW);
         }
+    }
+
+    // ═════════════ F-05b 저장소 URL 수집 (docs/specs/F-05b-analysis-request-url.md AC4·AC6·AC11)
+    // ═════════════
+
+    /** 가짜 GitHub·GitLab 서버. 테스트마다 다른 저장소 경로를 쓴다. */
+    static final FakeRepositoryServer REPOSITORY = new FakeRepositoryServer();
+
+    @DynamicPropertySource
+    static void repositoryServer(DynamicPropertyRegistry registry) {
+        registry.add("analysis.fetch.github-api-base", REPOSITORY::base);
+        registry.add("analysis.fetch.gitlab-api-base", () -> REPOSITORY.base() + "/api/v4");
+        registry.add("analysis.fetch.allowed-hosts", () -> "localhost");
+    }
+
+    @AfterAll
+    static void closeRepositoryServer() {
+        REPOSITORY.close();
+    }
+
+    /** springProject()의 최상위 폴더를 GitHub zipball 형식({owner}-{repo}-{sha})으로 바꾼다. */
+    private static byte[] githubArchive(Map<String, String> entries) {
+        Map<String, String> renamed = new LinkedHashMap<>();
+        entries.forEach(
+                (path, content) ->
+                        renamed.put(
+                                path.replaceFirst("^todo-app/", "octo-todo-app-1a2b3c4/"),
+                                content));
+        return zip(renamed);
+    }
+
+    @Test
+    void F05b_AC4_GitHub_저장소를_받아_선별하고_DONE이_되며_임시_파일을_지운다() {
+        long userId = createUser("b4github", "JUNIOR");
+        long id = insertUrlAnalysis(userId, "https://github.com/octo/b4-app");
+        REPOSITORY
+                .on(
+                        "/repos/octo/b4-app/zipball",
+                        FakeRepositoryServer.redirect(
+                                302, REPOSITORY.base() + "/codeload/octo/b4-app/zip/main"))
+                .on(
+                        "/codeload/octo/b4-app/zip/main",
+                        FakeRepositoryServer.zip(githubArchive(springProject())));
+
+        pipeline.run(id);
+
+        Map<String, Object> row = analysisRow(id);
+        assertThat(row.get("status")).isEqualTo("DONE");
+        assertThat(row.get("error_code")).isNull();
+        assertThat(files(id))
+                .extracting(f -> (String) f.get("path"))
+                .contains("src/main/java/com/example/todo/controller/UserController.java")
+                .allSatisfy(path -> assertThat(path).doesNotStartWith("octo-todo-app"));
+        assertThat(tempZip(id)).doesNotExist();
+    }
+
+    @Test
+    void F05b_AC5_GitLab_저장소를_받아_DONE이_된다() {
+        long userId = createUser("b5gitlab", "JUNIOR");
+        long id = insertUrlAnalysis(userId, "https://gitlab.com/group/sub/b5-app");
+        REPOSITORY.on(
+                "/api/v4/projects/group%2Fsub%2Fb5-app/repository/archive.zip",
+                FakeRepositoryServer.zip(zip(springProject())));
+
+        pipeline.run(id);
+
+        assertThat(analysisRow(id).get("status")).isEqualTo("DONE");
+        assertThat(tempZip(id)).doesNotExist();
+    }
+
+    @Test
+    void F05b_AC6_저장소가_없으면_FAILED_ANALYSIS_004이고_한도를_깎지_않는다() {
+        long userId = createUser("b6missing", "JUNIOR");
+        long id = insertUrlAnalysis(userId, "https://github.com/octo/b6-missing");
+        REPOSITORY.on("/repos/octo/b6-missing/zipball", FakeRepositoryServer.status(404));
+
+        pipeline.run(id);
+
+        Map<String, Object> row = analysisRow(id);
+        assertThat(row.get("status")).isEqualTo("FAILED");
+        assertThat(row.get("error_code")).isEqualTo("ANALYSIS_004");
+        assertThat(row.get("error_message"))
+                .isEqualTo("저장소를 찾을 수 없습니다. 공개 저장소인지, 주소가 맞는지, 기본 브랜치에 코드가 있는지 확인해 주세요.");
+        assertThat(tempZip(id)).doesNotExist();
+        assertThat(
+                        jdbc.queryForObject(
+                                "SELECT COUNT(*) FROM analyses WHERE user_id = ? AND status <>"
+                                        + " 'FAILED'",
+                                Long.class,
+                                userId))
+                .isZero();
+    }
+
+    @Test
+    void F05b_AC11_받은_아카이브에_지원_코드가_없으면_ANALYSIS_415() {
+        long userId = createUser("b11none", "JUNIOR");
+        long id = insertUrlAnalysis(userId, "https://github.com/octo/b11-docs");
+        REPOSITORY.on(
+                "/repos/octo/b11-docs/zipball",
+                FakeRepositoryServer.zip(
+                        zip(
+                                Map.of(
+                                        "octo-b11-docs-1a2b3c4/README.md",
+                                        "# docs",
+                                        "octo-b11-docs-1a2b3c4/logo.png",
+                                        "png"))));
+
+        pipeline.run(id);
+
+        Map<String, Object> row = analysisRow(id);
+        assertThat(row.get("status")).isEqualTo("FAILED");
+        assertThat(row.get("error_code")).isEqualTo("ANALYSIS_415");
+        assertThat(tempZip(id)).doesNotExist();
+    }
+
+    @Test
+    void F05b_AC11_받은_아카이브의_지원_파일이_200개를_넘으면_ANALYSIS_413() {
+        long userId = createUser("b11many", "JUNIOR");
+        long id = insertUrlAnalysis(userId, "https://github.com/octo/b11-many");
+        Map<String, String> entries = new LinkedHashMap<>();
+        for (int i = 0; i < 201; i++) {
+            entries.put("octo-b11-many-1a2b3c4/src/A" + i + ".java", "class A" + i + " {}");
+        }
+        REPOSITORY.on("/repos/octo/b11-many/zipball", FakeRepositoryServer.zip(zip(entries)));
+
+        pipeline.run(id);
+
+        Map<String, Object> row = analysisRow(id);
+        assertThat(row.get("status")).isEqualTo("FAILED");
+        assertThat(row.get("error_code")).isEqualTo("ANALYSIS_413");
+        assertThat(tempZip(id)).doesNotExist();
     }
 }
