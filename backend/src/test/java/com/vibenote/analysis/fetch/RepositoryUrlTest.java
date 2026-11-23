@@ -150,4 +150,16 @@ class RepositoryUrlTest {
         assertThat(RepositoryUrl.parse(url).normalized()).isEqualTo(url);
         assertThatThrownBy(() -> RepositoryUrl.parse(url + "q")).hasMessage(RepositoryUrl.TOO_LONG);
     }
+
+    @Test
+    void AC2_정규화하면_500자를_넘는_주소도_거부한다() {
+        // http:// → https://로 한 글자 늘어 analyses.source_url VARCHAR(500)을 넘는다 (Codex 리뷰)
+        String prefix = "http://gitlab.com/group/";
+        String url = prefix + "p".repeat(255) + "/" + "q".repeat(500 - prefix.length() - 256);
+
+        assertThat(url).hasSize(500);
+        assertThatThrownBy(() -> RepositoryUrl.parse(url))
+                .isInstanceOf(InvalidRepositoryUrlException.class)
+                .hasMessage(RepositoryUrl.TOO_LONG);
+    }
 }

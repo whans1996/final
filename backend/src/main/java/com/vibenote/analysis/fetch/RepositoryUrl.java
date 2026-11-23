@@ -95,7 +95,12 @@ public record RepositoryUrl(Host host, List<String> segments) {
         if (segments.isEmpty() || segments.contains("")) {
             throw new InvalidRepositoryUrlException(FORMAT);
         }
-        return host == Host.GITHUB ? github(segments) : gitlab(segments);
+        RepositoryUrl repository = host == Host.GITHUB ? github(segments) : gitlab(segments);
+        // http:// → https://처럼 정규화하면 길어질 수 있다. 저장하는 값(source_url VARCHAR(500))으로 다시 센다
+        if (repository.normalized().length() > MAX_LENGTH) {
+            throw new InvalidRepositoryUrlException(TOO_LONG);
+        }
+        return repository;
     }
 
     /** 정규화한 주소. 호스트는 소문자·{@code www.} 없음, 경로 대소문자는 입력 그대로. */
