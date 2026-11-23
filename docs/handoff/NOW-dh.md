@@ -4,7 +4,7 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
 
-갱신: 2026-11-23 15:59 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/F-05b-analysis-url
+갱신: 2026-11-23 16:03 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/F-05b-analysis-url
 
 ## 현재 기능
 
@@ -20,11 +20,14 @@
 - ✅ AC4·5·6·11 파이프라인: `AnalysisPipeline.fetch` URL 분기. `AnalysisPipelineTest` F05b_* 5개(static 가짜 서버 + `@DynamicPropertySource`). analysis 패키지 316개 green
 - ✅ `RepositoryArchiveFetcherLiveTest`(@Tag live, DS-02-01 dev) 작성, 아직 실행 안 함. conventions 3절 코드 3개
 
+- ✅ FE AC13·14: `createAnalysis({file, sourceUrl, ...})`, SC-05 방식 라디오·주소 칸, SC-07 "저장소 보기" 링크. verify fe 통과
+
 ## 바로 다음 할 일
 
-1. FE AC13: `frontend/src/api/analyses.js` `createAnalysis({file, sourceUrl, level, consent})` + `src/api/__tests__/analyses.spec.js`, `AnalysisRequestView.vue` 방식 라디오·주소 칸 + `src/views/__tests__/AnalysisRequestView.spec.js`
-2. FE AC14: `AnalysisDetailView.vue` "저장소 보기" 링크 + spec 테스트
-3. 마무리: contract-checker, ui-verifier, 산출물(06 SC-05·SC-07, 08 외부API), #24에 "다운로드도 실행기 스레드 최대 60초" 덧글
+1. contract-checker(F-05b) → 불일치 수정
+2. ui-verifier: BE local + FE dev 띄우고 /analyses/new(주소 방식, 375px·1440px) 확인. 못 띄우면 사용자 요청
+3. 산출물: `docs/산출물/06-화면설계서.md` SC-05·SC-07, `08-외부API-생성형AI-활용.md` GitHub·GitLab 아카이브 API, 01 요구사항 F-05 행 확인. #24에 다운로드 실행기 스레드 덧글
+4. `/pr-review` (공통 파일 ErrorCode·application.yml 변경 → @JoonseobKim 멘션)
 
 ## 막힌 점 / 결정 필요
 

@@ -217,9 +217,9 @@ F-05a 5.3절 문구(ANALYSIS_400·413·415·500)는 그대로다.
 
 - [x] 브랜치 `feature/F-05b-analysis-url`
 - [x] Flyway 마이그레이션 — 없음
-- [ ] AC별 실패 테스트 작성 (red 확인) — BE AC1~12 ✅, FE AC13~14
+- [x] AC별 실패 테스트 작성 (red 확인) — BE AC1~12, FE AC13~14
 - [x] BE 구현 (green) — `RepositoryUrl`, `RepositoryArchiveFetcher`, `AnalysisService`·`AnalysisPipeline.fetch`, `ErrorCode` 3개, 상세 `sourceUrl`
-- [ ] FE 구현 (green)
+- [x] FE 구현 (green)
 - [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
 - [x] `.env.example`(`GITHUB_TOKEN`), `docs/conventions.md` 3절 에러 코드
 - [ ] contract-checker 통과
