@@ -1,4 +1,4 @@
-// 팀 (B F-20a): SC-22 내 팀 목록, SC-23 팀 상세
+// 팀 (B F-20a·F-20b): SC-22 내 팀 목록, SC-23 팀 상세, SC-24 팀 이해도
 export default [
   {
     path: '/teams',
@@ -11,6 +11,12 @@ export default [
     path: '/teams/:id(\\d+)',
     name: 'team-detail',
     component: () => import('@/views/team/TeamDetailView.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/teams/:id(\\d+)/analyses/:analysisId(\\d+)',
+    name: 'team-understanding',
+    component: () => import('@/views/team/TeamUnderstandingView.vue'),
     meta: { requiresAuth: true },
   },
 ]

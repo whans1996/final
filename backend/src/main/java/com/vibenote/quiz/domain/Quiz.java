@@ -9,6 +9,9 @@ public class Quiz {
     private long analysisId;
     private LocalDateTime createdAt;
 
+    /** 분석 주인 id. {@code QuizMapper.findActive}만 채운다 (F-20b). */
+    private Long ownerId;
+
     public static Quiz of(long analysisId, LocalDateTime now) {
         Quiz quiz = new Quiz();
         quiz.analysisId = analysisId;
@@ -38,5 +41,9 @@ public class Quiz {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public Long getOwnerId() {
+        return ownerId;
     }
 }

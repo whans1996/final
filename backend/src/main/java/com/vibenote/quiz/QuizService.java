@@ -19,6 +19,7 @@ import com.vibenote.quiz.dto.QuizResponse;
 import com.vibenote.quiz.dto.QuizResultItem;
 import com.vibenote.quiz.dto.ReviewAddedItem;
 import com.vibenote.reviewplan.ReviewPlanService;
+import com.vibenote.team.TeamAnalysisAccess;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -40,6 +41,7 @@ public class QuizService {
     private final AnalysisService analysisService;
     private final ConceptQueryService conceptQueryService;
     private final ReviewPlanService reviewPlanService;
+    private final TeamAnalysisAccess teamAnalysisAccess;
     private final Clock clock;
 
     public QuizService(
@@ -47,18 +49,25 @@ public class QuizService {
             AnalysisService analysisService,
             ConceptQueryService conceptQueryService,
             ReviewPlanService reviewPlanService,
+            TeamAnalysisAccess teamAnalysisAccess,
             Clock clock) {
         this.mapper = mapper;
         this.analysisService = analysisService;
         this.conceptQueryService = conceptQueryService;
         this.reviewPlanService = reviewPlanService;
+        this.teamAnalysisAccess = teamAnalysisAccess;
         this.clock = clock;
     }
 
-    /** 내 미삭제 분석의 퀴즈 (정답·해설·개념 없음). 분석이 아니면 ANALYSIS_404, 퀴즈가 없으면 QUIZ_404. */
+    /**
+     * 내 미삭제 분석이거나 내가 멤버인 팀에 공유된 미삭제 분석(F-20b AC5)의 퀴즈 (정답·해설·개념 없음). 둘 다 아니면 ANALYSIS_404, 퀴즈가 없으면
+     * QUIZ_404. {@code lastAttempt}는 요청자 자신의 최근 풀이다.
+     */
     @Transactional(readOnly = true)
     public QuizResponse getQuiz(long userId, long analysisId) {
-        analysisService.checkOwned(userId, analysisId);
+        if (!teamAnalysisAccess.isSharedWith(userId, analysisId)) {
+            analysisService.checkOwned(userId, analysisId);
+        }
         Quiz quiz =
                 mapper.findByAnalysis(analysisId)
                         .orElseThrow(() -> new BusinessException(ErrorCode.QUIZ_404));
@@ -79,12 +88,17 @@ public class QuizService {
 
     /**
      * 채점해 풀이·답을 저장하고, 틀린 문항의 공개 개념을 내일 복습 계획에 넣는다. 모두 한 트랜잭션이다. 문항마다 정확히 한 번씩 답하지 않으면 아무것도 저장하지 않고
-     * QUIZ_400.
+     * QUIZ_400. 분석 주인이거나 그 분석을 공유받은 팀 멤버(F-20b AC5)만 낼 수 있고, 아니면 QUIZ_404다. 풀이·복습 계획은 요청자의 것이다.
      */
     @Transactional
     public QuizAttemptResponse submit(long userId, long quizId, QuizAttemptRequest request) {
         Quiz quiz =
-                mapper.findOwned(quizId, userId)
+                mapper.findActive(quizId)
+                        .filter(
+                                q ->
+                                        q.getOwnerId() == userId
+                                                || teamAnalysisAccess.isSharedWith(
+                                                        userId, q.getAnalysisId()))
                         .orElseThrow(() -> new BusinessException(ErrorCode.QUIZ_404));
         List<QuizQuestion> questions = mapper.findQuestions(quiz.getId());
         Map<Long, Integer> selected = selections(request.answers(), questions);

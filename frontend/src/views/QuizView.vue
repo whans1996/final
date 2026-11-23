@@ -11,6 +11,16 @@ import { planDateLabel } from '@/utils/quizFormat'
 
 const route = useRoute()
 const analysisId = computed(() => Number(route.params.id))
+// 팀 공유 분석에서 들어오면(?team=T, F-20b AC13) 분석 상세 대신 팀으로 돌아간다. 숫자가 아니면 무시한다.
+const teamId = computed(() => {
+  const team = route.query.team
+  return typeof team === 'string' && /^\d+$/.test(team) ? Number(team) : null
+})
+const backLink = computed(() =>
+  teamId.value === null
+    ? { to: { path: `/analyses/${analysisId.value}`, query: { tab: 'quiz' } }, label: '분석으로' }
+    : { to: `/teams/${teamId.value}`, label: '팀으로' },
+)
 
 const quiz = ref(null)
 const loading = ref(true)
@@ -89,11 +99,8 @@ watch(
 
 <template>
   <section class="quiz">
-    <RouterLink
-      :to="{ path: `/analyses/${analysisId}`, query: { tab: 'quiz' } }"
-      class="back"
-      data-action="back"
-      >← 분석으로 돌아가기</RouterLink
+    <RouterLink :to="backLink.to" class="back" data-action="back"
+      >← {{ backLink.label }} 돌아가기</RouterLink
     >
     <h1>코드 이해 퀴즈</h1>
 
