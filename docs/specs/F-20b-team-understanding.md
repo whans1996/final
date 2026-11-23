@@ -216,7 +216,7 @@ CREATE TABLE team_analyses (
 - [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
 - [x] `docs/conventions.md` 3절 `TEAM` 행에 006~010
 - [x] contract-checker 통과
-- [x] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일) — 빈 상태·404만. 데이터가 있는 SC-23·SC-24·SC-08 `?team=`은 머지 전 사람 확인
+- [x] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일) — 빈 상태·404 + 11-24 시드 데이터(분석 DONE 공유, 멤버 2명 풀이)로 SC-23·SC-24·SC-08 `?team=` 1280·375 통과
 - [x] reviewer 지적 사항 반영
 - [x] 산출물 반영: 화면 설계서 SC-23(공유 영역)·SC-24 추가·SC-08(`?team=`), ERD(`team_analyses`), 요구사항 정의서 F-20 행(F-20b·F-20c)
 - [x] PR CI 초록 (A 영역 `QuizService`·`QuizMapper`·`QuizView.vue`, 공통 `ErrorCode`·conventions 변경 → @whans1996 멘션)
