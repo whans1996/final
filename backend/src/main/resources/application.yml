@@ -8,6 +8,11 @@ spring:
     url: ${DB_URL:jdbc:mysql://localhost:3306/vibenote?serverTimezone=Asia/Seoul&characterEncoding=UTF-8}
     username: ${DB_USERNAME:vibenote}
     password: ${DB_PASSWORD:}
+    hikari:
+      # DEFAULT CURRENT_TIMESTAMP·NOW()가 Asia/Seoul 시각이 되게 연결마다 세션 시간대를 고정한다 (#17).
+      # URL의 serverTimezone은 드라이버에 서버 시간대를 알려 줄 뿐 세션을 바꾸지 않아, UTC MySQL에서는 9시간 어긋난다.
+      # 이름('Asia/Seoul') 대신 오프셋을 쓴다. 시간대 테이블이 빈 MySQL(Windows 설치본 등)에서도 동작하고, 한국은 서머타임이 없다.
+      connection-init-sql: SET time_zone = '+09:00'
   flyway:
     enabled: true
     locations: classpath:db/migration

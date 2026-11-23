@@ -4,29 +4,31 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
 
-갱신: 2026-11-23 13:35 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/issue-55-json-body-limit
+갱신: 2026-11-23 13:52 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/issue-17-db-session-tz
 
 ## 현재 기능
 
-공통 이슈 **#55** JSON 요청 본문 전역 크기 제한. **PR #72** 열림 (Closes #55, @JoonseobKim 멘션). Codex ✅ 1178e6d (P2 1건 → #73). CI 확인 후 머지
+공통 이슈 **#17** created_at/updated_at이 DB 세션 시간대에 의존. 방식 (a) 연결 단위 고정 (사용자 결정). 계획 `~/.claude/plans/a-sleepy-tiger.md`
 
 ## 진행
 
-- ✅ (PR #70 #54·#32 11-20 머지, 이슈 닫힘 확인. 이 PC는 F-14 wip에 멈춰 있어 develop으로 맞춤)
-- ✅ 방식: Jackson (사용자 결정). Boot 4.1 속성 `spring.jackson.factory.constraints.read.max-document-length: 1048576`(application.yml) — 커스터마이저 코드 불필요
-- ✅ `GlobalExceptionHandler.handleNotReadable`: 원인 체인에 `StreamConstraintsException`이면 413 `COMMON_413`, 아니면 400. ErrorCode 추가 없음. COMMON_413 메시지는 "요청 크기가 허용 범위를 넘었습니다."로 일반화 (사용자 결정, 결정로그)
-- ✅ 테스트: `GlobalExceptionHandlerTest.본문이_Jackson_읽기_한도를_넘으면_413`, `common/RequestBodyLimitTest`(로그인 1MB+1KB → 413, 1MB−1KB → 401 AUTH_001). `verify.mjs all` 통과
-- ✅ `docs/conventions.md` 3절 COMMON_413 설명 갱신 (multipart 파일 10MB·요청 12MB, JSON 1MB)
-- ✅ /pr-review: reviewer 반드시 수정 없음, 권장 2건 반영(1178e6d). PR 설명 `.harness/pr-issue-55.md`
+- ✅ PR #72(#55) 11-23 머지, #55 닫힘 확인
+- ✅ 원인: URL의 `serverTimezone=Asia/Seoul`은 드라이버 힌트일 뿐 세션 time_zone을 바꾸지 않음. 테스트 컨테이너가 `--default-time-zone=+09:00`이라 가려져 있었음
+- ✅ `IntegrationTestBase` 컨테이너를 `--default-time-zone=+00:00`(UTC)으로 변경
+- ✅ 새 테스트 `common/DbSessionTimeZoneTest` 3개(세션_시간대가_서버_기본값과_무관하게_KST, DB_NOW가_서비스_Clock과_같은_시각, 기본값_created_at이_KST로_들어간다) 작성 → red 확인 (세션 +00:00, 9시간 차이)
+- ✅ `application.yml` `spring.datasource.hikari.connection-init-sql: SET time_zone = '+09:00'` 추가 (이름 대신 오프셋: 시간대 테이블 빈 MySQL 대비)
+- ✅ 결정로그 #17 한 줄, `backend/CLAUDE.md` MyBatis 절에 "시각" 규칙 한 줄
+- ✅ `verify.mjs be` 650 통과(UTC 컨테이너 회귀 없음), 로컬 MySQL bootRun 기동 확인. 상대 이슈 댓글(피드 `activities.created_at` 9시간)도 이 고정으로 해결 → ActivityMapper 수정 불필요
+- ✅ 커밋 `fix(common): #17 DB 세션 시간대를 +09:00으로 고정`
 
 ## 바로 다음 할 일
 
-1. PR #72: `gh pr checks 72` 초록 확인 → GitHub에서 머지 (spec 없으니 완료 표시 커밋 없음). 머지 뒤 #55 닫힘 확인
-2. 그 뒤 #17 (created_at 시간대) → F-05b `/spec` (먼저 `node scripts/branches.mjs F-05b`)
+1. 새 세션에서 `/pr-review` (Closes #17, @JoonseobKim 멘션: IntegrationTestBase·application.yml 공통)
+2. 그 뒤 F-05b `/spec` (먼저 `node scripts/branches.mjs F-05b`)
 
 ## 막힌 점 / 결정 필요
 
-- 사람: 이슈 #16, 노션 팀원 초대, 고아 폴더 `../final-harness` 삭제 여부, 하네스 동결 원칙 결정로그 추가 여부, 로컬 옛 브랜치 4개(F-07, F-14, common-notify-per-person, issue-54) 정리 여부
+- 사람: 이슈 #16, 노션 팀원 초대, 고아 폴더 `../final-harness` 삭제 여부, 하네스 동결 원칙 결정로그 추가 여부, 머지된 로컬 옛 브랜치(26개) 정리 여부
 
 ## 주의
 

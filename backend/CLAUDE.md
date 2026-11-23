@@ -56,6 +56,7 @@ com.vibenote
   - JSON 컬럼에 담기는 record의 필드 중 null이 올 수 있는 것은 래퍼 타입(`Integer` 등)으로 선언한다. Jackson 3 기본값에서는 null을 primitive로 읽으면 예외가 난다.
 - 목록 조회는 페이지(`LIMIT #{size} OFFSET #{offset}`)와 `COUNT(*)`를 함께 제공한다.
 - **분석은 soft delete**다 (V2, F-19). 삭제 시 `analysis_files`·`analysis_flows`·`analysis_concepts`를 지우고 `analyses.deleted_at`을 채운다. 목록·상세·피드·게시글 첨부 조회는 `deleted_at IS NULL`로 거르고, 퀴즈 풀이·정답률·챌린지·일일 한도 집계는 거르지 않는다. 추천(F-16)은 삭제된 분석의 오답·등장을 신호에 넣지 않는다 (spec AC2). 프로필의 "분석 수"는 삭제한 분석을 뺀다 (F-03 AC3).
+- **시각**: 서비스 코드는 `Clock` 빈(Asia/Seoul, `common.config.ClockConfig`)으로 `LocalDateTime.now(clock)`을 쓴다. DB의 `DEFAULT CURRENT_TIMESTAMP`·`NOW()`는 연결마다 세션 시간대를 `+09:00`으로 고정해 같은 기준이 된다 (`application.yml` `hikari.connection-init-sql`, #17). 테스트 컨테이너는 UTC로 떠서 이 고정을 검증한다 (`DbSessionTimeZoneTest`).
 - 회원도 soft delete(`users.status=WITHDRAWN`)이므로 users 행을 DELETE하지 않는다. 작성물(posts·comments·concept_reviews)의 user FK는 RESTRICT라 실패한다.
 
 ## DB 마이그레이션 (Flyway)

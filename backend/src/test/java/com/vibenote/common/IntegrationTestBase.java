@@ -35,7 +35,8 @@ public abstract class IntegrationTestBase {
                     .withCommand(
                             "--character-set-server=utf8mb4",
                             "--collation-server=utf8mb4_0900_ai_ci",
-                            "--default-time-zone=+09:00");
+                            // 배포·CI MySQL처럼 UTC로 띄운다. 세션 시간대는 앱이 연결마다 +09:00으로 맞춘다 (#17)
+                            "--default-time-zone=+00:00");
 
     static {
         MYSQL.start();
