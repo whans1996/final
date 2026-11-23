@@ -15,6 +15,9 @@ vi.mock('@/api/teams', async (importOriginal) => {
     regenerateInviteCode: vi.fn(),
     leaveTeam: vi.fn(),
     removeTeamMember: vi.fn(),
+    fetchTeamAnalyses: vi.fn(),
+    shareTeamAnalysis: vi.fn(),
+    unshareTeamAnalysis: vi.fn(),
   }
 })
 
@@ -69,6 +72,7 @@ describe('TeamDetailView SC-23 (F-20a AC14)', () => {
 
   beforeEach(() => {
     vi.resetAllMocks()
+    teamsApi.fetchTeamAnalyses.mockResolvedValue([])
     writeText = vi.fn().mockResolvedValue(undefined)
     Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
   })
@@ -184,6 +188,7 @@ describe('TeamDetailView SC-23 (F-20a AC14)', () => {
 describe('TeamDetailView 관리 동작 (F-20a AC15)', () => {
   beforeEach(() => {
     vi.resetAllMocks()
+    teamsApi.fetchTeamAnalyses.mockResolvedValue([])
   })
 
   afterEach(() => {
@@ -336,6 +341,7 @@ describe('TeamDetailView 다른 팀으로 이동한 뒤 늦게 온 응답 (#84)'
 
   beforeEach(() => {
     vi.resetAllMocks()
+    teamsApi.fetchTeamAnalyses.mockResolvedValue([])
     vi.spyOn(window, 'confirm').mockReturnValue(true)
   })
 
@@ -464,5 +470,102 @@ describe('TeamDetailView 다른 팀으로 이동한 뒤 늦게 온 응답 (#84)'
     await flushPromises()
 
     expect(router.currentRoute.value.fullPath).toBe('/')
+  })
+})
+
+function shared(partial) {
+  return {
+    analysisId: 42,
+    title: 'spring-realworld',
+    projectName: 'spring-realworld-proj',
+    level: 'JUNIOR',
+    sharedBy: { userId: 7, nickname: 'learner' },
+    sharedAt: '2026-11-25T14:20:00+09:00',
+    questionCount: 6,
+    solvedMemberCount: 1,
+    myLastAttempt: { attemptId: 5, score: 4, total: 6, createdAt: '2026-11-25T15:02:00+09:00' },
+    canUnshare: true,
+    ...partial,
+  }
+}
+
+describe('TeamDetailView SC-23 공유 분석 (F-20b AC10)', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+    teamsApi.fetchTeamAnalyses.mockResolvedValue([])
+    teamsApi.fetchTeam.mockResolvedValue(team())
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  const items = (wrapper) => wrapper.findAll('[data-team-analysis]')
+
+  it('AC10 공유 분석 n/10과 항목마다 제목·공유자·풀이 수·내 점수·링크·해제 버튼을 보여 준다', async () => {
+    teamsApi.fetchTeamAnalyses.mockResolvedValue([
+      shared(),
+      shared({ analysisId: 43, title: null, myLastAttempt: null, canUnshare: false }),
+    ])
+    const { wrapper } = await mountDetail()
+
+    expect(teamsApi.fetchTeamAnalyses).toHaveBeenCalledWith(12)
+    expect(wrapper.find('[data-role="shared-count"]').text()).toBe('공유 분석 2/10')
+    const [first, second] = items(wrapper)
+    expect(first.text()).toContain('spring-realworld')
+    expect(first.text()).toContain('learner 님 공유 · 2026-11-25')
+    expect(first.text()).toContain('1/2명 풀이')
+    expect(first.text()).toContain('내 점수 4/6')
+    expect(first.find('[data-action="solve"]').attributes('href')).toBe('/analyses/42/quiz?team=12')
+    expect(first.find('[data-action="understanding"]').attributes('href')).toBe(
+      '/teams/12/analyses/42',
+    )
+    expect(first.find('[data-action="unshare"]').exists()).toBe(true)
+    expect(second.text()).toContain('spring-realworld-proj')
+    expect(second.text()).toContain('아직 풀지 않음')
+    expect(second.find('[data-action="unshare"]').exists()).toBe(false)
+  })
+
+  it('AC10 공유가 없으면 안내를 보여 준다', async () => {
+    teamsApi.fetchTeamAnalyses.mockResolvedValue([])
+    const { wrapper } = await mountDetail()
+
+    expect(wrapper.text()).toContain(
+      '아직 공유한 분석이 없습니다. 내 분석을 공유해 팀원과 함께 퀴즈를 풀어 보세요.',
+    )
+  })
+
+  it('AC10 목록 조회가 실패하면 그 영역에 message와 다시 시도를 보여 주고 팀 정보는 그대로다', async () => {
+    teamsApi.fetchTeamAnalyses
+      .mockRejectedValueOnce(apiError(500, { code: 'COMMON_500', message: '서버 오류입니다.' }))
+      .mockResolvedValueOnce([shared()])
+    const { wrapper } = await mountDetail()
+
+    expect(wrapper.find('h1').text()).toBe('스프링 스터디')
+    expect(wrapper.findAll('[data-team-member]')).toHaveLength(2)
+    expect(wrapper.find('[data-error="team-analyses"]').text()).toBe('서버 오류입니다.')
+
+    await button(wrapper, 'retry-team-analyses').trigger('click')
+    await flushPromises()
+    expect(items(wrapper)).toHaveLength(1)
+  })
+
+  it('AC10 공유 해제는 확인해야 요청하고, 성공하면 목록을 다시 불러온다', async () => {
+    teamsApi.fetchTeamAnalyses.mockResolvedValueOnce([shared()]).mockResolvedValueOnce([])
+    teamsApi.unshareTeamAnalysis.mockResolvedValue(undefined)
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValueOnce(true)
+    const { wrapper } = await mountDetail()
+
+    await button(wrapper, 'unshare').trigger('click')
+    expect(confirm).toHaveBeenCalledWith(
+      '이 분석의 공유를 해제할까요? 팀원의 풀이 기록은 남습니다.',
+    )
+    expect(teamsApi.unshareTeamAnalysis).not.toHaveBeenCalled()
+
+    await button(wrapper, 'unshare').trigger('click')
+    await flushPromises()
+    expect(teamsApi.unshareTeamAnalysis).toHaveBeenCalledWith(12, 42)
+    expect(teamsApi.fetchTeamAnalyses).toHaveBeenCalledTimes(2)
+    expect(items(wrapper)).toHaveLength(0)
   })
 })

@@ -211,9 +211,9 @@ CREATE TABLE team_analyses (
 - [x] 브랜치 `feature/F-20b-team-understanding`
 - [x] Flyway 마이그레이션
 - [x] AC별 실패 테스트 작성 (red 확인)
-- [ ] BE 구현 (green)
-- [ ] FE 구현 (green)
-- [ ] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
+- [x] BE 구현 (green)
+- [x] FE 구현 (green)
+- [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
 - [x] `docs/conventions.md` 3절 `TEAM` 행에 006~010
 - [ ] contract-checker 통과
 - [ ] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일)

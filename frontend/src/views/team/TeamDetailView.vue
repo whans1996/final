@@ -1,5 +1,6 @@
 <script setup>
 // SC-23 팀 상세 (F-20a AC14·AC15). 멤버만 볼 수 있다 (남의 팀·없는 팀은 404).
+// 멤버 아래에 공유 분석 영역(F-20b AC10·AC11, TeamAnalysisList)이 있다.
 // 팀장: 초대 코드 상자, 수정, 팀 삭제, 팀원 내보내기. 팀원: 팀 탈퇴. 파괴적 동작은 window.confirm으로 확인한다.
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -15,6 +16,7 @@ import { errorCode, errorDetails, errorMessage } from '@/api/http'
 import InviteCodeBox from '@/components/team/InviteCodeBox.vue'
 import TeamForm from '@/components/team/TeamForm.vue'
 import TeamMemberList from '@/components/team/TeamMemberList.vue'
+import TeamAnalysisList from '@/components/team/TeamAnalysisList.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -207,6 +209,8 @@ async function onSave(body) {
           @remove="onRemove"
         />
       </section>
+
+      <TeamAnalysisList :team-id="team.id" :member-count="team.memberCount" />
 
       <div class="actions">
         <template v-if="isOwner">

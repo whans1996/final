@@ -14,12 +14,12 @@
 - ✅ BE AC1~AC9 green: V9 `team_analyses`, `TeamAnalysisController`·`Service`·`Access`·`TeamUnderstandingCalculator`, DTO 8개, `ErrorCode` TEAM_006~010, `TeamService` leave·removeMember·removeAllOf 공유 정리
 - ✅ A 영역 변경: `QuizService.getQuiz`(공유면 통과)·`submit`(`QuizMapper.findActive` + 주인/공유), `Quiz.ownerId`
 - ✅ 테스트: `team/TeamAnalysisApiTest`(AC1~4,6~9), `quiz/QuizTeamAccessApiTest`(AC5), `team/TeamUnderstandingCalculatorTest`
-- ⏳ BE 전체 verify·openapi.json 재생성 → 커밋 `feat(F-20b): BE AC1~AC9 ...`
+- ✅ BE 커밋 9d50761 push. FE AC10~AC13 green(verify fe 통과): `api/teams.js` 4함수, `TeamAnalysisList`·`TeamAnalysisPicker`·`ModuleUnderstandingBars`·`MemberUnderstandingTable`, SC-24 `TeamUnderstandingView`, 라우트 `team-understanding`, `QuizView` `?team=` 링크
 
 ## 바로 다음 할 일
 
-1. BE 커밋·push (openapi.json 포함)
-2. FE AC10~AC13: `src/api/teams.js`에 `fetchTeamAnalyses`·`shareTeamAnalysis`·`unshareTeamAnalysis`·`fetchTeamUnderstanding` → `components/team/TeamAnalysisList.vue`·`TeamAnalysisPicker.vue` → `TeamDetailView.vue` 영역 → `views/team/TeamUnderstandingView.vue`(+ `ModuleUnderstandingBars`·`MemberUnderstandingTable`, 라우트 `routes/team.js`) → `QuizView.vue` `?team=` 링크. 각 spec 파일 먼저(red)
+1. FE 커밋·push
+2. 아래 3 진행
 3. contract-checker, ui-verifier(1280·375), 산출물(SC-23·SC-24·SC-08, ERD, 요구사항 정의서)
 
 ## 막힌 점 / 결정 필요

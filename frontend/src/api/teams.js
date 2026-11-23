@@ -60,3 +60,44 @@ export function leaveTeam(id) {
 export function removeTeamMember(id, userId) {
   return http.delete(`/teams/${id}/members/${userId}`).then(() => undefined)
 }
+
+// ── 공유 분석·팀 이해도 (F-20b, docs/specs/F-20b-team-understanding.md 3절) ──
+
+export const MAX_TEAM_ANALYSES = 10
+
+/**
+ * @typedef {{ attemptId: number, score: number, total: number, createdAt: string }} LastAttempt
+ * @typedef {{ userId: number, nickname: string }} SharedBy
+ * @typedef {{ analysisId: number, title: string | null, projectName: string, level: string,
+ *   sharedBy: SharedBy, sharedAt: string, questionCount: number, solvedMemberCount: number,
+ *   myLastAttempt: LastAttempt | null, canUnshare: boolean }} TeamAnalysis
+ * @typedef {{ layer: string, questionCount: number, correctRate: number | null }} ModuleUnderstanding
+ * @typedef {{ userId: number, nickname: string, role: TeamRole, lastAttempt: LastAttempt | null,
+ *   modules: { layer: string, correct: number, total: number }[] }} MemberUnderstanding
+ * @typedef {{ analysisId: number, title: string | null, sharedBy: SharedBy, questionCount: number,
+ *   memberCount: number, solvedMemberCount: number, modules: ModuleUnderstanding[],
+ *   members: MemberUnderstanding[] }} TeamUnderstanding
+ */
+
+/** 멤버. 공유 최신순, 최대 10개. 404 TEAM_404. @returns {Promise<TeamAnalysis[]>} */
+export function fetchTeamAnalyses(id) {
+  return http.get(`/teams/${id}/analyses`).then((res) => res.data)
+}
+
+/**
+ * 내 DONE·퀴즈 있는 분석을 공유한다. 400 COMMON_400, 404 TEAM_404·ANALYSIS_404,
+ * 409 TEAM_009·TEAM_007·TEAM_008. @returns {Promise<{ analysisId: number, sharedAt: string }>}
+ */
+export function shareTeamAnalysis(id, analysisId) {
+  return http.post(`/teams/${id}/analyses`, { analysisId }).then((res) => res.data)
+}
+
+/** 공유한 사람·팀장. 204. 403 TEAM_010, 404 TEAM_006. */
+export function unshareTeamAnalysis(id, analysisId) {
+  return http.delete(`/teams/${id}/analyses/${analysisId}`).then(() => undefined)
+}
+
+/** 멤버. 404 TEAM_404·TEAM_006. @returns {Promise<TeamUnderstanding>} */
+export function fetchTeamUnderstanding(id, analysisId) {
+  return http.get(`/teams/${id}/analyses/${analysisId}/understanding`).then((res) => res.data)
+}
