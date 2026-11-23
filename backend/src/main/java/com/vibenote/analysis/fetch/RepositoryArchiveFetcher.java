@@ -27,12 +27,17 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.util.unit.DataSize;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * 공개 저장소의 기본 브랜치 아카이브 ZIP을 임시 파일로 받는다 (docs/specs/F-05b-analysis-request-url.md 5절, AC4~AC10).
  *
  * <p>SSRF 방어: 첫 요청 주소는 사용자 입력이 아니라 설정의 API 주소에 검증된 조각(owner·repo, 프로젝트 경로)을 붙여 조립한다. 리다이렉트는 직접 따라가며
- * 시작 요청과 같은 스킴·포트이고 {@code allowed-hosts}에 있는 호스트일 때만 요청한다. 토큰은 첫 요청(GitHub api 호스트)에만 붙인다.
+ * 시작 요청과 같은 스킴·포트이고 {@code allowed-hosts}에 있는 호스트일 때만 요청한다. 토큰은 GitHub api 호스트로 보내는 첫 요청에만 붙이고, 토큰을
+ * 쓸 때는 먼저 공개 저장소인지 확인한다.
  *
  * <p>본문은 스트리밍으로 쓰며 바이트를 세어 상한을 넘는 순간 멈춘다. 시간 상한은 첫 요청부터 본문 끝까지이며, 넘으면 작업 스레드를 인터럽트해 받기를 끊는다. 실패하면
  * 쓰다 만 파일을 지운 뒤에 돌아온다.
@@ -49,6 +54,8 @@ public class RepositoryArchiveFetcher {
     private static final byte[] ZIP_SIGNATURE = {0x50, 0x4B, 0x03, 0x04};
     private static final Set<Integer> REDIRECT_STATUSES = Set.of(301, 302, 303, 307, 308);
     private static final int BUFFER_SIZE = 8192;
+    private static final int MAX_METADATA_BYTES = 1024 * 1024;
+    private static final ObjectMapper JSON = JsonMapper.builder().build();
 
     private final FetchProperties properties;
     private final HttpClient client;
@@ -112,35 +119,75 @@ public class RepositoryArchiveFetcher {
             throws IOException, InterruptedException {
         boolean saved = false;
         try {
-            URI start = firstUri(repository);
-            URI uri = start;
-            for (int redirects = 0; ; redirects++) {
-                HttpResponse<InputStream> response =
-                        client.send(
-                                request(repository, uri, redirects == 0),
-                                HttpResponse.BodyHandlers.ofInputStream());
-                try (InputStream body = response.body()) {
-                    int status = response.statusCode();
-                    if (REDIRECT_STATUSES.contains(status)) {
-                        if (redirects >= properties.maxRedirects()) {
-                            log.warn("저장소 아카이브 리다이렉트 상한 초과: {}", repository.normalized());
-                            throw new AnalysisFailedException(ErrorCode.ANALYSIS_502);
-                        }
-                        uri = redirectTarget(start, uri, response);
-                        continue;
-                    }
-                    if (status != 200) {
-                        log.info("저장소 아카이브 응답 {}: {}", status, repository.normalized());
-                        throw new AnalysisFailedException(classify(response));
-                    }
-                    save(body, response.headers().firstValueAsLong("Content-Length"), target);
-                    saved = true;
-                    return;
-                }
+            if (repository.host() == RepositoryUrl.Host.GITHUB && properties.hasGithubToken()) {
+                ensurePublic(repository);
+            }
+            HttpResponse<InputStream> response = follow(repository, firstUri(repository));
+            try (InputStream body = response.body()) {
+                save(body, response.headers().firstValueAsLong("Content-Length"), target);
+                saved = true;
             }
         } finally {
             if (!saved) {
                 deleteQuietly(target);
+            }
+        }
+    }
+
+    /**
+     * 서버 토큰은 비공개 저장소도 읽을 수 있으므로, 토큰을 쓸 때는 받기 전에 공개 저장소인지 확인한다. 공개가 아니면 비공개 저장소와 같은 ANALYSIS_004다
+     * (PR #82 Codex 리뷰). 토큰이 없으면 비인증 요청이라 공개 저장소만 받을 수 있다.
+     */
+    private void ensurePublic(RepositoryUrl repository) throws IOException, InterruptedException {
+        URI uri = URI.create(properties.githubApiBase() + "/repos/" + repository.path());
+        HttpResponse<InputStream> response = follow(repository, uri);
+        try (InputStream body = response.body()) {
+            if (!isPublic(body.readNBytes(MAX_METADATA_BYTES))) {
+                log.info("공개 저장소가 아니라 받지 않음: {}", repository.normalized());
+                throw new AnalysisFailedException(ErrorCode.ANALYSIS_004);
+            }
+        }
+    }
+
+    /** {@code visibility}가 {@code public}이거나, 그 필드가 없으면 {@code private: false}일 때만 공개다. */
+    private static boolean isPublic(byte[] json) {
+        JsonNode repo;
+        try {
+            repo = JSON.readTree(json);
+        } catch (JacksonException e) {
+            throw new AnalysisFailedException(ErrorCode.ANALYSIS_502);
+        }
+        JsonNode visibility = repo.get("visibility");
+        if (visibility != null) {
+            return "public".equals(visibility.asString());
+        }
+        JsonNode isPrivate = repo.get("private");
+        return isPrivate != null && isPrivate.isBoolean() && !isPrivate.booleanValue();
+    }
+
+    /** 허용된 리다이렉트를 따라가 200 응답을 준다. 200이 아니면 상태로 분류해 실패한다. 본문은 호출자가 닫는다. */
+    private HttpResponse<InputStream> follow(RepositoryUrl repository, URI start)
+            throws IOException, InterruptedException {
+        URI uri = start;
+        for (int redirects = 0; ; redirects++) {
+            HttpResponse<InputStream> response =
+                    client.send(
+                            request(repository, uri, redirects == 0),
+                            HttpResponse.BodyHandlers.ofInputStream());
+            int status = response.statusCode();
+            if (status == 200) {
+                return response;
+            }
+            try (InputStream body = response.body()) {
+                if (!REDIRECT_STATUSES.contains(status)) {
+                    log.info("저장소 응답 {}: {}", status, repository.normalized());
+                    throw new AnalysisFailedException(classify(response));
+                }
+                if (redirects >= properties.maxRedirects()) {
+                    log.warn("저장소 리다이렉트 상한 초과: {}", repository.normalized());
+                    throw new AnalysisFailedException(ErrorCode.ANALYSIS_502);
+                }
+                uri = redirectTarget(start, uri, response);
             }
         }
     }

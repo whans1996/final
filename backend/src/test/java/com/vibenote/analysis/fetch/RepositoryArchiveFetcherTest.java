@@ -8,6 +8,7 @@ import static com.vibenote.analysis.fetch.FakeRepositoryServer.zip;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.vibenote.analysis.fetch.FakeRepositoryServer.Handler;
 import com.vibenote.analysis.fetch.FakeRepositoryServer.Recorded;
 import com.vibenote.analysis.pipeline.AnalysisFailedException;
 import com.vibenote.common.exception.ErrorCode;
@@ -32,6 +33,7 @@ import org.springframework.util.unit.DataSize;
  */
 class RepositoryArchiveFetcherTest {
 
+    private static final String GITHUB_REPO = "/repos/octo/todo-app";
     private static final String GITHUB_ZIPBALL = "/repos/octo/todo-app/zipball";
     private static final String CODELOAD = "/codeload/octo/todo-app/zip/main";
     private static final String GITLAB_ARCHIVE =
@@ -126,15 +128,81 @@ class RepositoryArchiveFetcherTest {
 
     @Test
     void AC4_토큰은_api_호스트_요청에만_붙이고_리다이렉트_요청에는_붙이지_않는다() throws IOException {
-        server.on(GITHUB_ZIPBALL, redirect(302, server.base() + CODELOAD))
+        server.on(GITHUB_REPO, repo("public", false))
+                .on(GITHUB_ZIPBALL, redirect(302, server.base() + CODELOAD))
                 .on(CODELOAD, zip(archive(100)));
 
         new RepositoryArchiveFetcher(properties(TOKEN, Duration.ofSeconds(5)))
                 .download(github(), target);
 
+        assertThat(paths()).containsExactly(GITHUB_REPO, GITHUB_ZIPBALL, CODELOAD);
         assertThat(server.requests().get(0).headers().getFirst("Authorization"))
                 .isEqualTo("Bearer " + TOKEN);
-        assertThat(server.requests().get(1).headers().containsKey("Authorization")).isFalse();
+        assertThat(server.requests().get(1).headers().getFirst("Authorization"))
+                .isEqualTo("Bearer " + TOKEN);
+        assertThat(server.requests().get(2).headers().containsKey("Authorization")).isFalse();
+    }
+
+    @Test
+    void AC4_토큰이_없으면_공개_여부_확인_요청을_하지_않는다() throws IOException {
+        server.on(GITHUB_ZIPBALL, zip(archive(100)));
+
+        fetcher().download(github(), target);
+
+        assertThat(paths()).containsExactly(GITHUB_ZIPBALL);
+    }
+
+    @Test
+    void AC6_토큰이_있으면_비공개_저장소는_받지_않고_ANALYSIS_004() {
+        for (Handler repo :
+                List.of(
+                        repo("private", true),
+                        repo("internal", true),
+                        repo(null, true),
+                        FakeRepositoryServer.body(200, "{}".getBytes(StandardCharsets.UTF_8)))) {
+            server.reset();
+            server.on(GITHUB_REPO, repo).on(GITHUB_ZIPBALL, zip(archive(100)));
+
+            assertFails(
+                    () ->
+                            new RepositoryArchiveFetcher(properties(TOKEN, Duration.ofSeconds(5)))
+                                    .download(github(), target),
+                    ErrorCode.ANALYSIS_004);
+            assertThat(paths()).containsExactly(GITHUB_REPO);
+        }
+    }
+
+    @Test
+    void AC6_공개_여부_확인이_실패하면_아카이브를_받지_않는다() {
+        Map<Handler, ErrorCode> cases =
+                Map.of(
+                        status(404), ErrorCode.ANALYSIS_004,
+                        status(403, Map.of("x-ratelimit-remaining", "0")), ErrorCode.ANALYSIS_503,
+                        status(500), ErrorCode.ANALYSIS_502,
+                        FakeRepositoryServer.body(200, "not json".getBytes(StandardCharsets.UTF_8)),
+                                ErrorCode.ANALYSIS_502);
+        cases.forEach(
+                (repo, code) -> {
+                    server.reset();
+                    server.on(GITHUB_REPO, repo).on(GITHUB_ZIPBALL, zip(archive(100)));
+
+                    assertFails(
+                            () ->
+                                    new RepositoryArchiveFetcher(
+                                                    properties(TOKEN, Duration.ofSeconds(5)))
+                                            .download(github(), target),
+                            code);
+                    assertThat(paths()).containsExactly(GITHUB_REPO);
+                });
+    }
+
+    /** GitHub 저장소 정보 응답. visibility가 null이면 필드를 넣지 않는다. */
+    private static Handler repo(String visibility, boolean isPrivate) {
+        String json =
+                visibility == null
+                        ? "{\"private\":%s}".formatted(isPrivate)
+                        : "{\"private\":%s,\"visibility\":\"%s\"}".formatted(isPrivate, visibility);
+        return FakeRepositoryServer.body(200, json.getBytes(StandardCharsets.UTF_8));
     }
 
     @Test
