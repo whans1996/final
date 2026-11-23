@@ -81,6 +81,31 @@ final class ConfigSecretValues {
         return new Found(tokens, List.of());
     }
 
+    /**
+     * 가린 뒤의 properties를 다시 읽어 key 규칙 비밀의 짧은 값이 남았는지 본다. 유니코드 이스케이프나 줄 이음으로 쓴 키는 줄 단위 1차가 알아보지 못하므로,
+     * 남았으면 파일 전체를 가리게 한다 (#16, Codex 리뷰).
+     */
+    static boolean hasShortSuffixSecrets(String redactedProperties) {
+        Properties properties = new Properties();
+        try {
+            properties.load(new StringReader(redactedProperties));
+        } catch (IOException | IllegalArgumentException e) {
+            return false;
+        }
+        for (String name : properties.stringPropertyNames()) {
+            Set<String> local = new LinkedHashSet<>();
+            splitTokens(
+                    properties.getProperty(name),
+                    contextOf(name, Context.PLAIN),
+                    new LinkedHashSet<>(),
+                    local);
+            if (!local.isEmpty()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private static Context contextOf(String key, Context parent) {
         if (parent == Context.KEYWORD || SecretRedactor.hasSecretKeyword(key)) {
             return Context.KEYWORD;
@@ -153,14 +178,36 @@ final class ConfigSecretValues {
                 Set<String> local = new LinkedHashSet<>();
                 splitTokens(scalar.getValue(), context, tokens, local);
                 if (!local.isEmpty()) {
-                    // Mark 인덱스는 코드 포인트 기준이다
                     located.add(
                             new Located(
-                                    content.offsetByCodePoints(0, scalar.getStartMark().getIndex()),
-                                    content.offsetByCodePoints(0, scalar.getEndMark().getIndex()),
+                                    charIndex(scalar.getStartMark().getIndex()),
+                                    charIndex(scalar.getEndMark().getIndex()),
                                     local));
                 }
             }
+        }
+
+        /** 코드 포인트 위치 → UTF-16 위치. BMP 밖 문자가 없으면 같은 값이다 (Mark 인덱스는 코드 포인트 기준). */
+        private int[] charOffsets;
+
+        private boolean offsetsReady;
+
+        private int charIndex(int codePointIndex) {
+            if (!offsetsReady) {
+                offsetsReady = true;
+                int count = content.codePointCount(0, content.length());
+                if (count != content.length()) {
+                    // 값마다 앞에서부터 다시 세면 값 수 × 본문 길이가 되므로 한 번만 만든다 (Codex 리뷰)
+                    charOffsets = new int[count + 1];
+                    int at = 0;
+                    for (int i = 0; i < count; i++) {
+                        charOffsets[i] = at;
+                        at += Character.charCount(content.codePointAt(at));
+                    }
+                    charOffsets[count] = at;
+                }
+            }
+            return charOffsets == null ? codePointIndex : charOffsets[codePointIndex];
         }
 
         private boolean first(Node node, Context context) {

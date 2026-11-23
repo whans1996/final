@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
 import java.time.Duration;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
 
@@ -510,6 +511,42 @@ class SecretRedactorTest {
                                 "signingKey:",
                                 "  ${SIGNING:[REDACTED]}",
                                 "other: abc1234"));
+    }
+
+    @Test
+    void 이슈16_properties_이스케이프나_줄_이음_키의_짧은_값이_남으면_파일_전체를_가린다() {
+        assertThat(SecretRedactor.redact("application.properties", "private\\u002dkey=abc1234"))
+                .isEqualTo("[REDACTED]");
+        // 줄 이음: 1차가 다음 줄을 가리든 파일 전체를 가리든 값은 남지 않는다
+        assertThat(SecretRedactor.redact("application.properties", "private\\\n  -key=abc1234"))
+                .doesNotContain("abc1234");
+        assertThat(
+                        SecretRedactor.redact(
+                                "application.properties", "priv\\\n  ate-k\\\n  ey=abc1234"))
+                .doesNotContain("abc1234");
+    }
+
+    @Test
+    void 이슈16_BMP_밖_문자가_앞에_있어도_짧은_값의_자리를_맞춘다() {
+        String yml = "emoji: 😀😀\nprivate-key:\n  abc1234\nother: abc1234";
+
+        assertThat(SecretRedactor.redact("application.yml", yml))
+                .isEqualTo("emoji: 😀😀\nprivate-key:\n  [REDACTED]\nother: abc1234");
+    }
+
+    @Test
+    void 이슈16_짧은_값이_아주_많아도_선형_시간에_끝나고_상한을_넘으면_파일_전체를_가린다() {
+        String yml =
+                "key:\n"
+                        + IntStream.range(0, 40_000)
+                                .mapToObj(i -> "  - abc")
+                                .collect(Collectors.joining("\n"));
+
+        String redacted =
+                assertTimeoutPreemptively(
+                        Duration.ofSeconds(3), () -> SecretRedactor.redact("application.yml", yml));
+
+        assertThat(redacted).isEqualTo("[REDACTED]");
     }
 
     @Test
