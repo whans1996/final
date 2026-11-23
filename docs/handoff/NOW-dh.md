@@ -4,7 +4,7 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
 
-갱신: 2026-11-23 14:33 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/issue-16-secret-key-suffix
+갱신: 2026-11-23 14:36 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/issue-16-secret-key-suffix
 
 ## 현재 기능
 
@@ -21,7 +21,7 @@
 
 ## 바로 다음 할 일
 
-1. PR 설명 `.harness/pr-issue-16.md` 작성 → push → PR (Closes #16, 멘션 불필요) → CI·Codex 루프
+1. **PR #78** 열림 (Closes #16). Codex 리뷰 대기(`node scripts/codex-review.mjs 78 --request --wait --status`), CI 확인 `gh pr checks 78` → 둘 다 초록이면 GitHub에서 머지, 머지 뒤 #16 닫힘 확인
 2. 머지 뒤 F-05b `/spec` (`branches.mjs F-05b` ✅ 중복 없음 확인됨)
 
 ## 막힌 점 / 결정 필요
