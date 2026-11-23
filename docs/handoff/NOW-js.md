@@ -18,8 +18,7 @@
 ## 바로 다음 할 일
 
 1. 사람이 PR #85를 GitHub에서 Merge (wip 없음 → 일반 머지). 상대 PR #82가 먼저 머지되면 `git merge origin/develop` → push → CI 초록 재확인
-2. 머지 후 `git switch develop && git pull` → 주간 `/progress` (11-22 일요일분 밀림, 진행현황 마지막 갱신 11-19) → docs PR
-3. 그 다음 새 세션에서 F-20b `/spec` (A 영역 퀴즈·분석 권한 변경 필요 → 상대와 협의)
+2. 머지 후 `/clear` → `/pickup` → F-20b `/spec` (A 영역 퀴즈·분석 권한 변경 필요 → 상대와 협의). 주간 `/progress`(docs 관리)는 상대가 맡기로 함 (11-23)
 
 ## 막힌 점 / 결정 필요
 
