@@ -6,7 +6,7 @@ import com.vibenote.analysis.fetch.RepositoryUrl;
 import com.vibenote.common.Level;
 import java.time.LocalDateTime;
 
-/** analyses 행 (overview·memo 제외). Controller 응답으로 직접 내보내지 않는다 (DTO로 변환). */
+/** analyses 행 (overview 제외). Controller 응답으로 직접 내보내지 않는다 (DTO로 변환). */
 public class Analysis {
 
     private Long id;
@@ -15,6 +15,7 @@ public class Analysis {
     private String sourceUrl;
     private String projectName;
     private String title;
+    private String memo;
     private Level level;
     private AnalysisStatus status;
     private int progress;
@@ -93,6 +94,14 @@ public class Analysis {
 
     public void setTitle(String title) {
         this.title = title;
+    }
+
+    public String getMemo() {
+        return memo;
+    }
+
+    public void setMemo(String memo) {
+        this.memo = memo;
     }
 
     public Level getLevel() {

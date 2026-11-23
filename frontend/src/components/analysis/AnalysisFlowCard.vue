@@ -7,6 +7,8 @@ import MethodBadge from '@/components/analysis/MethodBadge.vue'
 defineProps({
   flow: { type: Object, required: true },
   busy: { type: Boolean, default: false },
+  // 남의 공개 분석 (F-19 AC14): "다시 만들기"를 숨긴다
+  readonly: { type: Boolean, default: false },
 })
 
 defineEmits(['retry', 'select-file'])
@@ -27,6 +29,7 @@ const STATUS_LABELS = { PENDING: '생성 중', DONE: '완료', FAILED: '실패' 
     <div v-else-if="flow.status === 'FAILED'" class="failed">
       <p class="form-error">{{ flow.errorMessage }}</p>
       <button
+        v-if="!readonly"
         type="button"
         class="retry-button"
         data-action="retry-flow"

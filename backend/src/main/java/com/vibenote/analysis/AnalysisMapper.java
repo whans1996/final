@@ -58,8 +58,36 @@ public interface AnalysisMapper {
     Optional<AnalysisFile> findFile(
             @Param("analysisId") long analysisId, @Param("fileId") long fileId);
 
-    /** 본인의 미삭제 분석 + overview + 파일 수 (F-06 AC9). */
-    Optional<AnalysisDetail> findOwnedDetail(@Param("id") long id, @Param("userId") long userId);
+    /** 볼 수 있는 분석: 미삭제이고 내 것이거나 공개·DONE이고 주인이 ACTIVE (F-19). 아니면 empty. */
+    Optional<Analysis> findViewable(@Param("id") long id, @Param("userId") long userId);
+
+    /** 볼 수 있는 분석 + overview + 파일 수 (F-06 AC9) + 주인 닉네임 (F-19 AC9). */
+    Optional<AnalysisDetail> findViewableDetail(@Param("id") long id, @Param("userId") long userId);
+
+    /** 내 미삭제 분석의 제목·메모를 바꾼다 (F-19 AC1). 바꾼 행 수. */
+    int updateInfo(
+            @Param("id") long id,
+            @Param("userId") long userId,
+            @Param("title") String title,
+            @Param("memo") String memo,
+            @Param("now") LocalDateTime now);
+
+    /** 내 미삭제 분석의 공개 여부. 공개는 DONE일 때만 바꾼다 (F-19 AC4·AC5). 바꾼 행 수. */
+    int updateVisibility(
+            @Param("id") long id,
+            @Param("userId") long userId,
+            @Param("isPublic") boolean isPublic,
+            @Param("now") LocalDateTime now);
+
+    /** 내 미삭제 DONE·FAILED 분석에 deleted_at을 채운다 (F-19 AC6·AC7). 바꾼 행 수. */
+    int softDelete(
+            @Param("id") long id, @Param("userId") long userId, @Param("now") LocalDateTime now);
+
+    void deleteConceptLinks(long analysisId);
+
+    void deleteFlows(long analysisId);
+
+    void deleteFiles(long analysisId);
 
     void updateOverview(@Param("id") long id, @Param("overview") AnalysisOverview overview);
 

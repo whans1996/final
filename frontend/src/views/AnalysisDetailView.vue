@@ -3,6 +3,8 @@
 // 진행 중: 상태를 바로 1회, 이후 2초마다 조회하고 DONE·FAILED·404이거나 화면을 떠나면 멈춘다 (F-05a AC15).
 // DONE: 상세를 1회 불러와 "개요"·"파일"·"실행 흐름"·"개념"·"퀴즈" 탭을 보여 준다. 탭과 선택 파일은 쿼리(?tab=files&file=123)에 둔다
 // (F-06 AC13~AC15, F-07 AC14, F-08 AC8, F-14 AC9).
+// FAILED도 상세를 1회 불러와 주인에게 관리 영역(삭제)을 보여 준다. 남의 공개 분석은 읽기 전용이다: 관리·메모·퀴즈 탭이 없고
+// 실행 흐름은 카드만 보인다 (F-19 AC13·AC14).
 import { computed, nextTick, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { fetchAnalysis, fetchAnalysisStatus } from '@/api/analyses'
@@ -15,6 +17,7 @@ import AnalysisFilesTab from '@/components/analysis/AnalysisFilesTab.vue'
 import AnalysisFlowsTab from '@/components/analysis/AnalysisFlowsTab.vue'
 import AnalysisConceptsTab from '@/components/analysis/AnalysisConceptsTab.vue'
 import AnalysisQuizTab from '@/components/analysis/AnalysisQuizTab.vue'
+import AnalysisManagePanel from '@/components/analysis/AnalysisManagePanel.vue'
 import { LEVELS } from '@/utils/authValidation'
 
 const POLL_INTERVAL_MS = 2000
@@ -39,13 +42,25 @@ const detailLoading = ref(false)
 const detailError = ref('')
 
 const isDone = computed(() => status.value?.status === 'DONE')
-// URL 분석의 정규화한 저장소 주소 (F-05b AC14). 서버가 https 주소만 저장하지만 href에 넣으므로 한 번 더 거른다
+const isFailed = computed(() => status.value?.status === 'FAILED')
+const mine = computed(() => analysis.value?.mine === true)
+const title = computed(() => {
+  if (!analysis.value) return '분석 결과'
+  return analysis.value.title ?? analysis.value.projectName ?? '제목 없는 분석'
+})
+// 관리 영역은 상세를 불러온 뒤의 상태 변화(진행 중 → DONE·FAILED)를 따라야 하므로 폴링한 상태를 덮어쓴다
+const manageDetail = computed(() =>
+  analysis.value && status.value ? { ...analysis.value, status: status.value.status } : null,
+)
+// URL 분석의 정규화한 저장소 주소 (F-05b AC14, FAILED는 F-19 AC12). 서버가 https 주소만 저장하지만 href에 넣으므로 한 번 더 거른다
 const sourceLink = computed(() => {
-  const url = analysis.value?.sourceUrl
+  const url = status.value?.sourceUrl ?? analysis.value?.sourceUrl
   return typeof url === 'string' && url.startsWith('https://') ? url : null
 })
+// 퀴즈는 주인만 푼다 (F-14, F-19 AC14)
+const tabs = computed(() => (mine.value ? TABS : TABS.filter((t) => t.name !== 'quiz')))
 const activeTab = computed(() =>
-  TABS.some((t) => t.name === route.query.tab) ? route.query.tab : 'overview',
+  tabs.value.some((t) => t.name === route.query.tab) ? route.query.tab : 'overview',
 )
 const tabsEl = ref(null)
 
@@ -66,12 +81,19 @@ const selectedFileId = computed(() => {
   return Number.isInteger(id) && id > 0 ? id : null
 })
 
-// 상세는 상태가 DONE이 된 뒤 1회만 불러온다 (결과는 다시 바뀌지 않는다)
+// 상세는 첫 상태를 받으면 1회(진행 중이면 관리 영역용, F-19 AC13), 진행 중에 불러왔으면 DONE·FAILED가 된 뒤
+// 결과를 위해 1회 더 불러온다 (결과는 다시 바뀌지 않는다). 단계는 요청할 때 정해 실패해도 같은 단계에서 다시 부르지 않는다
 let detailRequest = 0
+let detailStage = null
+
+function stageOf(value) {
+  return value === 'DONE' || value === 'FAILED' ? 'finished' : 'progress'
+}
 
 async function loadDetail() {
   const id = currentId
   const request = ++detailRequest
+  detailStage = stageOf(status.value?.status)
   detailLoading.value = true
   detailError.value = ''
   try {
@@ -82,6 +104,14 @@ async function loadDetail() {
   } finally {
     if (request === detailRequest) detailLoading.value = false
   }
+}
+
+function onUpdated(changes) {
+  analysis.value = { ...analysis.value, ...changes }
+}
+
+function onDeleted() {
+  router.push({ name: 'analyses' })
 }
 
 function levelLabel(level) {
@@ -103,7 +133,7 @@ async function poll(id, isCurrent) {
     if (!isCurrent()) return false
     status.value = result
     loadError.value = ''
-    if (result.status === 'DONE' && !analysis.value && !detailLoading.value) loadDetail()
+    if (detailStage !== 'finished' && detailStage !== stageOf(result.status)) loadDetail()
     return isInProgress(result.status)
   } catch (error) {
     if (!isCurrent()) return false
@@ -133,6 +163,7 @@ watch(
     status.value = null
     analysis.value = null
     detailRequest += 1
+    detailStage = null
     detailLoading.value = false
     detailError.value = ''
     notFound.value = false
@@ -147,9 +178,15 @@ watch(
 <template>
   <section class="detail" :class="{ wide: isDone }">
     <RouterLink :to="{ name: 'analyses' }" class="back">← 내 분석</RouterLink>
-    <h1>{{ isDone ? (analysis?.title ?? '분석 결과') : '분석 진행 상태' }}</h1>
+    <h1>{{ isDone ? title : '분석 진행 상태' }}</h1>
+    <p v-if="analysis && !mine" class="owner" data-section="owner">
+      <RouterLink :to="{ name: 'user-profile', params: { id: analysis.owner.id } }">
+        {{ analysis.owner.nickname }}님의 분석
+      </RouterLink>
+    </p>
+    <p v-if="mine && analysis.memo" class="memo" data-section="memo">{{ analysis.memo }}</p>
     <a
-      v-if="isDone && sourceLink"
+      v-if="(isDone || isFailed) && sourceLink"
       :href="sourceLink"
       target="_blank"
       rel="noopener noreferrer"
@@ -158,6 +195,18 @@ watch(
     >
       저장소 보기
     </a>
+
+    <div v-if="mine && manageDetail" class="manage-area">
+      <AnalysisManagePanel :detail="manageDetail" @updated="onUpdated" @deleted="onDeleted" />
+      <RouterLink
+        v-if="isDone"
+        :to="{ name: 'post-write', query: { analysisId: String(analysis.id) } }"
+        class="ask"
+        data-action="ask-community"
+      >
+        커뮤니티에 질문하기
+      </RouterLink>
+    </div>
 
     <p v-if="notFound" class="form-error" data-message="not-found">분석을 찾을 수 없습니다.</p>
     <p v-else-if="loading" class="hint">불러오는 중…</p>
@@ -179,7 +228,7 @@ watch(
 
         <p v-if="detailLoading" class="hint">결과를 불러오는 중…</p>
         <div v-else-if="detailError" class="failed">
-          <p class="form-error" role="alert">{{ detailError }}</p>
+          <p class="form-error" role="alert" data-error="detail">{{ detailError }}</p>
           <button type="button" class="retry-button" data-action="retry-detail" @click="loadDetail">
             다시 시도
           </button>
@@ -187,7 +236,7 @@ watch(
         <template v-else-if="analysis">
           <div ref="tabsEl" class="tabs" role="tablist" aria-label="분석 결과">
             <button
-              v-for="tab in TABS"
+              v-for="tab in tabs"
               :id="`tab-${tab.name}`"
               :key="tab.name"
               type="button"
@@ -218,6 +267,7 @@ watch(
               v-else-if="activeTab === 'flows'"
               :analysis-id="analysis.id"
               :apis="analysis.overview?.apis ?? []"
+              :readonly="!mine"
               @select-file="selectFile"
             />
             <AnalysisConceptsTab
@@ -225,7 +275,7 @@ watch(
               :analysis-id="analysis.id"
               @select-file="selectFile"
             />
-            <AnalysisQuizTab v-else :analysis-id="analysis.id" />
+            <AnalysisQuizTab v-else-if="mine" :analysis-id="analysis.id" />
           </div>
         </template>
       </div>
@@ -242,6 +292,14 @@ watch(
         <p v-else class="hint">
           {{ status.progress }}% · 화면을 닫아도 분석은 계속됩니다. 내 분석에서 다시 볼 수 있습니다.
         </p>
+
+        <!-- 진행 중·FAILED의 상세는 관리 영역용이다 (F-19 AC13) -->
+        <div v-if="detailError" class="failed">
+          <p class="form-error" role="alert" data-error="detail">{{ detailError }}</p>
+          <button type="button" class="retry-button" data-action="retry-detail" @click="loadDetail">
+            다시 시도
+          </button>
+        </div>
       </div>
     </template>
   </section>
@@ -327,6 +385,33 @@ watch(
 
 .back {
   font-size: 0.9em;
+}
+
+.owner,
+.memo {
+  margin: 0 0 var(--space-2);
+}
+
+.memo {
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+  color: var(--color-text-muted);
+}
+
+.manage-area {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.manage-area > section {
+  align-self: stretch;
+}
+
+.ask {
+  font-weight: 600;
 }
 
 .source-link {

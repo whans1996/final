@@ -3,8 +3,16 @@
 <mapper namespace="com.vibenote.analysis.AnalysisMapper">
 
     <sql id="columns">
-        id, user_id, source_type, source_url, project_name, title, level, status, progress, is_public,
+        id, user_id, source_type, source_url, project_name, title, memo, level, status, progress, is_public,
         error_code, error_message, created_at, updated_at
+    </sql>
+
+    <!-- F-19 "볼 수 있는 분석": 미삭제 AND (내 분석 OR 공개·DONE이고 주인이 ACTIVE) -->
+    <sql id="viewable">
+        a.id = #{id} AND a.deleted_at IS NULL
+        AND (a.user_id = #{userId}
+             OR (a.is_public = TRUE AND a.status = 'DONE'
+                 AND EXISTS (SELECT 1 FROM users u WHERE u.id = a.user_id AND u.status = 'ACTIVE')))
     </sql>
 
     <!-- updated_at은 DB 세션 시간대의 기본값·ON UPDATE 대신 서비스 Clock 값(Asia/Seoul)으로 쓴다 -->
@@ -78,14 +86,50 @@
                 typeHandler="com.vibenote.common.mybatis.JsonTypeHandler"/>
     </resultMap>
 
-    <!-- F-06 AC9. explained_file_count는 설명(summary)이 채워진 파일 수 -->
-    <select id="findOwnedDetail" resultMap="analysisDetail">
+    <select id="findViewable" resultType="com.vibenote.analysis.domain.Analysis">
+        SELECT <include refid="columns"/> FROM analyses a
+        WHERE <include refid="viewable"/>
+    </select>
+
+    <!-- F-06 AC9, F-19 AC9. explained_file_count는 설명(summary)이 채워진 파일 수 -->
+    <select id="findViewableDetail" resultMap="analysisDetail">
         SELECT <include refid="columns"/>, overview,
                (SELECT COUNT(*) FROM analysis_files f WHERE f.analysis_id = a.id) AS file_count,
-               (SELECT COUNT(*) FROM analysis_files f WHERE f.analysis_id = a.id AND f.summary IS NOT NULL) AS explained_file_count
+               (SELECT COUNT(*) FROM analysis_files f WHERE f.analysis_id = a.id AND f.summary IS NOT NULL) AS explained_file_count,
+               (SELECT u.nickname FROM users u WHERE u.id = a.user_id) AS owner_nickname
         FROM analyses a
-        WHERE a.id = #{id} AND a.user_id = #{userId} AND a.deleted_at IS NULL
+        WHERE <include refid="viewable"/>
     </select>
+
+    <update id="updateInfo">
+        UPDATE analyses SET title = #{title}, memo = #{memo}, updated_at = #{now}
+        WHERE id = #{id} AND user_id = #{userId} AND deleted_at IS NULL
+    </update>
+
+    <!-- F-19 AC5. 공개로 바꾸는 것은 DONE일 때만, 비공개는 상태와 관계없이 -->
+    <update id="updateVisibility">
+        UPDATE analyses SET is_public = #{isPublic}, updated_at = #{now}
+        WHERE id = #{id} AND user_id = #{userId} AND deleted_at IS NULL
+          AND (#{isPublic} = FALSE OR status = 'DONE')
+    </update>
+
+    <!-- F-19 AC7. 끝난 분석만 한 문장으로 판단해 파이프라인 상태 갱신과 경쟁하지 않는다 -->
+    <update id="softDelete">
+        UPDATE analyses SET deleted_at = #{now}, updated_at = #{now}
+        WHERE id = #{id} AND user_id = #{userId} AND deleted_at IS NULL AND status IN ('DONE', 'FAILED')
+    </update>
+
+    <delete id="deleteConceptLinks">
+        DELETE FROM analysis_concepts WHERE analysis_id = #{analysisId}
+    </delete>
+
+    <delete id="deleteFlows">
+        DELETE FROM analysis_flows WHERE analysis_id = #{analysisId}
+    </delete>
+
+    <delete id="deleteFiles">
+        DELETE FROM analysis_files WHERE analysis_id = #{analysisId}
+    </delete>
 
     <update id="updateOverview">
         UPDATE analyses

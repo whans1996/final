@@ -366,9 +366,23 @@
             "example" : "JUNIOR",
             "type" : "string"
           },
+          "memo" : {
+            "description" : "메모. 주인이 아니면(mine = false) 항상 null",
+            "example" : "JWT 필터 순서 다시 보기",
+            "type" : [ "string", "null" ]
+          },
+          "mine" : {
+            "description" : "요청한 회원의 분석인지",
+            "example" : true,
+            "type" : "boolean"
+          },
           "overview" : {
             "$ref" : "#/components/schemas/AnalysisOverview",
             "description" : "프로젝트 개요. 개요 생성 전·실패 시 null"
+          },
+          "owner" : {
+            "$ref" : "#/components/schemas/AnalysisOwnerResponse",
+            "description" : "분석 주인"
           },
           "progress" : {
             "description" : "진행률 (0~100)",
@@ -404,7 +418,7 @@
             "type" : [ "string", "null" ]
           }
         },
-        "required" : [ "createdAt", "explainedFileCount", "fileCount", "id", "isPublic", "level", "progress", "sourceType", "status" ],
+        "required" : [ "createdAt", "explainedFileCount", "fileCount", "id", "isPublic", "level", "mine", "owner", "progress", "sourceType", "status" ],
         "type" : "object"
       },
       "AnalysisFileResponse" : {
@@ -519,6 +533,24 @@
         "required" : [ "apis", "layers", "readingOrder", "summary", "techStack" ],
         "type" : "object"
       },
+      "AnalysisOwnerResponse" : {
+        "description" : "분석 주인",
+        "properties" : {
+          "id" : {
+            "description" : "회원 ID",
+            "example" : 7,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "nickname" : {
+            "description" : "닉네임",
+            "example" : "vibecoder",
+            "type" : "string"
+          }
+        },
+        "required" : [ "id", "nickname" ],
+        "type" : "object"
+      },
       "AnalysisStatusResponse" : {
         "description" : "분석 진행 상태",
         "properties" : {
@@ -544,6 +576,11 @@
             "example" : 15,
             "format" : "int32",
             "type" : "integer"
+          },
+          "sourceUrl" : {
+            "description" : "저장소 주소(정규화). ZIP 분석이면 null. FAILED 화면의 \"저장소 보기\" 링크 (F-19 AC12)",
+            "example" : "https://github.com/octo/todo-app",
+            "type" : [ "string", "null" ]
           },
           "status" : {
             "description" : "진행 상태",
@@ -586,6 +623,11 @@
             "enum" : [ "BEGINNER", "JUNIOR", "SENIOR" ],
             "example" : "JUNIOR",
             "type" : "string"
+          },
+          "memo" : {
+            "description" : "메모 (F-19)",
+            "example" : "JWT 필터 순서 다시 보기",
+            "type" : [ "string", "null" ]
           },
           "progress" : {
             "description" : "진행률 (0~100)",
@@ -2907,6 +2949,26 @@
         "required" : [ "analysisId", "memberCount", "members", "modules", "questionCount", "sharedBy", "solvedMemberCount" ],
         "type" : "object"
       },
+      "UpdateAnalysisRequest" : {
+        "description" : "분석 제목·메모 수정 요청",
+        "properties" : {
+          "memo" : {
+            "description" : "메모 (1000자 이하). 비우면 null",
+            "example" : "JWT 필터 순서 다시 보기",
+            "maxLength" : 1000,
+            "minLength" : 0,
+            "type" : [ "string", "null" ]
+          },
+          "title" : {
+            "description" : "제목 (100자 이하). 비우면 null",
+            "example" : "할 일 앱 백엔드",
+            "maxLength" : 100,
+            "minLength" : 0,
+            "type" : [ "string", "null" ]
+          }
+        },
+        "type" : "object"
+      },
       "UpdateProfileRequest" : {
         "description" : "내 프로필 수정 요청. 보낸 필드만 바뀐다",
         "properties" : {
@@ -2931,6 +2993,18 @@
             "type" : [ "string", "null" ]
           }
         },
+        "type" : "object"
+      },
+      "UpdateVisibilityRequest" : {
+        "description" : "분석 공개 설정 요청",
+        "properties" : {
+          "isPublic" : {
+            "description" : "공개 여부",
+            "example" : true,
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "isPublic" ],
         "type" : "object"
       },
       "UserProfileResponse" : {
@@ -2991,6 +3065,24 @@
           }
         },
         "required" : [ "analysisCount", "learnedConceptCount" ],
+        "type" : "object"
+      },
+      "VisibilityResponse" : {
+        "description" : "분석 공개 설정 결과",
+        "properties" : {
+          "id" : {
+            "description" : "분석 ID",
+            "example" : 42,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "isPublic" : {
+            "description" : "공개 여부",
+            "example" : true,
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "id", "isPublic" ],
         "type" : "object"
       },
       "WithdrawRequest" : {
@@ -3623,8 +3715,58 @@
       }
     },
     "/api/analyses/{id}" : {
+      "delete" : {
+        "description" : "끝난(DONE·FAILED) 내 분석을 지운다. 파일·실행 흐름·개념 연결은 지우고 퀴즈 풀이 기록과 일일 한도 집계는 남긴다.",
+        "operationId" : "delete_4",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "삭제됨"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "토큰 없음·만료 (AUTH_401)"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "없는 분석, 다른 회원의 분석(공개여도), 이미 삭제된 분석 (ANALYSIS_404)"
+          },
+          "409" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "진행 중(FETCHING~QUIZ)인 분석 (ANALYSIS_005)"
+          }
+        },
+        "summary" : "분석 삭제",
+        "tags" : [ "분석" ]
+      },
       "get" : {
-        "description" : "내 분석의 정보와 개요(요약·기술 스택·레이어·읽는 순서·API 목록). 진행 중이거나 개요 생성에 실패했으면 overview가 null이다. LLM을 부르지 않는다.",
+        "description" : "내 분석 또는 공개·완료된 남의 분석의 정보와 개요(요약·기술 스택·레이어·읽는 순서·API 목록). 진행 중이거나 개요 생성에 실패했으면 overview가 null이다. 남의 분석이면 mine = false, memo = null. LLM을 부르지 않는다.",
         "operationId" : "getDetail",
         "parameters" : [ {
           "in" : "path",
@@ -3664,16 +3806,83 @@
                 }
               }
             },
-            "description" : "없는 분석, 다른 회원의 분석, 삭제된 분석 (ANALYSIS_404)"
+            "description" : "없는 분석, 삭제된 분석, 볼 수 없는 남의 분석(비공개·미완료·주인 탈퇴) (ANALYSIS_404)"
           }
         },
         "summary" : "분석 상세",
+        "tags" : [ "분석" ]
+      },
+      "patch" : {
+        "description" : "내 분석의 제목(100자)·메모(1000자)를 보낸 값으로 바꾼다 (누락·빈 문자열은 null). 진행 중이어도 되고 파이프라인에는 영향이 없다.",
+        "operationId" : "update_4",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdateAnalysisRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AnalysisDetailResponse"
+                }
+              }
+            },
+            "description" : "수정됨 (바뀐 상세)"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "제목 100자·메모 1000자 초과 (COMMON_400, details.title·memo)"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "토큰 없음·만료 (AUTH_401)"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "없는 분석, 다른 회원의 분석(공개여도), 삭제된 분석 (ANALYSIS_404)"
+          }
+        },
+        "summary" : "분석 제목·메모 수정",
         "tags" : [ "분석" ]
       }
     },
     "/api/analyses/{id}/concepts" : {
       "get" : {
-        "description" : "분석 코드에 쓰인 공개 개념 카드와 위치(파일·줄·맥락). 검수 전 AI 초안은 수(pendingCount)만 준다. 추출 전이거나 연결이 없으면 빈 목록이다. LLM을 부르지 않는다.",
+        "description" : "내 분석 또는 공개·완료된 남의 분석의 코드에 쓰인 공개 개념 카드와 위치(파일·줄·맥락). 검수 전 AI 초안은 수(pendingCount)만 준다. 추출 전이거나 연결이 없으면 빈 목록이다. LLM을 부르지 않는다.",
         "operationId" : "listConcepts",
         "parameters" : [ {
           "in" : "path",
@@ -3713,7 +3922,7 @@
                 }
               }
             },
-            "description" : "없는 분석, 다른 회원의 분석, 삭제된 분석 (ANALYSIS_404)"
+            "description" : "없는 분석, 삭제된 분석, 볼 수 없는 남의 분석(비공개·미완료·주인 탈퇴) (ANALYSIS_404)"
           }
         },
         "summary" : "분석의 개념 카드",
@@ -3722,7 +3931,7 @@
     },
     "/api/analyses/{id}/files" : {
       "get" : {
-        "description" : "선별한 파일(최대 30개)을 선별 우선순위(id 오름차순)로 준다. 코드 내용은 단건 조회에서 받는다.",
+        "description" : "내 분석 또는 공개·완료된 남의 분석에서 선별한 파일(최대 30개)을 선별 우선순위(id 오름차순)로 준다. 코드 내용은 단건 조회에서 받는다.",
         "operationId" : "listFiles",
         "parameters" : [ {
           "in" : "path",
@@ -3765,7 +3974,7 @@
                 }
               }
             },
-            "description" : "없는 분석, 다른 회원의 분석, 삭제된 분석 (ANALYSIS_404)"
+            "description" : "없는 분석, 삭제된 분석, 볼 수 없는 남의 분석(비공개·미완료·주인 탈퇴) (ANALYSIS_404)"
           }
         },
         "summary" : "분석 파일 목록",
@@ -3774,7 +3983,7 @@
     },
     "/api/analyses/{id}/files/{fileId}" : {
       "get" : {
-        "description" : "파일의 역할·설명과 코드 내용. 키·비밀 설정값은 [REDACTED]로 가려져 있다.",
+        "description" : "내 분석 또는 공개·완료된 남의 분석의 파일 역할·설명과 코드 내용. 키·비밀 설정값은 [REDACTED]로 가려져 있다.",
         "operationId" : "getFile",
         "parameters" : [ {
           "in" : "path",
@@ -3822,7 +4031,7 @@
                 }
               }
             },
-            "description" : "없는 분석·다른 회원의 분석·삭제된 분석 (ANALYSIS_404), 그 분석의 파일이 아님 (ANALYSIS_001)"
+            "description" : "없는 분석·삭제된 분석·볼 수 없는 남의 분석 (ANALYSIS_404), 그 분석의 파일이 아님 (ANALYSIS_001)"
           }
         },
         "summary" : "분석 파일 하나",
@@ -3831,7 +4040,7 @@
     },
     "/api/analyses/{id}/flows" : {
       "get" : {
-        "description" : "이 분석의 흐름 전체(id 오름차순). DONE이 아니면 summary·steps는 null. 화면은 PENDING이 있으면 3초마다 다시 부른다.",
+        "description" : "내 분석 또는 공개·완료된 남의 분석의 흐름 전체(id 오름차순). DONE이 아니면 summary·steps는 null. 화면은 PENDING이 있으면 3초마다 다시 부른다.",
         "operationId" : "list_4",
         "parameters" : [ {
           "in" : "path",
@@ -3874,7 +4083,7 @@
                 }
               }
             },
-            "description" : "없는 분석, 다른 회원의 분석, 삭제된 분석 (ANALYSIS_404)"
+            "description" : "없는 분석, 삭제된 분석, 볼 수 없는 남의 분석(비공개·미완료·주인 탈퇴) (ANALYSIS_404)"
           }
         },
         "summary" : "실행 흐름 목록",
@@ -4012,7 +4221,7 @@
     },
     "/api/analyses/{id}/status" : {
       "get" : {
-        "description" : "내 분석의 단계·진행률·실패 사유. 진행 화면이 2초마다 폴링한다.",
+        "description" : "내 분석 또는 공개·완료된 남의 분석의 단계·진행률·실패 사유·저장소 주소. 진행 화면이 2초마다 폴링한다.",
         "operationId" : "getStatus",
         "parameters" : [ {
           "in" : "path",
@@ -4052,10 +4261,89 @@
                 }
               }
             },
-            "description" : "없는 분석, 다른 회원의 분석, 삭제된 분석 (ANALYSIS_404)"
+            "description" : "없는 분석, 삭제된 분석, 볼 수 없는 남의 분석(비공개·미완료·주인 탈퇴) (ANALYSIS_404)"
           }
         },
         "summary" : "분석 진행 상태",
+        "tags" : [ "분석" ]
+      }
+    },
+    "/api/analyses/{id}/visibility" : {
+      "patch" : {
+        "description" : "공개하면 완료 때 기록된 피드 활동이 팔로워에게 보이고, 다른 회원이 읽기 전용으로 열람할 수 있다. 공개는 DONE일 때만 되고, 비공개는 상태와 관계없이 된다.",
+        "operationId" : "updateVisibility",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdateVisibilityRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/VisibilityResponse"
+                }
+              }
+            },
+            "description" : "바뀜"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "isPublic 누락·null (COMMON_400)"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "토큰 없음·만료 (AUTH_401)"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "없는 분석, 다른 회원의 분석(공개여도), 삭제된 분석 (ANALYSIS_404)"
+          },
+          "409" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "DONE이 아닌 분석을 공개로 바꾸려 함 (ANALYSIS_006)"
+          }
+        },
+        "summary" : "분석 공개 설정",
         "tags" : [ "분석" ]
       }
     },
@@ -7259,14 +7547,14 @@
     "url" : "http://localhost"
   } ],
   "tags" : [ {
+    "description" : "프로젝트 분석 요청, 내 분석 목록, 진행 상태, 분석 결과(개요·파일·개념) 조회, 수정·공개·삭제",
+    "name" : "분석"
+  }, {
     "description" : "프로필 조회·수정, 학습 통계, 회원 탈퇴",
     "name" : "회원"
   }, {
     "description" : "게시판(코드 이해 Q&A·학습 후기·자유) 글 목록·검색·상세·작성·수정·삭제와 댓글",
     "name" : "커뮤니티"
-  }, {
-    "description" : "프로젝트 분석 요청, 내 분석 목록, 진행 상태, 분석 결과(개요·파일·개념) 조회",
-    "name" : "분석"
   }, {
     "description" : "회원가입, 로그인, 토큰 재발급, 로그아웃",
     "name" : "인증"

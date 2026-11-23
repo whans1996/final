@@ -15,6 +15,8 @@ public record AnalysisSummaryResponse(
                 long id,
         @Schema(description = "제목 (처음에는 프로젝트 이름)", example = "todo-app", nullable = true)
                 String title,
+        @Schema(description = "메모 (F-19)", example = "JWT 필터 순서 다시 보기", nullable = true)
+                String memo,
         @Schema(
                         description = "프로젝트 이름 (ZIP 파일명에서 .zip을 뺀 이름)",
                         example = "todo-app",
@@ -52,6 +54,7 @@ public record AnalysisSummaryResponse(
         return new AnalysisSummaryResponse(
                 analysis.getId(),
                 analysis.getTitle(),
+                analysis.getMemo(),
                 analysis.getProjectName(),
                 analysis.getSourceType(),
                 analysis.getLevel(),

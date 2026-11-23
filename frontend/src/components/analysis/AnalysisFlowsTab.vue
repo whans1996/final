@@ -1,6 +1,7 @@
 <script setup>
 // SC-07 "실행 흐름" 탭 (F-07 AC14~AC16). 개요 apis에서 남은 개수(3 − FAILED가 아닌 흐름)까지 골라 요청하고,
 // PENDING이 있으면 3초마다 목록을 다시 불러 모두 끝나면 멈춘다 (탭을 떠나면 unmount로 멈춤).
+// readonly(남의 공개 분석, F-19 AC14)면 API 선택·만들기·다시 만들기를 숨기고 흐름 카드만 보여 준다.
 import { computed, onMounted, ref } from 'vue'
 import { fetchAnalysisFlows, requestAnalysisFlows } from '@/api/analyses'
 import { errorMessage } from '@/api/http'
@@ -16,6 +17,7 @@ const STATUS_LABELS = { PENDING: '생성 중', DONE: '완료', FAILED: '실패' 
 const props = defineProps({
   analysisId: { type: Number, required: true },
   apis: { type: Array, required: true },
+  readonly: { type: Boolean, default: false },
 })
 
 const emit = defineEmits(['select-file'])
@@ -103,8 +105,8 @@ function retryFlow(flow) {
       </button>
     </div>
 
-    <div v-if="flows !== null" class="layout">
-      <section class="picker" aria-label="API 선택">
+    <div v-if="flows !== null" class="layout" :class="{ readonly }">
+      <section v-if="!readonly" class="picker" aria-label="API 선택">
         <h2>API 고르기</h2>
         <p v-if="apis.length === 0" class="hint" data-message="no-apis">
           탐지된 API가 없어 실행 흐름을 만들 수 없습니다.
@@ -173,6 +175,7 @@ function retryFlow(flow) {
           :key="flow.id"
           :flow="flow"
           :busy="submitting || remaining <= 0"
+          :readonly="readonly"
           @retry="retryFlow"
           @select-file="emit('select-file', $event)"
         />
@@ -289,6 +292,10 @@ function retryFlow(flow) {
 .hint {
   margin: 0;
   color: var(--color-text-muted);
+}
+
+.layout.readonly {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 @media (max-width: 768px) {
