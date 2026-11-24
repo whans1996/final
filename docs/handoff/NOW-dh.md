@@ -4,7 +4,7 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
 
-갱신: 2026-11-24 12:36 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/F-21a-structure-graph
+갱신: 2026-11-24 13:17 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/F-21a-structure-graph
 
 ## 현재 기능
 
@@ -29,6 +29,8 @@
 - 사람: 노션 팀원 초대, #77 담당(F-08 A·F-13 B 걸침)
 
 ## 주의
+
+- StructureAnalyzerTest(AC7~AC12)는 red 확인을 건너뛰어(클래스 없어 컴파일 에러) 뮤테이션 4종으로 사후 확인: 11개 모두 해당 기능을 망가뜨리면 실패(11-24). FE는 stub → red → green 순서 지킬 것
 
 - PR: 공통 파일 application.yml(analysis.structure 블록) 변경 → "공통 코드 변경"에 적고 @JoonseobKim 멘션. 적을 것: AC6 코드 아닌 확장자(.css 등) 미보고, AC4는 spec 문구 "DOM 파서" 대신 SAX(같은 보안 설정, 줄 번호 때문)
 - 리뷰 지적은 '무시 가능'도 직접 확인한다 (11-20 사용자 지시) · 하네스 동결(11-23): 버그·작업 막는 문제만 고친다
