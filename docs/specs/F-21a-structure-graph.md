@@ -155,6 +155,18 @@ Codex가 9회 재리뷰 동안 같은 종류의 구멍을 회차마다 하나씩
    - `axios.defaults.baseURL` 쓰기가 둘 이상(값이 다름)이거나 `+=`·`Object.assign(X.defaults…)`·`X.defaults['baseURL']`·`X.defaults = …`·인스턴스의 `api.defaults.baseURL = …`이면 `BASE_URL_UNKNOWN`. 같은 파일에서 `axios.defaults.baseURL`을 쓰고 config 없이 `axios.create`해도 `BASE_URL_UNKNOWN`. `window.fetch =`·`globalThis.fetch =`·`fetch =` 대입, `interceptors.request.use`가 있으면 그 receiver 호출은 unresolved.
    - `ContextPathReader`: `spring.profiles`가 맵(`spring.profiles.active`)이면 프로필 문서로 보지 않는다.
    - `ApiDetector` 50개 잘림·상수 매핑 건너뜀이 있으면 변수 없는 일치만 확정한다.
+   - **구현(11-24)**:
+     - 경로에 매개변수가 붙어 계산된 요청도 부른 곳이 있으면 인라인하고, 부른 곳이 없으면 와일드카드로 비교한다.
+     - 동적 조각은 놓인 URL 구성 요소 안에 머문다고 본다. 호스트 이름 자리에 있을 때만 URL_UNKNOWN(baseURL이면 BASE_URL_UNKNOWN)이고, 스킴·userinfo·포트의 조각은 경로 계산에 영향이 없다.
+     - 로컬 호스트는 `localhost`·`127.0.0.1`·`[::1]`이다. baseURL 호스트는 선별 파일의 `axios.defaults.baseURL`·`axios.create` baseURL 중 계산되는 것이고, 대소문자를 무시하고 포트는 보지 않는다. NO_MATCHING_API의 detail은 `GET host/path`다.
+     - "API 리터럴과 맞선 와일드카드"는 정규식 변수·섞인 세그먼트와 맞선 경우도 포함한다. 와일드카드가 정규식 없는 변수·`**`와만 맞서도 맞는 후보는 확실한 후보로 본다.
+     - 순위의 변수 무게는 `*`가 100, `{v}`가 1이다.
+     - `defaults` 쓰기 중 `delete X.defaults.baseURL`도 BASE_URL_UNKNOWN이다. 다른 문자열 키(`['timeout']`)와 `Object.assign(X.defaults.headers, …)`는 제외한다.
+     - `create` config에 baseURL이 없으면(config가 없을 때만이 아니라) 같은 파일의 axios 기본값을 물려받는 것으로 본다.
+     - request 인터셉터가 있으면 그 받는 쪽 호출은 래퍼 인라인 없이 그 자리에서 URL_UNKNOWN이고, response 인터셉터는 보지 않는다.
+     - `fetch` 바꿔 끼우기는 선별 파일 어디서든 모든 fetch 호출에 적용한다.
+     - ApiDetector의 incomplete는 50개 잘림, 경로를 알 수 없는 메서드·클래스 매핑, 190자 넘는 경로 제외 중 하나라도 있을 때다. `StructureService`가 선별 파일을 다시 훑어 구한다. 이때 확정하지 못한 후보는 AMBIGUOUS로 둔다.
+     - 테스트는 `StructureAnalyzerTest` "5.3절 5", `ApiPathMatcherTest`, `ApiDetectorTest#F21a_…`에 있다.
 6. **토크나이저 (AC5)**: `<script\b`는 `<script(?=[\s>/])`로, 여는 태그 속성 안의 `>`(따옴표 안) 허용, regex 안 `\` 다음 줄바꿈은 실패, CR 단독·U+2028·U+2029 줄 끝, 값 뒤 TS `!` 다음 `/`는 나눗셈, `?.` 뒤 숫자는 `?`+`.5`.
 7. **넘기는 것 (follow-up)**: JSX(`.js` 안 React, 지원 스택 밖이라 지금처럼 `PARSE_ERROR`), 템플릿 `${}` 안의 함수·const 범위, 비엄격 모드 블록 함수 선언(Annex B), HEAD↔GET·끝 슬래시·`axios(url, cfg)`·`postForm` 등 간선이 빠지는 쪽만인 것, 여러 줄 토큰의 끝 줄, `ApiDetector` 클래스 위치 정규식(F-07 코드), config 별칭(`const c2 = cfg`) 변경.
 
