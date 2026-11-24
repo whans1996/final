@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- F-25 참여·달성도. review_plans·quiz_attempts·analyses 는 읽기만 하고, 삭제한 분석의 활동도 센다 -->
+<mapper namespace="com.vibenote.challenge.ChallengeParticipantMapper">
+
+    <insert id="insertIgnore">
+        INSERT IGNORE INTO challenge_participants (challenge_id, user_id, progress, joined_at)
+        VALUES (#{challengeId}, #{userId}, 0, #{joinedAt})
+    </insert>
+
+    <delete id="delete">
+        DELETE FROM challenge_participants WHERE challenge_id = #{challengeId} AND user_id = #{userId}
+    </delete>
+
+    <select id="find" resultType="com.vibenote.challenge.domain.ChallengeParticipant">
+        SELECT challenge_id, user_id, progress, completed_at, joined_at
+        FROM challenge_participants
+        WHERE challenge_id = #{challengeId} AND user_id = #{userId}
+    </select>
+
+    <select id="countByChallenge" resultType="long">
+        SELECT COUNT(*) FROM challenge_participants WHERE challenge_id = #{challengeId}
+    </select>
+
+    <!-- 상태는 저장하지 않으므로 오늘과 기간으로 거른다 (ChallengeStatus.of와 같은 기준) -->
+    <sql id="joinedWhere">
+        WHERE p.user_id = #{userId}
+        <if test="status != null and status.name() == 'UPCOMING'">AND c.start_date &gt; #{today}</if>
+        <if test="status != null and status.name() == 'ONGOING'">
+            AND c.start_date &lt;= #{today} AND c.end_date &gt;= #{today}
+        </if>
+        <if test="status != null and status.name() == 'ENDED'">AND c.end_date &lt; #{today}</if>
+    </sql>
+
+    <select id="findJoined" resultType="com.vibenote.challenge.domain.JoinedChallenge">
+        SELECT c.id, c.title, c.description, c.image_url, c.start_date, c.end_date, c.goal_type, c.goal_value,
+               c.created_by, c.created_at, c.updated_at, p.progress, p.completed_at, p.joined_at
+        FROM challenge_participants p
+        JOIN challenges c ON c.id = p.challenge_id
+        <include refid="joinedWhere"/>
+        ORDER BY p.joined_at DESC, p.challenge_id DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="countJoined" resultType="long">
+        SELECT COUNT(*)
+        FROM challenge_participants p
+        JOIN challenges c ON c.id = p.challenge_id
+        <include refid="joinedWhere"/>
+    </select>
+
+    <!-- ── 집계 ── -->
+
+    <select id="findOpenForUpdate" resultType="com.vibenote.challenge.domain.Challenge">
+        SELECT c.id, c.start_date, c.end_date, c.goal_type, c.goal_value
+        FROM challenge_participants p
+        JOIN challenges c ON c.id = p.challenge_id
+        WHERE p.user_id = #{userId}
+          AND p.completed_at IS NULL
+          AND c.goal_type = #{goalType}
+          AND c.start_date &lt;= #{date} AND c.end_date &gt;= #{date}
+        ORDER BY c.id
+        FOR UPDATE OF p
+    </select>
+
+    <select id="countDoneReviews" resultType="int">
+        SELECT COUNT(*) FROM review_plans
+        WHERE user_id = #{userId} AND status = 'DONE'
+          AND done_at &gt;= #{from} AND done_at &lt; #{until}
+    </select>
+
+    <!-- 같은 퀴즈를 같은 날 여러 번 풀어도 1회 (F-25 결정) -->
+    <select id="countQuizDays" resultType="int">
+        SELECT COUNT(DISTINCT quiz_id, DATE(created_at)) FROM quiz_attempts
+        WHERE user_id = #{userId}
+          AND created_at &gt;= #{from} AND created_at &lt; #{until}
+    </select>
+
+    <!-- 요청 날짜 기준. soft delete된 분석도 센다 -->
+    <select id="countDoneAnalyses" resultType="int">
+        SELECT COUNT(*) FROM analyses
+        WHERE user_id = #{userId} AND status = 'DONE'
+          AND created_at &gt;= #{from} AND created_at &lt; #{until}
+    </select>
+
+    <update id="updateProgress">
+        UPDATE challenge_participants
+        SET progress = #{progress}, completed_at = #{completedAt}
+        WHERE challenge_id = #{challengeId} AND user_id = #{userId} AND completed_at IS NULL
+    </update>
+</mapper>

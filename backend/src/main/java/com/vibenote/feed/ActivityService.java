@@ -30,4 +30,10 @@ public class ActivityService {
             activityMapper.insert(userId, type, targetId);
         }
     }
+
+    /** 그 회원의 (종류, 대상) 활동을 모두 지운다. 챌린지 참여를 취소하면 "참여했어요"를 피드에서 뺀다 (F-25 AC9). */
+    @Transactional
+    public void delete(long userId, ActivityType type, long targetId) {
+        activityMapper.delete(userId, type, targetId);
+    }
 }

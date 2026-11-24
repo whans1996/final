@@ -1,5 +1,7 @@
 package com.vibenote.reviewplan;
 
+import com.vibenote.challenge.ChallengeGoalType;
+import com.vibenote.challenge.ChallengeProgressService;
 import com.vibenote.common.exception.BusinessException;
 import com.vibenote.common.exception.ErrorCode;
 import com.vibenote.concept.ConceptQueryService;
@@ -43,12 +45,17 @@ public class ReviewPlanService {
 
     private final ReviewPlanMapper mapper;
     private final ConceptQueryService conceptQueryService;
+    private final ChallengeProgressService challengeProgressService;
     private final Clock clock;
 
     public ReviewPlanService(
-            ReviewPlanMapper mapper, ConceptQueryService conceptQueryService, Clock clock) {
+            ReviewPlanMapper mapper,
+            ConceptQueryService conceptQueryService,
+            ChallengeProgressService challengeProgressService,
+            Clock clock) {
         this.mapper = mapper;
         this.conceptQueryService = conceptQueryService;
+        this.challengeProgressService = challengeProgressService;
         this.clock = clock;
     }
 
@@ -145,7 +152,8 @@ public class ReviewPlanService {
     }
 
     /**
-     * 완료(DONE, doneAt = 지금)·되돌림(TODO, doneAt = null). 이미 그 상태면 바꾸지 않는다 (AC6).
+     * 완료(DONE, doneAt = 지금)·되돌림(TODO, doneAt = null). 이미 그 상태면 바꾸지 않는다 (AC6). 바꾸면 그 완료 날짜의 복습 챌린지
+     * 달성도를 다시 센다 (F-25 AC5).
      *
      * @throws BusinessException REVIEW_PLAN_404 없는·남의·비공개 카드의 계획, REVIEW_PLAN_409 되돌릴 때 그 카드의 다른
      *     TODO가 있음
@@ -164,20 +172,32 @@ public class ReviewPlanService {
         }
         LocalDateTime doneAt = status == ReviewPlanStatus.DONE ? now() : null;
         mapper.updateStatus(userId, planId, status, doneAt);
+        refreshChallenges(userId, doneAt != null ? doneAt : plan.getDoneAt());
         plan.setStatus(status);
         plan.setDoneAt(doneAt);
         return ReviewPlanItemResponse.of(plan, concept);
     }
 
     /**
-     * 내 계획을 지운다 (AC7).
+     * 내 계획을 지운다 (AC7). DONE 계획이면 그 완료 날짜의 복습 챌린지 달성도를 다시 센다 (F-25 AC5).
      *
      * @throws BusinessException REVIEW_PLAN_404 없는·남의·비공개 카드의 계획
      */
     @Transactional
     public void delete(long userId, long planId) {
-        findVisible(userId, planId);
+        ReviewPlan plan = findVisible(userId, planId).plan();
         mapper.deleteOwned(userId, planId);
+        if (plan.getStatus() == ReviewPlanStatus.DONE) {
+            refreshChallenges(userId, plan.getDoneAt());
+        }
+    }
+
+    /** 완료 시각이 생기거나 사라진 날짜의 복습 챌린지를 다시 센다. */
+    private void refreshChallenges(long userId, LocalDateTime doneAt) {
+        if (doneAt != null) {
+            challengeProgressService.refresh(
+                    userId, ChallengeGoalType.REVIEW_COUNT, doneAt.toLocalDate());
+        }
     }
 
     private record Visible(ReviewPlan plan, ConceptSummaryResponse concept) {}

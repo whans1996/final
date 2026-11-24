@@ -36,4 +36,20 @@ public interface ChallengeMapper {
 
     /** 참여 기록은 FK CASCADE로 함께 지워진다. */
     int deleteById(long id);
+
+    // ── F-25 회원 ──
+
+    /**
+     * 회원용 목록. 진행 중은 end_date ASC, 예정은 start_date ASC, 종료는 end_date DESC이고 모두 다음 기준 id DESC다. 참여자 수와
+     * viewerId의 참여 여부(joined, 비로그인이면 false)를 채운다.
+     */
+    List<Challenge> findForMember(
+            @Param("status") ChallengeStatus status,
+            @Param("today") LocalDate today,
+            @Param("viewerId") Long viewerId,
+            @Param("size") int size,
+            @Param("offset") long offset);
+
+    /** {@link #findForMember}와 같은 조건의 개수. */
+    long countForMember(@Param("status") ChallengeStatus status, @Param("today") LocalDate today);
 }

@@ -4,29 +4,30 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
 
-갱신: 2026-11-24 10:02 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/F-25-challenge-participation
+갱신: 2026-11-24 10:19 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/F-25-challenge-participation
 
 ## 현재 기능
 
-**F-25 챌린지 참여·달성도** spec `docs/specs/F-25-challenge-participation.md` — **APPROVED (김동환 11-24)**, 관련 이슈 #99 흡수
+**F-25 챌린지 참여·달성도** spec `docs/specs/F-25-challenge-participation.md` — APPROVED, `/implement` 진행 중
 
 ## 진행
 
-- ✅ F-24 PR #97 머지(11-24 09:47)
-- ✅ F-25 spec 초안: AC16개(BE 11, FE 5). 사용자 결정 4개(시작일부터 집계, 퀴즈는 (퀴즈, 날짜)당 1회, 미달성·종료 전만 취소하고 JOIN 활동 삭제, 참여 목록 공개)를 결정로그에 한 줄로 적음. Flyway 없음
-- ✅ spec 승인 커밋 `docs(F-25): spec 승인`, develop(#100 F-20c 시작일 상한) 합쳐 push
+- ✅ BE AC1~AC11 green (`verify be` 1009 통과), openapi.json 갱신, 커밋 `feat(F-25): BE ...`
+  - 테스트: `challenge/ChallengeApiTest`·`ChallengeParticipationApiTest`·`ChallengeProgressTest`·`UserChallengeApiTest` (+`ChallengeTestSupport`)
+  - 구현: `ChallengeService`, `ChallengeProgressService.refresh/recount`, `ChallengeParticipantMapper`, 컨트롤러 2개. 집계 호출은 `ReviewPlanService.changeStatus/delete`·`QuizService.submit`·`AnalysisService.complete`
+- #101(Actions 결제 막힘): 사용자 결정 11-24 "로컬 구현 계속, PR·머지는 복구 뒤"
 
 ## 바로 다음 할 일
 
-1. `/clear` → `/implement F-25` (Opus/high). BE부터: `ChallengeProgressService.refresh` + `ChallengeParticipantMapper.xml` 집계 쿼리 3개 → `ChallengeProgressTest` AC5~AC8
-2. 로컬 DB에 `[시연]` 챌린지 3개가 있다 (화면 점검용, 지워도 됨)
+1. FE AC16: `frontend/src/utils/seoulDate.js`(`todayInSeoul(now)`, `daysBetween(a,b)`) + `utils/__tests__/seoulDate.spec.js` → `components/challenge/admin/validation.js`의 `todayIso` 교체(#99)
+2. FE: `src/api/challenges.js`(+spec) → `components/challenge/admin/labels.js`를 `components/challenge/labels.js`로 이동 → `ChallengeCard`·`ChallengeProgressBar`·`ChallengeJoinPanel`·`MyChallengeList` → `views/challenge/ChallengeListView`·`ChallengeDetailView`, `routes/challenge.js`(nav order 9) → 대시보드·프로필 절 (AC12~15)
 
 ## 막힌 점 / 결정 필요
 
-- 사람: 노션 팀원 초대, #77 담당(F-08 A·F-13 B 걸침)
+- 사람: 노션 팀원 초대, #77 담당(F-08 A·F-13 B 걸침), #101 Actions 결제 확인
 
 ## 주의
 
 - 리뷰 지적은 '무시 가능'도 직접 확인한다 (11-20 사용자 지시) · 하네스 동결(11-23): 버그·작업 막는 문제만 고친다
-- Bash heredoc·python 치환은 백슬래시와 `갱신:` 같은 반복 문자열에 약하다(라우트 `:id(\\d+)`·NOW 머리말 깨짐 실제 발생) → 문서·코드는 Edit/Write 도구로
-- F-25는 공통 `feed.ActivityService`에 `delete`를 더한다 → PR 때 `owners.mjs --diff`로 @멘션 확인
+- 공통 파일 변경(ErrorCode, SecurityConfig, feed.ActivityService·ActivityMapper) → PR "공통 코드 변경"에 적고 @JoonseobKim 멘션
+- openapi 경로 변수가 `/api/users/{userId}/challenges`(spec은 `{id}`). contract-checker 때 확인

@@ -5,7 +5,10 @@ import com.vibenote.challenge.ChallengeStatus;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-/** challenges 행. Controller 응답으로 직접 내보내지 않는다. participantCount는 목록·상세 조회만 채운다. */
+/**
+ * challenges 행. Controller 응답으로 직접 내보내지 않는다. participantCount는 목록·상세 조회만, joined는 회원용 목록(F-25)만
+ * 채운다.
+ */
 public class Challenge {
 
     private Long id;
@@ -20,6 +23,7 @@ public class Challenge {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private long participantCount;
+    private boolean joined;
 
     public ChallengeStatus statusOn(LocalDate today) {
         return ChallengeStatus.of(startDate, endDate, today);
@@ -119,5 +123,13 @@ public class Challenge {
 
     public void setParticipantCount(long participantCount) {
         this.participantCount = participantCount;
+    }
+
+    public boolean isJoined() {
+        return joined;
+    }
+
+    public void setJoined(boolean joined) {
+        this.joined = joined;
     }
 }

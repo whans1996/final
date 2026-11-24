@@ -16,4 +16,9 @@ public interface ActivityMapper {
             @Param("userId") long userId,
             @Param("type") ActivityType type,
             @Param("targetId") long targetId);
+
+    int delete(
+            @Param("userId") long userId,
+            @Param("type") ActivityType type,
+            @Param("targetId") long targetId);
 }
