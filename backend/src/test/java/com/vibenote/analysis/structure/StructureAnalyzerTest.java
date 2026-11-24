@@ -1505,6 +1505,131 @@ class StructureAnalyzerTest {
     }
 
     @Test
+    void AC9_axios_defaults_baseURL을_여러_값으로_쓰거나_변형해_쓰면_BASE_URL_UNKNOWN이다() {
+        List<String> tainted =
+                List.of(
+                        "axios.defaults.baseURL = '/api'\naxios.defaults.baseURL = '/v2'",
+                        "axios.defaults.baseURL = '/api'\naxios.defaults.baseURL += '/v2'",
+                        "axios.defaults.baseURL = '/api'\n"
+                                + "Object.assign(axios.defaults, { baseURL: '/v2' })",
+                        "axios.defaults.baseURL = '/api'\naxios.defaults['baseURL'] = '/v2'",
+                        "axios.defaults.baseURL = '/api'\naxios.defaults = { baseURL: '/v2' }",
+                        "axios.defaults.baseURL = '/api'\ndelete axios.defaults.baseURL");
+        for (String main : tainted) {
+            assertThat(httpUnresolved(defaultsRun(main)))
+                    .as(main)
+                    .containsExactly(
+                            unknown(
+                                    2,
+                                    2,
+                                    UnresolvedReason.BASE_URL_UNKNOWN,
+                                    "axios.get('/todos')"));
+        }
+        // 같은 값을 두 번 쓰거나 baseURL이 아닌 기본값을 바꾸는 것은 그대로다
+        assertThat(
+                        http(
+                                defaultsRun(
+                                        "axios.defaults.baseURL = '/api'\n"
+                                                + "axios.defaults.baseURL = '/api'\n"
+                                                + "axios.defaults['timeout'] = 5\n"
+                                                + "Object.assign(axios.defaults.headers, h)")))
+                .containsExactly(edge(2, 100, 2));
+    }
+
+    private AnalysisStructureResponse defaultsRun(String main) {
+        return run(
+                List.of(api("GET", "/api/todos", 100)),
+                js(1, "src/main.js", "import axios from 'axios'\n" + main),
+                js(2, "src/a.js", "import axios from 'axios'\naxios.get('/todos')"));
+    }
+
+    @Test
+    void AC9_인스턴스_defaults_쓰기와_같은_파일_기본값을_물려받는_create는_BASE_URL_UNKNOWN이다() {
+        AnalysisStructureResponse response =
+                run(
+                        List.of(
+                                api("GET", "/api/todos", 100),
+                                api("GET", "/api/items", 101),
+                                api("GET", "/api/users", 102)),
+                        js(
+                                1,
+                                "src/a.js",
+                                """
+                                import axios from 'axios'
+                                const a = axios.create({ baseURL: '/api' })
+                                a.defaults.baseURL = '/api'
+                                a.get('/todos')
+                                const b = axios.create({ baseURL: '/api' })
+                                b.interceptors.request.use(c => c)
+                                b.get('/todos')
+                                const c = axios.create({ baseURL: '/api' })
+                                c.interceptors.response.use(r => r)
+                                c.get('/items')
+                                """),
+                        js(
+                                2,
+                                "src/b.js",
+                                """
+                                import axios from 'axios'
+                                axios.defaults.baseURL = '/api'
+                                const d = axios.create()
+                                d.get('/todos')
+                                const e = axios.create({ baseURL: '/api' })
+                                e.get('/users')
+                                const f = axios.create({ timeout: 5 })
+                                f.get('/todos')
+                                """));
+
+        // request 인터셉터는 요청 주소를 바꿀 수 있다. response 인터셉터는 바꾸지 않는다
+        assertThat(http(response)).containsExactly(edge(1, 101, 10), edge(2, 102, 6));
+        assertThat(httpUnresolved(response))
+                .extracting(UnresolvedLink::fileId, UnresolvedLink::line, UnresolvedLink::reason)
+                .containsExactly(
+                        tuple(1L, 4, UnresolvedReason.BASE_URL_UNKNOWN),
+                        tuple(1L, 7, UnresolvedReason.URL_UNKNOWN),
+                        tuple(2L, 4, UnresolvedReason.BASE_URL_UNKNOWN),
+                        tuple(2L, 8, UnresolvedReason.BASE_URL_UNKNOWN));
+    }
+
+    @Test
+    void AC7_fetch를_바꿔_끼우거나_axios_request_인터셉터가_있으면_그_호출은_URL_UNKNOWN이다() {
+        List<String> replaced =
+                List.of("window.fetch = wrap", "globalThis.fetch = wrap", "fetch = wrap");
+        for (String replace : replaced) {
+            AnalysisStructureResponse response =
+                    run(
+                            List.of(api("GET", "/api/todos", 100)),
+                            js(1, "src/main.js", replace),
+                            js(2, "src/a.js", "fetch('/api/todos')"));
+            assertThat(httpUnresolved(response))
+                    .as(replace)
+                    .extracting(UnresolvedLink::fileId, UnresolvedLink::reason)
+                    .containsExactly(tuple(2L, UnresolvedReason.URL_UNKNOWN));
+        }
+        AnalysisStructureResponse response =
+                run(
+                        List.of(api("GET", "/api/todos", 100)),
+                        js(
+                                1,
+                                "src/main.js",
+                                "import axios from 'axios'\naxios.interceptors.request.use(f)"),
+                        js(
+                                2,
+                                "src/a.js",
+                                """
+                                import axios from 'axios'
+                                axios.get('/api/todos')
+                                fetch('/api/todos')
+                                function g(fetch) { fetch = wrap }
+                                """));
+        // 매개변수 fetch에 대입한 것은 전역 fetch를 바꾸지 않는다
+        assertThat(http(response)).containsExactly(edge(2, 100, 3));
+        assertThat(httpUnresolved(response))
+                .extracting(UnresolvedLink::line, UnresolvedLink::reason)
+                .containsExactly(tuple(2, UnresolvedReason.URL_UNKNOWN));
+    }
+
+    @Test
     void AC11_절대_URL의_호스트가_로컬도_설정된_baseURL_호스트도_아니면_NO_MATCHING_API다() {
         AnalysisStructureResponse response =
                 run(

@@ -277,7 +277,7 @@ public final class HttpLinker {
     private void handle(HttpCall http) {
         JsCall call = http.call();
         JsModule module = http.module();
-        if (http.receiver() == SHADOWED) {
+        if (http.receiver() == SHADOWED || hooked(http.receiver())) {
             unresolved(module, call, UnresolvedReason.URL_UNKNOWN);
             return;
         }
@@ -489,24 +489,200 @@ public final class HttpLinker {
         return List.copyOf(out);
     }
 
-    /** 인스턴스면 {@code create} config의 baseURL, axios면 선별 파일 어디든 첫 {@code axios.defaults.baseURL}. */
+    /**
+     * 인스턴스면 {@code create} config의 baseURL, axios면 선별 파일의 {@code axios.defaults.baseURL}. 기본값을 바꾸는
+     * 쓰기가 여럿(값이 다름)이거나 모양이 다르면 값을 모른다 (5.3절 5). baseURL 없이 만든 인스턴스는 같은 파일이 axios 기본값을 바꾸면 그 값을 물려받을
+     * 수 있어 모른다.
+     */
     private Expr receiverBase(Receiver receiver) {
+        Taints taints = taints();
         if (receiver.type() == ReceiverType.INSTANCE) {
-            return config(receiver.createArgs(), receiver.module(), Bindings.NONE, 0)
-                    .prop("baseURL");
+            if (taints.instanceBase().contains(receiver)) {
+                return UNKNOWN;
+            }
+            Expr base =
+                    config(receiver.createArgs(), receiver.module(), Bindings.NONE, 0)
+                            .prop("baseURL");
+            return base == null && !receiver.module().defaultsBaseUrls().isEmpty() ? UNKNOWN : base;
+        }
+        if (taints.axiosBase()) {
+            return UNKNOWN;
         }
         if (axiosBase == null) {
-            axiosBase =
-                    modules.values().stream()
-                            .sorted((a, b) -> Long.compare(a.fileId(), b.fileId()))
-                            .filter(m -> !m.defaultsBaseUrls().isEmpty())
-                            .findFirst()
-                            .map(m -> new Expr(m.defaultsBaseUrls().get(0), m, Bindings.NONE));
+            axiosBase = readAxiosBase();
         }
         return axiosBase.orElse(null);
     }
 
     private Optional<Expr> axiosBase;
+
+    /** 선별 파일의 {@code axios.defaults.baseURL} 쓰기. 계산한 값이 모두 같으면 그 값, 다르면 값을 모른다. */
+    private Optional<Expr> readAxiosBase() {
+        Expr first = null;
+        String value = null;
+        for (JsModule m :
+                modules.values().stream()
+                        .sorted((a, b) -> Long.compare(a.fileId(), b.fileId()))
+                        .toList()) {
+            for (List<JsToken> base : m.defaultsBaseUrls()) {
+                budget.spend();
+                Expr expr = new Expr(base, m, Bindings.NONE);
+                UrlValue v = evaluator.eval(base, m, Bindings.NONE);
+                if (first == null) {
+                    first = expr;
+                    value = v.text();
+                } else if (!v.known() || !v.text().equals(value)) {
+                    return Optional.of(UNKNOWN);
+                }
+            }
+        }
+        return Optional.ofNullable(first);
+    }
+
+    // ---- 요청을 바꾸는 설정 (5.3절 5) ----
+
+    /**
+     * 선별 파일 어디서든 요청 주소를 바꿀 수 있는 설정. axios와 fetch는 전역 하나라 파일과 상관없다.
+     *
+     * @param axiosBase axios 기본 baseURL을 {@code X.defaults.baseURL = 식} 말고 다른 모양으로 바꾼다
+     * @param instanceBase 기본 baseURL을 바꾸는 인스턴스 (식별자: 인스턴스 판정 메모의 Receiver)
+     * @param hooked request 인터셉터를 단 받는 쪽 (axios는 {@link #axiosHooked})
+     * @param fetchReplaced {@code fetch}를 바꿔 끼운다
+     */
+    private record Taints(
+            boolean axiosBase,
+            Set<Receiver> instanceBase,
+            boolean axiosHooked,
+            Set<Receiver> hooked,
+            boolean fetchReplaced) {}
+
+    private Taints taints;
+
+    private boolean hooked(Receiver receiver) {
+        Taints t = taints();
+        return switch (receiver.type()) {
+            case AXIOS -> t.axiosHooked();
+            case INSTANCE -> t.hooked().contains(receiver);
+            case FETCH -> t.fetchReplaced();
+            case SHADOWED -> false;
+        };
+    }
+
+    private Taints taints() {
+        if (taints == null) {
+            taints = readTaints();
+        }
+        return taints;
+    }
+
+    private Taints readTaints() {
+        boolean axiosBase = false;
+        boolean axiosHooked = false;
+        boolean fetchReplaced = false;
+        Set<Receiver> instanceBase = Collections.newSetFromMap(new IdentityHashMap<>());
+        Set<Receiver> hooked = Collections.newSetFromMap(new IdentityHashMap<>());
+        for (JsModule m :
+                modules.values().stream()
+                        .sorted((a, b) -> Long.compare(a.fileId(), b.fileId()))
+                        .toList()) {
+            List<JsToken> t = m.tokens();
+            for (int i = 0; i < t.size(); i++) {
+                budget.spend();
+                JsToken name = t.get(i);
+                if (name.kind() != JsToken.Kind.IDENT
+                        || (i > 0 && (t.get(i - 1).is(".") || t.get(i - 1).is("?.")))) {
+                    continue;
+                }
+                fetchReplaced |= replacesFetch(t, i, m);
+                boolean defaults = is(t, i + 1, ".") && is(t, i + 2, "defaults");
+                boolean interceptor =
+                        is(t, i + 1, ".")
+                                && is(t, i + 2, "interceptors")
+                                && is(t, i + 3, ".")
+                                && is(t, i + 4, "request");
+                boolean assigned =
+                        is(t, i - 1, "(")
+                                && is(t, i - 2, "assign")
+                                && is(t, i - 3, ".")
+                                && is(t, i - 4, "Object")
+                                && defaults
+                                && is(t, i + 3, ",");
+                if (!interceptor && !(defaults && (assigned || writesBase(t, i)))) {
+                    continue;
+                }
+                Receiver receiver = receiver(name.text(), name.start(), m);
+                if (receiver == null || receiver == SHADOWED) {
+                    continue;
+                }
+                boolean axios = receiver.type() == ReceiverType.AXIOS;
+                if (interceptor) {
+                    if (axios) {
+                        axiosHooked = true;
+                    } else {
+                        hooked.add(receiver);
+                    }
+                } else if (axios) {
+                    // 단순한 axios.defaults.baseURL = 식은 defaultsBaseUrls가 모은다
+                    axiosBase |= assigned || !plainBaseWrite(t, i);
+                } else {
+                    instanceBase.add(receiver);
+                }
+            }
+        }
+        return new Taints(axiosBase, instanceBase, axiosHooked, hooked, fetchReplaced);
+    }
+
+    /**
+     * {@code X.defaults} 뒤가 baseURL을 바꾸는 쓰기: {@code X.defaults = …}, {@code X.defaults.baseURL
+     * <대입>}, {@code delete X.defaults.baseURL}, 계산된 키 {@code X.defaults[k] = …}(k가 다른 문자열이면 제외).
+     */
+    private static boolean writesBase(List<JsToken> t, int i) {
+        if (is(t, i + 3, null) && ASSIGN_OPS.contains(t.get(i + 3).text())) {
+            return true;
+        }
+        if (is(t, i + 3, ".") && is(t, i + 4, "baseURL")) {
+            return is(t, i - 1, "delete")
+                    || (i + 5 < t.size() && ASSIGN_OPS.contains(t.get(i + 5).text()));
+        }
+        if (is(t, i + 3, "[")) {
+            int close = closingParen(t, i + 3);
+            boolean otherKey =
+                    close == i + 5
+                            && t.get(i + 4).kind() == JsToken.Kind.STRING
+                            && !t.get(i + 4).value().equals("baseURL");
+            return close > 0
+                    && !otherKey
+                    && close + 1 < t.size()
+                    && ASSIGN_OPS.contains(t.get(close + 1).text());
+        }
+        return false;
+    }
+
+    /** {@code X.defaults.baseURL = 식} (defaultsBaseUrls가 모으는 모양). */
+    private static boolean plainBaseWrite(List<JsToken> t, int i) {
+        return is(t, i + 3, ".") && is(t, i + 4, "baseURL") && is(t, i + 5, "=");
+    }
+
+    /** {@code window.fetch =}·{@code globalThis.fetch =}, 또는 그 자리에서 선언이 보이지 않는 {@code fetch =}. */
+    private static boolean replacesFetch(List<JsToken> t, int i, JsModule m) {
+        String name = t.get(i).text();
+        int at;
+        if ((name.equals("window") || name.equals("globalThis"))
+                && is(t, i + 1, ".")
+                && is(t, i + 2, "fetch")) {
+            at = i + 3;
+        } else if (name.equals("fetch") && m.lookup("fetch", t.get(i).start()).isEmpty()) {
+            at = i + 1;
+        } else {
+            return false;
+        }
+        return at < t.size() && ASSIGN_OPS.contains(t.get(at).text());
+    }
+
+    /** i 위치 토큰이 text인지 (text가 null이면 있는지만). */
+    private static boolean is(List<JsToken> t, int i, String text) {
+        return i >= 0 && i < t.size() && (text == null || t.get(i).is(text));
+    }
 
     /** 메서드 식이 문자열로 계산되면 대문자, 속성이 없으면 axios·fetch 기본값 GET, 계산하지 못하면 null. */
     private String method(Expr method) {
