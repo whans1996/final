@@ -3,7 +3,7 @@
 > 김동환(A 영역: AI·분석·학습 루프) 전용. 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
-갱신: 2026-11-24 17:40 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/F-21a-structure-graph
+갱신: 2026-11-24 17:50 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/F-21a-structure-graph
 
 ## 현재 기능
 
@@ -16,10 +16,11 @@
 - ✅ 5.3-3 완료: `d22972e` WorkBudget·파일별 예외 격리, `e4adde6` 제곱 경로 색인화(`JsScopeIndex` 등, `StructureWorkloadTest` 12개), `c5a45f7` 메모리 상한(토큰 파일 50만·합계 200만, unresolved 상한+1 보관, Java AST 파일마다 두 번 파싱). spec 5.3-3 끝에 구현 메모
 - ✅ 5.3-1 완료 `d796d18`: `JsDecl.Kind.UNKNOWN`(TS식 매개변수·catch 이름, `with` 본문), `JsModule.lookupKnown`으로 가린 바깥 이름이 HTTP면 `HttpLinker`가 `SHADOWED` → URL_UNKNOWN. 키워드·계산된·`#` 메서드, 구조 분해 catch·대입, for 머리, 다시 대입 래퍼, 최상위 래퍼만 다른 파일, 전개 인자, import axios만 믿음. `StructureAnalyzerTest` "5.3절 1" 8개, 구조 테스트 122개 통과. spec 5.3-1 끝에 구현 메모
 - ✅ 5.3-5 완료 (7개): `5a3aa56` 인라인 먼저·호스트 자리 동적, `baa446a` 외부 호스트 NO_MATCHING_API, `8a961a8` 와일드카드·메서드 모름은 한 파일일 때만·Spring 순위, `312d7e5` axios defaults 변형·인터셉터·fetch 바꿔 끼우기, `b2ec249` profiles 맵, `6249215` ApiDetector 불완전 시 리터럴 일치만(나머지 AMBIGUOUS). spec 5.3-5 끝에 구현 메모. 구조 관련 테스트 144개
+- ✅ 5.3-2·6 완료 `0fab493`: `.vue` TS script는 여는 태그 줄 PARSE_ERROR, `scriptBlocks` 한 번 훑기·`<script(?=[s>/])`·속성 따옴표 안 `>`, CR 단독·U+2028·U+2029 줄 끝, 정규식 안 ``+줄 끝 실패, 같은 줄 값 뒤 `!` 다음 `/` 나눗셈, `?.5`는 `?`+`.5`. `JsTokenizerTest` 9개 추가, 구조 테스트 153개 통과. spec 구현 메모
 
 ## 바로 다음 할 일
 
-1. spec 5.3-2·6 토크나이저 (`JsTokenizer`, `JsTokenizerTest`에 실패 테스트 먼저): `.vue` `<script lang="ts|tsx">`는 PARSE_ERROR, `scriptBlocks`의 `SCRIPT_OPEN`을 `<script(?=[s>/])`·선형으로, 속성 따옴표 안 `>`, regex 안 `` 다음 줄바꿈 실패, CR 단독·U+2028·U+2029 줄 끝, 값 뒤 TS `!` 다음 `/`는 나눗셈, `?.` 뒤 숫자는 `?`+`.5` → 5.3-4 캐시(`StructureService`, 선별 파일 불변·soft delete 확인 먼저, `StructureServiceTest` 새로) → 5.3-7 follow-up 이슈(area:A)
+1. 5.3-4 캐시: 분석 파일은 SELECTING 때 저장·EXPLAINING 때 role만 바뀌고 DONE 뒤 불변(삭제만) 확인함. 설계 — DONE일 때만 분석 id로 LRU 캐시, 같은 분석 동시 계산은 하나(future), 전체 동시 계산 Semaphore, 예산을 다 쓴 결과는 캐시하지 않음, 삭제는 매 요청 열람 확인이 404로 막고 `AnalysisService.delete`가 이벤트로 비움. **결정 필요: 동시 계산 상한을 넘을 때 대기 vs 503(새 ErrorCode)** → 사용자에게 물음. `StructureServiceTest` 새로 → 5.3-7 follow-up 이슈(area:A)
 2. `node scripts/verify.mjs all` → push → `gh pr ready 118` → `node scripts/codex-review.mjs 118 --request --wait --status` (background)
 3. Codex COMPLETE + CI 초록 → `docs(F-21a): 완료 표시 (spec DONE)` → 사람이 GitHub에서 머지
 
