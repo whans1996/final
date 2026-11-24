@@ -31,6 +31,7 @@
 | teams | 팀 (이름 30자, 소개 200자, 팀장 `owner_id`, 초대 코드 `invite_code` CHAR(8) UNIQUE — I·O·0·1을 뺀 32자에서 생성, 재발급하면 이전 코드는 무효, V8). 팀장이 탈퇴하면 팀을 지운다 | users(팀장) 1:N | F-20a |
 | team_members | 팀 멤버 PK `(team_id, user_id)`, 역할 `OWNER`·`MEMBER`(역할의 정본, 팀당 OWNER 1명·위임 없음), 가입 시각. 팀당 10명·1인 5팀은 서비스가 `teams` 행 잠금 후 센다. 팀 삭제·회원 탈퇴 시 지워진다(FK CASCADE·탈퇴 정리, V8) | teams N:M users | F-20a |
 | team_analyses | 팀 공유 분석 PK `(team_id, analysis_id)`, 공유 시각. 공유한 사람 = 분석 주인(`analyses.user_id`). 팀당 미삭제 10개(서비스가 `teams` 행 잠금 후 셈), 같은 분석을 여러 팀에 공유 가능. 공유받은 팀 멤버는 그 퀴즈만 풀 수 있다. soft delete된 분석은 지우지 않고 조회·권한에서 거른다. 팀 삭제·분석 삭제 시 CASCADE, 공유자가 팀을 떠나거나 탈퇴하면 서비스가 지운다 (V9) | teams N:M analyses | F-20b |
+| team_challenges | 팀 기간 목표: 공유 분석 하나 + 기간(`start_date`~`end_date`, Asia/Seoul 날짜·양끝 포함·최대 30일) + 목표 정답률 `target_rate`(1~100), 만든 팀장 `created_by`. 달성은 저장하지 않고 조회 때 지금 멤버의 기간 안 최근 풀이로 계산한다. 분석마다 끝나지 않은 목표 1개·팀당 20개(서비스가 `teams` 행 잠금 후 셈). `(team_id, analysis_id)` → `team_analyses` 복합 FK CASCADE라 공유 해제·공유자 탈퇴·팀 삭제 때 함께 지워진다. soft delete된 분석의 목표는 조회·상한에서 거른다 (V10) | team_analyses 1:N | F-20c |
 | llm_usage_logs | LLM 호출 사용량 | users 1:N | NF-07 |
 
 ## 정규화 메모

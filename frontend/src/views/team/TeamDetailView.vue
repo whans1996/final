@@ -1,6 +1,6 @@
 <script setup>
 // SC-23 팀 상세 (F-20a AC14·AC15). 멤버만 볼 수 있다 (남의 팀·없는 팀은 404).
-// 멤버 아래에 공유 분석 영역(F-20b AC10·AC11, TeamAnalysisList)이 있다.
+// 멤버 아래에 팀 목표 영역(F-20c AC11, TeamChallengeList), 그 아래 공유 분석 영역(F-20b AC10·AC11, TeamAnalysisList)이 있다.
 // 팀장: 초대 코드 상자, 수정, 팀 삭제, 팀원 내보내기. 팀원: 팀 탈퇴. 파괴적 동작은 window.confirm으로 확인한다.
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -17,6 +17,7 @@ import InviteCodeBox from '@/components/team/InviteCodeBox.vue'
 import TeamForm from '@/components/team/TeamForm.vue'
 import TeamMemberList from '@/components/team/TeamMemberList.vue'
 import TeamAnalysisList from '@/components/team/TeamAnalysisList.vue'
+import TeamChallengeList from '@/components/team/TeamChallengeList.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -33,6 +34,7 @@ const editFieldErrors = ref({})
 const editError = ref('')
 
 const analysisList = ref(null)
+const challengeList = ref(null)
 
 const isOwner = computed(() => team.value?.myRole === 'OWNER')
 
@@ -113,7 +115,12 @@ function onRemove(member) {
   return confirmed(`${member.nickname} 님을 팀에서 내보낼까요?`, async (teamId, isCurrent) => {
     await removeTeamMember(teamId, member.userId)
     if (!isCurrent()) return
-    await Promise.all([load(teamId, { quiet: true }), analysisList.value?.load()])
+    // 내보낸 사람의 공유와 그 분석의 팀 목표는 서버가 지운다 (F-20b AC8, F-20c AC8)
+    await Promise.all([
+      load(teamId, { quiet: true }),
+      analysisList.value?.load(),
+      challengeList.value?.load(),
+    ])
   })
 }
 
@@ -213,7 +220,14 @@ async function onSave(body) {
         />
       </section>
 
-      <TeamAnalysisList ref="analysisList" :team-id="team.id" :member-count="team.memberCount" />
+      <TeamChallengeList ref="challengeList" :team-id="team.id" :is-owner="isOwner" />
+
+      <TeamAnalysisList
+        ref="analysisList"
+        :team-id="team.id"
+        :member-count="team.memberCount"
+        @unshared="challengeList?.load()"
+      />
 
       <div class="actions">
         <template v-if="isOwner">

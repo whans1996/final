@@ -74,7 +74,8 @@ export const MAX_TEAM_ANALYSES = 10
  * @typedef {{ layer: string, questionCount: number, correctRate: number | null }} ModuleUnderstanding
  * @typedef {{ userId: number, nickname: string, role: TeamRole, lastAttempt: LastAttempt | null,
  *   modules: { layer: string, correct: number, total: number }[] }} MemberUnderstanding
- * @typedef {{ analysisId: number, title: string | null, sharedBy: SharedBy, questionCount: number,
+ * @typedef {{ analysisId: number, title: string | null, projectName: string, sharedBy: SharedBy,
+ *   questionCount: number,
  *   memberCount: number, solvedMemberCount: number, modules: ModuleUnderstanding[],
  *   members: MemberUnderstanding[] }} TeamUnderstanding
  */
@@ -100,4 +101,38 @@ export function unshareTeamAnalysis(id, analysisId) {
 /** 멤버. 404 TEAM_404·TEAM_006. @returns {Promise<TeamUnderstanding>} */
 export function fetchTeamUnderstanding(id, analysisId) {
   return http.get(`/teams/${id}/analyses/${analysisId}/understanding`).then((res) => res.data)
+}
+
+// ── 팀 기간 목표 (F-20c, docs/specs/F-20c-team-challenge.md 3절) ──
+
+/**
+ * @typedef {'UPCOMING' | 'ONGOING' | 'ENDED'} TeamChallengeStatus
+ * @typedef {{ userId: number, nickname: string, role: TeamRole, attempt: LastAttempt | null,
+ *   achieved: boolean }} TeamChallengeMember
+ * @typedef {{ challengeId: number, analysisId: number, title: string | null, projectName: string,
+ *   startDate: string, endDate: string, targetRate: number, status: TeamChallengeStatus,
+ *   memberCount: number, solvedMemberCount: number, achievedMemberCount: number,
+ *   achieved: boolean, members: TeamChallengeMember[], createdAt: string }} TeamChallenge
+ */
+
+/**
+ * 멤버. 진행 중 → 예정 → 종료 순, 최대 20개. analysisId를 주면 그 분석의 목표만.
+ * 404 TEAM_404. @returns {Promise<TeamChallenge[]>}
+ */
+export function fetchTeamChallenges(id, { analysisId } = {}) {
+  const params = analysisId == null ? undefined : { analysisId }
+  return http.get(`/teams/${id}/challenges`, { params }).then((res) => res.data)
+}
+
+/**
+ * 팀장. body `{ analysisId, startDate, endDate, targetRate }` (날짜 YYYY-MM-DD).
+ * 400 COMMON_400, 403 TEAM_403, 404 TEAM_006, 409 TEAM_011·TEAM_012. @returns {Promise<TeamChallenge>}
+ */
+export function createTeamChallenge(id, body) {
+  return http.post(`/teams/${id}/challenges`, body).then((res) => res.data)
+}
+
+/** 팀장. 204. 403 TEAM_403, 404 TEAM_013. */
+export function deleteTeamChallenge(id, challengeId) {
+  return http.delete(`/teams/${id}/challenges/${challengeId}`).then(() => undefined)
 }

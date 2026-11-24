@@ -1093,6 +1093,40 @@
         "required" : [ "endpoints" ],
         "type" : "object"
       },
+      "CreateTeamChallengeRequest" : {
+        "description" : "팀 목표 만들기 요청",
+        "properties" : {
+          "analysisId" : {
+            "description" : "팀에 공유된 분석 ID",
+            "example" : 42,
+            "format" : "int64",
+            "minimum" : 1,
+            "type" : "integer"
+          },
+          "endDate" : {
+            "description" : "종료일 (YYYY-MM-DD, 시작일과 같거나 그 뒤, 기간은 양끝 포함 최대 30일)",
+            "example" : "2026-12-01",
+            "format" : "date",
+            "type" : "string"
+          },
+          "startDate" : {
+            "description" : "시작일 (YYYY-MM-DD, 오늘이거나 그 뒤)",
+            "example" : "2026-11-25",
+            "format" : "date",
+            "type" : "string"
+          },
+          "targetRate" : {
+            "description" : "목표 정답률 (%)",
+            "example" : 80,
+            "format" : "int32",
+            "maximum" : 100,
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        },
+        "required" : [ "analysisId", "endDate", "startDate", "targetRate" ],
+        "type" : "object"
+      },
       "ErrorResponse" : {
         "description" : "실패 응답 (docs/conventions.md 2절)",
         "properties" : {
@@ -2761,6 +2795,128 @@
         "required" : [ "analysisId", "sharedAt" ],
         "type" : "object"
       },
+      "TeamChallengeMemberResponse" : {
+        "description" : "팀 목표의 멤버별 진행",
+        "properties" : {
+          "achieved" : {
+            "description" : "달성 여부 (score × 100 ≥ 목표 정답률 × total)",
+            "example" : false,
+            "type" : "boolean"
+          },
+          "attempt" : {
+            "$ref" : "#/components/schemas/LastAttemptResponse",
+            "description" : "기간 안의 가장 최근 풀이 (없으면 null)"
+          },
+          "nickname" : {
+            "description" : "닉네임",
+            "example" : "vibecoder",
+            "type" : "string"
+          },
+          "role" : {
+            "description" : "역할",
+            "enum" : [ "OWNER", "MEMBER" ],
+            "example" : "OWNER",
+            "type" : "string"
+          },
+          "userId" : {
+            "description" : "회원 ID",
+            "example" : 3,
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "achieved", "nickname", "role", "userId" ],
+        "type" : "object"
+      },
+      "TeamChallengeResponse" : {
+        "description" : "팀 목표",
+        "properties" : {
+          "achieved" : {
+            "description" : "팀 달성 (지금 멤버 전원 달성)",
+            "example" : false,
+            "type" : "boolean"
+          },
+          "achievedMemberCount" : {
+            "description" : "달성한 멤버 수",
+            "example" : 1,
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "analysisId" : {
+            "description" : "분석 ID",
+            "example" : 42,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "challengeId" : {
+            "description" : "목표 ID",
+            "example" : 7,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "createdAt" : {
+            "description" : "만든 시각",
+            "example" : "2026-11-24T10:00:00+09:00",
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "endDate" : {
+            "description" : "종료일 (Asia/Seoul, 포함)",
+            "example" : "2026-11-30",
+            "format" : "date",
+            "type" : "string"
+          },
+          "memberCount" : {
+            "description" : "지금 멤버 수",
+            "example" : 3,
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "members" : {
+            "description" : "멤버별 진행 (팀장 먼저, 가입 순)",
+            "items" : {
+              "$ref" : "#/components/schemas/TeamChallengeMemberResponse"
+            },
+            "type" : "array"
+          },
+          "projectName" : {
+            "description" : "프로젝트 이름",
+            "example" : "spring-realworld",
+            "type" : "string"
+          },
+          "solvedMemberCount" : {
+            "description" : "기간 안에 푼 멤버 수",
+            "example" : 2,
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "startDate" : {
+            "description" : "시작일 (Asia/Seoul, 포함)",
+            "example" : "2026-11-24",
+            "format" : "date",
+            "type" : "string"
+          },
+          "status" : {
+            "description" : "상태",
+            "enum" : [ "UPCOMING", "ONGOING", "ENDED" ],
+            "example" : "ONGOING",
+            "type" : "string"
+          },
+          "targetRate" : {
+            "description" : "목표 정답률 (%)",
+            "example" : 80,
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "title" : {
+            "description" : "분석 제목 (없으면 null)",
+            "example" : "spring-realworld",
+            "type" : "string"
+          }
+        },
+        "required" : [ "achieved", "achievedMemberCount", "analysisId", "challengeId", "createdAt", "endDate", "memberCount", "members", "projectName", "solvedMemberCount", "startDate", "status", "targetRate" ],
+        "type" : "object"
+      },
       "TeamCreatedResponse" : {
         "description" : "팀 만들기 응답",
         "properties" : {
@@ -2924,6 +3080,11 @@
             },
             "type" : "array"
           },
+          "projectName" : {
+            "description" : "프로젝트 이름 (제목이 없을 때 대신 보여 준다)",
+            "example" : "spring-realworld",
+            "type" : "string"
+          },
           "questionCount" : {
             "description" : "퀴즈 문항 수",
             "example" : 4,
@@ -2946,7 +3107,7 @@
             "type" : "string"
           }
         },
-        "required" : [ "analysisId", "memberCount", "members", "modules", "questionCount", "sharedBy", "solvedMemberCount" ],
+        "required" : [ "analysisId", "memberCount", "members", "modules", "projectName", "questionCount", "sharedBy", "solvedMemberCount" ],
         "type" : "object"
       },
       "UpdateAnalysisRequest" : {
@@ -6698,6 +6859,233 @@
         "tags" : [ "팀" ]
       }
     },
+    "/api/teams/{id}/challenges" : {
+      "get" : {
+        "description" : "진행 중(종료일 ASC) → 예정(시작일 ASC) → 종료(종료일 DESC), 같으면 목표 id DESC. 달성은 지금 멤버마다 기간 안 가장 최근 풀이로 조회할 때 계산한다.",
+        "operationId" : "fetchTeamChallenges",
+        "parameters" : [ {
+          "description" : "팀 ID",
+          "example" : 12,
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "description" : "이 분석의 목표만 (선택)",
+          "example" : 42,
+          "in" : "query",
+          "name" : "analysisId",
+          "required" : false,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/TeamChallengeResponse"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "조회 성공"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "analysisId가 숫자가 아니거나 1 미만 (COMMON_400)"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "로그인 필요, 만료·깨진 토큰, 탈퇴한 회원의 남은 토큰 (AUTH_401)"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "없는 팀이거나 내가 멤버가 아닌 팀 (TEAM_404)"
+          }
+        },
+        "summary" : "팀 목표 목록",
+        "tags" : [ "팀" ]
+      },
+      "post" : {
+        "description" : "공유 분석 하나에 기간(Asia/Seoul 날짜, 양끝 포함, 최대 30일)과 목표 정답률을 정한다. 분석마다 끝나지 않은 목표는 하나, 팀당 목표는 최대 20개.",
+        "operationId" : "createTeamChallenge",
+        "parameters" : [ {
+          "description" : "팀 ID",
+          "example" : 12,
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateTeamChallengeRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TeamChallengeResponse"
+                }
+              }
+            },
+            "description" : "만들기 성공"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "analysisId·startDate·endDate·targetRate 오류, 시작일이 오늘 전, 종료일이 시작일 전, 30일 초과 (COMMON_400, 필드별 details)"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "로그인 필요, 만료·깨진 토큰, 탈퇴한 회원의 남은 토큰 (AUTH_401)"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "팀장이 아님 (TEAM_403)"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "없는 팀이거나 내가 멤버가 아닌 팀 (TEAM_404), 팀에 공유되지 않았거나 삭제된 분석 (TEAM_006)"
+          },
+          "409" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "끝나지 않은 목표가 이미 있음 (TEAM_011), 목표 20개 (TEAM_012)"
+          }
+        },
+        "summary" : "팀 목표 만들기 (팀장)",
+        "tags" : [ "팀" ]
+      }
+    },
+    "/api/teams/{id}/challenges/{challengeId}" : {
+      "delete" : {
+        "description" : "상태와 상관없이 지운다. 풀이 기록은 남는다.",
+        "operationId" : "deleteTeamChallenge",
+        "parameters" : [ {
+          "description" : "팀 ID",
+          "example" : 12,
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "description" : "목표 ID",
+          "example" : 7,
+          "in" : "path",
+          "name" : "challengeId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "삭제 성공"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "로그인 필요, 만료·깨진 토큰, 탈퇴한 회원의 남은 토큰 (AUTH_401)"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "팀장이 아님 (TEAM_403)"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "없는 팀이거나 내가 멤버가 아닌 팀 (TEAM_404), 없는·다른 팀의·삭제된 분석의 목표 (TEAM_013)"
+          }
+        },
+        "summary" : "팀 목표 삭제 (팀장)",
+        "tags" : [ "팀" ]
+      }
+    },
     "/api/teams/{id}/invite-code" : {
       "post" : {
         "description" : "새 코드를 발급한다. 이전 코드로는 더 가입할 수 없다.",
@@ -7585,5 +7973,8 @@
   }, {
     "description" : "퀴즈 오답·내 코드·찜한 분야·수준으로 고른 맞춤 개념 카드와 AI 추천 이유",
     "name" : "추천"
+  }, {
+    "description" : "팀 생성, 초대 코드 가입, 멤버 관리 (F-20a), 분석 공유·팀 이해도 (F-20b), 팀 목표 (F-20c)",
+    "name" : "팀"
   } ]
 }
