@@ -18,11 +18,12 @@ let renderCount = 0
 function loadMermaid() {
   if (!mermaidLoader) {
     mermaidLoader = import('mermaid').then(({ default: mermaid }) => {
-      // 그림이 커지면 상자 안에서 가로로 스크롤한다 (줄여 맞추면 좁은 화면에서 글자를 읽을 수 없다)
+      // 그림이 커지면 상자 안에서 가로로 스크롤한다 (줄여 맞추면 좁은 화면에서 글자를 읽을 수 없다).
+      // 기본 줄바꿈 폭(200px)은 긴 파일 이름을 글자 중간에서 자르므로 넓힌다
       mermaid.initialize({
         startOnLoad: false,
         securityLevel: 'strict',
-        flowchart: { useMaxWidth: false },
+        flowchart: { useMaxWidth: false, wrappingWidth: 400 },
       })
       return mermaid
     })

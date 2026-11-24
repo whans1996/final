@@ -192,8 +192,8 @@ SC-07에 **"구조" 탭**을 추가해 선별 파일(최대 30개) 사이의 의
 - [x] FE 구현 (green), `mermaid` 정확한 버전 고정 (12.3.0)
 - [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
 - [x] contract-checker 통과 — spec ↔ openapi ↔ FE 불일치 0 (11-24)
-- [ ] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일)
+- [x] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일) — 로그인 화면이라 Chrome(1280)·Playwright(375)로 직접 확인 (11-24)
 - [ ] reviewer 지적 사항 반영
-- [ ] 산출물 반영: `06-화면설계서.md` SC-07 탭·구조 탭, `01-요구사항정의서.md` F-21 비고(a·b 분할), `07-REST-API-명세.md` 분석 API 표, 루트 `README.md` 기술 스택(JavaParser·mermaid)
+- [x] 산출물 반영: `06-화면설계서.md` SC-07 탭·구조 탭, `01-요구사항정의서.md` F-21 비고(a·b 분할), `07-REST-API-명세.md` 분석 API 표, 루트 `README.md` 기술 스택(JavaParser·mermaid)
 - [ ] PR CI 초록
 - [ ] 상태 DONE (PR 머지 후)
