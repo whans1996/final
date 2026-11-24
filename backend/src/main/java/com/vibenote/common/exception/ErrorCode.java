@@ -75,6 +75,8 @@ public enum ErrorCode {
     ANALYSIS_005(HttpStatus.CONFLICT, "진행 중인 분석은 삭제할 수 없습니다. 분석이 끝난 뒤 다시 시도해 주세요."),
     /** DONE이 아닌 분석을 공개로 바꾸려 함 (F-19 AC5). */
     ANALYSIS_006(HttpStatus.CONFLICT, "완료된 분석만 공개할 수 있습니다."),
+    /** 구조 그래프 동시 계산 상한이 차서 기다려도 자리가 나지 않음 (F-21a 5.3절 4). */
+    ANALYSIS_007(HttpStatus.SERVICE_UNAVAILABLE, "구조 계산 요청이 많습니다. 잠시 뒤 다시 시도해 주세요."),
 
     // ── CONCEPT (A F-08 · B F-09~13) ──
     /** 없는 카드, 또는 PUBLISHED가 아닌 카드(DRAFT·HIDDEN)를 일반 사용자가 조회 (F-00b, NF-04). */

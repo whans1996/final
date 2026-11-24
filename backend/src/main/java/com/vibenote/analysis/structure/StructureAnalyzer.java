@@ -69,10 +69,24 @@ public final class StructureAnalyzer {
             List<ApiEndpoint> apis,
             String contextPath,
             boolean apisIncomplete) {
+        return analyze(files, apis, contextPath, apisIncomplete, newBudget());
+    }
+
+    /** 이 분석기의 단계·시간 상한으로 만든 새 예산. 계산 직전에 만든다 (마감 시각이 만든 때부터 흐른다). */
+    public WorkBudget newBudget() {
+        return new WorkBudget(maxWorkSteps, maxWorkTime);
+    }
+
+    /** 호출자가 만든 예산으로 계산한다. 끝난 뒤 {@link WorkBudget#exhausted()}로 다 썼는지 볼 수 있다. */
+    public AnalysisStructureResponse analyze(
+            List<AnalysisFile> files,
+            List<ApiEndpoint> apis,
+            String contextPath,
+            boolean apisIncomplete,
+            WorkBudget budget) {
         List<AnalysisFile> sorted =
                 files.stream().sorted(Comparator.comparing(AnalysisFile::getId)).toList();
         StructureLinks links = new StructureLinks(maxUnresolved);
-        WorkBudget budget = new WorkBudget(maxWorkSteps, maxWorkTime);
 
         JavaTypeIndex index =
                 JavaStructureReader.read(

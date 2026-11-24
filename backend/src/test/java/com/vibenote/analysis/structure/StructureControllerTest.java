@@ -2,6 +2,7 @@ package com.vibenote.analysis.structure;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.nullValue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -29,6 +30,7 @@ class StructureControllerTest extends IntegrationTestBase {
     @Autowired UserService userService;
     @Autowired JwtTokenProvider tokenProvider;
     @Autowired JdbcTemplate jdbc;
+    @Autowired StructureCache cache;
 
     @AfterEach
     void cleanUpUsers() {
@@ -206,5 +208,23 @@ class StructureControllerTest extends IntegrationTestBase {
         getStructure(null, hidden)
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("AUTH_401"));
+    }
+
+    @Test
+    void AC12_분석을_지우면_커밋_뒤_구조_캐시를_비운다() throws Exception {
+        long owner = createUser("owner");
+        long id = fullAnalysis(owner, false)[0];
+        getStructure(owner, id).andExpect(status().isOk());
+        assertThat(cache.contains(id)).isTrue();
+
+        mockMvc.perform(
+                        delete("/api/analyses/{id}", id)
+                                .header(
+                                        "Authorization",
+                                        "Bearer " + tokenProvider.createAccessToken(owner, "USER")))
+                .andExpect(status().isNoContent());
+
+        assertThat(cache.contains(id)).isFalse();
+        getStructure(owner, id).andExpect(status().isNotFound());
     }
 }
