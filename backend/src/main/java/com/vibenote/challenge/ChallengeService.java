@@ -25,6 +25,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -97,13 +98,15 @@ public class ChallengeService {
     }
 
     // ── 참여·취소 (AC3·AC4·AC9) ──
+    // READ_COMMITTED: 회원 확인 SELECT가 REPEATABLE READ 스냅샷을 챌린지 행 잠금 전에 잡으면, 잠금을 기다린 뒤 읽는
+    // 참여 행·참여자 수가 먼저 커밋된 참여·취소를 놓친다 (ChallengeParticipationConcurrencyTest).
 
     /**
      * 예정·진행 중 챌린지에 참여한다. 처음 참여하면 CHALLENGE_JOIN 활동을 남기고 시작일부터 다시 센다 (참여하자마자 달성할 수 있다).
      *
      * @throws BusinessException AUTH_401 탈퇴한 회원, CHALLENGE_404, CHALLENGE_002 종료된 챌린지
      */
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public ParticipationResponse join(long challengeId, long userId) {
         userService.getActiveMember(userId);
         Challenge challenge = lockOrThrow(challengeId);
@@ -124,7 +127,7 @@ public class ChallengeService {
      * @throws BusinessException AUTH_401 탈퇴한 회원, CHALLENGE_404, CHALLENGE_002 종료된 챌린지,
      *     CHALLENGE_003 달성한 챌린지
      */
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public ParticipationResponse cancel(long challengeId, long userId) {
         userService.getActiveMember(userId);
         Challenge challenge = lockOrThrow(challengeId);

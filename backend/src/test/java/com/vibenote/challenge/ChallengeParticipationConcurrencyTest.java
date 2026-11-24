@@ -2,6 +2,7 @@ package com.vibenote.challenge;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -15,13 +16,66 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * F-25 AC9: 취소가 달성 여부를 읽은 뒤 같은 참여 행을 집계({@code ChallengeProgressService.refresh})가 달성시키고 커밋해도, 달성한
- * 참여는 지워지지 않고 409 {@code CHALLENGE_003}이다. 집계는 참여 행만 잠그므로 취소도 참여 행을 잠그고 읽어야 한다 (PR 리뷰 지적). 테스트 트랜잭션
- * 없이 실제로 커밋하고 끝나면 지운다.
+ * F-25 참여·취소 동시성 (PR 리뷰 지적). 테스트 트랜잭션 없이 실제로 커밋하고 끝나면 지운다.
+ *
+ * <ul>
+ *   <li>AC9: 취소가 달성 여부를 읽은 뒤 같은 참여 행을 집계({@code ChallengeProgressService.refresh})가 달성시키고 커밋해도, 달성한
+ *       참여는 지워지지 않고 409 {@code CHALLENGE_003}이다. 집계는 참여 행만 잠그므로 취소도 참여 행을 잠그고 읽어야 한다.
+ *   <li>AC3: 챌린지 행 잠금을 기다린 참여는 먼저 커밋된 참여를 본다. 잠금보다 먼저 일반 SELECT(회원 확인)를 하면 REPEATABLE READ 스냅샷이 잠금
+ *       전에 잡혀 {@code participation}이 null, 참여자 수가 0으로 나간다.
+ * </ul>
  */
-class ChallengeCancelConcurrencyTest extends ChallengeTestSupport {
+class ChallengeParticipationConcurrencyTest extends ChallengeTestSupport {
 
     @Autowired PlatformTransactionManager txManager;
+
+    @Test
+    void AC3_잠금을_기다린_참여는_먼저_커밋된_참여를_보고_참여_정보와_참여자_수를_돌려준다() throws Exception {
+        long u = insertUser("f25u");
+        long c = insertChallenge("C", "2026-11-20", "2026-11-30", "QUIZ_COUNT", 10);
+        TransactionTemplate tx = new TransactionTemplate(txManager);
+        CountDownLatch t1Locked = new CountDownLatch(1);
+        CountDownLatch t2Started = new CountDownLatch(1);
+
+        // T1: 다른 탭의 참여처럼 챌린지 행을 잠그고 참여 행을 넣은 채, T2가 시작해 잠금을 기다릴 때까지 커밋을 미룬다
+        CompletableFuture<Void> t1 =
+                CompletableFuture.runAsync(
+                        () ->
+                                tx.executeWithoutResult(
+                                        s -> {
+                                            jdbc.queryForList(
+                                                    "SELECT id FROM challenges WHERE id = ? FOR"
+                                                            + " UPDATE",
+                                                    c);
+                                            insertParticipant(c, u, 0, null, "2026-11-24 09:59:59");
+                                            t1Locked.countDown();
+                                            await(t2Started);
+                                            sleep(500); // T2가 잠금을 기다리기 시작할 시간
+                                        }));
+        // T2: 같은 회원이 참여를 요청한다
+        CompletableFuture<Void> t2 =
+                CompletableFuture.runAsync(
+                        () -> {
+                            await(t1Locked);
+                            t2Started.countDown();
+                            try {
+                                mockMvc.perform(
+                                                post("/api/challenges/{id}/participation", c)
+                                                        .header(
+                                                                HttpHeaders.AUTHORIZATION,
+                                                                bearer(u)))
+                                        .andExpect(status().isOk())
+                                        .andExpect(jsonPath("$.joined").value(true))
+                                        .andExpect(jsonPath("$.participantCount").value(1))
+                                        .andExpect(jsonPath("$.participation.goalValue").value(10));
+                            } catch (Exception e) {
+                                throw new IllegalStateException(e);
+                            }
+                        });
+
+        t1.get(30, TimeUnit.SECONDS);
+        t2.get(30, TimeUnit.SECONDS);
+    }
 
     @Test
     void AC9_집계가_참여_행을_잠그고_달성시키는_중에_취소하면_달성을_기다려_409이고_행은_남는다() throws Exception {
