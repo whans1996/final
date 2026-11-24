@@ -139,6 +139,27 @@ SC-07에 **"구조" 탭**을 추가해 선별 파일(최대 30개) 사이의 의
 - **확정 규칙 보완 (PR #118 Codex 리뷰)**: 래퍼 인라인은 부른 곳에서 보이는 선언이 래퍼 자신일 때만(매개변수·지역 이름이 가리면 제외, AC10). config의 `...전개` 뒤에 직접 적지 않은 url·method·baseURL은 값을 모른다(AC7). `+`에서 숫자끼리 만나면 동적 조각, 정수가 아닌 숫자 리터럴도 동적 조각(AC8). `{name}.json`·`*.json`처럼 섞인 세그먼트는 세그먼트 전체를 정규식으로 비교(AC11). `const axios = require('axios')`도 axios 받는 쪽(AC7). `if`·`while`·`for`·`with` 조건 괄호를 닫은 `)` 뒤의 `/`는 정규식(AC5). 2차: `axios.create`는 그 자리에서 보이는 axios일 때만 인스턴스(이름 가림 제외, AC7), 객체 리터럴로 계산하지 못한 config의 baseURL은 `BASE_URL_UNKNOWN`(AC9), 템플릿 `${}` 안의 호출도 HTTP 호출(AC7), `.vue` 블록 밖 HTML 주석 안의 `<script>`는 코드가 아님(AC5), Java 지역 타입 이름은 그 선언 범위 안에서만 자기 파일(AC1). 3차: `axios.defaults.baseURL` 대입도 그 자리에서 보이는 axios일 때만(AC9), config의 계산된 키·접근자·메서드는 전개처럼 앞 속성을 지우고 값을 모름(AC7), baseURL을 붙인 뒤 `.`·`..` 세그먼트를 정규화(AC8). 4차: `var`는 둘러싼 함수 전체가 범위(`let`·`const`는 블록, AC7), Java 변수 이름은 보이는 범위에서만 타입 이름을 가림(AC1), URL 최종 값에도 2,048자 상한(AC8). 5차: `catch (e)` 매개변수는 그 블록에서 이름을 가림(AC7), 나머지 매개변수(`...x`)는 래퍼 인라인 때 인자를 넣지 않음(AC10), const config도 `url`·`method`·`baseURL`·계산된 키 쓰기·`delete`·`Object.assign`이 있으면 값을 모름(AC7), context-path는 마지막 값(마지막이 플레이스홀더면 모름, AC11). 6차: 구조 분해 매개변수의 이름도 가림(AC7), for 머리의 `let`·`const`는 그 루프 안에서만(AC7), MyBatis XML의 이진 이름(`Dto$Row`)은 정식 이름으로 찾음(AC4). 7차: 본문에서 다시 대입하는 매개변수는 래퍼 인라인 때 인자로 바꾸지 않음(AC10), 식 자리의 `function f`의 f는 그 함수 안에서만 보임(AC7). 8차: 구조 분해 선언(`const {axios} = …`)의 이름도 가림(AC7). 9차: `class X` 이름도 가림(식 자리는 클래스 안에서만, AC7), 객체 리터럴을 닫은 `}` 뒤의 `/`는 나눗셈(AC5), 경로 비교는 이어진 `**`를 하나로 합치고 고정 세그먼트 수가 요청보다 많으면 표를 만들지 않으며 행 두 개로 채움(context-path 길이와 무관하게 O(경로) 메모리, AC11)
 - 설정: `analysis.structure.max-edges: 150`, `analysis.structure.max-unresolved: 100`
 
+### 5.3 전수 점검 반영 (PR #118, 11-24 사용자 결정)
+
+Codex가 9회 재리뷰 동안 같은 종류의 구멍을 회차마다 하나씩 찾았다. 그래서 4개 영역(이름 가림, 토크나이저, 계산량, HTTP 연결 의미)을 전수 점검했다. 원인은 두 곳이 "기본 허용"이라는 데 있다: 모델링한 선언만 가림으로 치고, 상한이 식·비교 단위라 분석 전체 예산이 없다. 하나씩 막지 않고 아래처럼 구조를 바꾼다. 남는 드문 P2는 follow-up 이슈로 넘긴다.
+
+1. **이름은 안전하게 실패 (AC7·AC10)**: `JsDeclarations`가 한 번 훑으며 멤버 이름·객체 키가 아닌 IDENT 중 모델링한 선언이 아닌 **선언 자리**(`( , [ { ... * class function catch let const var` 뒤, `= => :` 앞, 구조 분해 패턴·for 머리·메서드 매개변수·TS 타입 주석 안)에 나온 이름을 그 함수·블록(애매하면 함수 전체)에서 `UNKNOWN` 선언으로 등록한다. `JsModule.lookup`이 UNKNOWN을 돌려주면 receiver·fetch·URL 상수·config·래퍼 부른 곳은 모두 unresolved다. 지나치게 잡으면 확인하지 못한 연결이 늘 뿐 틀린 간선은 생기지 않는다. 함께: 객체·클래스 메서드 매개변수(키워드 이름 `delete(id){}` 포함), 구조 분해 catch, `[url] = …`·`({url} = o)`·`for (url of …)` 재대입, 다시 대입되는 `let`·`var` 래퍼는 인라인하지 않음, 다른 파일의 부른 곳은 최상위 래퍼에만, 부른 곳의 `...전개` 뒤 매개변수는 모름, `with` 안 호출은 unresolved, `axiosNames`는 import로 온 이름만 lookup 실패 때 믿는다.
+2. **TS 블록 제외 (AC5, spec 8절과 일치)**: `.vue`의 `<script lang="ts|tsx">` 블록은 읽지 않고 그 파일을 `PARSE_ERROR`(TS 미지원)로 둔다.
+3. **분석 전체 작업 예산 (5.1 계산량 상한 보강)**: 요청 하나에 `WorkBudget`(단계 수 상한 + 마감 시각) 하나를 두고 토큰화·선언 읽기·호출 분류·URL 계산·경로 비교·Java 이름 해석의 반복마다 차감한다. 다 쓰면 예외를 파일 단위로 잡아 남은 파일은 `PARSE_ERROR`, 남은 호출은 `URL_UNKNOWN`으로 두고 응답의 truncated를 켠다. 파일마다 `RuntimeException`·`StackOverflowError`를 잡아 `PARSE_ERROR`로 둔다 (500 금지). 메모리: JS 파일당 토큰 수 상한(넘으면 `PARSE_ERROR`), 한 글자 구두점 문자열 공유, 템플릿 원문 복사 대신 위치, JavaParser `setStoreTokens(false)`와 CU를 쓰고 바로 버림, unresolved는 상한 + 넘침 표시만 유지. 제곱 경로는 색인으로 바꾼다: `lookup`(이름·범위 색인), `importOf`(local→import 맵), `functionScopeOf`(둘러싼 함수 스택), `expressionEnd` 재계산, `callSites`(receiver 이름별 호출 색인, 예산 먼저 확인), receiver·config·const 값 메모, `ApiPathMatcher` 패턴은 분석마다 한 번 파싱·컴파일, Java `declaredAround`·`variableAt`은 노드별 이름 집합 선계산, `scriptBlocks` 한 번 훑기, `excerpt`는 잘라 낸 뒤 공백 정리, 재귀(`declarators`·`dottedName`)는 반복문으로.
+4. **결과 캐시 (#117 흡수, 8절 변경)**: 분석 id 단위로 계산 결과를 메모리에 둔다 (크기 상한 LRU, 같은 분석 동시 계산은 하나만, 전체 동시 계산 수 제한). 분석이 DONE이 된 뒤 선별 파일이 바뀌는 경로가 없는지 먼저 확인하고, 삭제(soft delete)되면 비운다. DB 저장은 하지 않는다.
+5. **흔한 코드의 틀린 간선 (AC8·AC9·AC11)**:
+   - `fetch(BASE + p)`처럼 매개변수가 붙은 래퍼는 부른 곳이 있으면 인라인을 먼저 한다. 동적 조각이 호스트 자리에 있으면 `URL_UNKNOWN`.
+   - 절대 URL의 호스트가 localhost도 아니고 설정된 baseURL 호스트도 아니면 `NO_MATCHING_API` (detail에 호스트).
+   - 요청에 API 리터럴과 맞선 와일드카드가 있거나 메서드를 모르면, 가장 구체적인 후보 고르기는 후보가 모두 한 파일일 때만 한다. 아니면 `AMBIGUOUS`.
+   - 순위는 `**`·`{*x}` 없는 것 → 리터럴 많은 것 → 변수 적은 것 순, `*`는 `{v}`보다 무겁게 친다 (Spring 순서).
+   - `axios.defaults.baseURL` 쓰기가 둘 이상(값이 다름)이거나 `+=`·`Object.assign(X.defaults…)`·`X.defaults['baseURL']`·`X.defaults = …`·인스턴스의 `api.defaults.baseURL = …`이면 `BASE_URL_UNKNOWN`. 같은 파일에서 `axios.defaults.baseURL`을 쓰고 config 없이 `axios.create`해도 `BASE_URL_UNKNOWN`. `window.fetch =`·`globalThis.fetch =`·`fetch =` 대입, `interceptors.request.use`가 있으면 그 receiver 호출은 unresolved.
+   - `ContextPathReader`: `spring.profiles`가 맵(`spring.profiles.active`)이면 프로필 문서로 보지 않는다.
+   - `ApiDetector` 50개 잘림·상수 매핑 건너뜀이 있으면 변수 없는 일치만 확정한다.
+6. **토크나이저 (AC5)**: `<script\b`는 `<script(?=[\s>/])`로, 여는 태그 속성 안의 `>`(따옴표 안) 허용, regex 안 `\` 다음 줄바꿈은 실패, CR 단독·U+2028·U+2029 줄 끝, 값 뒤 TS `!` 다음 `/`는 나눗셈, `?.` 뒤 숫자는 `?`+`.5`.
+7. **넘기는 것 (follow-up)**: JSX(`.js` 안 React, 지원 스택 밖이라 지금처럼 `PARSE_ERROR`), 템플릿 `${}` 안의 함수·const 범위, 비엄격 모드 블록 함수 선언(Annex B), HEAD↔GET·끝 슬래시·`axios(url, cfg)`·`postForm` 등 간선이 빠지는 쪽만인 것, 여러 줄 토큰의 끝 줄, `ApiDetector` 클래스 위치 정규식(F-07 코드), config 별칭(`const c2 = cfg`) 변경.
+
+각 항목은 실패하는 테스트를 먼저 쓴다 (`StructureAnalyzerTest`·`JsTokenizerTest`·`ApiPathMatcherTest`·`StructureServiceTest` 등, 계산량은 `assertTimeoutPreemptively`).
+
 ### 5.2 FE
 
 | 항목 | 내용 |
@@ -175,7 +196,7 @@ SC-07에 **"구조" 탭**을 추가해 선별 파일(최대 30개) 사이의 의
 
 - **F-21b**: API 하나를 골라 화면 → API 함수 → 컨트롤러 메서드 → 서비스 → 매퍼 → SQL까지 메서드 단위 결정적 흐름(시퀀스 다이어그램), F-07 흐름 카드의 다이어그램 전환. 그리고 AI 활용 두 가지(11-24 결정): **구조 해설**(확정된 그래프만 입력으로 수준별 설명, "AI 해설 만들기" 버튼으로 생성·저장)과 **F-07 흐름 검증**(정적 흐름으로 LLM 흐름 단계마다 "코드로 확인됨/확인 안 됨")
 - AI가 미확정 연결을 추정해 "AI 추정" 선으로 그리는 것 (F-21b 이후 별도 판단)
-- 선별되지 않은 파일의 심볼 색인 저장(11-24 결정으로 하지 않음), LLM 다이어그램, 결과 저장·캐시
+- 선별되지 않은 파일의 심볼 색인 저장(11-24 결정으로 하지 않음), LLM 다이어그램, 결과 DB 저장 (메모리 캐시는 5.3절 4로 이번에 한다)
 - 두 단계 이상 감싼 래퍼, `fetch`·axios 외 HTTP 클라이언트(ky, ofetch 등), `.ts`·TSX 등 지원 스택 밖 파일
 - 노드 클릭으로 파일 열기(mermaid `click`은 `securityLevel: 'loose'` 필요. 대신 AC15 링크), 확대·축소, 이미지 내려받기, 다크 테마 전용 색
 
@@ -197,5 +218,6 @@ SC-07에 **"구조" 탭**을 추가해 선별 파일(최대 30개) 사이의 의
 - [x] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일) — 로그인 화면이라 Chrome(1280)·Playwright(375)로 직접 확인 (11-24)
 - [x] reviewer 지적 사항 반영 — 반드시 4(계산량 상한)·권장 5 반영 `412c2f8`, 캐시 #117 (11-24)
 - [x] 산출물 반영: `06-화면설계서.md` SC-07 탭·구조 탭, `01-요구사항정의서.md` F-21 비고(a·b 분할), `07-REST-API-명세.md`는 openapi.json에서 생성하므로 수정 없음, 루트 `README.md` 기술 스택(JavaParser·mermaid)
+- [ ] 전수 점검 반영 (5.3절 1~6, 7은 follow-up 이슈) — 11-24 결정, Codex 9차 3건은 `a94d89e`
 - [ ] PR CI 초록
 - [ ] 상태 DONE (PR 머지 후)
