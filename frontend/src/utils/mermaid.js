@@ -8,13 +8,17 @@ const LABEL_ENTITIES = {
   '<': '#lt;',
   '>': '#gt;',
   '`': '#96;',
+  '%': '#37;',
 }
 
-/** 따옴표 라벨 안에서 mermaid 문법을 깨는 문자를 엔티티로, 줄바꿈을 공백으로 바꾼다 (한 번에 바꿔 엔티티를 다시 바꾸지 않는다). */
+/**
+ * 따옴표 라벨 안에서 mermaid 문법을 깨는 문자를 엔티티로, 줄바꿈을 공백으로 바꾼다 (한 번에 바꿔 엔티티를 다시 바꾸지 않는다).
+ * `%`는 `%%{…}%%`가 라벨 안에서도 설정(directive)으로 읽혀 뒤의 원본을 지우므로 바꾼다.
+ */
 export function escapeMermaidLabel(text) {
   return String(text ?? '')
     .replace(/\r\n|\r|\n/g, ' ')
-    .replace(/[";#<>`]/g, (ch) => LABEL_ENTITIES[ch])
+    .replace(/[";#<>`%]/g, (ch) => LABEL_ENTITIES[ch])
 }
 
 function layerId(layer) {

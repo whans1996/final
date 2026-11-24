@@ -2,11 +2,15 @@ package com.vibenote.analysis.structure;
 
 import static com.vibenote.analysis.structure.StructureFiles.file;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
 import com.vibenote.analysis.domain.AnalysisFile;
 import com.vibenote.analysis.explain.ApiEndpoint;
 import com.vibenote.analysis.structure.http.ContextPathReader;
+import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -14,6 +18,9 @@ import org.junit.jupiter.api.Test;
 class StructureAnalyzerTest {
 
     private final StructureAnalyzer analyzer = new StructureAnalyzer(150, 100);
+
+    /** 업로드한 코드로 계산량을 불릴 수 없음을 보는 테스트의 제한 시간. 정상 구현은 1초 안에 끝난다. */
+    private static final Duration LIMIT = Duration.ofSeconds(5);
 
     private static AnalysisFile js(long id, String path, String content) {
         return file(id, path, path.endsWith(".vue") ? "vue" : "js", content);
@@ -473,5 +480,114 @@ class StructureAnalyzerTest {
         assertThat(empty.nodes()).isEmpty();
         assertThat(empty.edges()).isEmpty();
         assertThat(empty.unresolved()).isEmpty();
+    }
+
+    @Test
+    void AC8_자기_참조나_불어나는_const는_계산_예산을_넘으면_URL_UNKNOWN이다() {
+        StringBuilder chain =
+                new StringBuilder("import axios from 'axios'\nconst a0 = '/aaaaaaaaaa'\n");
+        for (int i = 1; i <= 7; i++) {
+            chain.append("const a").append(i).append(" = ");
+            chain.append(String.join(" + ", Collections.nCopies(10, "a" + (i - 1))));
+            chain.append('\n');
+        }
+        chain.append("axios.get(a7)\n");
+
+        AnalysisStructureResponse response =
+                assertTimeoutPreemptively(
+                        LIMIT,
+                        () ->
+                                run(
+                                        List.of(api("GET", "/api/x", 9)),
+                                        js(
+                                                1,
+                                                "src/self.js",
+                                                "import axios from 'axios'\n"
+                                                    + "const u = u + u + u + u + u + u + u + u\n"
+                                                    + "axios.get(u)\n"),
+                                        js(2, "src/grow.js", chain.toString())));
+
+        assertThat(httpUnresolved(response))
+                .extracting(UnresolvedLink::fileId, UnresolvedLink::reason)
+                .containsExactly(
+                        tuple(1L, UnresolvedReason.URL_UNKNOWN),
+                        tuple(2L, UnresolvedReason.URL_UNKNOWN));
+    }
+
+    @Test
+    void AC12_config가_자기_자신이나_서로를_가리켜도_200_응답을_만든다() {
+        AnalysisStructureResponse response =
+                assertTimeoutPreemptively(
+                        LIMIT,
+                        () ->
+                                run(
+                                        List.of(api("GET", "/api/x", 9)),
+                                        js(
+                                                1,
+                                                "src/a.js",
+                                                """
+                                                import axios from 'axios'
+                                                const cfg = cfg
+                                                axios(cfg)
+                                                const a = b
+                                                const b = a
+                                                axios.request(a)
+                                                """)));
+
+        assertThat(http(response)).isEmpty();
+        assertThat(httpUnresolved(response)).extracting(UnresolvedLink::line).containsExactly(3, 6);
+    }
+
+    @Test
+    void AC5_템플릿_중첩이_너무_깊으면_그_파일은_PARSE_ERROR다() {
+        String deep = "const x = " + "`${".repeat(100_000) + "1" + "}`".repeat(100_000) + "\n";
+
+        AnalysisStructureResponse response =
+                assertTimeoutPreemptively(LIMIT, () -> run(List.of(), js(1, "src/deep.js", deep)));
+
+        assertThat(response.unresolved())
+                .extracting(UnresolvedLink::kind, UnresolvedLink::reason)
+                .containsExactly(tuple(UnresolvedKind.PARSE, UnresolvedReason.PARSE_ERROR));
+    }
+
+    @Test
+    void AC12_선언과_호출이_많은_큰_파일도_제한_시간_안에_계산한다() {
+        StringBuilder code = new StringBuilder("import axios from 'axios'\n");
+        for (int i = 0; i < 30_000; i++) {
+            code.append("const c").append(i).append(" = '/api/x'\n");
+        }
+        for (int i = 0; i < 30_000; i++) {
+            code.append("axios.get(c").append(i).append(")\n");
+        }
+
+        AnalysisStructureResponse response =
+                assertTimeoutPreemptively(
+                        LIMIT,
+                        () ->
+                                run(
+                                        List.of(api("GET", "/api/x", 9)),
+                                        js(1, "src/big.js", code.toString()),
+                                        file(
+                                                9,
+                                                "src/main/java/X.java",
+                                                "controller",
+                                                "class X {}")));
+
+        assertThat(http(response)).containsExactly(edge(1, 9, 30_002));
+    }
+
+    @Test
+    void AC8_URL_UNKNOWN_detail은_줄바꿈과_탭을_공백_하나로_접는다() {
+        AnalysisStructureResponse response =
+                run(
+                        List.of(api("GET", "/api/x", 9)),
+                        js(
+                                1,
+                                "src/a.js",
+                                "import axios from 'axios'\naxios.get(\n\t\tbase + '/x'\n)\n"));
+
+        assertThat(httpUnresolved(response))
+                .extracting(UnresolvedLink::detail)
+                .containsExactly("axios.get( base + '/x' )");
     }
 }

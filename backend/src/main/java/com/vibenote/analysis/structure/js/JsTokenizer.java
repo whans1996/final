@@ -45,9 +45,20 @@ public final class JsTokenizer {
     private static final Pattern SCRIPT_CLOSE =
             Pattern.compile("</script\\s*>", Pattern.CASE_INSENSITIVE);
 
+    /** 템플릿 리터럴 중첩 상한. 넘으면 PARSE_ERROR (재귀가 스택을 넘지 않게). */
+    static final int MAX_TEMPLATE_DEPTH = 64;
+
+    /** 정규식으로 끝나지 않은 후보를 훑은 글자 수의 파일당 상한. 같은 줄을 거듭 훑어 제곱 시간이 되지 않게 한다. */
+    static final int MAX_FAILED_REGEX_SCAN = 10_000_000;
+
+    /** 코드 포인트 이스케이프(백슬래시 u 중괄호)에서 닫는 중괄호를 찾는 범위. */
+    private static final int MAX_CODE_POINT_ESCAPE = 16;
+
     private final String src;
     private int pos;
     private int line = 1;
+    private int templateDepth;
+    private long failedRegexScan;
 
     private JsTokenizer(String src) {
         this.src = src;
@@ -223,6 +234,9 @@ public final class JsTokenizer {
     private JsToken template() {
         int start = pos;
         int startLine = line;
+        if (++templateDepth > MAX_TEMPLATE_DEPTH) {
+            throw new JsSyntaxException("템플릿 리터럴이 너무 깊게 중첩되었습니다.", startLine);
+        }
         pos++;
         List<String> quasis = new ArrayList<>();
         List<List<JsToken>> parts = new ArrayList<>();
@@ -252,6 +266,7 @@ public final class JsTokenizer {
             }
         }
         quasis.add(quasi.toString());
+        templateDepth--;
         String text = src.substring(start, pos);
         return new JsToken(
                 Kind.TEMPLATE,
@@ -287,7 +302,7 @@ public final class JsTokenizer {
             case 'u' -> {
                 if (peek(0) == '{') {
                     int close = src.indexOf('}', pos);
-                    if (close > pos) {
+                    if (close > pos && close - pos <= MAX_CODE_POINT_ESCAPE) {
                         try {
                             out.appendCodePoint(
                                     Integer.parseInt(src.substring(pos + 1, close), 16));
@@ -327,7 +342,7 @@ public final class JsTokenizer {
         while (i < src.length()) {
             char c = src.charAt(i);
             if (c == '\n') {
-                return null;
+                return failedRegex(i - start);
             }
             if (c == '\\') {
                 i += 2;
@@ -346,6 +361,14 @@ public final class JsTokenizer {
                 return simple(Kind.REGEX, start);
             }
             i++;
+        }
+        return failedRegex(i - start);
+    }
+
+    private JsToken failedRegex(int scanned) {
+        failedRegexScan += scanned;
+        if (failedRegexScan > MAX_FAILED_REGEX_SCAN) {
+            throw new JsSyntaxException("정규식인지 나눗셈인지 가릴 수 없는 '/'가 너무 많습니다.", line);
         }
         return null;
     }

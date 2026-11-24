@@ -3,6 +3,8 @@ package com.vibenote.analysis.structure.xml;
 import static com.vibenote.analysis.structure.StructureFiles.file;
 import static com.vibenote.analysis.structure.StructureFiles.java;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
 import com.vibenote.analysis.domain.AnalysisFile;
 import com.vibenote.analysis.structure.EdgeType;
@@ -15,6 +17,7 @@ import com.vibenote.analysis.structure.java.JavaStructureReader;
 import com.vibenote.analysis.structure.java.JavaTypeIndex;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -134,5 +137,38 @@ class MyBatisXmlReaderTest {
 
         // 외부 파라미터 엔티티를 읽었다면 namespace가 TodoMapper로 풀려 간선이 생긴다
         assertThat(links.edges()).isEmpty();
+    }
+
+    @Test
+    void AC4_요소가_많은_큰_XML도_제한_시간_안에_줄_번호를_계산한다() {
+        String xml =
+                DOCTYPE
+                        + "<mapper namespace=\"com.example.todo.TodoMapper\">\n"
+                        + "<sql id=\"a\"/>\n".repeat(100_000)
+                        + "<select id=\"x\" resultType=\"com.example.todo.Todo\"/>\n"
+                        + "</mapper>";
+
+        StructureLinks links =
+                assertTimeoutPreemptively(Duration.ofSeconds(5), () -> read(mapperXml(10, xml)));
+
+        assertThat(links.edges()).contains(new StructureEdge(10, 2, EdgeType.MYBATIS, 100_004));
+    }
+
+    @Test
+    void AC4_내부_엔티티를_크게_펼치면_PARSE_ERROR다() {
+        String xml =
+                "<?xml version=\"1.0\"?>\n"
+                        + "<!DOCTYPE mapper [<!ENTITY a \""
+                        + "a".repeat(10_000)
+                        + "\"><!ENTITY b \""
+                        + "&a;".repeat(100)
+                        + "\">]>\n"
+                        + "<mapper namespace=\"&b;&b;&b;&b;&b;&b;&b;&b;&b;&b;\"></mapper>";
+
+        StructureLinks links = read(mapperXml(10, xml));
+
+        assertThat(links.unresolved())
+                .extracting(UnresolvedLink::kind, UnresolvedLink::reason)
+                .containsExactly(tuple(UnresolvedKind.PARSE, UnresolvedReason.PARSE_ERROR));
     }
 }

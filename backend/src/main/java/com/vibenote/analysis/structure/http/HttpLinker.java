@@ -39,6 +39,8 @@ public final class HttpLinker {
     private static final Set<String> URL_CONFIG_SECOND = Set.of("get", "delete", "head", "options");
     private static final Set<String> URL_CONFIG_THIRD = Set.of("post", "put", "patch");
 
+    private static final int MAX_CONFIG_DEPTH = 16;
+
     private final Map<Long, JsModule> modules;
     private final UrlEvaluator evaluator;
     private final List<ApiEndpoint> apis;
@@ -239,10 +241,10 @@ public final class HttpLinker {
             case URL_THEN_CONFIG -> {
                 method = call.member().toUpperCase(Locale.ROOT);
                 url = expr(call.arg(0), module, bindings);
-                config = config(call.arg(http.configIndex()), module, bindings);
+                config = config(call.arg(http.configIndex()), module, bindings, 0);
             }
             case CONFIG -> {
-                config = config(call.arg(0), module, bindings);
+                config = config(call.arg(0), module, bindings, 0);
                 if (config.props() == null) {
                     return Outcome.failed(UnresolvedReason.URL_UNKNOWN, config.paramOf());
                 }
@@ -255,7 +257,7 @@ public final class HttpLinker {
                 if (init == null) {
                     method = "GET";
                 } else {
-                    Config fetchInit = config(init, module, bindings);
+                    Config fetchInit = config(init, module, bindings, 0);
                     method = fetchInit.props() == null ? null : method(fetchInit.prop("method"));
                 }
             }
@@ -290,7 +292,8 @@ public final class HttpLinker {
     /** 인스턴스면 {@code create} config의 baseURL, axios면 선별 파일 어디든 첫 {@code axios.defaults.baseURL}. */
     private Expr receiverBase(Receiver receiver) {
         if (receiver.type() == ReceiverType.INSTANCE) {
-            return config(receiver.createArgs(), receiver.module(), Bindings.NONE).prop("baseURL");
+            return config(receiver.createArgs(), receiver.module(), Bindings.NONE, 0)
+                    .prop("baseURL");
         }
         return modules.values().stream()
                 .sorted((a, b) -> Long.compare(a.fileId(), b.fileId()))
@@ -313,9 +316,12 @@ public final class HttpLinker {
         return tokens == null ? null : new Expr(tokens, module, bindings);
     }
 
-    /** 객체 리터럴의 url·method·baseURL 등 속성. 식별자면 보이는 const 초기값이나 인라인 중인 인자를 따라간다. */
-    private Config config(List<JsToken> tokens, JsModule module, Bindings bindings) {
-        if (tokens == null || tokens.isEmpty()) {
+    /**
+     * 객체 리터럴의 url·method·baseURL 등 속성. 식별자면 보이는 const 초기값이나 인라인 중인 인자를 따라간다. {@code const cfg =
+     * cfg}처럼 돌고 도는 식별자는 {@link #MAX_CONFIG_DEPTH}에서 끊는다.
+     */
+    private Config config(List<JsToken> tokens, JsModule module, Bindings bindings, int depth) {
+        if (tokens == null || tokens.isEmpty() || depth > MAX_CONFIG_DEPTH) {
             return new Config(null, null);
         }
         if (tokens.size() == 1 && tokens.get(0).kind() == JsToken.Kind.IDENT) {
@@ -330,12 +336,12 @@ public final class HttpLinker {
                     Arg arg = bindings.args().get(name.text());
                     return arg == null
                             ? new Config(null, null)
-                            : config(arg.tokens(), arg.module(), Bindings.NONE);
+                            : config(arg.tokens(), arg.module(), Bindings.NONE, depth + 1);
                 }
                 return new Config(null, d.function());
             }
             return d.kind() == JsDecl.Kind.CONST
-                    ? config(d.init(), module, bindings)
+                    ? config(d.init(), module, bindings, depth + 1)
                     : new Config(null, null);
         }
         if (!tokens.get(0).is("{")

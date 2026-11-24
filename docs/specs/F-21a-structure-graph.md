@@ -63,7 +63,7 @@ SC-07에 **"구조" 탭**을 추가해 선별 파일(최대 30개) 사이의 의
 | AC14 | 분석이 `DONE`인 SC-07에서 (주인·공개 분석을 보는 타인 모두) | "구조" 탭(개요 다음, `?tab=structure`)을 열면 | 로딩 문구 → `flowchart LR` 그림: 레이어별 `subgraph`(`LAYER_ORDER` 순, 한국어 라벨), 노드 라벨 = 파일 이름, `IMPORT`·`MYBATIS` 실선, `HTTP` 점선 + `HTTP` 라벨. 간선이 없는 파일은 그림에서 빼고 "연결 없는 파일 n개"(접힘)에 경로를 나열. 그림 위 범례: "실선 = 코드 참조 · 점선 = API 호출 · 코드에서 확정한 연결만 그립니다". `edgesTruncated`면 "연결이 많아 150개까지만 보여 줍니다." |
 | AC15 | AC14 화면에서 | 그림 아래 | "연결 목록"(접힘): 줄마다 `TodoView.vue:12 → todoApi.js (코드 참조)`, 양쪽 파일 이름은 파일 탭 링크(`?tab=files&file={id}`). "확인하지 못한 연결 n개"(접힘, `unresolved`가 있을 때만): 줄마다 `파일:줄 · 사유 한국어 문구 · detail`(3.1절). 간선이 0개면 그림 대신 "파일 사이 연결을 찾지 못했습니다."와 레이어별 파일 목록(확인하지 못한 연결 목록은 그대로). API 실패면 서버 `message`와 "다시 시도". 375px에서 페이지 가로 스크롤 없음(그림은 그림 상자 안에서만 가로 스크롤) |
 | AC16 | 그림 아래 | "mermaid 코드 보기"(접힘)를 펼치고 "복사"를 누르면 | 원본을 `<pre>`로 보여 주고 클립보드에 복사. 성공 "복사했습니다.", 클립보드가 없거나 실패하면 "복사하지 못했습니다. 코드를 직접 선택해 복사해 주세요." (`InviteCodeBox` 방식) |
-| AC17 | 파일 이름에 `"`, `;`, `#`, `<`, `>`, `` ` ``, 줄바꿈이 있거나 mermaid 렌더링이 실패할 때 | 원본을 만들고 그리면 | `utils/mermaid.js`(순수 함수)가 라벨 특수 문자를 엔티티(`#quot;`·`#59;`·`#35;`·`#lt;`·`#gt;`·`#96;`)로, 줄바꿈을 공백으로 바꾼다. 노드 id는 `f{fileId}`, subgraph id는 `L_{layer}`. mermaid는 `securityLevel: 'strict'`, `startOnLoad: false`로 쓰고 구조 탭을 열 때만 동적 `import()`. 렌더링 예외면 그림 자리에 "다이어그램을 그리지 못했습니다."를 보여 주고 연결 목록·원본은 그대로 |
+| AC17 | 파일 이름에 `"`, `;`, `#`, `<`, `>`, `` ` ``, 줄바꿈이 있거나 mermaid 렌더링이 실패할 때 | 원본을 만들고 그리면 | `utils/mermaid.js`(순수 함수)가 라벨 특수 문자를 엔티티(`#quot;`·`#59;`·`#35;`·`#lt;`·`#gt;`·`#96;`, 라벨 안 `%%{…}%%` 설정을 막는 `%`→`#37;`(11-24 리뷰))로, 줄바꿈을 공백으로 바꾼다. 노드 id는 `f{fileId}`, subgraph id는 `L_{layer}`. mermaid는 `securityLevel: 'strict'`, `startOnLoad: false`로 쓰고 구조 탭을 열 때만 동적 `import()`. 렌더링 예외면 그림 자리에 "다이어그램을 그리지 못했습니다."를 보여 주고 연결 목록·원본은 그대로 |
 
 ## 3. API 계약
 
@@ -135,6 +135,7 @@ SC-07에 **"구조" 탭**을 추가해 선별 파일(최대 30개) 사이의 의
   - `StructureAnalyzer.analyze(List<AnalysisFile>, List<ApiEndpoint>, String contextPath)` (순수 함수, AC12 정렬·상한), `StructureService`, `StructureController`(`/api/analyses/{id:\d+}/structure`)
   - DTO `AnalysisStructureResponse`·`StructureNode`·`StructureEdge`·`UnresolvedLink`, enum `EdgeType`·`UnresolvedKind`·`UnresolvedReason`
 - `ApiDetector`는 바꾸지 않는다. AC11의 `{name:regex}` 비교에 쓰는 정규식은 `Pattern.compile` 실패 시 1세그먼트 변수로 보고, 매칭은 세그먼트 하나(200자 이하)에만 적용한다
+- **계산량 상한 (11-24 `/pr-review`)**: 이 API는 공개 분석이면 누구나 반복 호출하고 결과를 저장하지 않으므로, 업로드한 코드가 계산량을 불리지 못하게 한다. URL 식 하나의 피연산자 2,000개·값 2,048자(넘으면 그 식은 `URL_UNKNOWN`), config 식별자 따라가기 16단계, 템플릿 리터럴 중첩 64단계와 정규식 후보 실패 스캔 파일당 1천만 자(넘으면 그 파일 `PARSE_ERROR`), `{name:regex}` 매칭은 글자 읽기 10만 회(넘으면 맞지 않음), `**`는 표 채우기 O(패턴×경로²), XML 내부 엔티티 펼침 10만 자(넘으면 `PARSE_ERROR`). 줄 번호·이름 조회는 색인으로 선형 시간에 한다
 - 설정: `analysis.structure.max-edges: 150`, `analysis.structure.max-unresolved: 100`
 
 ### 5.2 FE
@@ -194,6 +195,6 @@ SC-07에 **"구조" 탭**을 추가해 선별 파일(최대 30개) 사이의 의
 - [x] contract-checker 통과 — spec ↔ openapi ↔ FE 불일치 0 (11-24)
 - [x] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일) — 로그인 화면이라 Chrome(1280)·Playwright(375)로 직접 확인 (11-24)
 - [ ] reviewer 지적 사항 반영
-- [x] 산출물 반영: `06-화면설계서.md` SC-07 탭·구조 탭, `01-요구사항정의서.md` F-21 비고(a·b 분할), `07-REST-API-명세.md` 분석 API 표, 루트 `README.md` 기술 스택(JavaParser·mermaid)
+- [x] 산출물 반영: `06-화면설계서.md` SC-07 탭·구조 탭, `01-요구사항정의서.md` F-21 비고(a·b 분할), `07-REST-API-명세.md`는 openapi.json에서 생성하므로 수정 없음, 루트 `README.md` 기술 스택(JavaParser·mermaid)
 - [ ] PR CI 초록
 - [ ] 상태 DONE (PR 머지 후)

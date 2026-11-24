@@ -17,6 +17,8 @@ public final class JsModule {
     private final List<JsToken> tokens;
     private final List<JsImport> imports = new ArrayList<>();
     private final List<JsDecl> decls = new ArrayList<>();
+    private final Map<String, List<JsDecl>> declsByName = new HashMap<>();
+    private int indexed;
     private final List<JsFunction> functions = new ArrayList<>();
     private final Map<String, JsExport> exports = new HashMap<>();
     private final Set<String> axiosNames = new HashSet<>();
@@ -76,10 +78,8 @@ public final class JsModule {
     /** offset에서 보이는 name 선언 중 가장 안쪽 것. */
     public Optional<JsDecl> lookup(String name, int offset) {
         JsDecl best = null;
-        for (JsDecl decl : decls) {
-            if (decl.name().equals(name)
-                    && decl.visibleAt(offset)
-                    && (best == null || decl.scopeStart() > best.scopeStart())) {
+        for (JsDecl decl : declsNamed(name)) {
+            if (decl.visibleAt(offset) && (best == null || decl.scopeStart() > best.scopeStart())) {
                 best = decl;
             }
         }
@@ -88,7 +88,16 @@ public final class JsModule {
 
     /** 파일 최상위 선언. */
     public Optional<JsDecl> lookupTopLevel(String name) {
-        return decls.stream().filter(d -> d.name().equals(name) && d.scopeStart() < 0).findFirst();
+        return declsNamed(name).stream().filter(d -> d.scopeStart() < 0).findFirst();
+    }
+
+    /** 이름별 선언. 조회 때 새로 붙은 선언만 묶어 넣는다 (decls는 덧붙이기만 한다). 호출마다 모든 선언을 훑지 않게 한다. */
+    private List<JsDecl> declsNamed(String name) {
+        for (; indexed < decls.size(); indexed++) {
+            JsDecl decl = decls.get(indexed);
+            declsByName.computeIfAbsent(decl.name(), k -> new ArrayList<>()).add(decl);
+        }
+        return declsByName.getOrDefault(name, List.of());
     }
 
     /** 이 지역 이름을 가져온 import와 그 가져온 이름. */
@@ -106,7 +115,7 @@ public final class JsModule {
     public String excerpt(int start, int end, int max) {
         String text =
                 source.substring(Math.max(0, start), Math.min(source.length(), end))
-                        .replaceAll("\s+", " ")
+                        .replaceAll("\\s+", " ")
                         .strip();
         return text.length() <= max ? text : text.substring(0, max);
     }

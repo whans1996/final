@@ -15,10 +15,17 @@ import java.util.Optional;
  * URL 식 계산 (F-21a AC8·AC10). 문자열, 템플릿({@code ${}}는 값을 알면 넣고 모르면 동적 조각), {@code +} 연결, 보이는 {@code
  * const} 식별자, 선별 파일에서 import한 {@code export const}·{@code export default}만 값을 안다. 그 밖의 식(멤버 접근, 호출,
  * 조건식 등)은 동적 조각이다. 래퍼 인라인 중이면 그 함수의 매개변수를 부른 곳의 인자로 바꿔 계산한다.
+ *
+ * <p>업로드한 코드가 계산량을 불리지 못하게, 식 하나를 계산하는 동안 피연산자 수({@link #MAX_OPERANDS})와 값 길이({@link #MAX_LENGTH})에
+ * 상한을 둔다. 넘으면 그 식 전체를 동적 조각으로 본다 ({@code const u = u + u}처럼 자기를 가리키는 식 포함).
  */
 public final class UrlEvaluator {
 
     private static final int MAX_DEPTH = 16;
+
+    static final int MAX_OPERANDS = 2_000;
+
+    static final int MAX_LENGTH = 2_048;
 
     private final Map<Long, JsModule> modules;
 
@@ -34,22 +41,39 @@ public final class UrlEvaluator {
         public static final Bindings NONE = new Bindings(null, Map.of());
     }
 
+    /** 식 하나를 계산하는 동안 남은 피연산자 수. 0 아래로 내려가거나 값이 너무 길어지면 그 식은 계산하지 못한 것이다. */
+    private int budget;
+
     public UrlValue eval(List<JsToken> tokens, JsModule module, Bindings bindings) {
-        return eval(tokens, module, bindings, 0);
+        budget = MAX_OPERANDS;
+        UrlValue value = eval(tokens, module, bindings, 0);
+        return budget < 0 ? UrlValue.dynamic() : value;
     }
 
     private UrlValue eval(List<JsToken> tokens, JsModule module, Bindings bindings, int depth) {
-        if (tokens == null || tokens.isEmpty() || depth > MAX_DEPTH) {
+        if (tokens == null || tokens.isEmpty() || depth > MAX_DEPTH || budget < 0) {
             return UrlValue.dynamic();
         }
         UrlValue value = UrlValue.literal("");
         for (List<JsToken> part : splitPlus(tokens)) {
-            value = value.plus(operand(part, module, bindings, depth));
+            value = capped(value.plus(operand(part, module, bindings, depth)));
+        }
+        return value;
+    }
+
+    /** 값이 {@link #MAX_LENGTH}를 넘으면 예산을 다 쓴 것으로 본다. */
+    private UrlValue capped(UrlValue value) {
+        if (value.text().length() > MAX_LENGTH) {
+            budget = -1;
+            return UrlValue.dynamic();
         }
         return value;
     }
 
     private UrlValue operand(List<JsToken> part, JsModule module, Bindings bindings, int depth) {
+        if (--budget < 0) {
+            return UrlValue.dynamic();
+        }
         if (part.size() == 1) {
             JsToken token = part.get(0);
             return switch (token.kind()) {
@@ -70,8 +94,9 @@ public final class UrlEvaluator {
         UrlValue value = UrlValue.literal(token.quasis().get(0));
         for (int i = 0; i < token.parts().size(); i++) {
             value =
-                    value.plus(eval(token.parts().get(i), module, bindings, depth + 1))
-                            .plus(UrlValue.literal(token.quasis().get(i + 1)));
+                    capped(
+                            value.plus(eval(token.parts().get(i), module, bindings, depth + 1))
+                                    .plus(UrlValue.literal(token.quasis().get(i + 1))));
         }
         return value;
     }

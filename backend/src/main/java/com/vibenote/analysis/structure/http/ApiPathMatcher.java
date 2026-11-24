@@ -19,6 +19,12 @@ public final class ApiPathMatcher {
     /** 정규식 변수는 이 길이 이하의 세그먼트에만 적용한다 (5.1절). */
     static final int MAX_REGEX_INPUT = 200;
 
+    /**
+     * 정규식 하나가 입력 글자를 읽을 수 있는 횟수. 업로드한 컨트롤러의 정규식과 FE 경로가 함께 백트래킹을 불릴 수 있어 이 횟수를 넘으면 맞지 않은 것으로 본다
+     * (확정한 연결만 그린다).
+     */
+    static final int MAX_REGEX_STEPS = 100_000;
+
     private static final Comparator<Candidate> MOST_SPECIFIC =
             Comparator.comparingInt(Candidate::literals)
                     .reversed()
@@ -35,7 +41,7 @@ public final class ApiPathMatcher {
                 continue;
             }
             List<ApiSegment> pattern = parse(prefix + "/" + api.path());
-            if (matches(pattern, 0, request.path(), 0)) {
+            if (matches(pattern, request.path())) {
                 candidates.add(Candidate.of(api.fileId(), pattern));
             }
         }
@@ -68,23 +74,26 @@ public final class ApiPathMatcher {
         return segments;
     }
 
-    private static boolean matches(List<ApiSegment> pattern, int i, List<PathSegment> path, int j) {
-        if (i == pattern.size()) {
-            return j == path.size();
-        }
-        ApiSegment segment = pattern.get(i);
-        if (segment.type() == Type.MULTI) {
-            for (int k = j; k <= path.size(); k++) {
-                if (matches(pattern, i + 1, path, k)) {
-                    return true;
+    /**
+     * 패턴 세그먼트 i 이후가 경로 세그먼트 j 이후와 맞는지를 뒤에서부터 표로 채운다. {@code **}가 여럿이어도 O(패턴 × 경로²)이다 (분할을 모두 다시
+     * 시도하지 않는다).
+     */
+    private static boolean matches(List<ApiSegment> pattern, List<PathSegment> path) {
+        int p = pattern.size();
+        int n = path.size();
+        boolean[][] ok = new boolean[p + 1][n + 1];
+        ok[p][n] = true;
+        for (int i = p - 1; i >= 0; i--) {
+            ApiSegment segment = pattern.get(i);
+            for (int j = n; j >= 0; j--) {
+                if (segment.type() == Type.MULTI) {
+                    ok[i][j] = ok[i + 1][j] || (j < n && ok[i][j + 1]);
+                } else {
+                    ok[i][j] = j < n && ok[i + 1][j + 1] && segment.accepts(path.get(j));
                 }
             }
-            return false;
         }
-        if (j == path.size() || !segment.accepts(path.get(j))) {
-            return false;
-        }
-        return matches(pattern, i + 1, path, j + 1);
+        return ok[0][0];
     }
 
     private enum Type {
@@ -123,9 +132,51 @@ public final class ApiPathMatcher {
                 case VARIABLE ->
                         regex == null
                                 || (fe.literal().length() <= MAX_REGEX_INPUT
-                                        && regex.matcher(fe.literal()).matches());
+                                        && regexMatches(fe.literal()));
                 case MULTI -> true;
             };
+        }
+
+        private boolean regexMatches(String input) {
+            try {
+                return regex.matcher(new BudgetedChars(input, new int[] {MAX_REGEX_STEPS}))
+                        .matches();
+            } catch (RegexBudgetExceeded e) {
+                return false;
+            }
+        }
+    }
+
+    /** 글자를 읽을 때마다 예산을 줄이고, 다 쓰면 {@link RegexBudgetExceeded}로 정규식 매칭을 끝낸다. */
+    private record BudgetedChars(String text, int[] budget) implements CharSequence {
+
+        @Override
+        public int length() {
+            return text.length();
+        }
+
+        @Override
+        public char charAt(int index) {
+            if (--budget[0] < 0) {
+                throw new RegexBudgetExceeded();
+            }
+            return text.charAt(index);
+        }
+
+        @Override
+        public CharSequence subSequence(int start, int end) {
+            return new BudgetedChars(text.substring(start, end), budget);
+        }
+
+        @Override
+        public String toString() {
+            return text;
+        }
+    }
+
+    private static final class RegexBudgetExceeded extends RuntimeException {
+        RegexBudgetExceeded() {
+            super(null, null, false, false);
         }
     }
 

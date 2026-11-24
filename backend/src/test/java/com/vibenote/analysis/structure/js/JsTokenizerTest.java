@@ -2,8 +2,10 @@ package com.vibenote.analysis.structure.js;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
 import com.vibenote.analysis.structure.js.JsToken.Kind;
+import java.time.Duration;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -114,5 +116,27 @@ class JsTokenizerTest {
                 .isInstanceOf(JsSyntaxException.class);
         assertThatThrownBy(() -> JsTokenizer.tokenize("const t = `a${b}"))
                 .isInstanceOf(JsSyntaxException.class);
+    }
+
+    @Test
+    void AC5_끝나지_않는_정규식_후보가_한_줄에_반복되면_제한_시간_안에_PARSE_ERROR다() {
+        String code = "x" + "=/[".repeat(100_000);
+
+        assertTimeoutPreemptively(
+                Duration.ofSeconds(5),
+                () ->
+                        assertThatThrownBy(() -> JsTokenizer.tokenize(code))
+                                .isInstanceOf(JsSyntaxException.class));
+    }
+
+    @Test
+    void AC5_닫히지_않은_유니코드_이스케이프가_반복돼도_제한_시간_안에_나눈다() {
+        String code = "'\\u{'".repeat(100_000);
+
+        List<JsToken> tokens =
+                assertTimeoutPreemptively(Duration.ofSeconds(5), () -> JsTokenizer.tokenize(code));
+
+        assertThat(tokens).hasSize(100_000).allMatch(t -> t.kind() == Kind.STRING);
+        assertThat(JsTokenizer.tokenize("'\\u{41}b'").get(0).value()).isEqualTo("Ab");
     }
 }

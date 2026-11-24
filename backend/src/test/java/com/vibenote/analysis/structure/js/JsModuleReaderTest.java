@@ -2,6 +2,7 @@ package com.vibenote.analysis.structure.js;
 
 import static com.vibenote.analysis.structure.StructureFiles.file;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
 import com.vibenote.analysis.domain.AnalysisFile;
 import com.vibenote.analysis.structure.EdgeType;
@@ -10,6 +11,7 @@ import com.vibenote.analysis.structure.StructureLinks;
 import com.vibenote.analysis.structure.UnresolvedKind;
 import com.vibenote.analysis.structure.UnresolvedLink;
 import com.vibenote.analysis.structure.UnresolvedReason;
+import java.time.Duration;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -121,5 +123,21 @@ class JsModuleReaderTest {
         assertThat(error.kind()).isEqualTo(UnresolvedKind.PARSE);
         assertThat(error.reason()).isEqualTo(UnresolvedReason.PARSE_ERROR);
         assertThat(error.detail()).isNotBlank();
+    }
+
+    @Test
+    void AC6_from_없는_import_export가_반복돼도_제한_시간_안에_읽는다() {
+        String code =
+                "import a\n".repeat(50_000)
+                        + "import { a\n".repeat(30_000)
+                        + "export { a\n".repeat(30_000)
+                        + "import x from './x.js'\n";
+
+        StructureLinks links =
+                assertTimeoutPreemptively(
+                        Duration.ofSeconds(5),
+                        () -> read(js(1, "src/a.js", code), js(2, "src/x.js", "")));
+
+        assertThat(links.edges()).containsExactly(imp(1, 2, 110_001));
     }
 }

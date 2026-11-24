@@ -12,6 +12,10 @@ describe('mermaid 유틸 (F-21a)', () => {
     // 엔티티를 넣은 뒤 그 안의 #·;을 다시 바꾸지 않는다
     expect(escapeMermaidLabel('#;')).toBe('#35;#59;')
     expect(escapeMermaidLabel('TodoView.vue')).toBe('TodoView.vue')
+    // %%{…}%%는 라벨 안에서도 mermaid 설정(directive)으로 읽혀 뒤의 원본을 지운다
+    expect(escapeMermaidLabel("%%{init:{'theme':'dark'}}%%.vue")).toBe(
+      "#37;#37;{init:{'theme':'dark'}}#37;#37;.vue",
+    )
   })
 
   it('AC14·AC17 레이어 순서 subgraph, f{fileId} 노드, 실선·HTTP 점선 간선을 만든다', () => {

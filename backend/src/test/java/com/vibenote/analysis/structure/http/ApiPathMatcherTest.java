@@ -1,8 +1,10 @@
 package com.vibenote.analysis.structure.http;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
 import com.vibenote.analysis.explain.ApiEndpoint;
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -119,5 +121,31 @@ class ApiPathMatcherTest {
     void AC11_요청_표기는_메서드와_별표_경로다() {
         assertThat(req("GET", "/api/todos/*").toString()).isEqualTo("GET /api/todos/*");
         assertThat(req(null, "/").toString()).isEqualTo("/");
+    }
+
+    @Test
+    void AC11_정규식_변수가_백트래킹을_오래_하면_맞지_않은_것으로_본다() {
+        FeRequest request = req("GET", "/x/" + "a".repeat(ApiPathMatcher.MAX_REGEX_INPUT));
+
+        ApiMatch result =
+                assertTimeoutPreemptively(
+                        Duration.ofSeconds(5),
+                        () -> match(request, "", api("GET", "/x/{v:a*a*a*a*a*a*a*a*b}", 100)));
+
+        assertThat(result).isEqualTo(ApiMatch.NONE);
+    }
+
+    @Test
+    void AC11_이중_별표가_많아도_제한_시간_안에_판정한다() {
+        FeRequest request = req("GET", "/a".repeat(40));
+        String path = "/**".repeat(30) + "/z";
+
+        ApiMatch result =
+                assertTimeoutPreemptively(
+                        Duration.ofSeconds(5), () -> match(request, "", api("GET", path, 100)));
+
+        assertThat(result).isEqualTo(ApiMatch.NONE);
+        assertThat(match(req("GET", "/a/b/z"), "", api("GET", path, 100)))
+                .isEqualTo(ApiMatch.matched(100));
     }
 }

@@ -185,7 +185,10 @@ public final class JsModuleReader {
         }
         Map<String, String> bindings = new LinkedHashMap<>();
         int j = i + 1;
-        while (j < t.size() && !t.get(j).is("from") && !t.get(j).is(";")) {
+        while (j < t.size()
+                && !t.get(j).is("from")
+                && !t.get(j).is(";")
+                && !statementStart(t.get(j))) {
             JsToken b = t.get(j);
             if (b.is("*") && JsTokens.is(t, j + 1, "as") && JsTokens.kind(t, j + 2) == Kind.IDENT) {
                 bindings.put(t.get(j + 2).text(), "*");
@@ -232,10 +235,14 @@ public final class JsModuleReader {
 
     /**
      * {@code {a, b as c, default as d}} 안을 읽어 names에 넣는다. import면 지역 이름 → 가져온 이름, export면 내보낸 이름 →
-     * 지역 이름. 닫는 중괄호 다음 위치를 돌려준다.
+     * 지역 이름. 닫는 중괄호 다음 위치를 돌려준다. 중괄호가 닫히기 전에 다음 {@code import}·{@code export}가 나오면 거기서 멈추고 그 위치를
+     * 돌려준다 (닫히지 않은 목록이 이어질 때마다 파일 끝까지 다시 읽지 않게).
      */
     static int readSpecifiers(List<JsToken> t, int j, Map<String, String> names) {
         while (j < t.size() && !t.get(j).is("}")) {
+            if (statementStart(t.get(j))) {
+                return j;
+            }
             JsToken name = t.get(j);
             if (name.kind() == Kind.IDENT || name.kind() == Kind.STRING) {
                 String original = name.value();
@@ -249,5 +256,10 @@ public final class JsModuleReader {
             j++;
         }
         return j + 1;
+    }
+
+    /** import 문의 이름 목록에는 나오지 않는 다음 문의 시작. */
+    private static boolean statementStart(JsToken token) {
+        return token.is("import") || token.is("export");
     }
 }

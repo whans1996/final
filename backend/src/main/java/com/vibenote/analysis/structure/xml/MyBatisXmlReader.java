@@ -8,6 +8,7 @@ import com.vibenote.analysis.structure.UnresolvedReason;
 import com.vibenote.analysis.structure.java.JavaTypeIndex;
 import java.io.IOException;
 import java.io.StringReader;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -34,6 +35,12 @@ import org.xml.sax.helpers.DefaultHandler;
 public final class MyBatisXmlReader {
 
     static final int MAX_DETAIL = 200;
+
+    /** 내부 엔티티를 펼친 전체 크기 상한. MyBatis XML은 내부 엔티티를 쓰지 않으므로 작게 둔다. */
+    static final String MAX_ENTITY_SIZE = "100000";
+
+    /** 시작 태그 {@code <이름}을 거슬러 찾는 범위. 이보다 긴 시작 태그(엔티티로 만든 요소 포함)는 끝난 줄을 쓴다. */
+    private static final int MAX_TAG_LENGTH = 8_192;
 
     private static final List<String> TYPE_ATTRIBUTES =
             List.of("resultType", "parameterType", "type", "javaType", "ofType");
@@ -96,6 +103,12 @@ public final class MyBatisXmlReader {
             SAXParser parser = factory.newSAXParser();
             parser.setProperty(XMLConstants.ACCESS_EXTERNAL_DTD, "");
             parser.setProperty(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
+            parser.setProperty(
+                    "http://www.oracle.com/xml/jaxp/properties/totalEntitySizeLimit",
+                    MAX_ENTITY_SIZE);
+            parser.setProperty(
+                    "http://www.oracle.com/xml/jaxp/properties/maxGeneralEntitySizeLimit",
+                    MAX_ENTITY_SIZE);
             return parser;
         } catch (ParserConfigurationException e) {
             throw new IllegalStateException("XML 파서를 설정하지 못했습니다.", e);
@@ -106,6 +119,10 @@ public final class MyBatisXmlReader {
 
         private final JavaTypeIndex index;
         private final String code;
+
+        /** 줄 시작 offset (0부터). 요소마다 처음부터 줄을 다시 세지 않게 한 번 만든다. */
+        private final int[] lineStarts;
+
         private Locator locator;
         Long namespaceFile;
         String missingNamespace;
@@ -115,6 +132,30 @@ public final class MyBatisXmlReader {
         Handler(JavaTypeIndex index, String code) {
             this.index = index;
             this.code = code;
+            this.lineStarts = lineStarts(code);
+        }
+
+        private static int[] lineStarts(String code) {
+            int count = 1;
+            for (int i = 0; i < code.length(); i++) {
+                if (code.charAt(i) == '\n') {
+                    count++;
+                }
+            }
+            int[] starts = new int[count];
+            int k = 1;
+            for (int i = 0; i < code.length(); i++) {
+                if (code.charAt(i) == '\n') {
+                    starts[k++] = i + 1;
+                }
+            }
+            return starts;
+        }
+
+        /** offset이 있는 줄 (1부터). */
+        private int lineOf(int offset) {
+            int found = Arrays.binarySearch(lineStarts, offset);
+            return found >= 0 ? found + 1 : -found - 1;
         }
 
         @Override
@@ -134,18 +175,21 @@ public final class MyBatisXmlReader {
                 return 1;
             }
             int line = locator.getLineNumber();
-            int offset = 0;
-            for (int i = 1; i < line; i++) {
-                offset = code.indexOf('\n', offset) + 1;
-                if (offset == 0) {
-                    return line;
+            if (line > lineStarts.length) {
+                return line;
+            }
+            int offset = lineStarts[line - 1];
+            int end = Math.min(code.length(), offset + Math.max(locator.getColumnNumber() - 1, 0));
+            String open = "<" + qName;
+            int floor = Math.max(0, end - MAX_TAG_LENGTH);
+            for (int start = Math.min(end, code.length() - open.length());
+                    start >= floor;
+                    start--) {
+                if (code.startsWith(open, start)) {
+                    return lineOf(start);
                 }
             }
-            int end = Math.min(code.length(), offset + Math.max(locator.getColumnNumber() - 1, 0));
-            int start = code.lastIndexOf("<" + qName, end);
-            return start < 0
-                    ? line
-                    : (int) code.substring(0, start).chars().filter(c -> c == '\n').count() + 1;
+            return line;
         }
 
         @Override
