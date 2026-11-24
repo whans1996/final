@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.vibenote.challenge.ChallengeMapper">
+
+    <sql id="columns">
+        id, title, description, image_url, start_date, end_date, goal_type, goal_value, created_by,
+        created_at, updated_at
+    </sql>
+
+    <sql id="withParticipantCount">
+        <include refid="columns"/>,
+        (SELECT COUNT(*) FROM challenge_participants p WHERE p.challenge_id = c.id) AS participant_count
+    </sql>
+
+    <!-- 상태는 저장하지 않으므로 오늘과 기간으로 거른다 (ChallengeStatus.of와 같은 기준) -->
+    <sql id="adminSearchWhere">
+        <where>
+            <if test="status != null and status.name() == 'UPCOMING'">start_date &gt; #{today}</if>
+            <if test="status != null and status.name() == 'ONGOING'">
+                start_date &lt;= #{today} AND end_date &gt;= #{today}
+            </if>
+            <if test="status != null and status.name() == 'ENDED'">end_date &lt; #{today}</if>
+        </where>
+    </sql>
+
+    <!-- ── F-24 관리자 ── -->
+
+    <select id="findForAdmin" resultType="com.vibenote.challenge.domain.Challenge">
+        SELECT <include refid="withParticipantCount"/>
+        FROM challenges c
+        <include refid="adminSearchWhere"/>
+        ORDER BY start_date DESC, id DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="countForAdmin" resultType="long">
+        SELECT COUNT(*) FROM challenges c
+        <include refid="adminSearchWhere"/>
+    </select>
+
+    <select id="findById" resultType="com.vibenote.challenge.domain.Challenge">
+        SELECT <include refid="withParticipantCount"/> FROM challenges c WHERE id = #{id}
+    </select>
+
+    <select id="findByIdForUpdate" resultType="com.vibenote.challenge.domain.Challenge">
+        SELECT <include refid="columns"/> FROM challenges WHERE id = #{id} FOR UPDATE
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO challenges (title, description, image_url, start_date, end_date, goal_type, goal_value,
+                                created_by)
+        VALUES (#{title}, #{description}, #{imageUrl}, #{startDate}, #{endDate}, #{goalType}, #{goalValue},
+                #{createdBy})
+    </insert>
+
+    <update id="update">
+        UPDATE challenges
+        SET title = #{title}, description = #{description}, image_url = #{imageUrl},
+            start_date = #{startDate}, end_date = #{endDate}, goal_type = #{goalType}, goal_value = #{goalValue}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM challenges WHERE id = #{id}
+    </delete>
+</mapper>

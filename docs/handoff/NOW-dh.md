@@ -4,23 +4,25 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
 
-갱신: 2026-11-24 08:25 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/F-19-analysis-manage
+갱신: 2026-11-24 09:42 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/F-24-challenge-admin
 
 ## 현재 기능
 
-**F-19 분석 관리** spec `docs/specs/F-19-analysis-manage.md` (DONE 표시) — **PR #93** CI 초록·Codex ✅ 8c11ad2, 머지 대기
+**F-24 학습 챌린지 관리** spec `docs/specs/F-24-challenge-admin.md` — **DONE (PR #97)**, Codex ✅ 107ed49 (재리뷰 3회) → CI 초록 확인 뒤 사용자가 머지
 
 ## 진행
 
-- ✅ AC1~AC15 + reviewer 반영(`6c35690`), 스크린샷 Chrome 재촬영(`b472093`), follow-up #91·#92
-- ✅ PR #90(F-20b) 먼저 머지 → `git merge origin/develop`(`8c11ad2`), openapi.json 충돌은 `OpenApiExportTest`로 재생성. F-20b SQL이 `deleted_at IS NULL`로 F-19 삭제를 거름 확인. verify all 통과
-- ✅ CI 전부 초록, Codex COMPLETE 8c11ad2 (재리뷰 1회), spec DONE (PR #93) 표시
+- ✅ 구현 AC1~AC13, /pr-review: reviewer 권장 1~3 반영 `5f77bd8`, 권장 4 → #94
+- ✅ Codex 지적: 편집 화면 주소 변경 시 다시 불러오기 `b76721f`, "다시 시도" 회귀 `c08692f`, 클라이언트 오늘 Asia/Seoul → #99
+- ✅ 하네스 버그 수정 `107ed49`: Codex 상태 댓글 has_any_findings(이전 스레드 누적)보다 그 커밋의 "지적 없음" 영수증 우선 (`scripts/lib/codex.mjs` judgeReview)
+- ✅ develop(F-20c PR #98, V10) 합침, BE 전체 통과
+- 로컬 테스트 관리자 `.harness/dev-admin.local.json`(gitignore, dh-ssafy DB). 관리자 화면 점검 방법은 메모리 `local-dev-admin`
 
 ## 바로 다음 할 일
 
-1. 사람이 GitHub에서 PR #93 머지 (그 전에 develop에 새 머지가 있으면 `git merge origin/develop` → push → CI·Codex 재확인)
-2. 머지 후 `git switch develop && git pull`, #60·#81이 닫혔는지 확인 (안 닫혔으면 `gh issue close <n> --comment "PR #93로 해결"`)
-3. `/clear` 후 새 세션 `/pickup` → 다음 A 영역 P0(F-24·F-25) 중 선택해 `/spec`
+1. `gh pr checks 97` 전부 초록이면 GitHub에서 PR #97 머지 (wip 없음, 일반 머지). 그 전에 develop이 바뀌었으면 `git merge origin/develop` → push → CI 재확인
+2. 머지 뒤 `/clear` → `/pickup`으로 다음 기능(F-25 회원 챌린지 참여·달성도, A 영역) `/spec` 시작. #99를 F-25 spec "관련 이슈"에 흡수 검토
+3. 로컬 DB에 `[시연]` 챌린지 3개가 있다 (화면 점검용, 지워도 됨)
 
 ## 막힌 점 / 결정 필요
 
@@ -29,5 +31,4 @@
 ## 주의
 
 - 리뷰 지적은 '무시 가능'도 직접 확인한다 (11-20 사용자 지시) · 하네스 동결(11-23): 버그·작업 막는 문제만 고친다
-- 하네스 가드는 Bash 명령 문자열의 `core.hooksPath`를 막는다 → 테스트 파일 편집은 Edit 도구로
-- BE(local)·FE dev 서버가 8080·5173에 떠 있음 (BE는 리팩터링 전 코드, 동작 동일)
+- Bash heredoc·python 치환은 백슬래시와 `갱신:` 같은 반복 문자열에 약하다(라우트 `:id(\\d+)`·NOW 머리말 깨짐 실제 발생) → 문서·코드는 Edit/Write 도구로
