@@ -197,14 +197,21 @@ public class AdminChallengeService {
         challenge.setGoalValue(request.goalValueAsInt());
     }
 
-    /** 새 이미지를 쓰고, 커밋되면 이전 이미지를, 롤백되면 새 이미지를 지운다. */
+    /**
+     * 새 이미지를 쓰고, 커밋되면 이전 이미지를, 롤백되면 새 이미지를 지운다. 결과를 모르면(STATUS_UNKNOWN) DB가 어느 쪽을 가리키는지 알 수 없으므로 둘
+     * 다 남긴다 (깨진 이미지보다 남는 파일이 낫다).
+     */
     private String saveImage(MultipartFile image, String oldImageUrl) {
         String newImageUrl = imageStorage.save(image);
         TransactionSynchronizationManager.registerSynchronization(
                 new TransactionSynchronization() {
                     @Override
                     public void afterCompletion(int status) {
-                        imageStorage.delete(status == STATUS_COMMITTED ? oldImageUrl : newImageUrl);
+                        if (status == STATUS_COMMITTED) {
+                            imageStorage.delete(oldImageUrl);
+                        } else if (status == STATUS_ROLLED_BACK) {
+                            imageStorage.delete(newImageUrl);
+                        }
                     }
                 });
         return newImageUrl;

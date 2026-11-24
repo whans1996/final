@@ -5,13 +5,18 @@ import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.matchesPattern;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.vibenote.challenge.ChallengeMapper;
+import com.vibenote.challenge.domain.Challenge;
 import com.vibenote.common.IntegrationTestBase;
 import com.vibenote.common.security.JwtTokenProvider;
 import java.io.IOException;
@@ -36,6 +41,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.bean.override.convention.TestBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.AbstractMockHttpServletRequestBuilder;
@@ -63,6 +69,7 @@ class AdminChallengeApiTest extends IntegrationTestBase {
         return Clock.fixed(LocalDateTime.of(2026, 11, 24, 10, 0).atZone(KST).toInstant(), KST);
     }
 
+    @MockitoSpyBean ChallengeMapper challengeMapper;
     @Autowired JdbcTemplate jdbc;
     @Autowired JwtTokenProvider tokenProvider;
 
@@ -224,7 +231,12 @@ class AdminChallengeApiTest extends IntegrationTestBase {
                         "/uploads/challenges/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\.png");
         assertThat(fileOf(imageUrl)).exists().hasBinaryContent(PNG);
 
-        mockMvc.perform(get(imageUrl)).andExpect(status().isOk()).andExpect(content().bytes(PNG));
+        // 내용 검사는 앞부분 매직 바이트만 보므로, 뒤에 HTML을 붙인 파일도 이미지로만 해석되게 두 헤더를 고정한다
+        mockMvc.perform(get(imageUrl))
+                .andExpect(status().isOk())
+                .andExpect(content().bytes(PNG))
+                .andExpect(content().contentType("image/png"))
+                .andExpect(header().string("X-Content-Type-Options", "nosniff"));
     }
 
     @Test
@@ -479,6 +491,27 @@ class AdminChallengeApiTest extends IntegrationTestBase {
         String newUrl = imageUrlOf(id);
         assertThat(fileOf(newUrl)).exists().hasBinaryContent(JPEG);
         assertThat(fileOf(oldUrl)).doesNotExist();
+    }
+
+    @Test
+    void AC6_저장이_롤백되면_새_이미지_파일을_지우고_이전_파일은_남긴다() throws Exception {
+        long id = create(validFields(), png());
+        String oldUrl = imageUrlOf(id);
+        doThrow(new IllegalStateException("db down"))
+                .when(challengeMapper)
+                .update(any(Challenge.class));
+        doThrow(new IllegalStateException("db down"))
+                .when(challengeMapper)
+                .insert(any(Challenge.class));
+
+        asAdmin(updateRequest(id, validFields(), image("new.jpeg", "image/jpeg", JPEG)))
+                .andExpect(status().isInternalServerError());
+        asAdmin(createRequest(validFields(), png())).andExpect(status().isInternalServerError());
+
+        assertThat(fileCount()).isEqualTo(1);
+        assertThat(fileOf(oldUrl)).exists().hasBinaryContent(PNG);
+        assertThat(challengeCount()).isEqualTo(1);
+        assertThat(imageUrlOf(id)).isEqualTo(oldUrl);
     }
 
     @Test
