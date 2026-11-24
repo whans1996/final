@@ -93,8 +93,9 @@ function mergeOne({ ref, label, ffOnly }, cwd) {
   const count = Number(git(['rev-list', '--count', `HEAD..${ref}`], { cwd }).out) || 0;
   if (count === 0) return { ok: true, line: null };
   const target = git(['rev-parse', ref], { cwd }).out;
-  // 사용자 설정 merge.ff(only면 develop 병합이 매번 실패, false면 내 원격 받기도 병합 커밋)가 결과를 바꾸지 않게 고정한다 (#44)
-  const r = git(['-c', 'merge.ff=true', 'merge', ffOnly ? '--ff-only' : '--no-edit', ref], { cwd, timeout: MERGE_TIMEOUT });
+  // 사용자 설정 merge.ff·branch.<name>.mergeOptions(only면 develop 병합이 매번 실패, false·--no-ff면 내 원격 받기도 병합 커밋)가
+  // 결과를 바꾸지 않게 명령줄 옵션으로 고정한다. 명령줄이 두 설정보다 우선한다 (#44)
+  const r = git(['merge', ...(ffOnly ? ['--ff-only'] : ['--ff', '--no-edit']), ref], { cwd, timeout: MERGE_TIMEOUT });
   if (r.ok) {
     const files = git(['diff', '--name-only', before, 'HEAD'], { cwd }).out.split('\n').filter(Boolean);
     const notes = mergeNotes(files);

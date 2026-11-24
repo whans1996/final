@@ -357,7 +357,8 @@ test('detached HEAD면 지금 작업 트리를 건드리지 않는다 (#44)', ()
 
   const lines = autoSync({ cwd: me });
 
-  assert.ok(!lines.some((l) => /자동으로 합쳤습니다|자동 병합/.test(l)), lines.join('\n'));
+  // 로컬 develop이 없고 main은 원격과 같아 알릴 것도 없다
+  assert.deepEqual(lines, []);
   assert.equal(sh(me, 'rev-parse', 'HEAD'), head);
   assert.equal(spawnSync('git', ['symbolic-ref', '-q', 'HEAD'], { cwd: me }).status, 1, '여전히 detached');
 });
@@ -407,9 +408,10 @@ test('사용자 설정 merge.ff=only여도 develop을 병합 커밋으로 합친
   assert.equal(sh(me, 'rev-list', '--count', 'HEAD..origin/develop'), '0');
 });
 
-test('사용자 설정 merge.ff=false여도 다른 PC가 push한 내 브랜치 커밋은 fast-forward로 받는다 (#44)', () => {
+test('사용자 설정 merge.ff=false·mergeOptions --no-ff여도 다른 PC가 push한 내 브랜치 커밋은 fast-forward로 받는다 (#44)', () => {
   const { me } = setup();
   sh(me, 'config', 'merge.ff', 'false');
+  sh(me, 'config', 'branch.feature/F-09-x.mergeOptions', '--no-ff');
   const other = join(me, '..', 'other-pc');
   sh(tmp, 'clone', '-q', '-b', 'feature/F-09-x', join(me, '..', 'origin.git'), other);
   commit(other, 'pc2.txt', 'pc2\n', 'feat: from other pc');
