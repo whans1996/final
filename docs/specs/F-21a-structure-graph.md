@@ -164,6 +164,7 @@ Codex가 9회 재리뷰 동안 같은 종류의 구멍을 회차마다 하나씩
      - 순위의 변수 무게는 `*`가 100, `{v}`가 1이다.
      - `defaults` 쓰기 중 `delete X.defaults.baseURL`도 BASE_URL_UNKNOWN이다. 다른 문자열 키(`['timeout']`)와 `Object.assign(X.defaults.headers, …)`는 제외한다.
      - `create` config에 baseURL이 없으면(config가 없을 때만이 아니라) 같은 파일의 axios 기본값을 물려받는 것으로 본다.
+     - 부른 곳이 넘기지 않은 config 매개변수에 기본값이 있으면 config를 확정하지 않는다 (Codex 11차).
      - request 인터셉터가 있으면 그 받는 쪽 호출은 래퍼 인라인 없이 그 자리에서 URL_UNKNOWN이고, response 인터셉터는 보지 않는다.
      - `fetch` 바꿔 끼우기는 선별 파일 어디서든 모든 fetch 호출에 적용한다.
      - ApiDetector의 incomplete는 50개 잘림, 경로를 알 수 없는 메서드·클래스 매핑, 190자 넘는 경로 제외 중 하나라도 있을 때다. `StructureService`가 선별 파일을 다시 훑어 구한다. 이때 확정하지 못한 후보는 AMBIGUOUS로 둔다.
