@@ -125,6 +125,24 @@ class PostDetailApiTest extends PostApiTestBase {
     }
 
     @Test
+    void AC5_탈퇴한_회원의_공개_분석은_남과_비로그인에게_숨긴다() throws Exception {
+        // F-19 AC10 findViewable과 같은 기준: 남의 공개 분석은 주인이 ACTIVE일 때만 볼 수 있다 (#92)
+        long gone = insertUser("f17분석주인");
+        long analysis = insertAnalysis(gone, "DONE", true, false);
+        long post = postWithAnalysis(analysis);
+        withdraw(gone);
+
+        for (String authorization : new String[] {bearer(author), bearer(other), null}) {
+            detail(post, authorization)
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.analysis.id").value((int) analysis))
+                    .andExpect(jsonPath("$.analysis.viewable").value(false))
+                    .andExpect(jsonPath("$.analysis.title").value(nullValue()))
+                    .andExpect(jsonPath("$.analysis.projectName").value(nullValue()));
+        }
+    }
+
+    @Test
     void AC5_삭제된_분석은_주인에게도_숨긴다() throws Exception {
         long analysis = insertAnalysis(author, "DONE", true, true);
         long post = postWithAnalysis(analysis);
