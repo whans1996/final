@@ -54,7 +54,6 @@ if (!isGitRepo()) {
     git(['fetch', '--quiet', '--prune'], { timeout: 5000, env: NON_INTERACTIVE_GIT_ENV });
     // 다른 PC가 push한 내 브랜치 커밋과 상대가 develop에 머지한 커밋을 자동으로 합친다 (scripts/lib/sync.mjs)
     synced = autoSync();
-    if (synced.length) parts.push(`## 자동 동기화\n${synced.join('\n')}`);
     const ab = git(['rev-list', '--left-right', '--count', 'HEAD...@{u}']);
     if (ab.ok) {
       const [ahead, behind] = ab.out.split(/\s+/).map(Number);
@@ -86,6 +85,8 @@ if (!isGitRepo()) {
   if (PROTECTED_BRANCHES.includes(branch) && hasCommits()) {
     warnings.push(`보호 브랜치(${branch})에 있습니다. 코드를 바꾸기 전에 feature/F-xx-slug 브랜치를 만드세요.`);
   }
+  // Git 블록의 "- 미커밋 변경"·"- 최근 커밋" 줄이 이 헤딩 아래 묶여 보이지 않게 Git 블록 뒤에 둔다 (#44)
+  if (synced.length) parts.push(`## 자동 동기화\n${synced.join('\n')}`);
 }
 
 // 외부 명령(gh·docker)은 위 동기 git(fetch·autoSync)이 끝난 뒤 띄운다 (#67).

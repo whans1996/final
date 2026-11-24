@@ -313,3 +313,111 @@ test('로컬 develop에 원격에 없는 커밋이 있으면 FF하지 않고 알
   assert.ok(lines.some((l) => /^- ⚠️ 로컬 develop에 origin\/develop에 없는 커밋 1개/.test(l)), lines.join('\n'));
   assert.equal(sh(me, 'rev-parse', 'develop'), before);
 });
+
+// ── #44 경계 상황 ──
+
+test('보호 브랜치(develop)에 로컬 커밋이 있어 fast-forward가 안 되면 건너뛰고 알린다 (#44)', () => {
+  const { peer, me } = setup();
+  sh(me, 'switch', '-q', '-c', 'develop', '--track', 'origin/develop');
+  commit(me, 'local.txt', 'x\n', 'chore: 실수로 develop에 커밋');
+  peerMergesToDevelop(peer, 'theirs.txt', 'theirs\n');
+  sh(me, 'fetch', '-q');
+  const head = sh(me, 'rev-parse', 'HEAD');
+
+  const lines = autoSync({ cwd: me });
+
+  assert.match(lines[0], /원격 origin\/develop 자동 병합: fast-forward가 안 되어 건너뜀/);
+  assert.equal(sh(me, 'rev-parse', 'HEAD'), head, '병합 커밋을 만들지 않는다');
+  assert.equal(sh(me, 'status', '--porcelain'), '');
+});
+
+test('내 브랜치가 원격과 갈라졌으면 병합 커밋을 만들고 push 전이라고 알린다 (#44)', () => {
+  const { me } = setup();
+  const other = join(me, '..', 'other-pc');
+  sh(tmp, 'clone', '-q', '-b', 'feature/F-09-x', join(me, '..', 'origin.git'), other);
+  commit(other, 'pc2.txt', 'pc2\n', 'feat: from other pc');
+  sh(other, 'push', '-q', 'origin', 'feature/F-09-x');
+  commit(me, 'pc1.txt', 'pc1\n', 'feat: this pc');
+  sh(me, 'fetch', '-q');
+
+  const lines = autoSync({ cwd: me });
+
+  assert.match(lines[0], /원격 origin\/feature\/F-09-x의 새 커밋 1개를 자동으로 합쳤습니다/);
+  assert.match(lines.at(-1), /push하지 않았습니다/);
+  assert.match(sh(me, 'log', '-1', '--format=%s'), /^Merge /);
+  assert.equal(sh(me, 'rev-list', '--count', 'HEAD..origin/feature/F-09-x'), '0');
+});
+
+test('detached HEAD면 지금 작업 트리를 건드리지 않는다 (#44)', () => {
+  const { peer, me } = setup();
+  sh(me, 'switch', '-q', '--detach', 'HEAD');
+  peerMergesToDevelop(peer, 'theirs.txt', 'theirs\n');
+  sh(me, 'fetch', '-q');
+  const head = sh(me, 'rev-parse', 'HEAD');
+
+  const lines = autoSync({ cwd: me });
+
+  assert.ok(!lines.some((l) => /자동으로 합쳤습니다|자동 병합/.test(l)), lines.join('\n'));
+  assert.equal(sh(me, 'rev-parse', 'HEAD'), head);
+  assert.equal(spawnSync('git', ['symbolic-ref', '-q', 'HEAD'], { cwd: me }).status, 1, '여전히 detached');
+});
+
+test('사람이 병합 중이면 미루고 그 병합을 되돌리지 않는다 (#44)', () => {
+  const { peer, me } = setup();
+  // 사람이 다른 브랜치를 합치다 충돌로 멈춘 상태
+  sh(me, 'switch', '-q', '-c', 'side');
+  commit(me, 'shared.txt', 'side\n', 'feat: side');
+  sh(me, 'switch', '-q', 'feature/F-09-x');
+  commit(me, 'shared.txt', 'mine\n', 'feat: mine');
+  const merging = spawnSync('git', ['merge', '-q', 'side'], { cwd: me, encoding: 'utf8', env: ENV });
+  assert.notEqual(merging.status, 0, '충돌로 멈춰야 한다');
+  const mergeHead = sh(me, 'rev-parse', 'MERGE_HEAD');
+  peerMergesToDevelop(peer, 'theirs.txt', 'theirs\n');
+  sh(me, 'fetch', '-q');
+
+  const lines = autoSync({ cwd: me });
+
+  assert.match(lines[0], /병합이 진행 중이라 자동 병합을 미뤘습니다/);
+  assert.equal(sh(me, 'rev-parse', 'MERGE_HEAD'), mergeHead, '사람의 병합 상태가 그대로다');
+  assert.equal(sh(me, 'rev-list', '--count', 'HEAD..origin/develop'), '1');
+});
+
+test('vibenote.autoSync를 off·no·0으로 써도 꺼진다 (#44)', () => {
+  for (const value of ['off', 'no', '0', 'FALSE']) {
+    const { peer, me } = setup();
+    peerMergesToDevelop(peer, 'theirs.txt', 'theirs\n');
+    sh(me, 'fetch', '-q');
+    sh(me, 'config', 'vibenote.autoSync', value);
+
+    assert.deepEqual(autoSync({ cwd: me }), [], value);
+    assert.equal(sh(me, 'rev-list', '--count', 'HEAD..origin/develop'), '1', value);
+  }
+});
+
+test('사용자 설정 merge.ff=only여도 develop을 병합 커밋으로 합친다 (#44)', () => {
+  const { peer, me } = setup();
+  sh(me, 'config', 'merge.ff', 'only');
+  commit(me, 'mine.txt', 'mine\n', 'feat: mine');
+  peerMergesToDevelop(peer, 'theirs.txt', 'theirs\n');
+  sh(me, 'fetch', '-q');
+
+  const lines = autoSync({ cwd: me });
+
+  assert.match(lines[0], /origin\/develop의 새 커밋 1개를 자동으로 합쳤습니다/);
+  assert.equal(sh(me, 'rev-list', '--count', 'HEAD..origin/develop'), '0');
+});
+
+test('사용자 설정 merge.ff=false여도 다른 PC가 push한 내 브랜치 커밋은 fast-forward로 받는다 (#44)', () => {
+  const { me } = setup();
+  sh(me, 'config', 'merge.ff', 'false');
+  const other = join(me, '..', 'other-pc');
+  sh(tmp, 'clone', '-q', '-b', 'feature/F-09-x', join(me, '..', 'origin.git'), other);
+  commit(other, 'pc2.txt', 'pc2\n', 'feat: from other pc');
+  sh(other, 'push', '-q', 'origin', 'feature/F-09-x');
+  sh(me, 'fetch', '-q');
+
+  const lines = autoSync({ cwd: me });
+
+  assert.match(lines[0], /원격 origin\/feature\/F-09-x의 새 커밋 1개/);
+  assert.equal(sh(me, 'log', '-1', '--format=%s'), 'feat: from other pc', '병합 커밋 없이 따라간다');
+});
