@@ -186,11 +186,11 @@ SC-07에 **"구조" 탭**을 추가해 선별 파일(최대 30개) 사이의 의
 `/implement`가 진행하며 체크한다.
 
 - [x] 브랜치 `feature/F-21a-structure-graph`
-- [ ] Flyway 마이그레이션 (없음)
-- [ ] AC별 실패 테스트 작성 (red 확인)
-- [ ] BE 구현 (green), `javaparser-core` 정확한 버전 고정
+- [x] Flyway 마이그레이션 (없음)
+- [ ] AC별 실패 테스트 작성 (red 확인) — BE AC1~AC13 완료, FE 남음
+- [x] BE 구현 (green), `javaparser-core` 정확한 버전 고정 (3.28.2)
 - [ ] FE 구현 (green), `mermaid` 정확한 버전 고정
-- [ ] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
+- [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
 - [ ] contract-checker 통과
 - [ ] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일)
 - [ ] reviewer 지적 사항 반영

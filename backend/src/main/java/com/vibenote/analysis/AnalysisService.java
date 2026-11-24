@@ -198,6 +198,15 @@ public class AnalysisService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.ANALYSIS_404));
     }
 
+    /** 볼 수 있는 분석의 개요 (F-21a 구조 그래프). 진행 중이면 null. 볼 수 없으면 ANALYSIS_404. */
+    @Transactional(readOnly = true)
+    public AnalysisOverview getViewableOverview(long userId, long analysisId) {
+        return analysisMapper
+                .findViewableDetail(analysisId, userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ANALYSIS_404))
+                .getOverview();
+    }
+
     /** 볼 수 있는 분석의 파일 목록 (content 제외, F-06 AC10). */
     @Transactional(readOnly = true)
     public List<AnalysisFileSummaryResponse> listFiles(long userId, long analysisId) {

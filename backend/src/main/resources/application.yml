@@ -93,6 +93,10 @@ analysis:
     max-chars: 24000
     max-links: 15
     max-drafts: 5
+  # 구조 그래프 (docs/specs/F-21a-structure-graph.md 5.1절): 응답 간선·확인하지 못한 연결 상한
+  structure:
+    max-edges: 150
+    max-unresolved: 100
 
 # QUIZ 단계 (docs/specs/F-14-code-quiz.md 5절): 저장할 문항 수 범위, 프롬프트 입력 상한
 quiz:
