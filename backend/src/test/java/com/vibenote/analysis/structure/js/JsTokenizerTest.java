@@ -1,0 +1,118 @@
+package com.vibenote.analysis.structure.js;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import com.vibenote.analysis.structure.js.JsToken.Kind;
+import java.util.List;
+import org.junit.jupiter.api.Test;
+
+/** F-21a AC5 JS 토크나이저 (docs/specs/F-21a-structure-graph.md). */
+class JsTokenizerTest {
+
+    private static List<String> texts(List<JsToken> tokens) {
+        return tokens.stream().map(JsToken::text).toList();
+    }
+
+    @Test
+    void AC5_주석과_문자열_안의_import와_HTTP_호출은_코드_토큰이_아니다() {
+        List<JsToken> tokens =
+                JsTokenizer.tokenize(
+                        """
+                        // import x from 'a'
+                        /* axios.get('/x') */
+                        const s = "import y from 'b'";
+                        const t = 'it\\'s';
+                        """);
+
+        assertThat(texts(tokens))
+                .containsExactly(
+                        "const",
+                        "s",
+                        "=",
+                        "\"import y from 'b'\"",
+                        ";",
+                        "const",
+                        "t",
+                        "=",
+                        "'it\\'s'",
+                        ";");
+        assertThat(tokens.get(3).kind()).isEqualTo(Kind.STRING);
+        assertThat(tokens.get(3).value()).isEqualTo("import y from 'b'");
+        assertThat(tokens.get(8).value()).isEqualTo("it's");
+        assertThat(tokens.get(0).line()).isEqualTo(3);
+        assertThat(tokens.get(5).line()).isEqualTo(4);
+    }
+
+    @Test
+    void AC5_템플릿_리터럴은_중첩된_표현식을_토큰으로_가진다() {
+        List<JsToken> tokens = JsTokenizer.tokenize("const u = `a${b + `c${d}`}e`;");
+
+        JsToken template = tokens.get(3);
+        assertThat(template.kind()).isEqualTo(Kind.TEMPLATE);
+        assertThat(template.quasis()).containsExactly("a", "e");
+        assertThat(template.parts()).hasSize(1);
+        List<JsToken> expr = template.parts().get(0);
+        assertThat(texts(expr.subList(0, 2))).containsExactly("b", "+");
+        JsToken inner = expr.get(2);
+        assertThat(inner.kind()).isEqualTo(Kind.TEMPLATE);
+        assertThat(inner.quasis()).containsExactly("c", "");
+        assertThat(texts(inner.parts().get(0))).containsExactly("d");
+        assertThat(texts(tokens.subList(4, tokens.size()))).containsExactly(";");
+    }
+
+    @Test
+    void AC5_정규식_리터럴과_나눗셈을_구분한다() {
+        List<JsToken> tokens =
+                JsTokenizer.tokenize(
+                        """
+                        const r = /ab+c\\/[/]'/gi;
+                        const x = a / b / (c) / 2;
+                        if (ok) { return /x/.test(s) }
+                        """);
+
+        assertThat(tokens.get(3).kind()).isEqualTo(Kind.REGEX);
+        assertThat(tokens.get(3).text()).isEqualTo("/ab+c\\/[/]'/gi");
+        assertThat(texts(tokens.subList(5, 17)))
+                .containsExactly("const", "x", "=", "a", "/", "b", "/", "(", "c", ")", "/", "2");
+        assertThat(tokens.stream().filter(t -> t.kind() == Kind.REGEX).map(JsToken::text))
+                .containsExactly("/ab+c\\/[/]'/gi", "/x/");
+    }
+
+    @Test
+    void AC5_여러_글자_연산자를_하나의_토큰으로_읽는다() {
+        assertThat(texts(JsTokenizer.tokenize("a === b => c?.d ... e != f")))
+                .containsExactly("a", "===", "b", "=>", "c", "?.", "d", "...", "e", "!=", "f");
+    }
+
+    @Test
+    void AC5_vue는_script_블록만_원본_줄_번호로_읽는다() {
+        List<JsToken> tokens =
+                JsTokenizer.tokenizeFile(
+                        "src/views/TodoView.vue",
+                        """
+                        <template>
+                          <div @click="axios.get('/x')">{{ 'import' }}</div>
+                        </template>
+                        <script setup>
+                        import api from './api'
+                        </script>
+                        <style>.a { color: red }</style>
+                        """);
+
+        assertThat(texts(tokens)).containsExactly("import", "api", "from", "'./api'");
+        assertThat(tokens.get(0).line()).isEqualTo(5);
+    }
+
+    @Test
+    void AC5_끝나지_않은_문자열_주석_템플릿은_줄_번호와_함께_오류() {
+        assertThatThrownBy(() -> JsTokenizer.tokenize("const a = 1;\nconst s = 'abc\nfoo"))
+                .isInstanceOf(JsSyntaxException.class)
+                .extracting("line")
+                .isEqualTo(2);
+        assertThatThrownBy(() -> JsTokenizer.tokenize("/* never closed"))
+                .isInstanceOf(JsSyntaxException.class);
+        assertThatThrownBy(() -> JsTokenizer.tokenize("const t = `a${b}"))
+                .isInstanceOf(JsSyntaxException.class);
+    }
+}
