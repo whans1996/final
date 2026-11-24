@@ -1,25 +1,28 @@
 # NOW — 김준섭 현재 작업 스냅샷
 
 > 김준섭(B 영역: 카드·소셜) 전용. 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
-갱신: 2026-11-24 09:06 · 작업자: JoonseobKim · PC: js-home · 브랜치: feature/F-20c-team-challenge
+갱신: 2026-11-24 09:25 · 작업자: JoonseobKim · PC: js-home · 브랜치: feature/F-20c-team-challenge
 
 ---
 
 ## 현재 기능
 
-**F-20c** 팀 기간 목표 (`docs/specs/F-20c-team-challenge.md`, APPROVED). `/implement` 마무리 단계
+**F-20c** 팀 기간 목표 (`docs/specs/F-20c-team-challenge.md`, DONE). **PR #98** 열림, Codex ✅ 53c1047, spec DONE → CI 초록 확인 뒤 머지
 
 ## 진행
 
-- ✅ BE AC1~AC10 (070691c): V10 `team_challenges`, `TeamChallengeController·Service·Calculator·Mapper`, TEAM_011~013, #89 `projectName`. BE 전체 904 통과, openapi.json 갱신
-- ✅ FE AC11~AC13 (c5650ca): `TeamChallengeList`·`Progress`·`Form`, SC-23·SC-24 연결, 해제 확인 문구, `Closes #89`. FE 전체 통과
-- ✅ contract-checker 불일치 0, 산출물(화면 설계서 SC-23·24, ERD, 요구사항 F-20c) 반영
-- ✅ ui-verifier SC-23·SC-24 팀장·팀원 1280·375 문제 0건, 스크린샷 6장(`SC-23-team-challenges-*`, `SC-24-team-challenge(-form)-*`) 추가
+- ✅ BE AC1~AC10, FE AC11~AC13, 산출물·스크린샷 6장 (이전 커밋들)
+- ✅ `/pr-review`: verifier 전체 통과(BE 904, FE 625), contract-checker 불일치 0, reviewer 반드시 수정 0
+- ✅ 2629b53 reviewer 권장 1: SC-24 만든 뒤 `creating`이 풀리지 않던 버그 → `routeVersion` 카운터 (`TeamUnderstandingView.vue` `onCreate`)
+- ✅ 53c1047 날짜 Swagger 설명 경계 포함, DTO에 타입 오류 예외 주석(#96)
+- ✅ 후속 이슈 #95(날짜 상한), #96(숫자 타입 오류 403<400) 생성
+- ✅ PR #98 Codex ✅ 53c1047 (지적 없음, 재리뷰 1회), 완료 표시 커밋(spec DONE)
 
 ## 바로 다음 할 일
 
-1. `/clear` → 새 세션(Opus/high)에서 `/pr-review` (verifier·reviewer·contract-checker → PR 본문에 @whans1996 멘션(ErrorCode·conventions·FlywayMigrationTest 공통 변경), `Closes #89`, 스크린샷은 `node scripts/pr-screens.mjs SC-23 SC-24`)
-2. 화면 점검용 서버: BE 8082·FE 5175(이 세션이 띄움, 스크래치패드 `vite5175.mjs`)는 PR 뒤 정리해도 됨. 8080·5173은 옛 코드
+1. `gh pr checks 98` 전부 초록이면 GitHub에서 머지 (wip 없음, 일반 머지 가능). 머지 뒤 #89 닫힘 확인
+2. 머지 전 F-24 PR #97이 먼저 머지되면 `git merge origin/develop` → push → CI 재확인 (마이그레이션 번호·openapi.json·ErrorCode 충돌 주의)
+3. 화면 점검용 서버 BE 8082·FE 5175는 정리해도 됨
 
 ## 막힌 점 / 결정 필요
 
@@ -27,6 +30,4 @@
 
 ## 주의
 
-- 공통 변경(`ErrorCode` TEAM_011~013, conventions 3절, `FlywayMigrationTest` 테이블 목록) → PR에서 @whans1996 멘션. A 영역 코드 변경은 없음
-- SC-24 팀장 판단은 이해도 응답 `members`의 OWNER userId와 `useAuthStore().user.id` 비교 (추가 요청 없음)
-- 남은 날 문구: 진행 중은 `종료일 - 오늘`일(0이면 "오늘 마감"), 예정은 `시작일 - 오늘`로 "D-n"
+- 공통 변경(`ErrorCode` TEAM_011~013, V10, `FlywayMigrationTest`, conventions 3절) → PR에서 @whans1996 멘션 완료

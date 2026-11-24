@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 |---|---|
-| 상태 | APPROVED <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
+| 상태 | DONE (PR #98) <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
 | 기능 ID | F-20c (F-20 팀 챌린지의 3/3. 팀·초대 F-20a(DONE), 공동 분석 이해도 F-20b(DONE)) |
 | 우선순위 | P2 |
 | 영역 오너 | B 김준섭 (카드·소셜) |
@@ -205,7 +205,7 @@ CREATE TABLE team_challenges (
 - [x] `docs/conventions.md` 3절 `TEAM` 행에 011~013
 - [x] contract-checker 통과
 - [x] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일)
-- [ ] reviewer 지적 사항 반영
+- [x] reviewer 지적 사항 반영 (권장 1 수정, 권장 2·3 → #95·#96)
 - [x] 산출물 반영: 화면 설계서 SC-23(팀 목표 영역·해제 문구)·SC-24(목표·폼), ERD(`team_challenges`), 요구사항 정의서 F-20 행(F-20c)
-- [ ] PR CI 초록 (공통 `ErrorCode`·conventions·`FlywayMigrationTest` 변경 → @whans1996 멘션), `Closes #89`
-- [ ] 상태 DONE
+- [x] PR CI 초록 (공통 `ErrorCode`·conventions·`FlywayMigrationTest` 변경 → @whans1996 멘션), `Closes #89`
+- [x] 상태 DONE (PR #98, Codex ✅ 53c1047)
