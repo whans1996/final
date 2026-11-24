@@ -1,13 +1,13 @@
 # NOW — 김준섭 현재 작업 스냅샷
 
 > 김준섭(B 영역: 카드·소셜) 전용. 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
-갱신: 2026-11-24 11:02 · 작업자: JoonseobKim · PC: js-home · 브랜치: feature/issue-92-post-attachment-owner-withdrawn
+갱신: 2026-11-24 11:12 · 작업자: JoonseobKim · PC: js-home · 브랜치: feature/issue-92-post-attachment-owner-withdrawn
 
 ---
 
 ## 현재 기능
 
-**#92** F-17 게시글 분석 첨부 viewable이 주인 탈퇴 미고려 (follow-up, `feature/issue-92-post-attachment-owner-withdrawn`, develop 8c25c98에서 분기). 수정 커밋 97bad5c, `/pr-review` 진행 중
+**#92** F-17 게시글 분석 첨부 viewable이 주인 탈퇴 미고려 (follow-up, `feature/issue-92-post-attachment-owner-withdrawn`, develop 8c25c98에서 분기). **PR #103 열림**, Codex ✅ fbfba45 (지적 없음), CI BE 검증 진행 중이었음
 
 ## 진행
 
@@ -19,7 +19,7 @@
 
 ## 바로 다음 할 일
 
-1. `/pr-review` 이어서: verifier all + reviewer → PR 설명 `.harness/pr-issue-92.md` (Closes #92) → push·PR → Codex 루프
+1. `gh pr checks 103` 초록 확인 → GitHub에서 #102·#103 머지 (Mattermost 알림 fail은 Actions 장애 때 push 기록, 무시)
 2. PR #102 머지 확인 → #96 닫혔는지, #101 닫기(Actions 복구 확인 후)
 3. 그다음 산출물: `docs/산출물/03-ERD.md`를 현재 스키마(V8·V9 팀, F-24·25 챌린지)에 맞춰 갱신. SC-01 랜딩·디자인 기준은 F-25 머지 후 2차 기획에서 (사용자 합의 11-24)
 
