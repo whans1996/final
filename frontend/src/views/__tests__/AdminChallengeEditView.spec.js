@@ -258,6 +258,22 @@ describe('AdminChallengeEditView (F-24 AC13)', () => {
     expect(wrapper.find('[name="title"]').element.value).toBe('')
   })
 
+  it('AC13 불러오기에 실패하면 에러를 보여 주고, 다시 시도하면 같은 챌린지를 불러와 폼을 보여 준다', async () => {
+    adminApi.fetchAdminChallenge
+      .mockRejectedValueOnce(apiError(500, { code: 'COMMON_500', message: '서버 오류입니다.' }))
+      .mockResolvedValueOnce(detail())
+    const { wrapper } = await mountEdit('/admin/challenges/7/edit')
+
+    expect(wrapper.find('[role="alert"]').text()).toContain('서버 오류입니다.')
+
+    await wrapper.find('[data-action="retry"]').trigger('click')
+    await flushPromises()
+
+    expect(adminApi.fetchAdminChallenge).toHaveBeenLastCalledWith(7)
+    expect(wrapper.find('[role="alert"]').exists()).toBe(false)
+    expect(wrapper.find('[name="title"]').element.value).toBe('12월 퀴즈 챌린지')
+  })
+
   it('AC13 저장 중에는 버튼이 비활성이다', async () => {
     let resolve
     adminApi.createAdminChallenge.mockReturnValue(new Promise((r) => (resolve = r)))

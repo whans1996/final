@@ -168,7 +168,7 @@ function showSubmitError(error) {
     </div>
     <div v-else-if="loadError" class="error" role="alert">
       <p>{{ loadError }}</p>
-      <button type="button" data-action="retry" @click="load">다시 시도</button>
+      <button type="button" data-action="retry" @click="reset">다시 시도</button>
     </div>
 
     <form v-else novalidate @submit.prevent="save">
