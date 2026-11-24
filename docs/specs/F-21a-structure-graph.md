@@ -191,7 +191,7 @@ SC-07에 **"구조" 탭**을 추가해 선별 파일(최대 30개) 사이의 의
 - [x] BE 구현 (green), `javaparser-core` 정확한 버전 고정 (3.28.2)
 - [ ] FE 구현 (green), `mermaid` 정확한 버전 고정
 - [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
-- [ ] contract-checker 통과
+- [ ] contract-checker 통과 — BE ↔ spec 불일치 0 (11-24), FE 구현 후 다시
 - [ ] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일)
 - [ ] reviewer 지적 사항 반영
 - [ ] 산출물 반영: `06-화면설계서.md` SC-07 탭·구조 탭, `01-요구사항정의서.md` F-21 비고(a·b 분할), `07-REST-API-명세.md` 분석 API 표, 루트 `README.md` 기술 스택(JavaParser·mermaid)

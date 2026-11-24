@@ -41,7 +41,7 @@ public class StructureController {
             description = "없는 분석, 삭제된 분석, 볼 수 없는 남의 분석(비공개·미완료·주인 탈퇴) (ANALYSIS_404)",
             content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     @GetMapping
-    public AnalysisStructureResponse get(
+    public AnalysisStructureResponse getStructure(
             @AuthenticationPrincipal AuthUser user, @PathVariable long id) {
         return structureService.get(user.id(), id);
     }
