@@ -71,9 +71,11 @@ public final class ContextPathReader {
         return eq < 0 ? colon : (colon < 0 ? eq : Math.min(eq, colon));
     }
 
+    /** {@code spring.profiles}가 맵이면({@code spring.profiles.active} 등) 프로필 문서가 아니다 (5.3절 5). */
     private static boolean hasProfile(Map<?, ?> doc) {
+        Object profiles = path(doc, "spring.profiles");
         return path(doc, "spring.config.activate.on-profile") != null
-                || path(doc, "spring.profiles") != null;
+                || (profiles != null && !(profiles instanceof Map));
     }
 
     /** 점 경로로 중첩 맵이나 평평한 키를 찾는다. */

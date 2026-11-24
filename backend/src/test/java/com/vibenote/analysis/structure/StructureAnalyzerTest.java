@@ -998,6 +998,31 @@ class StructureAnalyzerTest {
     }
 
     @Test
+    void AC11_spring_profiles가_맵이면_프로필_문서가_아니다() {
+        String ctx = "server:\n  servlet:\n    context-path: /app\n";
+        // spring.profiles.active는 활성 프로필 지정이다. 이 문서는 늘 적용된다
+        assertThat(
+                        ContextPathReader.read(
+                                List.of(
+                                        file(
+                                                1,
+                                                "src/main/resources/application.yml",
+                                                "config",
+                                                "spring:\n  profiles:\n    active: dev\n" + ctx))))
+                .isEqualTo("/app");
+        // spring.profiles: dev(옛 모양)와 on-profile은 그 프로필에서만 적용된다
+        assertThat(
+                        ContextPathReader.read(
+                                List.of(
+                                        file(
+                                                1,
+                                                "src/main/resources/application.yml",
+                                                "config",
+                                                "spring:\n  profiles: dev\n" + ctx))))
+                .isEmpty();
+    }
+
+    @Test
     void AC10_래퍼_호출_곱이_커도_제한_시간_안에_한_간선으로_모은다() {
         StringBuilder code = new StringBuilder("function request(url) {\n");
         code.append("  fetch(url)\n".repeat(3_000));
