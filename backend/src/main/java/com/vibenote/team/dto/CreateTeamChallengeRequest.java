@@ -10,7 +10,7 @@ import jakarta.validation.constraints.NotNull;
  * details로 알리기 위해서다 (Jackson이 먼저 실패하면 details 없는 400이 된다).
  *
  * <p>예외: 깨진 JSON이나 숫자 필드(analysisId·targetRate)의 타입 오류는 Jackson이 먼저 400 {@code COMMON_400}으로 처리하므로
- * 팀원이 보내도 403보다 먼저 나간다 (기존 팀 API와 같은 수준, #96).
+ * 팀원이 보내도 403보다 먼저 나간다 ({@code docs/conventions.md} 3절, #96).
  */
 @Schema(description = "팀 목표 만들기 요청")
 public record CreateTeamChallengeRequest(
