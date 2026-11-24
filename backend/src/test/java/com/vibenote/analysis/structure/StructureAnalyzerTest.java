@@ -1092,4 +1092,23 @@ class StructureAnalyzerTest {
 
         assertThat(http(response)).containsExactly(edge(1, 100, 3), edge(1, 101, 5));
     }
+
+    @Test
+    void AC7_구조_분해_선언도_axios를_가린다() {
+        AnalysisStructureResponse response =
+                run(
+                        List.of(api("GET", "/api/todos", 100)),
+                        js(
+                                1,
+                                "src/a.js",
+                                """
+                                import axios from 'axios'
+                                function f() { const {axios} = {axios: new Map()}; axios.get('/api/todos') }
+                                function g() { let [x, { y: axios = 1 }] = []; axios.get('/api/todos') }
+                                function h() { const { a, axios: { get } } = {}; axios.get('/api/todos') }
+                                """));
+
+        assertThat(http(response)).containsExactly(edge(1, 100, 4));
+        assertThat(httpUnresolved(response)).isEmpty();
+    }
 }

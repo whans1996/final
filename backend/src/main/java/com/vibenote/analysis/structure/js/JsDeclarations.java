@@ -196,7 +196,24 @@ final class JsDeclarations {
                         : JsTokens.is(t, i - 1, "(") && JsTokens.is(t, i - 2, "for")
                                 ? loopScopeOf(i - 1)
                                 : scopeOf(i);
+        declarators(i, kind, scope);
+    }
+
+    /** i 다음 토큰부터 쉼표로 이어진 선언자들. */
+    private void declarators(int i, Kind kind, int[] scope) {
         int j = i + 1;
+        while ((JsTokens.is(t, j, "{") || JsTokens.is(t, j, "[")) && match[j] > j) {
+            // 구조 분해(const {axios} = …): 값은 모르지만 이 이름들이 바깥 이름을 가린다
+            addPattern(t.subList(j, match[j] + 1), scope[0], scope[1]);
+            int next = match[j] + 1;
+            if (JsTokens.is(t, next, "=")) {
+                next = expressionEnd(next + 1);
+            }
+            if (!JsTokens.is(t, next, ",")) {
+                return;
+            }
+            j = next + 1;
+        }
         while (JsTokens.kind(t, j) == JsToken.Kind.IDENT) {
             String name = t.get(j).text();
             List<JsToken> init = List.of();
@@ -214,6 +231,11 @@ final class JsDeclarations {
                 return;
             }
             j = next + 1;
+            if ((JsTokens.is(t, j, "{") || JsTokens.is(t, j, "[")) && match[j] > j) {
+                // const a = 1, {b} = c: 뒤쪽 구조 분해
+                declarators(j - 1, kind, scope);
+                return;
+            }
         }
     }
 
@@ -408,44 +430,41 @@ final class JsDeclarations {
         }
         for (List<JsToken> param : split(open + 1, close)) {
             int k = !param.isEmpty() && param.get(0).is("...") ? 1 : 0;
-            if (k >= param.size() || !(param.get(k).is("{") || param.get(k).is("["))) {
-                continue;
+            if (k < param.size() && (param.get(k).is("{") || param.get(k).is("["))) {
+                addPattern(param.subList(k, param.size()), fn.start(), fn.end());
             }
-            int depth = 0;
-            int defaultDepth = -1;
-            for (; k < param.size(); k++) {
-                JsToken token = param.get(k);
-                boolean opens = token.is("{") || token.is("[") || token.is("(");
-                boolean closes = token.is("}") || token.is("]") || token.is(")");
-                if (defaultDepth >= 0) {
-                    if (opens) {
-                        depth++;
-                    } else if (closes) {
-                        depth--;
-                    }
-                    if (depth < defaultDepth || (token.is(",") && depth == defaultDepth)) {
-                        defaultDepth = -1;
-                    }
-                    continue;
-                }
+        }
+    }
+
+    /** 구조 분해 패턴이 만드는 이름을 [from, to] 범위의 변수로 등록한다. 키({@code b:})와 기본값 식 안의 이름은 바인딩이 아니다. */
+    private void addPattern(List<JsToken> param, int from, int to) {
+        int depth = 0;
+        int defaultDepth = -1;
+        for (int k = 0; k < param.size(); k++) {
+            JsToken token = param.get(k);
+            boolean opens = token.is("{") || token.is("[") || token.is("(");
+            boolean closes = token.is("}") || token.is("]") || token.is(")");
+            if (defaultDepth >= 0) {
                 if (opens) {
                     depth++;
                 } else if (closes) {
                     depth--;
-                } else if (token.is("=")) {
-                    defaultDepth = depth;
-                } else if (token.kind() == JsToken.Kind.IDENT
-                        && !(k + 1 < param.size() && param.get(k + 1).is(":"))) {
-                    module.decls()
-                            .add(
-                                    new JsDecl(
-                                            token.text(),
-                                            Kind.VARIABLE,
-                                            fn.start(),
-                                            fn.end(),
-                                            List.of(),
-                                            null));
                 }
+                if (depth < defaultDepth || (token.is(",") && depth == defaultDepth)) {
+                    defaultDepth = -1;
+                }
+                continue;
+            }
+            if (opens) {
+                depth++;
+            } else if (closes) {
+                depth--;
+            } else if (token.is("=")) {
+                defaultDepth = depth;
+            } else if (token.kind() == JsToken.Kind.IDENT
+                    && !(k + 1 < param.size() && param.get(k + 1).is(":"))) {
+                module.decls()
+                        .add(new JsDecl(token.text(), Kind.VARIABLE, from, to, List.of(), null));
             }
         }
     }
