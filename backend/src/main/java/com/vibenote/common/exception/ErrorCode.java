@@ -159,6 +159,10 @@ public enum ErrorCode {
     CHALLENGE_404(HttpStatus.NOT_FOUND, "챌린지를 찾을 수 없습니다."),
     /** 시작한(진행 중·종료) 챌린지의 목표 유형·목표값·시작일 변경 (F-24 AC7). 참여자의 달성도 기준을 지킨다. */
     CHALLENGE_001(HttpStatus.CONFLICT, "이미 시작한 챌린지는 목표와 시작일을 바꿀 수 없습니다."),
+    /** 종료된 챌린지의 참여·취소 (F-25 AC3·AC9). */
+    CHALLENGE_002(HttpStatus.CONFLICT, "종료된 챌린지는 참여하거나 취소할 수 없습니다."),
+    /** 달성한 챌린지의 참여 취소 (F-25 AC9). */
+    CHALLENGE_003(HttpStatus.CONFLICT, "달성한 챌린지는 참여를 취소할 수 없습니다."),
     ;
 
     private final HttpStatus status;

@@ -10,8 +10,9 @@ import {
 } from '@/api/adminChallenges'
 import { errorCode, errorDetails, errorMessage } from '@/api/http'
 import AdminChallengeForm from '@/components/challenge/admin/AdminChallengeForm.vue'
-import { LOCK_MESSAGE, statusLabel } from '@/components/challenge/admin/labels'
-import { todayIso, validateChallengeForm } from '@/components/challenge/admin/validation'
+import { LOCK_MESSAGE, statusLabel } from '@/components/challenge/labels'
+import { validateChallengeForm } from '@/components/challenge/admin/validation'
+import { todayInSeoul } from '@/utils/seoulDate'
 
 const route = useRoute()
 const router = useRouter()
@@ -107,7 +108,7 @@ async function save() {
   if (saving.value) return
   submitError.value = ''
   fieldErrors.value = validateChallengeForm(form.value, {
-    today: todayIso(),
+    today: todayInSeoul(),
     originalEndDate: challenge.value?.endDate ?? null,
   })
   if (Object.keys(fieldErrors.value).length > 0) return

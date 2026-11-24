@@ -5,12 +5,14 @@ import UserProfileView from '@/views/UserProfileView.vue'
 import * as usersApi from '@/api/users'
 import * as conceptsApi from '@/api/concepts'
 import * as followsApi from '@/api/follows'
+import * as challengesApi from '@/api/challenges'
 import { useAuthStore } from '@/stores/auth'
 import { apiError, mountAt } from './viewTestUtils'
 
 vi.mock('@/api/users')
 vi.mock('@/api/concepts')
 vi.mock('@/api/follows')
+vi.mock('@/api/challenges')
 
 const PROFILE = {
   id: 3,
@@ -38,6 +40,7 @@ describe('UserProfileView (F-03 AC9)', () => {
     })
     // F-12 찜 절 기본값 (0건)
     conceptsApi.fetchUserWishes.mockResolvedValue({ items: [], page: 1, size: 12, total: 0 })
+    challengesApi.fetchUserChallenges.mockResolvedValue({ items: [], page: 1, size: 6, total: 0 })
   })
 
   it('AC9 프로필 정보와 학습 통계 3개를 보여 준다', async () => {
@@ -189,6 +192,7 @@ describe('UserProfileView 찜한 카드 절 (F-12 AC15)', () => {
       followingCount: 0,
     })
     conceptsApi.fetchUserWishes.mockResolvedValue({ items: [], page: 1, size: 12, total: 4 })
+    challengesApi.fetchUserChallenges.mockResolvedValue({ items: [], page: 1, size: 6, total: 0 })
     usersApi.fetchUserStats.mockResolvedValue({
       analysisCount: 0,
       learnedConceptCount: 0,
@@ -219,10 +223,58 @@ describe('UserProfileView 찜한 카드 절 (F-12 AC15)', () => {
   })
 })
 
+describe('UserProfileView 참여 챌린지 절 (F-25 AC15)', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+    followsApi.fetchFollowStatus.mockResolvedValue({
+      following: false,
+      followerCount: 0,
+      followingCount: 0,
+    })
+    conceptsApi.fetchUserWishes.mockResolvedValue({ items: [], page: 1, size: 12, total: 0 })
+    usersApi.fetchUser.mockResolvedValue(PROFILE)
+    usersApi.fetchUserStats.mockResolvedValue({
+      analysisCount: 0,
+      learnedConceptCount: 0,
+      quizAccuracy: null,
+    })
+  })
+
+  it('AC15 프로필에 참여 챌린지 절이 보인다', async () => {
+    challengesApi.fetchUserChallenges.mockResolvedValue({
+      items: [],
+      page: 1,
+      size: 6,
+      total: 3,
+    })
+
+    const { wrapper } = await mountAt(UserProfileView, '/users/3')
+    await flushPromises()
+
+    expect(challengesApi.fetchUserChallenges).toHaveBeenCalledWith(3, { page: 1, size: 6 })
+    expect(wrapper.find('[data-section="challenges"] h2').text()).toBe('참여 챌린지 3')
+  })
+
+  it('AC15 이 절만 실패하면 절 안에 메시지를 보이고 프로필은 그대로다', async () => {
+    challengesApi.fetchUserChallenges.mockRejectedValue(
+      apiError(500, { code: 'COMMON_500', message: '서버 오류가 발생했습니다.' }),
+    )
+
+    const { wrapper } = await mountAt(UserProfileView, '/users/3')
+    await flushPromises()
+
+    expect(wrapper.find('h1').text()).toBe('코딩초보')
+    expect(wrapper.find('[data-section="challenges"] [role="alert"]').text()).toBe(
+      '서버 오류가 발생했습니다.',
+    )
+  })
+})
+
 describe('UserProfileView 팔로우 영역 (F-04 AC9)', () => {
   beforeEach(() => {
     vi.resetAllMocks()
     conceptsApi.fetchUserWishes.mockResolvedValue({ items: [], page: 1, size: 12, total: 0 })
+    challengesApi.fetchUserChallenges.mockResolvedValue({ items: [], page: 1, size: 6, total: 0 })
     usersApi.fetchUser.mockResolvedValue(PROFILE)
     usersApi.fetchUserStats.mockResolvedValue({
       analysisCount: 0,

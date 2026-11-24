@@ -12,4 +12,8 @@
             WHERE user_id = #{userId} AND type = #{type} AND target_id = #{targetId}
         )
     </select>
+
+    <delete id="delete">
+        DELETE FROM activities WHERE user_id = #{userId} AND type = #{type} AND target_id = #{targetId}
+    </delete>
 </mapper>

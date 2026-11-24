@@ -1,17 +1,21 @@
 <script setup>
-// SC-04 대시보드 (F-16 AC8). 오늘 복습할 카드·맞춤 추천·최근 분석을 절마다 따로 불러온다 (한 절이 실패해도 나머지는 보인다).
+// SC-04 대시보드 (F-16 AC8, F-25 AC14). 오늘 복습할 카드·맞춤 추천·최근 분석·참여 중 챌린지를 절마다 따로 불러온다 (한 절이 실패해도 나머지는 보인다).
 // "오늘"은 복습 계획 응답의 today로 판단한다 (브라우저 시계를 쓰지 않는다).
 import { computed, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { fetchReviewPlans } from '@/api/reviewPlans'
 import { fetchAnalyses } from '@/api/analyses'
+import { fetchMyChallenges } from '@/api/challenges'
 import { errorMessage } from '@/api/http'
 import ConceptCard from '@/components/concept/ConceptCard.vue'
 import RecommendationList from '@/components/recommendation/RecommendationList.vue'
+import MyChallengeList from '@/components/challenge/MyChallengeList.vue'
 import { STATUS_LABELS } from '@/utils/analysisStatus'
+import { todayInSeoul } from '@/utils/seoulDate'
 
 const TODAY_LIMIT = 5
 const RECENT_SIZE = 3
+const CHALLENGE_SIZE = 3
 
 /** 절 하나의 로딩·에러·데이터 상태 */
 function useSection(loader) {
@@ -35,6 +39,9 @@ function useSection(loader) {
 
 const today = useSection(() => fetchReviewPlans())
 const recent = useSection(() => fetchAnalyses({ page: 1, size: RECENT_SIZE }))
+const challenges = useSection(() =>
+  fetchMyChallenges({ status: 'ONGOING', page: 1, size: CHALLENGE_SIZE }),
+)
 
 /** 밀린 복습 + 오늘 날짜의 TODO */
 const todayPlans = computed(() => {
@@ -50,6 +57,9 @@ const todayTitle = computed(() =>
 )
 
 const analyses = computed(() => recent.data.value?.items ?? [])
+const myChallenges = computed(() => challenges.data.value?.items ?? [])
+// D-n은 서버가 쓰는 서울 날짜 기준이다 (F-25 AC16)
+const seoulToday = todayInSeoul()
 
 /** '2026-11-19T15:30:00+09:00' → '11월 19일' (서버가 준 날짜 그대로) */
 function monthDay(value) {
@@ -131,6 +141,34 @@ function analysisTitle(a) {
         </ul>
       </section>
     </div>
+
+    <section class="panel" data-section="challenges">
+      <div class="panel-head">
+        <h2>참여 중 챌린지</h2>
+        <RouterLink to="/challenges?status=MY" class="more-link" data-action="all-challenges">
+          전체 보기
+        </RouterLink>
+      </div>
+      <p v-if="challenges.loading.value" class="hint">불러오는 중…</p>
+      <div v-else-if="challenges.error.value">
+        <p class="form-error" role="alert">{{ challenges.error.value }}</p>
+        <button
+          type="button"
+          class="outline-button"
+          data-action="retry-challenges"
+          @click="challenges.load"
+        >
+          다시 시도
+        </button>
+      </div>
+      <div v-else-if="myChallenges.length === 0" class="empty">
+        <p class="hint">참여 중인 챌린지가 없습니다.</p>
+        <RouterLink to="/challenges" class="link-button" data-action="browse-challenges">
+          챌린지 둘러보기
+        </RouterLink>
+      </div>
+      <MyChallengeList v-else :items="myChallenges" :today="seoulToday" />
+    </section>
 
     <section class="panel" data-section="recommendations">
       <RecommendationList title="맞춤 추천" :size="5" />

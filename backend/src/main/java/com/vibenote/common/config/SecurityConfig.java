@@ -65,7 +65,9 @@ public class SecurityConfig {
         "/api/posts/{id:\\d+}/comments", // F-18 댓글 목록만. 작성·수정·삭제는 인증 필요
 
         // ── CHALLENGE (A F-25) ──
-
+        "/api/challenges",
+        "/api/challenges/{id:\\d+}",
+        "/api/users/{id:\\d+}/challenges", // 숫자 id만이라 /users/me/challenges는 인증 필요
     };
 
     @Bean

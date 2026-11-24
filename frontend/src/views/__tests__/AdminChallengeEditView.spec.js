@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
 import AdminChallengeEditView from '@/views/admin/challenge/AdminChallengeEditView.vue'
 import * as adminApi from '@/api/adminChallenges'
@@ -96,6 +96,32 @@ describe('AdminChallengeEditView (F-24 AC13)', () => {
     })
     // 목록 route는 lazy import라 이동이 flushPromises보다 늦게 끝난다
     await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('admin-challenges'))
+  })
+
+  it('F-25 AC16 오늘은 브라우저 시간대가 아닌 서울 날짜다 (UTC 11-24 15:00:01 = 서울 11-25)', async () => {
+    // 브라우저가 UTC에 있는 것처럼 (교육장 PC는 KST라 그대로면 차이가 드러나지 않는다)
+    const env = globalThis.process.env
+    const originalTz = env.TZ
+    env.TZ = 'UTC'
+    onTestFinished(() => {
+      // undefined를 넣으면 문자열 'undefined'가 되므로 지운다
+      if (originalTz === undefined) delete env.TZ
+      else env.TZ = originalTz
+    })
+    vi.setSystemTime(new Date('2026-11-24T15:00:01Z'))
+    const { wrapper } = await mountEdit('/admin/challenges/new')
+    await fillForm(wrapper, {
+      title: '어제 끝난 챌린지',
+      startDate: '2026-11-20',
+      endDate: '2026-11-24',
+      goalType: 'REVIEW_COUNT',
+      goalValue: '5',
+    })
+
+    await save(wrapper)
+
+    expect(adminApi.createAdminChallenge).not.toHaveBeenCalled()
+    expect(errorFor(wrapper, 'endDate').text()).toBe('종료일은 오늘이거나 오늘 이후여야 합니다.')
   })
 
   it('AC13 종료일이 오늘보다 앞이거나 이미지 형식·크기가 맞지 않으면 요청하지 않는다', async () => {

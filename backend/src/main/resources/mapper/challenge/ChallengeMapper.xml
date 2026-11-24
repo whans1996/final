@@ -63,4 +63,30 @@
     <delete id="deleteById">
         DELETE FROM challenges WHERE id = #{id}
     </delete>
+
+    <!-- ── F-25 회원 ── -->
+
+    <select id="findForMember" resultType="com.vibenote.challenge.domain.Challenge">
+        SELECT <include refid="withParticipantCount"/>,
+               <choose>
+                   <when test="viewerId != null">
+                       EXISTS (SELECT 1 FROM challenge_participants v
+                               WHERE v.challenge_id = c.id AND v.user_id = #{viewerId})
+                   </when>
+                   <otherwise>FALSE</otherwise>
+               </choose> AS joined
+        FROM challenges c
+        <include refid="adminSearchWhere"/>
+        <choose>
+            <when test="status.name() == 'UPCOMING'">ORDER BY start_date ASC, id DESC</when>
+            <when test="status.name() == 'ENDED'">ORDER BY end_date DESC, id DESC</when>
+            <otherwise>ORDER BY end_date ASC, id DESC</otherwise>
+        </choose>
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="countForMember" resultType="long">
+        SELECT COUNT(*) FROM challenges c
+        <include refid="adminSearchWhere"/>
+    </select>
 </mapper>

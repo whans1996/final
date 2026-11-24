@@ -898,6 +898,170 @@
         "required" : [ "fileId", "method", "path" ],
         "type" : "object"
       },
+      "ChallengeDetailResponse" : {
+        "description" : "챌린지 상세",
+        "properties" : {
+          "description" : {
+            "description" : "설명 (없으면 null)",
+            "example" : "분석한 프로젝트의 퀴즈를 기간 안에 10번 풀어 보세요.",
+            "type" : [ "string", "null" ]
+          },
+          "endDate" : {
+            "description" : "종료일 (포함)",
+            "example" : "2026-11-30",
+            "format" : "date",
+            "type" : "string"
+          },
+          "goalType" : {
+            "description" : "목표 유형 (REVIEW_COUNT 개념 복습, QUIZ_COUNT 퀴즈, ANALYSIS_COUNT 분석)",
+            "enum" : [ "REVIEW_COUNT", "QUIZ_COUNT", "ANALYSIS_COUNT" ],
+            "example" : "QUIZ_COUNT",
+            "type" : "string"
+          },
+          "goalValue" : {
+            "description" : "목표값",
+            "example" : 10,
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "id" : {
+            "description" : "챌린지 ID",
+            "example" : 7,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "imageUrl" : {
+            "description" : "대표 이미지 공개 주소 (없으면 null)",
+            "example" : "/uploads/challenges/3f2b9c1e-8a4d-4f7e-9b1a-2c5d6e7f8a90.png",
+            "type" : [ "string", "null" ]
+          },
+          "participantCount" : {
+            "description" : "참여자 수",
+            "example" : 2,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "participation" : {
+            "$ref" : "#/components/schemas/ChallengeProgressResponse",
+            "description" : "내 참여·달성도 (비로그인이거나 참여하지 않았으면 null)",
+            "type" : "null"
+          },
+          "startDate" : {
+            "description" : "시작일",
+            "example" : "2026-11-20",
+            "format" : "date",
+            "type" : "string"
+          },
+          "status" : {
+            "description" : "상태 (UPCOMING 예정, ONGOING 진행 중, ENDED 종료). 오늘(Asia/Seoul) 기준으로 계산",
+            "enum" : [ "UPCOMING", "ONGOING", "ENDED" ],
+            "example" : "ONGOING",
+            "type" : "string"
+          },
+          "title" : {
+            "description" : "제목",
+            "example" : "12월 퀴즈 챌린지",
+            "type" : "string"
+          }
+        },
+        "required" : [ "description", "endDate", "goalType", "goalValue", "id", "imageUrl", "participantCount", "participation", "startDate", "status", "title" ],
+        "type" : "object"
+      },
+      "ChallengeProgressResponse" : {
+        "description" : "내 챌린지 참여·달성도",
+        "properties" : {
+          "completedAt" : {
+            "description" : "달성 시각 (미달성이면 null)",
+            "example" : "2026-11-24T10:15:00+09:00",
+            "format" : "date-time",
+            "type" : [ "string", "null" ]
+          },
+          "goalValue" : {
+            "description" : "목표값",
+            "example" : 10,
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "joinedAt" : {
+            "description" : "참여 시각",
+            "example" : "2026-11-22T21:05:00+09:00",
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "progress" : {
+            "description" : "달성도 (기간 안 활동 수, 목표값을 넘지 않는다)",
+            "example" : 3,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "completedAt", "goalValue", "joinedAt", "progress" ],
+        "type" : "object"
+      },
+      "ChallengeSummaryResponse" : {
+        "description" : "챌린지 목록 항목",
+        "properties" : {
+          "endDate" : {
+            "description" : "종료일 (포함)",
+            "example" : "2026-11-30",
+            "format" : "date",
+            "type" : "string"
+          },
+          "goalType" : {
+            "description" : "목표 유형 (REVIEW_COUNT 개념 복습, QUIZ_COUNT 퀴즈, ANALYSIS_COUNT 분석)",
+            "enum" : [ "REVIEW_COUNT", "QUIZ_COUNT", "ANALYSIS_COUNT" ],
+            "example" : "QUIZ_COUNT",
+            "type" : "string"
+          },
+          "goalValue" : {
+            "description" : "목표값",
+            "example" : 10,
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "id" : {
+            "description" : "챌린지 ID",
+            "example" : 7,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "imageUrl" : {
+            "description" : "대표 이미지 공개 주소 (없으면 null)",
+            "example" : "/uploads/challenges/3f2b9c1e-8a4d-4f7e-9b1a-2c5d6e7f8a90.png",
+            "type" : [ "string", "null" ]
+          },
+          "joined" : {
+            "description" : "내가 참여했는지 (비로그인이면 false)",
+            "example" : true,
+            "type" : "boolean"
+          },
+          "participantCount" : {
+            "description" : "참여자 수",
+            "example" : 2,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "startDate" : {
+            "description" : "시작일",
+            "example" : "2026-11-20",
+            "format" : "date",
+            "type" : "string"
+          },
+          "status" : {
+            "description" : "상태 (UPCOMING 예정, ONGOING 진행 중, ENDED 종료). 오늘(Asia/Seoul) 기준으로 계산",
+            "enum" : [ "UPCOMING", "ONGOING", "ENDED" ],
+            "example" : "ONGOING",
+            "type" : "string"
+          },
+          "title" : {
+            "description" : "제목",
+            "example" : "12월 퀴즈 챌린지",
+            "type" : "string"
+          }
+        },
+        "required" : [ "endDate", "goalType", "goalValue", "id", "imageUrl", "joined", "participantCount", "startDate", "status", "title" ],
+        "type" : "object"
+      },
       "CommentListResponse" : {
         "description" : "댓글 목록",
         "properties" : {
@@ -1858,6 +2022,77 @@
         "required" : [ "layer", "questionCount" ],
         "type" : "object"
       },
+      "MyChallengeResponse" : {
+        "description" : "참여한 챌린지 항목",
+        "properties" : {
+          "completedAt" : {
+            "description" : "달성 시각 (미달성이면 null)",
+            "example" : "2026-11-24T10:15:00+09:00",
+            "format" : "date-time",
+            "type" : [ "string", "null" ]
+          },
+          "endDate" : {
+            "description" : "종료일 (포함)",
+            "example" : "2026-11-30",
+            "format" : "date",
+            "type" : "string"
+          },
+          "goalType" : {
+            "description" : "목표 유형 (REVIEW_COUNT 개념 복습, QUIZ_COUNT 퀴즈, ANALYSIS_COUNT 분석)",
+            "enum" : [ "REVIEW_COUNT", "QUIZ_COUNT", "ANALYSIS_COUNT" ],
+            "example" : "QUIZ_COUNT",
+            "type" : "string"
+          },
+          "goalValue" : {
+            "description" : "목표값",
+            "example" : 10,
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "id" : {
+            "description" : "챌린지 ID",
+            "example" : 7,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "imageUrl" : {
+            "description" : "대표 이미지 공개 주소 (없으면 null)",
+            "example" : "/uploads/challenges/3f2b9c1e-8a4d-4f7e-9b1a-2c5d6e7f8a90.png",
+            "type" : [ "string", "null" ]
+          },
+          "joinedAt" : {
+            "description" : "참여 시각",
+            "example" : "2026-11-22T21:05:00+09:00",
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "progress" : {
+            "description" : "달성도 (기간 안 활동 수, 목표값을 넘지 않는다)",
+            "example" : 3,
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "startDate" : {
+            "description" : "시작일",
+            "example" : "2026-11-20",
+            "format" : "date",
+            "type" : "string"
+          },
+          "status" : {
+            "description" : "상태 (UPCOMING 예정, ONGOING 진행 중, ENDED 종료). 오늘(Asia/Seoul) 기준으로 계산",
+            "enum" : [ "UPCOMING", "ONGOING", "ENDED" ],
+            "example" : "ONGOING",
+            "type" : "string"
+          },
+          "title" : {
+            "description" : "제목",
+            "example" : "12월 퀴즈 챌린지",
+            "type" : "string"
+          }
+        },
+        "required" : [ "completedAt", "endDate", "goalType", "goalValue", "id", "imageUrl", "joinedAt", "progress", "startDate", "status", "title" ],
+        "type" : "object"
+      },
       "MyProfileResponse" : {
         "description" : "내 프로필",
         "properties" : {
@@ -2043,6 +2278,37 @@
         },
         "type" : "object"
       },
+      "PageResponseChallengeSummaryResponse" : {
+        "description" : "페이지 응답",
+        "properties" : {
+          "items" : {
+            "description" : "현재 페이지 항목",
+            "items" : {
+              "$ref" : "#/components/schemas/ChallengeSummaryResponse"
+            },
+            "type" : "array"
+          },
+          "page" : {
+            "description" : "페이지 번호 (1부터)",
+            "example" : 1,
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "size" : {
+            "description" : "페이지 크기",
+            "example" : 20,
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "total" : {
+            "description" : "전체 항목 수",
+            "example" : 134,
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
       "PageResponseConceptReviewResponse" : {
         "description" : "페이지 응답",
         "properties" : {
@@ -2167,6 +2433,37 @@
         },
         "type" : "object"
       },
+      "PageResponseMyChallengeResponse" : {
+        "description" : "페이지 응답",
+        "properties" : {
+          "items" : {
+            "description" : "현재 페이지 항목",
+            "items" : {
+              "$ref" : "#/components/schemas/MyChallengeResponse"
+            },
+            "type" : "array"
+          },
+          "page" : {
+            "description" : "페이지 번호 (1부터)",
+            "example" : 1,
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "size" : {
+            "description" : "페이지 크기",
+            "example" : 20,
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "total" : {
+            "description" : "전체 항목 수",
+            "example" : 134,
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
       "PageResponsePostSummaryResponse" : {
         "description" : "페이지 응답",
         "properties" : {
@@ -2196,6 +2493,29 @@
             "type" : "integer"
           }
         },
+        "type" : "object"
+      },
+      "ParticipationResponse" : {
+        "description" : "챌린지 참여 상태",
+        "properties" : {
+          "joined" : {
+            "description" : "참여 여부",
+            "example" : true,
+            "type" : "boolean"
+          },
+          "participantCount" : {
+            "description" : "참여자 수",
+            "example" : 3,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "participation" : {
+            "$ref" : "#/components/schemas/ChallengeProgressResponse",
+            "description" : "내 참여·달성도 (참여하지 않았으면 null)",
+            "type" : "null"
+          }
+        },
+        "required" : [ "joined", "participantCount", "participation" ],
         "type" : "object"
       },
       "PostAnalysisAttachment" : {
@@ -5305,6 +5625,243 @@
         "tags" : [ "인증" ]
       }
     },
+    "/api/challenges" : {
+      "get" : {
+        "description" : "상태(오늘 기준, 기본 진행 중)로 거른다. 진행 중은 종료일 오름차순, 예정은 시작일 오름차순, 종료는 종료일 내림차순이고 모두 다음 기준 id 역순이다. 비로그인도 쓸 수 있고, 로그인했으면 항목마다 참여 여부(joined)를 채운다.",
+        "operationId" : "list_8",
+        "parameters" : [ {
+          "description" : "상태 (없으면 ONGOING). 오늘(Asia/Seoul)과 기간으로 계산한다",
+          "example" : "ONGOING",
+          "in" : "query",
+          "name" : "status",
+          "required" : false,
+          "schema" : {
+            "default" : "ONGOING",
+            "description" : "상태 (없으면 ONGOING). 오늘(Asia/Seoul)과 기간으로 계산한다",
+            "enum" : [ "ONGOING", "UPCOMING", "ENDED" ],
+            "example" : "ONGOING",
+            "pattern" : "UPCOMING|ONGOING|ENDED",
+            "type" : "string"
+          }
+        }, {
+          "description" : "페이지 번호 (1부터)",
+          "example" : 1,
+          "in" : "query",
+          "name" : "page",
+          "required" : false,
+          "schema" : {
+            "default" : 1,
+            "description" : "페이지 번호 (1부터)",
+            "example" : 1,
+            "format" : "int32",
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        }, {
+          "description" : "페이지 크기 (최대 50)",
+          "example" : 12,
+          "in" : "query",
+          "name" : "size",
+          "required" : false,
+          "schema" : {
+            "default" : 12,
+            "description" : "페이지 크기 (최대 50)",
+            "example" : 12,
+            "format" : "int32",
+            "maximum" : 50,
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PageResponseChallengeSummaryResponse"
+                }
+              }
+            },
+            "description" : "조회 성공"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "상태·페이지 값 오류 (COMMON_400, details에 필드별 사유)"
+          }
+        },
+        "security" : [ ],
+        "summary" : "챌린지 목록",
+        "tags" : [ "챌린지" ]
+      }
+    },
+    "/api/challenges/{id}" : {
+      "get" : {
+        "description" : "설명·상태·참여자 수와, 로그인해 참여한 회원이면 내 달성도(participation)를 준다. 비로그인도 쓸 수 있다.",
+        "operationId" : "detail_4",
+        "parameters" : [ {
+          "description" : "챌린지 ID",
+          "example" : 7,
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ChallengeDetailResponse"
+                }
+              }
+            },
+            "description" : "조회 성공"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "없는 챌린지 (CHALLENGE_404)"
+          }
+        },
+        "security" : [ ],
+        "summary" : "챌린지 상세",
+        "tags" : [ "챌린지" ]
+      }
+    },
+    "/api/challenges/{id}/participation" : {
+      "delete" : {
+        "description" : "참여를 취소하고 피드의 참여 활동을 지운다. 참여하지 않았어도 200(멱등)이다. 달성했거나 종료된 챌린지는 취소할 수 없다.",
+        "operationId" : "cancel",
+        "parameters" : [ {
+          "description" : "챌린지 ID",
+          "example" : 7,
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ParticipationResponse"
+                }
+              }
+            },
+            "description" : "참여 상태 (joined false)"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "로그인 필요, 만료·깨진 토큰, 탈퇴한 회원의 남은 토큰 (AUTH_401)"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "없는 챌린지 (CHALLENGE_404)"
+          },
+          "409" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "종료된 챌린지 (CHALLENGE_002), 달성한 챌린지 (CHALLENGE_003)"
+          }
+        },
+        "summary" : "챌린지 참여 취소",
+        "tags" : [ "챌린지" ]
+      },
+      "post" : {
+        "description" : "예정·진행 중 챌린지에 참여한다. 이미 참여했어도 200(멱등)이다. 처음 참여하면 피드 활동을 남기고, 시작일부터의 활동을 바로 세어 목표에 닿았으면 달성 처리한다.",
+        "operationId" : "join",
+        "parameters" : [ {
+          "description" : "챌린지 ID",
+          "example" : 7,
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ParticipationResponse"
+                }
+              }
+            },
+            "description" : "참여 상태"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "로그인 필요, 만료·깨진 토큰, 탈퇴한 회원의 남은 토큰 (AUTH_401)"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "없는 챌린지 (CHALLENGE_404)"
+          },
+          "409" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "종료된 챌린지 (CHALLENGE_002)"
+          }
+        },
+        "summary" : "챌린지 참여",
+        "tags" : [ "챌린지" ]
+      }
+    },
     "/api/concepts" : {
       "get" : {
         "description" : "공개(PUBLISHED) 카드를 키워드(이름·요약 부분 일치)·카테고리·난이도로 거르고 인기순(찜 수→평점) 또는 최신순으로 페이지 조회한다. 비로그인도 쓸 수 있다.",
@@ -8026,6 +8583,89 @@
         "tags" : [ "회원" ]
       }
     },
+    "/api/users/me/challenges" : {
+      "get" : {
+        "description" : "내가 참여한 챌린지와 달성도를 참여 시각 최신순으로 페이지 조회한다. 상태가 없으면 전체다.",
+        "operationId" : "listMine",
+        "parameters" : [ {
+          "description" : "상태 (없으면 전체). 오늘(Asia/Seoul)과 기간으로 계산한다",
+          "example" : "ONGOING",
+          "in" : "query",
+          "name" : "status",
+          "required" : false,
+          "schema" : {
+            "description" : "상태 (없으면 전체). 오늘(Asia/Seoul)과 기간으로 계산한다",
+            "enum" : [ "ONGOING", "UPCOMING", "ENDED" ],
+            "example" : "ONGOING",
+            "pattern" : "UPCOMING|ONGOING|ENDED",
+            "type" : "string"
+          }
+        }, {
+          "description" : "페이지 번호 (1부터)",
+          "example" : 1,
+          "in" : "query",
+          "name" : "page",
+          "required" : false,
+          "schema" : {
+            "default" : 1,
+            "description" : "페이지 번호 (1부터)",
+            "example" : 1,
+            "format" : "int32",
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        }, {
+          "description" : "페이지 크기 (최대 50)",
+          "example" : 12,
+          "in" : "query",
+          "name" : "size",
+          "required" : false,
+          "schema" : {
+            "default" : 12,
+            "description" : "페이지 크기 (최대 50)",
+            "example" : 12,
+            "format" : "int32",
+            "maximum" : 50,
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PageResponseMyChallengeResponse"
+                }
+              }
+            },
+            "description" : "조회 성공"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "상태·페이지 값 오류 (COMMON_400, details에 필드별 사유)"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "로그인 필요, 만료·깨진 토큰 (AUTH_401)"
+          }
+        },
+        "summary" : "내 챌린지",
+        "tags" : [ "챌린지" ]
+      }
+    },
     "/api/users/me/teams" : {
       "get" : {
         "description" : "내가 속한 팀을 내가 가입한 시각 최신순(같으면 팀 id 내림차순)으로 전부 준다 (최대 5개).",
@@ -8461,6 +9101,100 @@
         "tags" : [ "회원" ]
       }
     },
+    "/api/users/{userId}/challenges" : {
+      "get" : {
+        "description" : "회원이 참여한 챌린지와 달성도를 참여 시각 최신순으로 페이지 조회한다. 상태가 없으면 전체다. 비로그인도 쓸 수 있다.",
+        "operationId" : "listByUser_1",
+        "parameters" : [ {
+          "description" : "회원 ID",
+          "example" : 3,
+          "in" : "path",
+          "name" : "userId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "description" : "상태 (없으면 전체). 오늘(Asia/Seoul)과 기간으로 계산한다",
+          "example" : "ONGOING",
+          "in" : "query",
+          "name" : "status",
+          "required" : false,
+          "schema" : {
+            "description" : "상태 (없으면 전체). 오늘(Asia/Seoul)과 기간으로 계산한다",
+            "enum" : [ "ONGOING", "UPCOMING", "ENDED" ],
+            "example" : "ONGOING",
+            "pattern" : "UPCOMING|ONGOING|ENDED",
+            "type" : "string"
+          }
+        }, {
+          "description" : "페이지 번호 (1부터)",
+          "example" : 1,
+          "in" : "query",
+          "name" : "page",
+          "required" : false,
+          "schema" : {
+            "default" : 1,
+            "description" : "페이지 번호 (1부터)",
+            "example" : 1,
+            "format" : "int32",
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        }, {
+          "description" : "페이지 크기 (최대 50)",
+          "example" : 12,
+          "in" : "query",
+          "name" : "size",
+          "required" : false,
+          "schema" : {
+            "default" : 12,
+            "description" : "페이지 크기 (최대 50)",
+            "example" : 12,
+            "format" : "int32",
+            "maximum" : 50,
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PageResponseMyChallengeResponse"
+                }
+              }
+            },
+            "description" : "조회 성공"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "상태·페이지 값 오류 (COMMON_400, details에 필드별 사유)"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "없거나 탈퇴한 회원 (USER_404)"
+          }
+        },
+        "security" : [ ],
+        "summary" : "회원의 참여 챌린지",
+        "tags" : [ "챌린지" ]
+      }
+    },
     "/api/users/{userId}/wishes" : {
       "get" : {
         "description" : "회원이 찜한 공개(PUBLISHED) 카드를 찜한 시각 최신순으로 페이지 조회한다. 비로그인도 쓸 수 있다.",
@@ -8586,6 +9320,9 @@
   }, {
     "description" : "팀 생성, 초대 코드 가입, 멤버 관리 (F-20a), 분석 공유·팀 이해도 (F-20b)",
     "name" : "팀"
+  }, {
+    "description" : "학습 챌린지 목록·상세, 참여·취소, 참여한 챌린지와 달성도",
+    "name" : "챌린지"
   }, {
     "description" : "퀴즈 오답·내 코드·찜한 분야·수준으로 고른 맞춤 개념 카드와 AI 추천 이유",
     "name" : "추천"

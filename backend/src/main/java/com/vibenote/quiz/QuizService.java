@@ -1,6 +1,8 @@
 package com.vibenote.quiz;
 
 import com.vibenote.analysis.AnalysisService;
+import com.vibenote.challenge.ChallengeGoalType;
+import com.vibenote.challenge.ChallengeProgressService;
 import com.vibenote.common.config.ClockConfig;
 import com.vibenote.common.exception.BusinessException;
 import com.vibenote.common.exception.ErrorCode;
@@ -42,6 +44,7 @@ public class QuizService {
     private final ConceptQueryService conceptQueryService;
     private final ReviewPlanService reviewPlanService;
     private final TeamAnalysisAccess teamAnalysisAccess;
+    private final ChallengeProgressService challengeProgressService;
     private final Clock clock;
 
     public QuizService(
@@ -50,12 +53,14 @@ public class QuizService {
             ConceptQueryService conceptQueryService,
             ReviewPlanService reviewPlanService,
             TeamAnalysisAccess teamAnalysisAccess,
+            ChallengeProgressService challengeProgressService,
             Clock clock) {
         this.mapper = mapper;
         this.analysisService = analysisService;
         this.conceptQueryService = conceptQueryService;
         this.reviewPlanService = reviewPlanService;
         this.teamAnalysisAccess = teamAnalysisAccess;
+        this.challengeProgressService = challengeProgressService;
         this.clock = clock;
     }
 
@@ -117,6 +122,7 @@ public class QuizService {
         QuizAttempt attempt = QuizAttempt.of(quiz.getId(), userId, score, questions.size(), now);
         mapper.insertAttempt(attempt);
         mapper.insertAnswers(attempt.getId(), answers);
+        challengeProgressService.refresh(userId, ChallengeGoalType.QUIZ_COUNT, now.toLocalDate());
 
         Map<Long, ConceptSummaryResponse> published =
                 conceptQueryService
