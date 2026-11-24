@@ -34,9 +34,11 @@ import com.vibenote.analysis.structure.UnresolvedKind;
 import com.vibenote.analysis.structure.UnresolvedReason;
 import com.vibenote.analysis.structure.WorkBudget;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -202,15 +204,21 @@ public final class JavaStructureReader {
     /** 해석 결과. fileId가 null이면 선별 파일이 아니고, fqn이 null이면 FQN을 모른다. */
     private record Target(Long fileId, String fqn) {}
 
-    /** 파일 하나의 이름 해석. 같은 대상은 가장 작은 줄 하나만 남긴다. */
+    /**
+     * 파일 하나의 이름 해석. 같은 대상은 가장 작은 줄 하나만 남긴다. 범위 노드마다 그 안에서 보이는 변수·타입 이름 집합을 한 번만 만들어, 참조마다 조상 노드를 따라
+     * 올라가며 집합만 본다 (5.3절 3).
+     */
     private static final class FileReader {
 
         private final Parsed parsed;
         private final JavaTypeIndex index;
         private final WorkBudget budget;
 
-        /** 변수 이름 → 그 변수가 보이는 범위 노드들 (메서드·람다·블록·for·try·타입 등). */
-        private final Map<String, List<Node>> variableScopes = new HashMap<>();
+        /** 범위 노드(메서드·람다·블록·for·try·타입 등) → 그 안에서 보이는 변수 이름들. */
+        private final Map<Node, Set<String>> variablesIn = new IdentityHashMap<>();
+
+        /** 노드 → 그 자리에서 선언된 타입 이름들 ({@link #typeNamesAt}). */
+        private final Map<Node, Set<String>> typesIn = new IdentityHashMap<>();
 
         private final Map<String, String> singleImports = new HashMap<>();
         private final List<String> wildcardImports = new ArrayList<>();
@@ -266,9 +274,17 @@ public final class JavaStructureReader {
             for (AnnotationExpr annotation : unit.findAll(AnnotationExpr.class)) {
                 reference(annotation.getNameAsString(), annotation);
             }
-            unit.findAll(MethodCallExpr.class).forEach(c -> c.getScope().ifPresent(this::scope));
-            unit.findAll(FieldAccessExpr.class).forEach(f -> scope(f.getScope()));
-            unit.findAll(MethodReferenceExpr.class).forEach(r -> scope(r.getScope()));
+            for (MethodCallExpr call : unit.findAll(MethodCallExpr.class)) {
+                call.getScope().ifPresent(scope -> chain(scope, true));
+            }
+            for (MethodReferenceExpr ref : unit.findAll(MethodReferenceExpr.class)) {
+                chain(ref.getScope(), true);
+            }
+            for (FieldAccessExpr access : unit.findAll(FieldAccessExpr.class)) {
+                if (outermost(access)) {
+                    chain(access, false);
+                }
+            }
 
             long self = parsed.file().getId();
             edgeLines.forEach((to, line) -> out.edge(self, to, EdgeType.IMPORT, line));
@@ -284,17 +300,49 @@ public final class JavaStructureReader {
                                             e.getKey()));
         }
 
-        /** 정적 호출·필드 접근·메서드 참조의 대상. 이름으로만 된 식이고 첫 이름이 변수가 아닐 때만 타입 이름으로 본다. */
-        private void scope(Expression expr) {
-            dottedName(expr)
-                    .filter(name -> !variableAt(name.split("\\.")[0], expr))
-                    .ifPresent(name -> reference(name, expr));
+        /**
+         * 정적 호출·필드 접근·메서드 참조의 대상이 되는 점 이름. top 사슬({@code a.b.c})의 앞부분은 모두 바깥 필드 접근의 대상이고,
+         * includeTop이면 top 자신도 호출·메서드 참조의 대상이다. 이름으로만 된 사슬이고 첫 이름이 변수가 아닐 때만 타입 이름으로 본다.
+         *
+         * <p>{@link #resolve}는 한 세그먼트 이름과 여러 세그먼트 이름을 다르게 풀고, 여러 세그먼트끼리는 첫 대문자 세그먼트까지만 쓰므로 가장 긴 이름과
+         * 결과가 같다. 그래서 사슬마다 한 번 훑어 두 이름만 푼다 (긴 사슬의 앞부분마다 이름을 다시 만들면 제곱 시간이다).
+         */
+        private void chain(Expression top, boolean includeTop) {
+            List<String> segments = new ArrayList<>();
+            Expression e = top;
+            while (e instanceof FieldAccessExpr access) {
+                budget.spend();
+                segments.add(access.getNameAsString());
+                e = access.getScope();
+            }
+            if (!(e instanceof NameExpr first)) {
+                return;
+            }
+            segments.add(first.getNameAsString());
+            Collections.reverse(segments);
+            int longest = includeTop ? segments.size() : segments.size() - 1;
+            if (longest < 1 || variableAt(segments.get(0), top)) {
+                return;
+            }
+            reference(segments.get(0), top);
+            if (longest > 1) {
+                reference(String.join(".", segments.subList(0, longest)), top);
+            }
+        }
+
+        /** 다른 필드 접근·호출·메서드 참조의 대상(사슬 안쪽)이 아닌 필드 접근. */
+        private static boolean outermost(FieldAccessExpr access) {
+            Node parent = access.getParentNode().orElse(null);
+            return !(parent instanceof FieldAccessExpr outer && outer.getScope() == access)
+                    && !(parent instanceof MethodCallExpr call
+                            && call.getScope().filter(s -> s == access).isPresent())
+                    && !(parent instanceof MethodReferenceExpr ref && ref.getScope() == access);
         }
 
         private void variable(String name, Node scope) {
             budget.spend();
             if (scope != null) {
-                variableScopes.computeIfAbsent(name, k -> new ArrayList<>()).add(scope);
+                variablesIn.computeIfAbsent(scope, k -> new HashSet<>()).add(name);
             }
         }
 
@@ -314,16 +362,11 @@ public final class JavaStructureReader {
 
         /** at에서 name 변수가 보이는지 (그 변수의 범위 노드가 at의 조상인지). */
         private boolean variableAt(String name, Node at) {
-            List<Node> scopes = variableScopes.get(name);
-            if (scopes == null) {
-                return false;
-            }
             for (Node node = at; node != null; node = node.getParentNode().orElse(null)) {
-                budget.spend(scopes.size());
-                for (Node scope : scopes) {
-                    if (scope == node) {
-                        return true;
-                    }
+                budget.spend();
+                Set<String> names = variablesIn.get(node);
+                if (names != null && names.contains(name)) {
+                    return true;
                 }
             }
             return false;
@@ -382,34 +425,47 @@ public final class JavaStructureReader {
         private boolean declaredAround(String simple, Node at) {
             for (Node node = at; node != null; node = node.getParentNode().orElse(null)) {
                 budget.spend();
-                if (node instanceof TypeDeclaration<?> type) {
-                    if (type.getNameAsString().equals(simple)
-                            || type.getMembers().stream()
-                                    .anyMatch(
-                                            m ->
-                                                    m instanceof TypeDeclaration<?> inner
-                                                            && inner.getNameAsString()
-                                                                    .equals(simple))) {
-                        return true;
-                    }
-                }
-                if (node instanceof NodeWithTypeParameters<?> generic
-                        && generic.getTypeParameters().stream()
-                                .anyMatch(p -> p.getNameAsString().equals(simple))) {
-                    return true;
-                }
-                if (node instanceof BlockStmt block
-                        && block.getStatements().stream()
-                                .anyMatch(stmt -> localTypeName(stmt).equals(simple))) {
-                    return true;
-                }
-                if (node instanceof CompilationUnit cu
-                        && cu.getTypes().stream()
-                                .anyMatch(type -> type.getNameAsString().equals(simple))) {
+                if (typeNamesAt(node).contains(simple)) {
                     return true;
                 }
             }
             return false;
+        }
+
+        /** 이 노드가 선언하는 타입 이름: 타입 자신과 멤버 타입, 타입 매개변수, 블록 안 지역 클래스, 최상위 타입. 노드마다 한 번 만든다. */
+        private Set<String> typeNamesAt(Node node) {
+            Set<String> cached = typesIn.get(node);
+            if (cached != null) {
+                return cached;
+            }
+            Set<String> names = new HashSet<>();
+            if (node instanceof TypeDeclaration<?> type) {
+                names.add(type.getNameAsString());
+                for (Node member : type.getMembers()) {
+                    budget.spend();
+                    if (member instanceof TypeDeclaration<?> inner) {
+                        names.add(inner.getNameAsString());
+                    }
+                }
+            }
+            if (node instanceof NodeWithTypeParameters<?> generic) {
+                generic.getTypeParameters().forEach(p -> names.add(p.getNameAsString()));
+            }
+            if (node instanceof BlockStmt block) {
+                for (Statement stmt : block.getStatements()) {
+                    budget.spend();
+                    String local = localTypeName(stmt);
+                    if (!local.isEmpty()) {
+                        names.add(local);
+                    }
+                }
+            }
+            if (node instanceof CompilationUnit cu) {
+                cu.getTypes().forEach(type -> names.add(type.getNameAsString()));
+            }
+            Set<String> result = names.isEmpty() ? Set.of() : names;
+            typesIn.put(node, result);
+            return result;
         }
 
         private static String localTypeName(Statement stmt) {
@@ -420,16 +476,6 @@ public final class JavaStructureReader {
                 return local.getRecordDeclaration().getNameAsString();
             }
             return "";
-        }
-
-        private static Optional<String> dottedName(Expression expr) {
-            if (expr instanceof NameExpr name) {
-                return Optional.of(name.getNameAsString());
-            }
-            if (expr instanceof FieldAccessExpr access) {
-                return dottedName(access.getScope()).map(s -> s + "." + access.getNameAsString());
-            }
-            return Optional.empty();
         }
     }
 }

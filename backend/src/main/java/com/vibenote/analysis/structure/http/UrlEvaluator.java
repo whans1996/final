@@ -8,6 +8,7 @@ import com.vibenote.analysis.structure.js.JsImport;
 import com.vibenote.analysis.structure.js.JsModule;
 import com.vibenote.analysis.structure.js.JsToken;
 import java.util.ArrayList;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -20,6 +21,9 @@ import java.util.regex.Pattern;
  *
  * <p>업로드한 코드가 계산량을 불리지 못하게, 식 하나를 계산하는 동안 피연산자 수({@link #MAX_OPERANDS})와 값 길이({@link #MAX_LENGTH})에
  * 상한을 둔다. 넘으면 그 식 전체를 동적 조각으로 본다 ({@code const u = u + u}처럼 자기를 가리키는 식 포함).
+ *
+ * <p>인라인 인자가 없는 const·내보낸 값은 (초기값, 깊이)마다 값과 그 계산에 쓴 피연산자 수를 메모한다. 다시 쓸 때 같은 수를 차감하므로 결과는 다시 계산한 것과
+ * 같고, 같은 상수를 부르는 호출이 많아도 초기값을 거듭 훑지 않는다 (5.3절 3).
  */
 public final class UrlEvaluator {
 
@@ -28,6 +32,12 @@ public final class UrlEvaluator {
     static final int MAX_OPERANDS = 2_000;
 
     static final int MAX_LENGTH = 2_048;
+
+    /**
+     * 식 하나의 토큰 수 상한. 넘으면 나누지 않고 동적 조각이다. {@code +}를 찾으려면 식 전체를 훑어야 하므로, {@code fetch(fetch(…))}처럼
+     * 인자가 다음 호출을 품는 입력이 호출마다 남은 전체를 훑지 않게 한다 (피연산자 2,000개를 다 써도 4,096 토큰 안이다).
+     */
+    static final int MAX_TOKENS = 4_096;
 
     private final Map<Long, JsModule> modules;
     private final WorkBudget work;
@@ -47,6 +57,12 @@ public final class UrlEvaluator {
 
     /** 식 하나를 계산하는 동안 남은 피연산자 수. 0 아래로 내려가거나 값이 너무 길어지면 그 식은 계산하지 못한 것이다. */
     private int budget;
+
+    /** 계산을 마친 상수 값과 그 계산이 쓴 피연산자 수. */
+    private record Memo(Typed value, int cost) {}
+
+    /** 초기값 토큰 목록(선언·내보내기마다 하나) → 깊이별 메모. */
+    private final Map<List<JsToken>, Memo[]> constants = new IdentityHashMap<>();
 
     public UrlValue eval(List<JsToken> tokens, JsModule module, Bindings bindings) {
         budget = MAX_OPERANDS;
@@ -73,7 +89,11 @@ public final class UrlEvaluator {
     }
 
     private Typed typed(List<JsToken> tokens, JsModule module, Bindings bindings, int depth) {
-        if (tokens == null || tokens.isEmpty() || depth > MAX_DEPTH || budget < 0) {
+        if (tokens == null
+                || tokens.isEmpty()
+                || tokens.size() > MAX_TOKENS
+                || depth > MAX_DEPTH
+                || budget < 0) {
             return Typed.text(UrlValue.dynamic());
         }
         Typed acc = null;
@@ -155,7 +175,7 @@ public final class UrlEvaluator {
                     }
                     yield Typed.text(UrlValue.dynamic(d.function()));
                 }
-                case CONST -> typed(d.init(), module, bindings, depth + 1);
+                case CONST -> constant(d.init(), module, bindings, depth + 1);
                 default -> Typed.text(UrlValue.dynamic());
             };
         }
@@ -175,12 +195,32 @@ public final class UrlEvaluator {
             return Typed.text(UrlValue.dynamic());
         }
         if (export.expr() != null) {
-            return typed(export.expr(), target, Bindings.NONE, depth + 1);
+            return constant(export.expr(), target, Bindings.NONE, depth + 1);
         }
         return target.lookupTopLevel(export.local())
                 .filter(d -> d.kind() == JsDecl.Kind.CONST)
-                .map(d -> typed(d.init(), target, Bindings.NONE, depth + 1))
+                .map(d -> constant(d.init(), target, Bindings.NONE, depth + 1))
                 .orElseGet(() -> Typed.text(UrlValue.dynamic()));
+    }
+
+    /** 상수 초기값을 depth에서 계산한다. 인라인 인자가 없으면 메모를 쓴다 (예산을 넘긴 계산은 메모하지 않는다). */
+    private Typed constant(List<JsToken> init, JsModule module, Bindings bindings, int depth) {
+        if (bindings != Bindings.NONE || depth > MAX_DEPTH || budget < 0) {
+            return typed(init, module, bindings, depth);
+        }
+        Memo[] byDepth = constants.computeIfAbsent(init, k -> new Memo[MAX_DEPTH + 1]);
+        Memo memo = byDepth[depth];
+        if (memo != null) {
+            work.spend();
+            budget -= memo.cost();
+            return budget < 0 ? Typed.text(UrlValue.dynamic()) : memo.value();
+        }
+        int before = budget;
+        Typed value = typed(init, module, bindings, depth);
+        if (budget >= 0) {
+            byDepth[depth] = new Memo(value, before - budget);
+        }
+        return value;
     }
 
     /** 괄호 밖의 {@code +}로 나눈다. */

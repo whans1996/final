@@ -2,8 +2,10 @@ package com.vibenote.analysis.structure.js;
 
 import com.vibenote.analysis.structure.WorkBudget;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -19,9 +21,18 @@ public final class JsModule {
     private final WorkBudget budget;
     private final List<JsImport> imports = new ArrayList<>();
     private final List<JsDecl> decls = new ArrayList<>();
-    private final Map<String, List<JsDecl>> declsByName = new HashMap<>();
-    private int indexed;
     private Set<JsDecl> reassigned;
+
+    /** 조회 색인. 선언·import·호출을 다 읽은 뒤(첫 조회 때) 만든다. 그 뒤에 목록이 늘면 다시 만든다 (읽기 단계는 조회 전에 모두 끝나므로 한 번이다). */
+    private int indexedDecls = -1;
+
+    private Map<String, List<JsDecl>> declsByName;
+    private final Map<String, JsScopeIndex> scopes = new HashMap<>();
+    private final Map<String, Optional<JsDecl>> topLevel = new HashMap<>();
+    private int indexedImports = -1;
+    private Map<String, Map.Entry<JsImport, String>> importsByLocal;
+    private int indexedCalls = -1;
+    private Map<String, List<JsCall>> callsByReceiver;
 
     /** 대입 연산자. {@code ==}·{@code =>}는 토크나이저가 따로 나눈다. */
     public static final Set<String> ASSIGN_OPS =
@@ -92,15 +103,14 @@ public final class JsModule {
         return defaultsBaseUrls;
     }
 
-    /** offset에서 보이는 name 선언 중 가장 안쪽 것. */
+    /** offset에서 보이는 name 선언 중 가장 안쪽 것 (범위 색인, O(log)). */
     public Optional<JsDecl> lookup(String name, int offset) {
-        JsDecl best = null;
-        for (JsDecl decl : declsNamed(name)) {
-            if (decl.visibleAt(offset) && (best == null || decl.scopeStart() > best.scopeStart())) {
-                best = decl;
-            }
+        List<JsDecl> named = declsNamed(name);
+        if (named.isEmpty()) {
+            return Optional.empty();
         }
-        return Optional.ofNullable(best);
+        return Optional.ofNullable(
+                scopes.computeIfAbsent(name, k -> new JsScopeIndex(named)).lookup(offset));
     }
 
     /**
@@ -157,7 +167,8 @@ public final class JsModule {
                 }
             }
         }
-        Set<JsDecl> out = new HashSet<>();
+        // 선언은 record라 해시가 초기값 토큰 전체를 훑는다. 같은 선언 객체인지만 본다
+        Set<JsDecl> out = Collections.newSetFromMap(new IdentityHashMap<>());
         for (int i = 0; i < tokens.size(); i++) {
             budget.spend();
             JsToken token = tokens.get(i);
@@ -180,37 +191,84 @@ public final class JsModule {
         return out;
     }
 
-    /** 파일 최상위 선언. */
+    /** 파일 최상위 선언 중 먼저 나온 것. */
     public Optional<JsDecl> lookupTopLevel(String name) {
-        return declsNamed(name).stream().filter(d -> d.scopeStart() < 0).findFirst();
+        List<JsDecl> named = declsNamed(name);
+        return topLevel.computeIfAbsent(
+                name, k -> named.stream().filter(d -> d.scopeStart() < 0).findFirst());
     }
 
-    /** 이름별 선언. 조회 때 새로 붙은 선언만 묶어 넣는다 (decls는 덧붙이기만 한다). 호출마다 모든 선언을 훑지 않게 한다. */
+    /** 이름별 선언 (등록 순서). */
     private List<JsDecl> declsNamed(String name) {
-        for (; indexed < decls.size(); indexed++) {
-            JsDecl decl = decls.get(indexed);
-            declsByName.computeIfAbsent(decl.name(), k -> new ArrayList<>()).add(decl);
+        if (indexedDecls != decls.size()) {
+            declsByName = new HashMap<>();
+            for (JsDecl decl : decls) {
+                declsByName.computeIfAbsent(decl.name(), k -> new ArrayList<>()).add(decl);
+            }
+            scopes.clear();
+            topLevel.clear();
+            indexedDecls = decls.size();
         }
         return declsByName.getOrDefault(name, List.of());
     }
 
-    /** 이 지역 이름을 가져온 import와 그 가져온 이름. */
+    /** 이 지역 이름을 가져온 import(앞의 것)와 그 가져온 이름. */
     public Optional<Map.Entry<JsImport, String>> importOf(String local) {
-        for (JsImport imp : imports) {
-            String imported = imp.bindings().get(local);
-            if (imported != null) {
-                return Optional.of(Map.entry(imp, imported));
+        if (indexedImports != imports.size()) {
+            importsByLocal = new HashMap<>();
+            for (JsImport imp : imports) {
+                imp.bindings()
+                        .forEach(
+                                (l, imported) ->
+                                        importsByLocal.putIfAbsent(l, Map.entry(imp, imported)));
             }
+            indexedImports = imports.size();
         }
-        return Optional.empty();
+        return Optional.ofNullable(importsByLocal.get(local));
     }
 
-    /** 원문 [start, end)를 공백 하나로 접어 max자까지. */
+    /** {@code receiver(…)}(member가 null) 또는 {@code receiver.member(…)} 호출, 나온 순서. */
+    public List<JsCall> callsTo(String receiver, String member) {
+        if (indexedCalls != calls.size()) {
+            callsByReceiver = new HashMap<>();
+            for (JsCall call : calls) {
+                callsByReceiver
+                        .computeIfAbsent(
+                                callKey(call.receiver(), call.member()), k -> new ArrayList<>())
+                        .add(call);
+            }
+            indexedCalls = calls.size();
+        }
+        return callsByReceiver.getOrDefault(callKey(receiver, member), List.of());
+    }
+
+    /** 식별자에 나올 수 없는 글자로 잇는다. */
+    private static String callKey(String receiver, String member) {
+        return member == null ? receiver + "(" : receiver + "." + member;
+    }
+
+    /** 원문 [start, end)를 공백 하나로 접고 앞뒤 공백을 뺀 앞 max자. 필요한 앞부분만 읽는다 (중첩된 긴 호출마다 원문 전체를 복사하지 않게). */
     public String excerpt(int start, int end, int max) {
-        String text =
-                source.substring(Math.max(0, start), Math.min(source.length(), end))
-                        .replaceAll("\\s+", " ")
-                        .strip();
-        return text.length() <= max ? text : text.substring(0, max);
+        StringBuilder out = new StringBuilder(max);
+        boolean space = false;
+        for (int i = Math.max(0, start); i < Math.min(source.length(), end); i++) {
+            char c = source.charAt(i);
+            if (Character.isWhitespace(c)) {
+                space = !out.isEmpty();
+                continue;
+            }
+            if (space) {
+                if (out.length() == max) {
+                    break;
+                }
+                out.append(' ');
+                space = false;
+            }
+            if (out.length() == max) {
+                break;
+            }
+            out.append(c);
+        }
+        return out.toString();
     }
 }

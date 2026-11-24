@@ -14,6 +14,8 @@ import java.util.regex.PatternSyntaxException;
  * <p>서버 경로 = context-path + API path를 세그먼트 단위로 비교한다. API의 {@code {name}}·{@code *}은 1세그먼트({@code
  * {name:regex}}는 FE 세그먼트가 리터럴이면 정규식까지), {@code **}·{@code {*name}}은 0개 이상이고 FE 와일드카드는 API 리터럴과도
  * 맞는다. 후보 중 리터럴 세그먼트 많은 것 → 변수 적은 것 → {@code **} 없는 것을 고르고, 남은 최상위 후보의 파일이 하나면 그 파일이다.
+ *
+ * <p>API 경로는 분석마다 한 번 나누고 정규식을 컴파일한다 (요청마다 다시 하지 않는다, 5.3절 3).
  */
 public final class ApiPathMatcher {
 
@@ -32,25 +34,45 @@ public final class ApiPathMatcher {
                     .thenComparingInt(Candidate::variables)
                     .thenComparing(Candidate::multi);
 
-    private ApiPathMatcher() {}
+    /** context-path + API path를 나누고 이어진 {@code **}를 합친 패턴. */
+    private record Compiled(ApiEndpoint api, List<ApiSegment> pattern, int fixed) {}
 
-    public static ApiMatch match(
-            List<ApiEndpoint> apis, String contextPath, FeRequest request, WorkBudget budget) {
-        // context-path는 업로드한 설정 파일 값이라 길이 상한이 없다. 한 번만 나누고, 고정 세그먼트만으로 요청보다 길면 비교하지 않는다
+    private final int prefixFixed;
+    private final List<Compiled> compiled = new ArrayList<>();
+
+    public ApiPathMatcher(List<ApiEndpoint> apis, String contextPath) {
+        // context-path는 업로드한 설정 파일 값이라 길이 상한이 없다. 한 번만 나눈다
         List<ApiSegment> prefix = compact(parse(contextPath == null ? "" : contextPath));
-        if (fixedCount(prefix) > request.path().size()) {
-            return ApiMatch.NONE;
-        }
-        List<Candidate> candidates = new ArrayList<>();
+        this.prefixFixed = fixedCount(prefix);
         for (ApiEndpoint api : apis) {
-            if (api.fileId() == null || !methodMatches(api.method(), request.method())) {
+            if (api.fileId() == null) {
                 continue;
             }
             List<ApiSegment> pattern = new ArrayList<>(prefix);
             pattern.addAll(parse(api.path()));
             pattern = compact(pattern);
-            if (matches(pattern, request.path(), budget)) {
-                candidates.add(Candidate.of(api.fileId(), pattern));
+            compiled.add(new Compiled(api, pattern, fixedCount(pattern)));
+        }
+    }
+
+    public static ApiMatch match(
+            List<ApiEndpoint> apis, String contextPath, FeRequest request, WorkBudget budget) {
+        return new ApiPathMatcher(apis, contextPath).match(request, budget);
+    }
+
+    public ApiMatch match(FeRequest request, WorkBudget budget) {
+        // 고정 세그먼트만으로 요청보다 길면 비교하지 않는다
+        if (prefixFixed > request.path().size()) {
+            return ApiMatch.NONE;
+        }
+        List<Candidate> candidates = new ArrayList<>();
+        for (Compiled c : compiled) {
+            budget.spend();
+            if (!methodMatches(c.api().method(), request.method())) {
+                continue;
+            }
+            if (matches(c.pattern(), c.fixed(), request.path(), budget)) {
+                candidates.add(Candidate.of(c.api().fileId(), c.pattern()));
             }
         }
         if (candidates.isEmpty()) {
@@ -108,10 +130,9 @@ public final class ApiPathMatcher {
      * 길이가 맞을 수 없으면 표를 채우지 않는다.
      */
     private static boolean matches(
-            List<ApiSegment> pattern, List<PathSegment> path, WorkBudget budget) {
+            List<ApiSegment> pattern, int fixed, List<PathSegment> path, WorkBudget budget) {
         int p = pattern.size();
         int n = path.size();
-        int fixed = fixedCount(pattern);
         if (fixed > n || (fixed == p && p != n)) {
             return false;
         }

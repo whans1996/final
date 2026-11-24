@@ -1176,25 +1176,25 @@ class StructureAnalyzerTest {
 
     @Test
     void AC12_HTTP_판정_중_예산을_다_쓰면_남은_호출은_URL_UNKNOWN이다() {
+        // 읽기는 작고, 호출마다 API 5천 개와 비교하는 경로 비교가 예산을 쓴다
         String code =
                 "import axios from 'axios'\n"
-                        + "const u = u + u + u + u + u + u + u + u\n"
-                        + "axios.get(u)\n".repeat(300)
+                        + "axios.get('/api/z/1')\n".repeat(300)
                         + "axios.get('/api/x')\n";
+        List<ApiEndpoint> apis =
+                new ArrayList<>(Collections.nCopies(5_000, api("GET", "/api/y/{v}", 8)));
+        apis.add(api("GET", "/api/x", 9));
 
         AnalysisStructureResponse response =
                 new StructureAnalyzer(150, 1_000, 200_000, Duration.ofMinutes(1))
-                        .analyze(
-                                List.of(js(1, "src/a.js", code)),
-                                List.of(api("GET", "/api/x", 9)),
-                                null);
+                        .analyze(List.of(js(1, "src/a.js", code)), apis, null);
 
         assertThat(response.unresolved())
                 .extracting(UnresolvedLink::kind)
                 .containsOnly(UnresolvedKind.HTTP_CALL);
         assertThat(http(response)).isEmpty();
         assertThat(httpUnresolved(response).getLast())
-                .isEqualTo(unknown(1, 303, UnresolvedReason.URL_UNKNOWN, "axios.get('/api/x')"));
+                .isEqualTo(unknown(1, 302, UnresolvedReason.URL_UNKNOWN, "axios.get('/api/x')"));
         assertThat(response.edgesTruncated()).isTrue();
     }
 

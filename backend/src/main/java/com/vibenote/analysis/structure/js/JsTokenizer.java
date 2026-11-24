@@ -94,10 +94,15 @@ public final class JsTokenizer {
         char[] out = vue.toCharArray();
         boolean[] keep = new boolean[out.length];
         Matcher open = SCRIPT_OPEN.matcher(vue);
+        Matcher close = SCRIPT_CLOSE.matcher(vue);
         int from = 0;
+        // from 이후 첫 HTML 주석 시작. from이 지나친 때만 다시 찾는다 (블록마다 파일 끝까지 다시 찾지 않게)
+        int comment = vue.indexOf("<!--");
         while (open.find(from)) {
+            if (comment >= 0 && comment < from) {
+                comment = vue.indexOf("<!--", from);
+            }
             // 블록 밖 HTML 주석 안의 <script>는 실행되지 않는다
-            int comment = vue.indexOf("<!--", from);
             if (comment >= 0 && comment < open.start()) {
                 int commentEnd = vue.indexOf("-->", comment + 4);
                 if (commentEnd < 0) {
@@ -106,7 +111,6 @@ public final class JsTokenizer {
                 from = commentEnd + 3;
                 continue;
             }
-            Matcher close = SCRIPT_CLOSE.matcher(vue);
             int end = close.find(open.end()) ? close.start() : vue.length();
             for (int i = open.end(); i < end; i++) {
                 keep[i] = true;

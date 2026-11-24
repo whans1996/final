@@ -4,6 +4,7 @@ import com.vibenote.analysis.structure.WorkBudget;
 import com.vibenote.analysis.structure.js.JsDecl.Kind;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Deque;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -19,6 +20,9 @@ import java.util.Set;
  *   <li>함수: {@code function}, 화살표 함수, 객체·클래스 메서드. 이름은 {@code function f}·{@code const f = …}에서만 붙인다
  *   <li>호출: 멤버 이름 자리가 아닌 {@code f(…)}, {@code r.m(…)}·{@code r?.m(…)}
  * </ul>
+ *
+ * <p>계산량 (5.3절 3): 이름 조회는 선언을 모두 읽은 뒤에만 한다(모듈 색인을 한 번 만든다). 둘러싼 함수는 스택으로, 식 끝·class 본문 위치는 한 번 훑은
+ * 자리마다 메모해 같은 구간을 다시 훑지 않는다.
  */
 final class JsDeclarations {
 
@@ -83,20 +87,43 @@ final class JsDeclarations {
     /** 템플릿 {@code ${}} 안의 토큰이면 true. 호출·화살표 함수만 모은다 (선언은 범위를 알 수 없어 이름을 잘못 가린다). */
     private final boolean inTemplate;
 
-    /** {@code X.defaults.baseURL =}의 X 위치 (X는 axios 이름). */
-    private final List<Integer> defaultsCandidates = new ArrayList<>();
+    /** {@code X.defaults.baseURL =}의 X 위치 (X는 axios 이름). 템플릿 안 것까지 바깥 읽기가 모아 마지막에 본다. */
+    private final List<Candidate> defaultsCandidates;
+
+    private record Candidate(JsDeclarations reader, int at) {}
+
+    /** 지금 읽는 위치를 둘러쌀 수 있는 함수들 (등록 순). 끝난 함수는 위에서부터 뺀다. */
+    private final Deque<JsFunction> openFunctions = new ArrayDeque<>();
+
+    /** 위치별 {@link #expressionEnd} 결과. 아직 모르면 -1. */
+    private final int[] endMemo;
+
+    /** 위치별 {@link #nextBrace} 결과. 아직 모르면 -1. */
+    private final int[] braceMemo;
+
+    /** 메모를 채울 때 지나온 위치를 담는 버퍼. */
+    private int[] visited = new int[16];
 
     private JsDeclarations(JsModule module) {
-        this(module, module.tokens(), false);
+        this(module, module.tokens(), false, new ArrayList<>());
     }
 
-    private JsDeclarations(JsModule module, List<JsToken> tokens, boolean inTemplate) {
+    private JsDeclarations(
+            JsModule module,
+            List<JsToken> tokens,
+            boolean inTemplate,
+            List<Candidate> defaultsCandidates) {
         this.module = module;
+        this.defaultsCandidates = defaultsCandidates;
         this.budget = module.budget();
         this.inTemplate = inTemplate;
         this.t = tokens;
         this.match = new int[t.size()];
         this.block = new int[t.size()];
+        this.endMemo = new int[t.size()];
+        this.braceMemo = new int[t.size()];
+        Arrays.fill(endMemo, -1);
+        Arrays.fill(braceMemo, -1);
         Deque<Integer> open = new ArrayDeque<>();
         Deque<Integer> braces = new ArrayDeque<>();
         budget.spend(t.size());
@@ -124,6 +151,14 @@ final class JsDeclarations {
         JsDeclarations d = new JsDeclarations(module);
         d.readImportsOfAxios();
         d.readAll();
+        // 선언을 다 모은 뒤에야(템플릿 안 포함) 그 자리의 axios 이름이 가려졌는지 안다
+        for (Candidate c : d.defaultsCandidates) {
+            List<JsToken> ct = c.reader().t;
+            int i = c.at();
+            if (module.axiosAt(ct.get(i).text(), ct.get(i).start())) {
+                module.defaultsBaseUrls().add(ct.subList(i + 6, c.reader().expressionEnd(i + 6)));
+            }
+        }
     }
 
     private void readAll() {
@@ -131,17 +166,11 @@ final class JsDeclarations {
             budget.spend();
             readAt(i);
         }
-        // 선언을 다 모은 뒤에야 그 자리의 axios 이름이 가려졌는지 안다
-        for (int i : defaultsCandidates) {
-            if (module.axiosAt(t.get(i).text(), t.get(i).start())) {
-                module.defaultsBaseUrls().add(t.subList(i + 6, expressionEnd(i + 6)));
-            }
-        }
         // 템플릿 ${} 안의 식도 실행된다 (`${fetch('/x')}`). 토큰은 원본 offset을 그대로 가진다
         for (JsToken token : t) {
             if (token.kind() == JsToken.Kind.TEMPLATE) {
                 for (List<JsToken> part : token.parts()) {
-                    new JsDeclarations(module, part, true).readAll();
+                    new JsDeclarations(module, part, true, defaultsCandidates).readAll();
                 }
             }
         }
@@ -205,43 +234,39 @@ final class JsDeclarations {
         declarators(i, kind, scope);
     }
 
-    /** i 다음 토큰부터 쉼표로 이어진 선언자들. */
+    /** i 다음 토큰부터 쉼표로 이어진 선언자들 (이름과 구조 분해가 섞여도 반복문으로 읽는다). */
     private void declarators(int i, Kind kind, int[] scope) {
         int j = i + 1;
-        while ((JsTokens.is(t, j, "{") || JsTokens.is(t, j, "[")) && match[j] > j) {
-            // 구조 분해(const {axios} = …): 값은 모르지만 이 이름들이 바깥 이름을 가린다
-            addPattern(t.subList(j, match[j] + 1), scope[0], scope[1]);
-            int next = match[j] + 1;
-            if (JsTokens.is(t, next, "=")) {
-                next = expressionEnd(next + 1);
-            }
-            if (!JsTokens.is(t, next, ",")) {
-                return;
-            }
-            j = next + 1;
-        }
-        while (JsTokens.kind(t, j) == JsToken.Kind.IDENT) {
-            String name = t.get(j).text();
-            List<JsToken> init = List.of();
-            int next = j + 1;
-            if (JsTokens.is(t, j + 1, "=")) {
-                int end = expressionEnd(j + 2);
-                init = t.subList(j + 2, end);
-                next = end;
-            }
-            module.decls().add(new JsDecl(name, kind, scope[0], scope[1], init, null));
-            if (isRequireAxios(init)) {
-                module.axiosNames().add(name);
-            }
-            if (!JsTokens.is(t, next, ",")) {
-                return;
-            }
-            j = next + 1;
+        while (true) {
+            budget.spend();
+            int next;
             if ((JsTokens.is(t, j, "{") || JsTokens.is(t, j, "[")) && match[j] > j) {
-                // const a = 1, {b} = c: 뒤쪽 구조 분해
-                declarators(j - 1, kind, scope);
+                // 구조 분해(const {axios} = …): 값은 모르지만 이 이름들이 바깥 이름을 가린다
+                addPattern(t.subList(j, match[j] + 1), scope[0], scope[1]);
+                next = match[j] + 1;
+                if (JsTokens.is(t, next, "=")) {
+                    next = expressionEnd(next + 1);
+                }
+            } else if (JsTokens.kind(t, j) == JsToken.Kind.IDENT) {
+                String name = t.get(j).text();
+                List<JsToken> init = List.of();
+                next = j + 1;
+                if (JsTokens.is(t, j + 1, "=")) {
+                    int end = expressionEnd(j + 2);
+                    init = t.subList(j + 2, end);
+                    next = end;
+                }
+                module.decls().add(new JsDecl(name, kind, scope[0], scope[1], init, null));
+                if (isRequireAxios(init)) {
+                    module.axiosNames().add(name);
+                }
+            } else {
                 return;
             }
+            if (!JsTokens.is(t, next, ",")) {
+                return;
+            }
+            j = next + 1;
         }
     }
 
@@ -272,14 +297,7 @@ final class JsDeclarations {
         if (JsTokens.kind(t, i + 1) != JsToken.Kind.IDENT || JsTokens.is(t, i + 1, "extends")) {
             return;
         }
-        int body = i + 2;
-        while (body < t.size() && !t.get(body).is("{")) {
-            budget.spend();
-            if ((t.get(body).is("(") || t.get(body).is("[")) && match[body] > body) {
-                body = match[body];
-            }
-            body++;
-        }
+        int body = nextBrace(i + 2);
         if (body >= t.size() || match[body] < 0) {
             return;
         }
@@ -333,19 +351,27 @@ final class JsDeclarations {
         return new int[] {t.get(open).start(), end};
     }
 
-    /** i를 둘러싼 가장 안쪽 함수의 범위. 없으면 파일 전체. */
+    /**
+     * i를 둘러싼 가장 안쪽 함수의 범위. 없으면 파일 전체. 함수는 읽는 순서로 열리고 안쪽이 먼저 끝나므로 스택 위에서 끝난 것을 빼고, 아직 시작하지 않은 것(이름 뒤
+     * 괄호에서 시작)은 건너뛴다.
+     */
     private int[] functionScopeOf(int i) {
         int offset = t.get(i).start();
-        JsFunction inner = null;
-        for (JsFunction fn : module.functions()) {
+        while (!openFunctions.isEmpty() && openFunctions.peek().end() <= offset) {
+            openFunctions.pop();
+        }
+        for (JsFunction fn : openFunctions) {
             budget.spend();
-            if (fn.contains(offset) && (inner == null || fn.start() > inner.start())) {
-                inner = fn;
+            if (fn.contains(offset)) {
+                return new int[] {fn.start(), fn.end()};
             }
         }
-        return inner == null
-                ? new int[] {-1, Integer.MAX_VALUE}
-                : new int[] {inner.start(), inner.end()};
+        return new int[] {-1, Integer.MAX_VALUE};
+    }
+
+    private void addFunctionToModule(JsFunction fn) {
+        module.functions().add(fn);
+        openFunctions.push(fn);
     }
 
     // ---- 함수 ----
@@ -422,7 +448,7 @@ final class JsDeclarations {
             end = last > a + 1 ? t.get(last - 1).end() : t.get(a).end();
         }
         JsFunction fn = new JsFunction(name, params, t.get(paramsStart).start(), end);
-        module.functions().add(fn);
+        addFunctionToModule(fn);
         addParams(fn);
         if (t.get(paramsStart).is("(")) {
             addDestructured(paramsStart, fn);
@@ -455,7 +481,7 @@ final class JsDeclarations {
 
     private void addFunction(String name, int paramsOpen, int end) {
         JsFunction fn = new JsFunction(name, params(paramsOpen), t.get(paramsOpen).start(), end);
-        module.functions().add(fn);
+        addFunctionToModule(fn);
         addParams(fn);
         addDestructured(paramsOpen, fn);
     }
@@ -657,7 +683,7 @@ final class JsDeclarations {
                 && JsTokens.is(t, i + 3, ".")
                 && JsTokens.is(t, i + 4, "baseURL")
                 && JsTokens.is(t, i + 5, "=")) {
-            defaultsCandidates.add(i);
+            defaultsCandidates.add(new Candidate(this, i));
         }
     }
 
@@ -690,28 +716,81 @@ final class JsDeclarations {
         return parts;
     }
 
-    /** from에서 시작한 식이 끝나는 위치(제외). */
+    /**
+     * from에서 시작한 식이 끝나는 위치(제외). 같은 깊이에서 지나온 위치에서 시작해도 끝은 같으므로(시작 자리의 줄바꿈 규칙만 다른데 지나왔다면 그 규칙이 걸리지
+     * 않았다) 지나온 위치마다 메모한다. 화살표 함수 사슬처럼 식 끝을 거듭 묻는 입력이 제곱 시간이 되지 않는다.
+     */
     int expressionEnd(int from) {
+        if (from < t.size() && endMemo[from] >= 0) {
+            return endMemo[from];
+        }
+        int count = 0;
+        int end = t.size();
         int j = from;
         while (j < t.size()) {
             budget.spend();
             JsToken token = t.get(j);
             if (token.is(";") || token.is(",") || token.is(")") || token.is("]") || token.is("}")) {
-                return j;
+                end = j;
+                break;
             }
             if (j > from
                     && token.line() > t.get(j - 1).line()
                     && !continuesAfter(t.get(j - 1))
                     && !continuesBefore(token)) {
-                return j;
+                end = j;
+                break;
             }
+            if (j > from && endMemo[j] >= 0) {
+                end = endMemo[j];
+                break;
+            }
+            count = visit(count, j);
             if ((token.is("(") || token.is("[") || token.is("{")) && match[j] > j) {
                 j = match[j] + 1;
                 continue;
             }
             j++;
         }
-        return t.size();
+        for (int k = 0; k < count; k++) {
+            endMemo[visited[k]] = end;
+        }
+        return end;
+    }
+
+    /**
+     * from부터 같은 깊이에서 처음 나오는 {@code {}} 위치 ({@code ()}·{@code []} 묶음은 건너뜀). 없으면 t.size(). {@link
+     * #expressionEnd}처럼 지나온 위치마다 메모한다 ({@code class a class a … {}}가 제곱 시간이 되지 않게).
+     */
+    private int nextBrace(int from) {
+        int count = 0;
+        int found = t.size();
+        int j = from;
+        while (j < t.size()) {
+            budget.spend();
+            if (braceMemo[j] >= 0) {
+                found = braceMemo[j];
+                break;
+            }
+            if (t.get(j).is("{")) {
+                found = j;
+                break;
+            }
+            count = visit(count, j);
+            j = (t.get(j).is("(") || t.get(j).is("[")) && match[j] > j ? match[j] + 1 : j + 1;
+        }
+        for (int k = 0; k < count; k++) {
+            braceMemo[visited[k]] = found;
+        }
+        return found;
+    }
+
+    private int visit(int count, int position) {
+        if (count == visited.length) {
+            visited = Arrays.copyOf(visited, count * 2);
+        }
+        visited[count] = position;
+        return count + 1;
     }
 
     private static boolean continuesAfter(JsToken prev) {

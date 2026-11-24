@@ -16,15 +16,16 @@ import com.vibenote.analysis.structure.js.JsImport;
 import com.vibenote.analysis.structure.js.JsModule;
 import com.vibenote.analysis.structure.js.JsToken;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * FE → API {@code HTTP} 간선 (F-21a AC7~AC11).
@@ -47,8 +48,7 @@ public final class HttpLinker {
 
     private final Map<Long, JsModule> modules;
     private final UrlEvaluator evaluator;
-    private final List<ApiEndpoint> apis;
-    private final String contextPath;
+    private final ApiPathMatcher matcher;
     private final StructureLinks out;
     private final WorkBudget budget;
 
@@ -60,8 +60,7 @@ public final class HttpLinker {
             WorkBudget budget) {
         this.modules = modules;
         this.evaluator = new UrlEvaluator(modules, budget);
-        this.apis = apis;
-        this.contextPath = contextPath;
+        this.matcher = new ApiPathMatcher(apis, contextPath);
         this.out = out;
         this.budget = budget;
     }
@@ -186,8 +185,17 @@ public final class HttpLinker {
                 .orElse(null);
     }
 
+    /** 초기값 토큰 목록(선언·내보내기마다 하나) → 인스턴스 판정. 같은 받는 쪽을 부르는 호출마다 초기값을 다시 훑지 않는다. */
+    private final Map<List<JsToken>, Optional<Receiver>> instances = new IdentityHashMap<>();
+
+    private Receiver instance(List<JsToken> init, JsModule module) {
+        return instances
+                .computeIfAbsent(init, k -> Optional.ofNullable(readInstance(init, module)))
+                .orElse(null);
+    }
+
     /** {@code A.create(…)}(A는 그 자리에서 보이는 axios) 식이면 인스턴스. 매개변수·지역 변수가 axios 이름을 가리면 axios가 아니다. */
-    private static Receiver instance(List<JsToken> init, JsModule module) {
+    private static Receiver readInstance(List<JsToken> init, JsModule module) {
         if (init.size() < 5
                 || !module.axiosAt(init.get(0).text(), init.get(0).start())
                 || !init.get(1).is(".")
@@ -363,13 +371,18 @@ public final class HttpLinker {
             return config(receiver.createArgs(), receiver.module(), Bindings.NONE, 0)
                     .prop("baseURL");
         }
-        return modules.values().stream()
-                .sorted((a, b) -> Long.compare(a.fileId(), b.fileId()))
-                .filter(m -> !m.defaultsBaseUrls().isEmpty())
-                .findFirst()
-                .map(m -> new Expr(m.defaultsBaseUrls().get(0), m, Bindings.NONE))
-                .orElse(null);
+        if (axiosBase == null) {
+            axiosBase =
+                    modules.values().stream()
+                            .sorted((a, b) -> Long.compare(a.fileId(), b.fileId()))
+                            .filter(m -> !m.defaultsBaseUrls().isEmpty())
+                            .findFirst()
+                            .map(m -> new Expr(m.defaultsBaseUrls().get(0), m, Bindings.NONE));
+        }
+        return axiosBase.orElse(null);
     }
+
+    private Optional<Expr> axiosBase;
 
     /** 메서드 식이 문자열로 계산되면 대문자, 속성이 없으면 axios·fetch 기본값 GET, 계산하지 못하면 null. */
     private String method(Expr method) {
@@ -392,7 +405,8 @@ public final class HttpLinker {
         if (tokens == null || tokens.isEmpty()) {
             return Config.NONE;
         }
-        if (depth > MAX_CONFIG_DEPTH) {
+        if (depth > MAX_CONFIG_DEPTH || tokens.size() > UrlEvaluator.MAX_TOKENS) {
+            // 너무 긴 config는 나누지 않는다 (중첩된 요청 config마다 남은 전체를 훑지 않게)
             return Config.unresolved(null);
         }
         if (tokens.size() == 1 && tokens.get(0).kind() == JsToken.Kind.IDENT) {
@@ -417,6 +431,10 @@ public final class HttpLinker {
             }
             if (d.kind() != JsDecl.Kind.CONST || mutatedConfigs(module).contains(d)) {
                 return Config.unresolved(null);
+            }
+            if (depth == 0 && bindings == Bindings.NONE) {
+                // 호출마다 같은 const config를 다시 나누지 않는다 (속성 식에 인라인 인자가 없을 때만 같은 결과다)
+                return constConfigs.computeIfAbsent(d, k -> config(d.init(), module, bindings, 1));
             }
             return config(d.init(), module, bindings, depth + 1);
         }
@@ -458,12 +476,14 @@ public final class HttpLinker {
 
     private final Map<JsModule, Set<JsDecl>> mutatedConfigs = new HashMap<>();
 
+    private final Map<JsDecl, Config> constConfigs = new IdentityHashMap<>();
+
     /** 분석 하나에서 래퍼를 부른 곳마다 다시 계산하는 횟수의 상한. 넘으면 남은 래퍼 안 호출은 URL_UNKNOWN이다. */
     static final int MAX_INLINE_EVALUATIONS = 10_000;
 
     private int inlineBudget = MAX_INLINE_EVALUATIONS;
 
-    private final Map<JsFunction, List<Site>> sitesByWrapper = new HashMap<>();
+    private final Map<JsFunction, List<Site>> sitesByWrapper = new IdentityHashMap<>();
 
     /**
      * 파일에서 속성이 바뀌는 const 선언: {@code cfg.url|method|baseURL = …}, {@code cfg[k] = …}, {@code delete
@@ -473,7 +493,7 @@ public final class HttpLinker {
         return mutatedConfigs.computeIfAbsent(
                 module,
                 m -> {
-                    Set<JsDecl> out = new HashSet<>();
+                    Set<JsDecl> out = Collections.newSetFromMap(new IdentityHashMap<>());
                     List<JsToken> t = m.tokens();
                     for (int i = 0; i < t.size(); i++) {
                         budget.spend();
@@ -525,70 +545,109 @@ public final class HttpLinker {
 
     private record Site(JsModule module, JsCall call) {}
 
-    /** 같은 파일의 {@code f(…)}와, f를 내보낸 이름으로 import한 선별 파일의 호출. */
+    /** 다른 선별 파일의 import 이름 하나. seq는 (파일 id, import 순서, 이름 순서)로 매긴 순번이다. */
+    private record Binding(JsModule module, String local, String imported, int seq) {}
+
+    /** 대상 모듈 → 그 모듈을 가리키는 import 이름들 (가져온 이름별). 분석 하나에서 한 번 만든다. */
+    private Map<JsModule, Map<String, List<Binding>>> importers;
+
+    /** 모듈 → 지역 이름 → 그 이름을 내보낸 이름들. */
+    private final Map<JsModule, Map<String, List<String>>> exportNames = new IdentityHashMap<>();
+
+    /**
+     * 같은 파일의 {@code f(…)}와, f를 내보낸 이름으로 import한 선별 파일의 호출. 호출은 (receiver, member) 색인으로, import는 가져온
+     * 이름별 색인으로 찾는다 (래퍼마다 모든 호출·import를 훑지 않게).
+     */
     private List<Site> callSites(JsFunction wrapper, JsModule module) {
         List<Site> sites = new ArrayList<>();
         // 부른 곳에서 보이는 선언이 래퍼 자신의 선언일 때만 래퍼 호출이다 (매개변수·지역 변수가 이름을 가리면 다른 함수)
         Optional<JsDecl> own = module.lookup(wrapper.name(), wrapper.start());
-        for (JsCall call : module.calls()) {
+        for (JsCall call : module.callsTo(wrapper.name(), null)) {
             budget.spend();
-            if (call.member() == null
-                    && call.receiver().equals(wrapper.name())
-                    && !wrapper.contains(call.start())
+            if (!wrapper.contains(call.start())
                     && module.lookup(call.receiver(), call.start()).equals(own)) {
                 sites.add(new Site(module, call));
             }
         }
-        Set<String> exportedAs =
-                module.exports().entrySet().stream()
-                        .filter(e -> wrapper.name().equals(e.getValue().local()))
-                        .map(Map.Entry::getKey)
-                        .collect(Collectors.toSet());
+        List<String> exportedAs = exportedAs(module, wrapper.name());
         if (exportedAs.isEmpty()) {
             return sites;
         }
-        modules.values().stream()
-                .filter(other -> other != module)
-                .sorted((a, b) -> Long.compare(a.fileId(), b.fileId()))
-                .forEach(
-                        other -> {
-                            for (JsImport imp : other.imports()) {
-                                if (imp.target() == null || imp.target() != module.fileId()) {
-                                    continue;
-                                }
-                                imp.bindings()
-                                        .forEach(
-                                                (local, imported) -> {
-                                                    for (JsCall call : other.calls()) {
-                                                        budget.spend();
-                                                        boolean direct =
-                                                                exportedAs.contains(imported)
-                                                                        && call.member() == null
-                                                                        && call.receiver()
-                                                                                .equals(local);
-                                                        boolean viaNamespace =
-                                                                imported.equals("*")
-                                                                        && call.receiver()
-                                                                                .equals(local)
-                                                                        && exportedAs.contains(
-                                                                                call.member());
-                                                        boolean shadowed =
-                                                                other.lookup(local, call.start())
-                                                                        .isPresent();
-                                                        if ((direct || viaNamespace) && !shadowed) {
-                                                            sites.add(new Site(other, call));
-                                                        }
-                                                    }
-                                                });
-                            }
-                        });
+        Map<String, List<Binding>> byImported = importersOf(module);
+        List<Binding> bindings = new ArrayList<>(byImported.getOrDefault("*", List.of()));
+        exportedAs.forEach(name -> bindings.addAll(byImported.getOrDefault(name, List.of())));
+        bindings.sort(Comparator.comparingInt(Binding::seq));
+        for (Binding b : bindings) {
+            List<JsCall> calls;
+            if (b.imported().equals("*")) {
+                // 네임스페이스 import: ns.f(…)
+                calls = new ArrayList<>();
+                for (String name : exportedAs) {
+                    calls.addAll(b.module().callsTo(b.local(), name));
+                }
+                calls.sort(Comparator.comparingInt(JsCall::start));
+            } else {
+                calls = b.module().callsTo(b.local(), null);
+            }
+            for (JsCall call : calls) {
+                budget.spend();
+                if (b.module().lookup(b.local(), call.start()).isEmpty()) {
+                    sites.add(new Site(b.module(), call));
+                }
+            }
+        }
         return sites;
+    }
+
+    private List<String> exportedAs(JsModule module, String local) {
+        return exportNames
+                .computeIfAbsent(
+                        module,
+                        m -> {
+                            Map<String, List<String>> names = new HashMap<>();
+                            m.exports().entrySet().stream()
+                                    .sorted(Map.Entry.comparingByKey())
+                                    .forEach(
+                                            e ->
+                                                    names.computeIfAbsent(
+                                                                    e.getValue().local(),
+                                                                    k -> new ArrayList<>())
+                                                            .add(e.getKey()));
+                            return names;
+                        })
+                .getOrDefault(local, List.of());
+    }
+
+    private Map<String, List<Binding>> importersOf(JsModule module) {
+        if (importers == null) {
+            importers = new IdentityHashMap<>();
+            int seq = 0;
+            for (JsModule other :
+                    modules.values().stream()
+                            .sorted((a, b) -> Long.compare(a.fileId(), b.fileId()))
+                            .toList()) {
+                for (JsImport imp : other.imports()) {
+                    JsModule target = imp.target() == null ? null : modules.get(imp.target());
+                    if (target == null || target == other) {
+                        continue;
+                    }
+                    for (Map.Entry<String, String> e : imp.bindings().entrySet()) {
+                        budget.spend();
+                        importers
+                                .computeIfAbsent(target, k -> new HashMap<>())
+                                .computeIfAbsent(e.getValue(), k -> new ArrayList<>())
+                                .add(new Binding(other, e.getKey(), e.getValue(), seq++));
+                    }
+                }
+            }
+        }
+        return importers.getOrDefault(module, Map.of());
     }
 
     // ---- 결과 (AC11) ----
 
     private void emit(JsModule from, int line, FeRequest request) {
-        ApiMatch match = ApiPathMatcher.match(apis, contextPath, request, budget);
+        ApiMatch match = matcher.match(request, budget);
         switch (match.status()) {
             case MATCHED -> out.edge(from.fileId(), match.fileId(), EdgeType.HTTP, line);
             case AMBIGUOUS ->
