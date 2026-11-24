@@ -4,23 +4,20 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
 
-갱신: 2026-11-24 11:33 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/F-25-challenge-participation
+갱신: 2026-11-24 11:52 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/F-21a-structure-graph
 
 ## 현재 기능
 
-**F-25 챌린지 참여·달성도** spec `docs/specs/F-25-challenge-participation.md` — DONE (PR #106), **머지 대기** (CI 초록, Codex ✅ fee532c 지적 없음)
+**F-21a 구조 시각화: 파일 의존 그래프** (P1) spec `docs/specs/F-21a-structure-graph.md` — **APPROVED** (whans1996 11-24), 브랜치 `feature/F-21a-structure-graph`, 구현 전
 
 ## 진행
 
-- ✅ AC1~AC16 구현·테스트, contract-checker 불일치 0, ui-verifier·Chrome 확인, 산출물 반영
-- ✅ `/pr-review` (11-24): reviewer 반드시 1 → `beb5593`(cancel `findForUpdate`), 권장 2 → `dba5663`(join·cancel READ_COMMITTED), 권장 4 → `5f21b00`, 권장 1·3 → #104·#105. Codex P2 1건 = #104 이관
-- ✅ 김준섭 토큰 소진으로 상대 PR 대신 처리 (11-24, 사용자 지시): #102 Mattermost 알림 실패(Actions 소진 시점 미기동) 재실행 → 사람 머지. #103 브랜치에 develop 합치며 NOW-js 충돌을 #103 버전으로 해결(`723cf92`) → 사람 머지
-- ✅ PR #106에 develop(#102·#103) 합침(`fee532c`), BE 전체 통과, openapi.json이 develop과 합쳐 달라져 Codex 재리뷰 → ✅ (재리뷰 2회)
+- ✅ F-25 PR #106 머지(11-24), #99·#96·#92 닫힘 확인. P0 21개 전부 DONE
+- ✅ F-21을 a(파일 의존 그래프)·b(메서드 단위 결정적 흐름)로 분할(사용자 결정). F-21a spec AC17개: JavaParser·JS 토크나이저·MyBatis XML, FE→API는 HTTP 호출 위치·URL 값 추적·메서드·세그먼트·가장 구체적 API로만 확정, 미확정은 `unresolved` 사유 목록. LLM·DB 변경 없음, 심볼 색인 저장 안 함. AI(구조 해설·F-07 흐름 검증)는 F-21b로. 결정로그 1줄
 
 ## 바로 다음 할 일
 
-1. 사람: GitHub에서 PR #106 머지 (wip 없음, 일반 머지)
-2. 머지 뒤 `/clear` → `/pickup`: #99·#96·#92가 닫혔는지 확인(`close-issues` 워크플로), 다음 기능 고르기 (내 영역 이슈 #104·#105·#24·#26·#91 또는 다음 spec)
+1. `/clear` → `/implement F-21a` (Opus/high): `JavaStructureReaderTest#AC1_…`부터 red. F-21b `/spec`은 F-21a 머지 뒤
 
 ## 막힌 점 / 결정 필요
 
@@ -29,4 +26,5 @@
 ## 주의
 
 - 리뷰 지적은 '무시 가능'도 직접 확인한다 (11-20 사용자 지시) · 하네스 동결(11-23): 버그·작업 막는 문제만 고친다
-- Codex 판정: develop 합치기 뒤 openapi.json은 양쪽 변경이 섞여 "develop에서 그대로 온 파일"이 아니므로 STALE이 정상 (재리뷰 1회 필요)
+- mermaid는 12.x 중 출시 2주 이상 지난 정확한 버전으로 고정 (12.3.0은 11-11 출시)
+- 내 영역 이슈 #104·#105(F-25 집계)는 F-21 뒤 기능 사이에 처리
