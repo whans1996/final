@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 |---|---|
-| 상태 | APPROVED <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
+| 상태 | DONE (PR #97) <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
 | 기능 ID | F-24 |
 | 우선순위 | P0 |
 | 영역 오너 | A 김동환 (AI·분석·학습 루프) |
@@ -223,7 +223,7 @@
 - [x] `docs/conventions.md` 3절 CHALLENGE 에러 코드
 - [x] contract-checker 통과
 - [x] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일)
-- [ ] reviewer 지적 사항 반영
+- [x] reviewer 지적 사항 반영
 - [x] 산출물 반영 (화면 설계서 SC-21 절·스크린샷, 유스케이스 UC51 대안 흐름)
 - [ ] PR CI 초록
-- [ ] 상태 DONE (PR 머지 후)
+- [x] 상태 DONE (PR 머지 후)
