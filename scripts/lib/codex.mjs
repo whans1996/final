@@ -213,12 +213,17 @@ export function judgeReview({ pr, h, comments, findingTimes = () => [], docsOnly
   const resolved = resolvedMarks(comments);
   const reqs = requests(comments);
   const clean = receipts.some((r) => h.sha.startsWith(r.sha));
-  const stClean = st?.status === 'completed' && !st.has_any_findings;
-  // 지적이 있었지만 그 커밋의 남은 지적을 모두 이슈로 넘긴 상태 (pr-review 8-3 이관 완료).
-  // 마커 뒤에 새 지적이 달렸으면 이관 완료가 아니다. 인라인 지적 조회는 필요할 때만 한다
+  // 인라인 지적 조회는 필요할 때만 한다
   let times;
   const allFindings = () => (times ??= findingTimes());
   const lastAny = () => [...allFindings()].sort().at(-1) ?? '';
+  // 상태 댓글의 has_any_findings는 이전 커밋의 미해결 스레드까지 누적한다. Codex는 한 리뷰에 인라인 지적과
+  // "지적 없음" 영수증 중 하나만 남기므로, 모든 인라인 지적보다 늦은 그 커밋의 영수증이 있으면 지적 없음이다 (PR #97)
+  const receiptAfterFindings = (sha) => receipts.some((r) => sha.startsWith(r.sha) && r.at > lastAny());
+  const stClean =
+    st?.status === 'completed' && (!st.has_any_findings || receiptAfterFindings(st.commit_sha));
+  // 지적이 있었지만 그 커밋의 남은 지적을 모두 이슈로 넘긴 상태 (pr-review 8-3 이관 완료).
+  // 마커 뒤에 새 지적이 달렸으면 이관 완료가 아니다
   const stMarks = resolved.filter((m) => m.sha === st?.commit_sha);
   const stResolved = st?.status === 'completed' && stMarks.length > 0 && stMarks.some((m) => m.at > lastAny());
   if (st?.commit_sha === h.sha && stClean) return { verdict: 'COMPLETE', msg: `head ${short} 지적 없음 (상태 댓글)` };
