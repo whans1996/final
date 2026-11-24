@@ -279,4 +279,27 @@ class ApiPathMatcherTest {
         assertThat(match(req("GET", "/a/a/x/y"), "/**/**/a", api("GET", "/x/{v}", 100)))
                 .isEqualTo(ApiMatch.matched(100));
     }
+
+    @Test
+    void AC11_긴_context_path는_API마다_복사하지_않는다() {
+        String contextPath = "/a".repeat(500_000);
+        List<ApiEndpoint> apis =
+                java.util.stream.IntStream.range(0, 2_000)
+                        .mapToObj(i -> api("GET", "/api/todos/" + i, 100 + i))
+                        .toList();
+
+        ApiMatch result =
+                assertTimeoutPreemptively(
+                        Duration.ofSeconds(5),
+                        () ->
+                                new ApiPathMatcher(apis, contextPath)
+                                        .match(req("GET", "/api/todos/1"), WorkBudget.unlimited()));
+
+        assertThat(result).isEqualTo(ApiMatch.NONE);
+        // context-path 끝과 API 앞의 이중 별표는 하나로 합친다
+        assertThat(match(req("GET", "/x/y"), "/x/**", api("GET", "/**/y", 100)))
+                .isEqualTo(ApiMatch.matched(100));
+        assertThat(match(req("GET", "/x/k/m/y"), "/x/**", api("GET", "/**/y", 100)))
+                .isEqualTo(ApiMatch.matched(100));
+    }
 }

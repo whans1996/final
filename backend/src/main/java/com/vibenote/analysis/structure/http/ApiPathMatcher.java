@@ -2,9 +2,11 @@ package com.vibenote.analysis.structure.http;
 
 import com.vibenote.analysis.explain.ApiEndpoint;
 import com.vibenote.analysis.structure.WorkBudget;
+import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.RandomAccess;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
@@ -57,17 +59,48 @@ public final class ApiPathMatcher {
 
     public ApiPathMatcher(List<ApiEndpoint> apis, String contextPath, boolean literalOnly) {
         this.literalOnly = literalOnly;
-        // context-path는 업로드한 설정 파일 값이라 길이 상한이 없다. 한 번만 나눈다
+        // context-path는 업로드한 설정 파일 값이라 길이 상한이 없다. 한 번만 나누고 API마다 복사하지 않고 함께 본다
         List<ApiSegment> prefix = compact(parse(contextPath == null ? "" : contextPath));
         this.prefixFixed = fixedCount(prefix);
+        boolean prefixEndsMulti = !prefix.isEmpty() && prefix.getLast().type() == Type.MULTI;
         for (ApiEndpoint api : apis) {
             if (api.fileId() == null) {
                 continue;
             }
-            List<ApiSegment> pattern = new ArrayList<>(prefix);
-            pattern.addAll(parse(api.path()));
-            pattern = compact(pattern);
-            compiled.add(new Compiled(api, pattern, fixedCount(pattern)));
+            List<ApiSegment> own = compact(parse(api.path()));
+            // 이어진 ** 는 하나와 같다: context-path 끝과 API 앞의 ** 를 합친다
+            if (prefixEndsMulti && !own.isEmpty() && own.getFirst().type() == Type.MULTI) {
+                own = own.subList(1, own.size());
+            }
+            compiled.add(new Compiled(api, joined(prefix, own), prefixFixed + fixedCount(own)));
+        }
+    }
+
+    /** 앞 목록 뒤에 뒤 목록을 이어 보는 읽기 전용 보기. 복사하지 않는다. */
+    private static List<ApiSegment> joined(List<ApiSegment> head, List<ApiSegment> tail) {
+        if (head.isEmpty()) {
+            return tail;
+        }
+        return new JoinedList(head, tail);
+    }
+
+    private static final class JoinedList extends AbstractList<ApiSegment> implements RandomAccess {
+        private final List<ApiSegment> head;
+        private final List<ApiSegment> tail;
+
+        JoinedList(List<ApiSegment> head, List<ApiSegment> tail) {
+            this.head = head;
+            this.tail = tail;
+        }
+
+        @Override
+        public ApiSegment get(int index) {
+            return index < head.size() ? head.get(index) : tail.get(index - head.size());
+        }
+
+        @Override
+        public int size() {
+            return head.size() + tail.size();
         }
     }
 
