@@ -107,3 +107,13 @@ export function updateVisibility(id, isPublic) {
 export function deleteAnalysis(id) {
   return http.delete(`/analyses/${id}`).then(() => undefined)
 }
+
+// 구조 시각화 (F-21a, docs/specs/F-21a-structure-graph.md 3절). 없거나 볼 수 없는 분석이면 404 ANALYSIS_404.
+
+/**
+ * 파일 의존 그래프. 간선은 코드에서 확정한 연결만 오고, 확정하지 못한 연결은 unresolved에 사유와 함께 온다.
+ * @returns {Promise<{ nodes: { fileId: number, path: string, name: string, layer: string, role: string|null }[], edges: { from: number, to: number, type: 'IMPORT'|'MYBATIS'|'HTTP', line: number }[], unresolved: { fileId: number, line: number, kind: string, reason: string, detail: string }[], edgesTruncated: boolean, unresolvedTruncated: boolean }>}
+ */
+export function fetchAnalysisStructure(id) {
+  return http.get(`/analyses/${id}/structure`).then((res) => res.data)
+}

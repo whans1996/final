@@ -187,9 +187,9 @@ SC-07에 **"구조" 탭**을 추가해 선별 파일(최대 30개) 사이의 의
 
 - [x] 브랜치 `feature/F-21a-structure-graph`
 - [x] Flyway 마이그레이션 (없음)
-- [ ] AC별 실패 테스트 작성 (red 확인) — BE AC1~AC13 완료, FE 남음
+- [x] AC별 실패 테스트 작성 (red 확인) — BE AC1~AC13, FE AC14~AC17 (11-24)
 - [x] BE 구현 (green), `javaparser-core` 정확한 버전 고정 (3.28.2)
-- [ ] FE 구현 (green), `mermaid` 정확한 버전 고정
+- [x] FE 구현 (green), `mermaid` 정확한 버전 고정 (12.3.0)
 - [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
 - [ ] contract-checker 통과 — BE ↔ spec 불일치 0 (11-24), FE 구현 후 다시
 - [ ] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일)
