@@ -57,6 +57,7 @@ class FlywayMigrationTest extends IntegrationTestBase {
                         "teams",
                         "team_members",
                         "team_analyses", // F-20b (V9)
+                        "team_challenges", // F-20c (V10)
                         "llm_usage_logs");
     }
 

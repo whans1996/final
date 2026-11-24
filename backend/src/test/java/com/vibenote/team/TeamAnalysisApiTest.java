@@ -502,6 +502,29 @@ class TeamAnalysisApiTest extends TeamTestSupport {
         expectError(perform(delete(ANALYSIS, e.team(), e.analysis()), e.u()), 404, "TEAM_006");
     }
 
+    // ── F-20c AC10 (#89) ──
+
+    @Test
+    void AC10_제목이_없는_공유_분석의_이해도에_projectName이_있다() throws Exception {
+        long u = insertUser("f20bu");
+        long team = insertTeam(u, "팀", "TEAM0001", BASE);
+        jdbc.update(
+                "INSERT INTO analyses (user_id, source_type, project_name, title, level, status,"
+                        + " progress, created_at) VALUES (?, 'ZIP', 'todo-app', NULL, 'JUNIOR',"
+                        + " 'DONE', 100, ?)",
+                u,
+                BASE);
+        long a = lastId();
+        insertQuestion(insertQuiz(a), null);
+        share(team, a, BASE);
+
+        perform(get(UNDERSTANDING, team, a), u)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.title").value(nullValue()))
+                .andExpect(jsonPath("$.projectName").value("todo-app"))
+                .andExpect(jsonPath("$.questionCount").value(1));
+    }
+
     // ── AC8 ──
 
     @Test

@@ -128,6 +128,7 @@ public class TeamAnalysisService {
         return new TeamUnderstandingResponse(
                 row.getAnalysisId(),
                 row.getTitle(),
+                row.getProjectName(),
                 new SharedByResponse(row.getSharedByUserId(), row.getSharedByNickname()),
                 questions.size(),
                 members.size(),

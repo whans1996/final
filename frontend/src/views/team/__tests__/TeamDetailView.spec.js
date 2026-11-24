@@ -18,6 +18,8 @@ vi.mock('@/api/teams', async (importOriginal) => {
     fetchTeamAnalyses: vi.fn(),
     shareTeamAnalysis: vi.fn(),
     unshareTeamAnalysis: vi.fn(),
+    fetchTeamChallenges: vi.fn(),
+    deleteTeamChallenge: vi.fn(),
   }
 })
 
@@ -73,6 +75,7 @@ describe('TeamDetailView SC-23 (F-20a AC14)', () => {
   beforeEach(() => {
     vi.resetAllMocks()
     teamsApi.fetchTeamAnalyses.mockResolvedValue([])
+    teamsApi.fetchTeamChallenges.mockResolvedValue([])
     writeText = vi.fn().mockResolvedValue(undefined)
     Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
   })
@@ -189,6 +192,7 @@ describe('TeamDetailView 관리 동작 (F-20a AC15)', () => {
   beforeEach(() => {
     vi.resetAllMocks()
     teamsApi.fetchTeamAnalyses.mockResolvedValue([])
+    teamsApi.fetchTeamChallenges.mockResolvedValue([])
   })
 
   afterEach(() => {
@@ -342,6 +346,7 @@ describe('TeamDetailView 다른 팀으로 이동한 뒤 늦게 온 응답 (#84)'
   beforeEach(() => {
     vi.resetAllMocks()
     teamsApi.fetchTeamAnalyses.mockResolvedValue([])
+    teamsApi.fetchTeamChallenges.mockResolvedValue([])
     vi.spyOn(window, 'confirm').mockReturnValue(true)
   })
 
@@ -493,6 +498,7 @@ describe('TeamDetailView SC-23 공유 분석 (F-20b AC10)', () => {
   beforeEach(() => {
     vi.resetAllMocks()
     teamsApi.fetchTeamAnalyses.mockResolvedValue([])
+    teamsApi.fetchTeamChallenges.mockResolvedValue([])
     teamsApi.fetchTeam.mockResolvedValue(team())
   })
 
@@ -558,7 +564,7 @@ describe('TeamDetailView SC-23 공유 분석 (F-20b AC10)', () => {
 
     await button(wrapper, 'unshare').trigger('click')
     expect(confirm).toHaveBeenCalledWith(
-      '이 분석의 공유를 해제할까요? 팀원의 풀이 기록은 남습니다.',
+      '이 분석의 공유를 해제할까요? 팀원의 풀이 기록은 남고, 이 분석의 팀 목표는 함께 삭제됩니다.',
     )
     expect(teamsApi.unshareTeamAnalysis).not.toHaveBeenCalled()
 
@@ -593,5 +599,90 @@ describe('TeamDetailView SC-23 공유 분석 (F-20b AC10)', () => {
     const { wrapper } = await mountDetail()
 
     expect(wrapper.find('[data-role="shared-count"]').text()).toBe('공유 분석')
+  })
+})
+
+function challenge(partial) {
+  return {
+    challengeId: 7,
+    analysisId: 42,
+    title: 'spring-realworld',
+    projectName: 'spring-realworld-proj',
+    startDate: '2026-11-24',
+    endDate: '2026-11-30',
+    targetRate: 80,
+    status: 'ONGOING',
+    memberCount: 2,
+    solvedMemberCount: 1,
+    achievedMemberCount: 1,
+    achieved: false,
+    members: [],
+    createdAt: '2026-11-24T10:00:00+09:00',
+    ...partial,
+  }
+}
+
+describe('TeamDetailView SC-23 팀 목표 (F-20c AC11)', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+    teamsApi.fetchTeamAnalyses.mockResolvedValue([])
+    teamsApi.fetchTeamChallenges.mockResolvedValue([])
+    teamsApi.fetchTeam.mockResolvedValue(team())
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('AC11 멤버와 공유 분석 사이에 팀 목표 영역이 있다', async () => {
+    teamsApi.fetchTeamChallenges.mockResolvedValue([challenge()])
+    const { wrapper } = await mountDetail()
+
+    expect(teamsApi.fetchTeamChallenges).toHaveBeenCalledWith(12)
+    const html = wrapper.html()
+    const members = html.indexOf('data-role="member-count"')
+    const challenges = html.indexOf('data-team-challenge="7"')
+    const sharedArea = html.indexOf('data-role="shared-count"')
+    expect(members).toBeGreaterThan(-1)
+    expect(members).toBeLessThan(challenges)
+    expect(challenges).toBeLessThan(sharedArea)
+  })
+
+  it('AC11 공유를 해제하면 팀 목표 목록도 다시 불러온다', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    teamsApi.fetchTeamAnalyses.mockResolvedValueOnce([shared()]).mockResolvedValueOnce([])
+    teamsApi.fetchTeamChallenges.mockResolvedValueOnce([challenge()]).mockResolvedValueOnce([])
+    teamsApi.unshareTeamAnalysis.mockResolvedValue(undefined)
+    const { wrapper } = await mountDetail()
+
+    await button(wrapper, 'unshare').trigger('click')
+    await flushPromises()
+
+    expect(teamsApi.fetchTeamChallenges).toHaveBeenCalledTimes(2)
+    expect(wrapper.findAll('[data-team-challenge]')).toHaveLength(0)
+  })
+
+  it('AC11 팀원을 내보내면 팀 목표 목록도 다시 불러온다', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    teamsApi.fetchTeam
+      .mockResolvedValueOnce(team())
+      .mockResolvedValueOnce(team({ memberCount: 1, members: [OWNER] }))
+    teamsApi.removeTeamMember.mockResolvedValue(undefined)
+    const { wrapper } = await mountDetail()
+
+    await button(wrapper, 'remove-member').trigger('click')
+    await flushPromises()
+
+    expect(teamsApi.fetchTeamChallenges).toHaveBeenCalledTimes(2)
+  })
+
+  it('AC11 팀장에게만 목표 삭제가 있다', async () => {
+    teamsApi.fetchTeamChallenges.mockResolvedValue([challenge()])
+    const owner = await mountDetail()
+    expect(owner.wrapper.find('[data-action="delete-challenge"]').exists()).toBe(true)
+
+    teamsApi.fetchTeam.mockResolvedValue(team(asMember))
+    const member = await mountDetail()
+    expect(member.wrapper.find('[data-action="delete-challenge"]').exists()).toBe(false)
   })
 })

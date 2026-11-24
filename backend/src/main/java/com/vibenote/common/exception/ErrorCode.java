@@ -141,6 +141,12 @@ public enum ErrorCode {
     TEAM_009(HttpStatus.CONFLICT, "퀴즈가 있는 완료된 분석만 공유할 수 있습니다."),
     /** 공유한 사람도 팀장도 아닌 팀원이 공유 해제 (F-20b AC4). */
     TEAM_010(HttpStatus.FORBIDDEN, "공유한 사람이나 팀장만 해제할 수 있습니다."),
+    /** 같은 분석에 종료일이 오늘 이후인 목표가 있는데 또 만듦 (F-20c AC3). */
+    TEAM_011(HttpStatus.CONFLICT, "이 분석에는 이미 예정되거나 진행 중인 팀 목표가 있습니다."),
+    /** 목표가 20개인 팀에 만듦 (F-20c AC3). soft delete된 분석의 목표는 세지 않는다. */
+    TEAM_012(HttpStatus.CONFLICT, "팀 목표는 최대 20개입니다. 종료된 목표를 지워 주세요."),
+    /** 없는 목표, 다른 팀의 목표, soft delete된 분석의 목표 (F-20c AC7). */
+    TEAM_013(HttpStatus.NOT_FOUND, "팀 목표를 찾을 수 없습니다."),
 
     // ── LLM (A) ──
     /** 개요 응답이 1회 재시도 후에도 스키마 위반. 파이프라인 FAILED 사유다 (F-06 AC5). */
