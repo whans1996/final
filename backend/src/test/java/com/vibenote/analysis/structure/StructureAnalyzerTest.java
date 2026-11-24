@@ -1130,4 +1130,113 @@ class StructureAnalyzerTest {
         assertThat(http(response)).containsExactly(edge(1, 100, 4));
         assertThat(httpUnresolved(response)).isEmpty();
     }
+
+    // ---- 5.3절 3: 분석 전체 작업 예산·파일별 예외 ----
+
+    private static UnresolvedLink parseError(long fileId, String detail) {
+        return new UnresolvedLink(
+                fileId, 1, UnresolvedKind.PARSE, UnresolvedReason.PARSE_ERROR, detail);
+    }
+
+    @Test
+    void AC12_작업_예산을_다_쓰면_남은_파일은_PARSE_ERROR이고_edgesTruncated를_켠다() {
+        AnalysisStructureResponse response =
+                new StructureAnalyzer(150, 100, 1_000, Duration.ofMinutes(1))
+                        .analyze(
+                                List.of(
+                                        js(1, "src/a.js", "import b from './b'\n"),
+                                        js(2, "src/big.js", "const x = 1\n".repeat(5_000)),
+                                        js(3, "src/c.js", "import b from './b'\n"),
+                                        js(4, "src/b.js", "export default 1\n")),
+                                null,
+                                null);
+
+        assertThat(response.edges()).containsExactly(new StructureEdge(1, 4, EdgeType.IMPORT, 1));
+        assertThat(response.unresolved())
+                .containsExactly(
+                        parseError(2, WorkBudget.EXHAUSTED_DETAIL),
+                        parseError(3, WorkBudget.EXHAUSTED_DETAIL),
+                        parseError(4, WorkBudget.EXHAUSTED_DETAIL));
+        assertThat(response.edgesTruncated()).isTrue();
+    }
+
+    @Test
+    void AC12_마감_시각을_넘기면_남은_파일은_PARSE_ERROR다() {
+        AnalysisStructureResponse response =
+                new StructureAnalyzer(150, 100, Long.MAX_VALUE, Duration.ZERO)
+                        .analyze(
+                                List.of(js(1, "src/big.js", "const x = 1\n".repeat(5_000))),
+                                null,
+                                null);
+
+        assertThat(response.unresolved())
+                .containsExactly(parseError(1, WorkBudget.EXHAUSTED_DETAIL));
+        assertThat(response.edgesTruncated()).isTrue();
+    }
+
+    @Test
+    void AC12_HTTP_판정_중_예산을_다_쓰면_남은_호출은_URL_UNKNOWN이다() {
+        String code =
+                "import axios from 'axios'\n"
+                        + "const u = u + u + u + u + u + u + u + u\n"
+                        + "axios.get(u)\n".repeat(300)
+                        + "axios.get('/api/x')\n";
+
+        AnalysisStructureResponse response =
+                new StructureAnalyzer(150, 1_000, 200_000, Duration.ofMinutes(1))
+                        .analyze(
+                                List.of(js(1, "src/a.js", code)),
+                                List.of(api("GET", "/api/x", 9)),
+                                null);
+
+        assertThat(response.unresolved())
+                .extracting(UnresolvedLink::kind)
+                .containsOnly(UnresolvedKind.HTTP_CALL);
+        assertThat(http(response)).isEmpty();
+        assertThat(httpUnresolved(response).getLast())
+                .isEqualTo(unknown(1, 303, UnresolvedReason.URL_UNKNOWN, "axios.get('/api/x')"));
+        assertThat(response.edgesTruncated()).isTrue();
+    }
+
+    /** content를 읽으면 오류가 나는 파일 (읽기 단계의 예상하지 못한 예외 대신). */
+    private static AnalysisFile failing(long id, String path, String layer, Throwable error) {
+        AnalysisFile f =
+                new AnalysisFile() {
+                    @Override
+                    public String getContent() {
+                        if (error instanceof RuntimeException e) {
+                            throw e;
+                        }
+                        throw (Error) error;
+                    }
+                };
+        f.setId(id);
+        f.setPath(path);
+        f.setLayer(layer);
+        return f;
+    }
+
+    @Test
+    void AC3_파일_하나를_읽다가_예상하지_못한_오류가_나도_그_파일만_PARSE_ERROR다() {
+        AnalysisStructureResponse response =
+                run(
+                        List.of(),
+                        js(1, "src/a.js", "import b from './b'\n"),
+                        failing(2, "src/broken.js", "js", new IllegalStateException("boom")),
+                        failing(3, "src/main/java/A.java", "service", new StackOverflowError()),
+                        js(4, "src/b.js", "export default 1\n"),
+                        failing(
+                                5,
+                                "src/main/resources/mapper/A.xml",
+                                "mapper",
+                                new IllegalStateException("boom")));
+
+        assertThat(response.edges()).containsExactly(new StructureEdge(1, 4, EdgeType.IMPORT, 1));
+        assertThat(response.unresolved())
+                .containsExactly(
+                        parseError(2, StructureLinks.FAILED_DETAIL),
+                        parseError(3, StructureLinks.FAILED_DETAIL),
+                        parseError(5, StructureLinks.FAILED_DETAIL));
+        assertThat(response.edgesTruncated()).isFalse();
+    }
 }

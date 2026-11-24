@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
+import com.vibenote.analysis.structure.WorkBudget;
 import com.vibenote.analysis.structure.js.JsToken.Kind;
 import java.time.Duration;
 import java.util.List;
@@ -100,7 +101,8 @@ class JsTokenizerTest {
                         import api from './api'
                         </script>
                         <style>.a { color: red }</style>
-                        """);
+                        """,
+                        WorkBudget.unlimited());
 
         assertThat(texts(tokens)).containsExactly("import", "api", "from", "'./api'");
         assertThat(tokens.get(0).line()).isEqualTo(5);

@@ -5,6 +5,7 @@ import com.vibenote.analysis.structure.EdgeType;
 import com.vibenote.analysis.structure.StructureLinks;
 import com.vibenote.analysis.structure.UnresolvedKind;
 import com.vibenote.analysis.structure.UnresolvedReason;
+import com.vibenote.analysis.structure.WorkBudget;
 import com.vibenote.analysis.structure.http.UrlEvaluator.Arg;
 import com.vibenote.analysis.structure.http.UrlEvaluator.Bindings;
 import com.vibenote.analysis.structure.js.JsCall;
@@ -32,6 +33,8 @@ import java.util.stream.Collectors;
  * data, config)}, {@code R.request(config)}, {@code R(config)}와 {@code fetch(url, init)}뿐이다. R은
  * axios import 이름, 같은 파일의 {@code const X = axios.create(…)}, 선별 파일에서 import한 이름이 그 파일의 {@code
  * axios.create(…)} 내보내기에 이어질 때만이다. URL을 계산하지 못했고 그 이유가 이름 있는 함수의 매개변수면 그 함수를 부른 곳마다 한 단계 인라인한다.
+ *
+ * <p>작업 예산을 다 쓰면 남은 HTTP 호출은 URL_UNKNOWN이다. 호출 하나를 계산하다 예상하지 못한 예외가 나도 그 호출만 URL_UNKNOWN이다.
  */
 public final class HttpLinker {
 
@@ -47,36 +50,58 @@ public final class HttpLinker {
     private final List<ApiEndpoint> apis;
     private final String contextPath;
     private final StructureLinks out;
+    private final WorkBudget budget;
 
     private HttpLinker(
             Map<Long, JsModule> modules,
             List<ApiEndpoint> apis,
             String contextPath,
-            StructureLinks out) {
+            StructureLinks out,
+            WorkBudget budget) {
         this.modules = modules;
-        this.evaluator = new UrlEvaluator(modules);
+        this.evaluator = new UrlEvaluator(modules, budget);
         this.apis = apis;
         this.contextPath = contextPath;
         this.out = out;
+        this.budget = budget;
     }
 
     public static void link(
             Map<Long, JsModule> modules,
             List<ApiEndpoint> apis,
             String contextPath,
-            StructureLinks out) {
-        HttpLinker linker = new HttpLinker(modules, apis, contextPath, out);
+            StructureLinks out,
+            WorkBudget budget) {
+        HttpLinker linker = new HttpLinker(modules, apis, contextPath, out, budget);
         modules.values().stream()
                 .sorted((a, b) -> Long.compare(a.fileId(), b.fileId()))
                 .forEach(
                         module -> {
                             for (JsCall call : module.calls()) {
-                                HttpCall http = linker.classify(call, module);
-                                if (http != null) {
-                                    linker.handle(http);
-                                }
+                                linker.link(call, module);
                             }
                         });
+    }
+
+    /** 호출 하나. 예산을 다 썼거나 계산 중 예외가 나면 HTTP 호출인지만 가려 URL_UNKNOWN으로 남긴다 (분류는 색인 조회라 예산을 쓰지 않는다). */
+    private void link(JsCall call, JsModule module) {
+        HttpCall http = null;
+        try {
+            http = classify(call, module);
+            if (http == null) {
+                return;
+            }
+            if (!budget.exhausted()) {
+                budget.spend();
+                handle(http);
+                return;
+            }
+        } catch (RuntimeException | StackOverflowError e) {
+            // 아래에서 URL_UNKNOWN으로 남긴다
+        }
+        if (http != null) {
+            unresolved(module, call, UnresolvedReason.URL_UNKNOWN);
+        }
     }
 
     // ---- HTTP 호출 판정 (AC7) ----
@@ -233,6 +258,7 @@ public final class HttpLinker {
             return;
         }
         for (Site site : sites) {
+            budget.spend();
             // 래퍼 안 호출 수 × 부른 곳 수만큼 계산하므로 분석 하나의 인라인 계산 횟수에 상한을 둔다
             if (--inlineBudget < 0) {
                 unresolved(module, call, UnresolvedReason.URL_UNKNOWN);
@@ -450,6 +476,7 @@ public final class HttpLinker {
                     Set<JsDecl> out = new HashSet<>();
                     List<JsToken> t = m.tokens();
                     for (int i = 0; i < t.size(); i++) {
+                        budget.spend();
                         JsToken name = t.get(i);
                         if (name.kind() != JsToken.Kind.IDENT
                                 || (i > 0 && (t.get(i - 1).is(".") || t.get(i - 1).is("?.")))) {
@@ -504,6 +531,7 @@ public final class HttpLinker {
         // 부른 곳에서 보이는 선언이 래퍼 자신의 선언일 때만 래퍼 호출이다 (매개변수·지역 변수가 이름을 가리면 다른 함수)
         Optional<JsDecl> own = module.lookup(wrapper.name(), wrapper.start());
         for (JsCall call : module.calls()) {
+            budget.spend();
             if (call.member() == null
                     && call.receiver().equals(wrapper.name())
                     && !wrapper.contains(call.start())
@@ -532,6 +560,7 @@ public final class HttpLinker {
                                         .forEach(
                                                 (local, imported) -> {
                                                     for (JsCall call : other.calls()) {
+                                                        budget.spend();
                                                         boolean direct =
                                                                 exportedAs.contains(imported)
                                                                         && call.member() == null
@@ -559,7 +588,7 @@ public final class HttpLinker {
     // ---- 결과 (AC11) ----
 
     private void emit(JsModule from, int line, FeRequest request) {
-        ApiMatch match = ApiPathMatcher.match(apis, contextPath, request);
+        ApiMatch match = ApiPathMatcher.match(apis, contextPath, request, budget);
         switch (match.status()) {
             case MATCHED -> out.edge(from.fileId(), match.fileId(), EdgeType.HTTP, line);
             case AMBIGUOUS ->

@@ -1,5 +1,6 @@
 package com.vibenote.analysis.structure.js;
 
+import com.vibenote.analysis.structure.WorkBudget;
 import com.vibenote.analysis.structure.js.JsDecl.Kind;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -72,6 +73,7 @@ final class JsDeclarations {
             Set.of("(", "[", "{", "!", "~", "++", "--", "...", ")", "]", "}", ";", ",");
 
     private final JsModule module;
+    private final WorkBudget budget;
     private final List<JsToken> t;
     private final int[] match;
 
@@ -90,12 +92,14 @@ final class JsDeclarations {
 
     private JsDeclarations(JsModule module, List<JsToken> tokens, boolean inTemplate) {
         this.module = module;
+        this.budget = module.budget();
         this.inTemplate = inTemplate;
         this.t = tokens;
         this.match = new int[t.size()];
         this.block = new int[t.size()];
         Deque<Integer> open = new ArrayDeque<>();
         Deque<Integer> braces = new ArrayDeque<>();
+        budget.spend(t.size());
         for (int i = 0; i < t.size(); i++) {
             match[i] = -1;
             block[i] = braces.isEmpty() ? -1 : braces.peek();
@@ -124,6 +128,7 @@ final class JsDeclarations {
 
     private void readAll() {
         for (int i = 0; i < t.size(); i++) {
+            budget.spend();
             readAt(i);
         }
         // 선언을 다 모은 뒤에야 그 자리의 axios 이름이 가려졌는지 안다
@@ -269,6 +274,7 @@ final class JsDeclarations {
         }
         int body = i + 2;
         while (body < t.size() && !t.get(body).is("{")) {
+            budget.spend();
             if ((t.get(body).is("(") || t.get(body).is("[")) && match[body] > body) {
                 body = match[body];
             }
@@ -332,6 +338,7 @@ final class JsDeclarations {
         int offset = t.get(i).start();
         JsFunction inner = null;
         for (JsFunction fn : module.functions()) {
+            budget.spend();
             if (fn.contains(offset) && (inner == null || fn.start() > inner.start())) {
                 inner = fn;
             }
@@ -475,6 +482,7 @@ final class JsDeclarations {
         int depth = 0;
         int defaultDepth = -1;
         for (int k = 0; k < param.size(); k++) {
+            budget.spend();
             JsToken token = param.get(k);
             boolean opens = token.is("{") || token.is("[") || token.is("(");
             boolean closes = token.is("}") || token.is("]") || token.is(")");
@@ -664,6 +672,7 @@ final class JsDeclarations {
         int start = from;
         int j = from;
         while (j < to) {
+            budget.spend();
             JsToken token = t.get(j);
             if ((token.is("(") || token.is("[") || token.is("{")) && match[j] > j) {
                 j = match[j] + 1;
@@ -685,6 +694,7 @@ final class JsDeclarations {
     int expressionEnd(int from) {
         int j = from;
         while (j < t.size()) {
+            budget.spend();
             JsToken token = t.get(j);
             if (token.is(";") || token.is(",") || token.is(")") || token.is("]") || token.is("}")) {
                 return j;

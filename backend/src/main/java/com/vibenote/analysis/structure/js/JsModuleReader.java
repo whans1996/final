@@ -5,6 +5,7 @@ import com.vibenote.analysis.structure.EdgeType;
 import com.vibenote.analysis.structure.StructureLinks;
 import com.vibenote.analysis.structure.UnresolvedKind;
 import com.vibenote.analysis.structure.UnresolvedReason;
+import com.vibenote.analysis.structure.WorkBudget;
 import com.vibenote.analysis.structure.js.JsToken.Kind;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -34,36 +35,36 @@ public final class JsModuleReader {
 
     private JsModuleReader() {}
 
-    /** 파일마다 토큰과 import를 읽고 import 간선을 남긴다. 토큰으로 나눌 수 없는 파일은 PARSE_ERROR이고 결과에서 빠진다. */
-    public static Map<Long, JsModule> read(List<AnalysisFile> files, StructureLinks out) {
+    /**
+     * 파일마다 토큰과 import를 읽고 import 간선을 남긴다. 토큰으로 나눌 수 없는 파일은 PARSE_ERROR이고 결과에서 빠진다. 예산을 다 썼거나 예상하지
+     * 못한 예외가 나면 그 파일(예산이면 남은 파일 모두)도 PARSE_ERROR다.
+     */
+    public static Map<Long, JsModule> read(
+            List<AnalysisFile> files, StructureLinks out, WorkBudget budget) {
         Map<String, Long> paths = new HashMap<>();
         files.forEach(f -> paths.putIfAbsent(f.getPath(), f.getId()));
 
         Map<Long, JsModule> modules = new LinkedHashMap<>();
         for (AnalysisFile file :
                 files.stream().sorted(Comparator.comparing(AnalysisFile::getId)).toList()) {
-            List<JsToken> tokens;
-            try {
-                tokens = JsTokenizer.tokenizeFile(file.getPath(), file.getContent());
-            } catch (JsSyntaxException e) {
-                out.unresolved(
-                        file.getId(),
-                        e.getLine(),
-                        UnresolvedKind.PARSE,
-                        UnresolvedReason.PARSE_ERROR,
-                        e.getMessage());
+            if (budget.exhausted()) {
+                out.parseFailure(file.getId(), budget);
                 continue;
             }
-            JsModule module =
-                    new JsModule(
-                            file.getId(),
-                            file.getPath(),
-                            file.getContent() == null ? "" : file.getContent(),
-                            tokens);
-            readImports(module);
-            JsDeclarations.read(module);
-            linkImports(module, paths, out);
-            modules.put(file.getId(), module);
+            try {
+                String content = file.getContent() == null ? "" : file.getContent();
+                List<JsToken> tokens = JsTokenizer.tokenizeFile(file.getPath(), content, budget);
+                JsModule module =
+                        new JsModule(file.getId(), file.getPath(), content, tokens, budget);
+                readImports(module);
+                JsDeclarations.read(module);
+                linkImports(module, paths, out);
+                modules.put(file.getId(), module);
+            } catch (JsSyntaxException e) {
+                out.parseError(file.getId(), e.getLine(), e.getMessage());
+            } catch (RuntimeException | StackOverflowError e) {
+                out.parseFailure(file.getId(), budget);
+            }
         }
         return modules;
     }
@@ -148,6 +149,7 @@ public final class JsModuleReader {
     static void readImports(JsModule module) {
         List<JsToken> t = module.tokens();
         for (int i = 0; i < t.size(); i++) {
+            module.budget().spend();
             JsToken token = t.get(i);
             if (token.kind() != Kind.IDENT || JsTokens.isMemberName(t, i)) {
                 continue;

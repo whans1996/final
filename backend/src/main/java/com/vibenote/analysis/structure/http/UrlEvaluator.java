@@ -1,5 +1,6 @@
 package com.vibenote.analysis.structure.http;
 
+import com.vibenote.analysis.structure.WorkBudget;
 import com.vibenote.analysis.structure.js.JsDecl;
 import com.vibenote.analysis.structure.js.JsExport;
 import com.vibenote.analysis.structure.js.JsFunction;
@@ -29,9 +30,11 @@ public final class UrlEvaluator {
     static final int MAX_LENGTH = 2_048;
 
     private final Map<Long, JsModule> modules;
+    private final WorkBudget work;
 
-    public UrlEvaluator(Map<Long, JsModule> modules) {
+    public UrlEvaluator(Map<Long, JsModule> modules, WorkBudget work) {
         this.modules = modules;
+        this.work = work;
     }
 
     /** 부른 곳의 인자 하나와 그 인자를 계산할 모듈. */
@@ -97,6 +100,7 @@ public final class UrlEvaluator {
     }
 
     private Typed operand(List<JsToken> part, JsModule module, Bindings bindings, int depth) {
+        work.spend();
         if (--budget < 0) {
             return Typed.text(UrlValue.dynamic());
         }
@@ -180,7 +184,8 @@ public final class UrlEvaluator {
     }
 
     /** 괄호 밖의 {@code +}로 나눈다. */
-    private static List<List<JsToken>> splitPlus(List<JsToken> tokens) {
+    private List<List<JsToken>> splitPlus(List<JsToken> tokens) {
+        work.spend(tokens.size());
         List<List<JsToken>> parts = new ArrayList<>();
         int depth = 0;
         int start = 0;

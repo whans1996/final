@@ -1,5 +1,6 @@
 package com.vibenote.analysis.structure.js;
 
+import com.vibenote.analysis.structure.WorkBudget;
 import com.vibenote.analysis.structure.js.JsToken.Kind;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -60,26 +61,33 @@ public final class JsTokenizer {
     private static final int MAX_CODE_POINT_ESCAPE = 16;
 
     private final String src;
+    private final WorkBudget budget;
     private int pos;
     private int line = 1;
     private int templateDepth;
     private long failedRegexScan;
 
-    private JsTokenizer(String src) {
+    private JsTokenizer(String src, WorkBudget budget) {
         this.src = src;
+        this.budget = budget;
     }
 
     public static List<JsToken> tokenize(String code) {
-        return new JsTokenizer(code == null ? "" : code).lex(false);
+        return tokenize(code, WorkBudget.unlimited());
+    }
+
+    /** 토큰 하나마다 예산을 쓴다. */
+    public static List<JsToken> tokenize(String code, WorkBudget budget) {
+        return new JsTokenizer(code == null ? "" : code, budget).lex(false);
     }
 
     /** {@code .vue}는 {@code <script>} 블록만 읽는다. 블록 밖은 줄바꿈만 남기고 공백으로 바꿔 줄 번호·위치를 원본과 같게 둔다. */
-    public static List<JsToken> tokenizeFile(String path, String content) {
+    public static List<JsToken> tokenizeFile(String path, String content, WorkBudget budget) {
         String code = content == null ? "" : content;
         if (path.toLowerCase(Locale.ROOT).endsWith(".vue")) {
             code = scriptBlocks(code);
         }
-        return tokenize(code);
+        return tokenize(code, budget);
     }
 
     static String scriptBlocks(String vue) {
@@ -126,7 +134,12 @@ public final class JsTokenizer {
         // 여는 중괄호마다 식 자리(객체 리터럴)인지. 객체를 닫은 } 뒤의 /는 나눗셈이다
         Deque<Boolean> braces = new ArrayDeque<>();
         boolean closedObject = false;
+        int counted = tokens.size();
         while (pos < src.length()) {
+            if (tokens.size() > counted) {
+                budget.spend(tokens.size() - counted);
+                counted = tokens.size();
+            }
             char c = src.charAt(pos);
             if (c == '\n') {
                 line++;

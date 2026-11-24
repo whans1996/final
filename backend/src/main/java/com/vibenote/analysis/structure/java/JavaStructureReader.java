@@ -32,6 +32,7 @@ import com.vibenote.analysis.structure.EdgeType;
 import com.vibenote.analysis.structure.StructureLinks;
 import com.vibenote.analysis.structure.UnresolvedKind;
 import com.vibenote.analysis.structure.UnresolvedReason;
+import com.vibenote.analysis.structure.WorkBudget;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -51,6 +52,8 @@ import java.util.regex.Pattern;
  * <p>JavaParser AST에서 타입 이름이 나오는 자리(타입 위치 전부, 어노테이션, 단일 타입·static import, 정적 호출·필드 접근·메서드 참조의 대상)를
  * 모아 Java 이름 규칙으로 푼다: 파일 안 선언 → 단일 타입 import → 같은 패키지 → 와일드카드 import. 소문자로 시작하는 점 이름은 FQN으로 보고 첫
  * 대문자 세그먼트까지를 타입 FQN으로 쓴다. 심볼 해석기는 쓰지 않으므로 import 없는 단순 이름이 선별되지 않은 타입이면 FQN을 몰라 남기지 않는다.
+ *
+ * <p>작업 예산을 다 썼거나 파일 하나를 읽다 예상하지 못한 예외가 나면 그 파일은 PARSE_ERROR다 (타입 이름은 파일 이름으로 남아 다른 파일이 가리킬 수 있다).
  */
 public final class JavaStructureReader {
 
@@ -61,10 +64,11 @@ public final class JavaStructureReader {
 
     private JavaStructureReader() {}
 
-    public static JavaTypeIndex read(List<AnalysisFile> javaFiles, StructureLinks out) {
+    public static JavaTypeIndex read(
+            List<AnalysisFile> javaFiles, StructureLinks out, WorkBudget budget) {
         List<AnalysisFile> files =
                 javaFiles.stream().sorted(Comparator.comparing(AnalysisFile::getId)).toList();
-        List<Parsed> parsed = files.stream().map(JavaStructureReader::parse).toList();
+        List<Parsed> parsed = files.stream().map(f -> parseWithin(f, budget)).toList();
 
         Map<String, Long> types = new HashMap<>();
         List<String> packages = new ArrayList<>();
@@ -78,21 +82,46 @@ public final class JavaStructureReader {
 
         for (Parsed p : parsed) {
             if (p.unit() == null) {
-                out.unresolved(
-                        p.file().getId(),
-                        p.errorLine(),
-                        UnresolvedKind.PARSE,
-                        UnresolvedReason.PARSE_ERROR,
-                        p.error());
+                out.parseError(p.file().getId(), p.errorLine(), p.error());
+            } else if (budget.exhausted()) {
+                out.parseFailure(p.file().getId(), budget);
             } else {
-                new FileReader(p, index).read(out);
+                try {
+                    new FileReader(p, index, budget).read(out);
+                } catch (RuntimeException | StackOverflowError e) {
+                    out.parseFailure(p.file().getId(), budget);
+                }
             }
         }
         return index;
     }
 
-    private static Parsed parse(AnalysisFile file) {
+    /** 예산 안에서 파싱한다. 예산을 다 썼거나 예외가 나면 파일 이름만으로 타입을 등록한 실패 결과다. */
+    private static Parsed parseWithin(AnalysisFile file, WorkBudget budget) {
+        try {
+            if (!budget.exhausted()) {
+                return parse(file, budget);
+            }
+        } catch (RuntimeException | StackOverflowError e) {
+            // 아래 실패 결과
+        }
+        String detail =
+                budget.exhausted() ? WorkBudget.EXHAUSTED_DETAIL : StructureLinks.FAILED_DETAIL;
+        String pkg = "";
+        try {
+            Matcher m = PACKAGE_LINE.matcher(file.getContent() == null ? "" : file.getContent());
+            pkg = m.find() ? m.group(1) : "";
+        } catch (RuntimeException | StackOverflowError e) {
+            // 패키지를 모르면 단순 이름만 등록한다
+        }
+        return new Parsed(
+                file, null, pkg, Set.of(qualify(pkg, fileTypeName(file.getPath()))), detail, 1);
+    }
+
+    private static Parsed parse(AnalysisFile file, WorkBudget budget) {
         String code = file.getContent() == null ? "" : file.getContent();
+        // 파서는 중간에 멈출 수 없어 글자 수로 미리 차감한다 (토큰 하나 ≈ 4글자)
+        budget.spend(code.length() / 4 + 1);
         String fileType = fileTypeName(file.getPath());
         ParserConfiguration config =
                 new ParserConfiguration()
@@ -125,6 +154,7 @@ public final class JavaStructureReader {
         Set<String> declared = new HashSet<>();
         declared.add(qualify(pkg, fileType));
         for (TypeDeclaration<?> type : unit.findAll(TypeDeclaration.class)) {
+            budget.spend();
             type.getFullyQualifiedName().ifPresent(declared::add);
         }
         return new Parsed(file, unit, pkg, declared, null, 0);
@@ -177,6 +207,7 @@ public final class JavaStructureReader {
 
         private final Parsed parsed;
         private final JavaTypeIndex index;
+        private final WorkBudget budget;
 
         /** 변수 이름 → 그 변수가 보이는 범위 노드들 (메서드·람다·블록·for·try·타입 등). */
         private final Map<String, List<Node>> variableScopes = new HashMap<>();
@@ -186,9 +217,10 @@ public final class JavaStructureReader {
         private final Map<Long, Integer> edgeLines = new TreeMap<>();
         private final Map<String, Integer> missingLines = new LinkedHashMap<>();
 
-        FileReader(Parsed parsed, JavaTypeIndex index) {
+        FileReader(Parsed parsed, JavaTypeIndex index, WorkBudget budget) {
             this.parsed = parsed;
             this.index = index;
+            this.budget = budget;
         }
 
         void read(StructureLinks out) {
@@ -260,6 +292,7 @@ public final class JavaStructureReader {
         }
 
         private void variable(String name, Node scope) {
+            budget.spend();
             if (scope != null) {
                 variableScopes.computeIfAbsent(name, k -> new ArrayList<>()).add(scope);
             }
@@ -286,6 +319,7 @@ public final class JavaStructureReader {
                 return false;
             }
             for (Node node = at; node != null; node = node.getParentNode().orElse(null)) {
+                budget.spend(scopes.size());
                 for (Node scope : scopes) {
                     if (scope == node) {
                         return true;
@@ -296,6 +330,7 @@ public final class JavaStructureReader {
         }
 
         private void reference(String name, Node at) {
+            budget.spend();
             Target target = resolve(name, at);
             if (target == null) {
                 return;
@@ -344,8 +379,9 @@ public final class JavaStructureReader {
          * at에서 보이는 이 파일 안의 타입 이름인지: 바깥쪽으로 올라가며 둘러싼 타입 자신과 그 멤버 타입, 타입 매개변수, 블록 안 지역 클래스, 최상위 타입을
          * 본다. 중첩 타입 이름은 그 타입 범위 밖에서는 같은 패키지의 다른 파일을 가리킬 수 있다.
          */
-        private static boolean declaredAround(String simple, Node at) {
+        private boolean declaredAround(String simple, Node at) {
             for (Node node = at; node != null; node = node.getParentNode().orElse(null)) {
+                budget.spend();
                 if (node instanceof TypeDeclaration<?> type) {
                     if (type.getNameAsString().equals(simple)
                             || type.getMembers().stream()

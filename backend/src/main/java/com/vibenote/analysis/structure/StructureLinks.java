@@ -33,6 +33,21 @@ public final class StructureLinks {
         unresolved.add(new UnresolvedLink(fileId, line, kind, reason, detail));
     }
 
+    public void parseError(long fileId, int line, String detail) {
+        unresolved(fileId, line, UnresolvedKind.PARSE, UnresolvedReason.PARSE_ERROR, detail);
+    }
+
+    /**
+     * 파일을 읽지 못한 이유가 예산 소진이나 예상하지 못한 예외일 때 그 파일의 PARSE_ERROR (줄 1). 예외 메시지는 내부 정보라 내보내지 않는다 (5.3절 3,
+     * 500 대신).
+     */
+    public void parseFailure(long fileId, WorkBudget budget) {
+        parseError(fileId, 1, budget.exhausted() ? WorkBudget.EXHAUSTED_DETAIL : FAILED_DETAIL);
+    }
+
+    /** 읽다가 예상하지 못한 예외가 난 파일의 PARSE_ERROR detail. */
+    public static final String FAILED_DETAIL = "코드를 해석하는 중 오류가 났습니다.";
+
     public List<StructureEdge> edges() {
         return new ArrayList<>(edges.values());
     }

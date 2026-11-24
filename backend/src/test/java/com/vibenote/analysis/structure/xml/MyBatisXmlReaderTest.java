@@ -13,6 +13,7 @@ import com.vibenote.analysis.structure.StructureLinks;
 import com.vibenote.analysis.structure.UnresolvedKind;
 import com.vibenote.analysis.structure.UnresolvedLink;
 import com.vibenote.analysis.structure.UnresolvedReason;
+import com.vibenote.analysis.structure.WorkBudget;
 import com.vibenote.analysis.structure.java.JavaStructureReader;
 import com.vibenote.analysis.structure.java.JavaTypeIndex;
 import java.nio.file.Files;
@@ -51,9 +52,9 @@ class MyBatisXmlReaderTest {
 
     private static StructureLinks read(AnalysisFile... xml) {
         StructureLinks links = new StructureLinks();
-        JavaTypeIndex index = JavaStructureReader.read(JAVA, links);
+        JavaTypeIndex index = JavaStructureReader.read(JAVA, links, WorkBudget.unlimited());
         StructureLinks out = new StructureLinks();
-        MyBatisXmlReader.read(List.of(xml), index, out);
+        MyBatisXmlReader.read(List.of(xml), index, out, WorkBudget.unlimited());
         return out;
     }
 
@@ -188,9 +189,9 @@ class MyBatisXmlReaderTest {
                         + "</mapper>";
 
         StructureLinks links = new StructureLinks();
-        JavaTypeIndex index = JavaStructureReader.read(List.of(dto), links);
+        JavaTypeIndex index = JavaStructureReader.read(List.of(dto), links, WorkBudget.unlimited());
         StructureLinks out = new StructureLinks();
-        MyBatisXmlReader.read(List.of(mapperXml(10, xml)), index, out);
+        MyBatisXmlReader.read(List.of(mapperXml(10, xml)), index, out, WorkBudget.unlimited());
 
         assertThat(out.edges())
                 .containsExactlyInAnyOrder(

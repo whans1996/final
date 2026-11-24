@@ -1,5 +1,6 @@
 package com.vibenote.analysis.structure.js;
 
+import com.vibenote.analysis.structure.WorkBudget;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -15,6 +16,7 @@ public final class JsModule {
     private final String path;
     private final String source;
     private final List<JsToken> tokens;
+    private final WorkBudget budget;
     private final List<JsImport> imports = new ArrayList<>();
     private final List<JsDecl> decls = new ArrayList<>();
     private final Map<String, List<JsDecl>> declsByName = new HashMap<>();
@@ -33,11 +35,18 @@ public final class JsModule {
     private final List<JsCall> calls = new ArrayList<>();
     private final List<List<JsToken>> defaultsBaseUrls = new ArrayList<>();
 
-    public JsModule(long fileId, String path, String source, List<JsToken> tokens) {
+    public JsModule(
+            long fileId, String path, String source, List<JsToken> tokens, WorkBudget budget) {
         this.fileId = fileId;
         this.path = path;
         this.source = source;
         this.tokens = tokens;
+        this.budget = budget;
+    }
+
+    /** 이 모듈을 읽고 계산하는 요청의 작업 예산. */
+    public WorkBudget budget() {
+        return budget;
     }
 
     public long fileId() {
@@ -122,6 +131,7 @@ public final class JsModule {
     private Set<JsDecl> findReassigned() {
         Set<Integer> paramNames = new HashSet<>();
         Map<Integer, Integer> indexByStart = new HashMap<>();
+        budget.spend(tokens.size());
         for (int i = 0; i < tokens.size(); i++) {
             indexByStart.put(tokens.get(i).start(), i);
         }
@@ -136,6 +146,7 @@ public final class JsModule {
             }
             int depth = 0;
             for (int i = at; i < tokens.size(); i++) {
+                budget.spend();
                 JsToken token = tokens.get(i);
                 if (token.is("(")) {
                     depth++;
@@ -148,6 +159,7 @@ public final class JsModule {
         }
         Set<JsDecl> out = new HashSet<>();
         for (int i = 0; i < tokens.size(); i++) {
+            budget.spend();
             JsToken token = tokens.get(i);
             if (token.kind() != JsToken.Kind.IDENT
                     || paramNames.contains(token.start())

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
 import com.vibenote.analysis.explain.ApiEndpoint;
+import com.vibenote.analysis.structure.WorkBudget;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
@@ -27,7 +28,7 @@ class ApiPathMatcherTest {
     }
 
     private static ApiMatch match(FeRequest request, String contextPath, ApiEndpoint... apis) {
-        return ApiPathMatcher.match(List.of(apis), contextPath, request);
+        return ApiPathMatcher.match(List.of(apis), contextPath, request, WorkBudget.unlimited());
     }
 
     @Test

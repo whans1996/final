@@ -16,7 +16,12 @@ public class StructureService {
 
     public StructureService(AnalysisService analysisService, StructureProperties properties) {
         this.analysisService = analysisService;
-        this.analyzer = new StructureAnalyzer(properties.maxEdges(), properties.maxUnresolved());
+        this.analyzer =
+                new StructureAnalyzer(
+                        properties.maxEdges(),
+                        properties.maxUnresolved(),
+                        properties.maxWorkSteps(),
+                        properties.maxWorkTime());
     }
 
     /**

@@ -11,6 +11,7 @@ import com.vibenote.analysis.structure.StructureLinks;
 import com.vibenote.analysis.structure.UnresolvedKind;
 import com.vibenote.analysis.structure.UnresolvedLink;
 import com.vibenote.analysis.structure.UnresolvedReason;
+import com.vibenote.analysis.structure.WorkBudget;
 import java.time.Duration;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -24,7 +25,7 @@ class JsModuleReaderTest {
 
     private static StructureLinks read(AnalysisFile... files) {
         StructureLinks links = new StructureLinks();
-        JsModuleReader.read(List.of(files), links);
+        JsModuleReader.read(List.of(files), links, WorkBudget.unlimited());
         return links;
     }
 

@@ -5,6 +5,7 @@ import com.vibenote.analysis.structure.EdgeType;
 import com.vibenote.analysis.structure.StructureLinks;
 import com.vibenote.analysis.structure.UnresolvedKind;
 import com.vibenote.analysis.structure.UnresolvedReason;
+import com.vibenote.analysis.structure.WorkBudget;
 import com.vibenote.analysis.structure.java.JavaTypeIndex;
 import java.io.IOException;
 import java.io.StringReader;
@@ -30,7 +31,7 @@ import org.xml.sax.helpers.DefaultHandler;
  *
  * <p>{@code <mapper namespace>}가 선별된 Java FQN이면 Java → XML(줄 1), 타입 속성 값이 선별된 Java FQN이면 XML →
  * Java(그 요소 줄). 요소 줄 번호가 필요해 DOM 대신 SAX로 읽는다. 외부 DTD·외부 엔티티·XInclude는 읽지 않는다 (MyBatis XML은 공개 DTD를
- * 선언하므로 DOCTYPE 자체는 허용한다).
+ * 선언하므로 DOCTYPE 자체는 허용한다). 작업 예산을 다 썼거나 예상하지 못한 예외가 나면 그 파일은 PARSE_ERROR다.
  */
 public final class MyBatisXmlReader {
 
@@ -47,23 +48,48 @@ public final class MyBatisXmlReader {
 
     private MyBatisXmlReader() {}
 
-    public static void read(List<AnalysisFile> xmlFiles, JavaTypeIndex index, StructureLinks out) {
-        xmlFiles.stream()
-                .sorted(Comparator.comparing(AnalysisFile::getId))
-                .forEach(file -> read(file, index, out));
+    public static void read(
+            List<AnalysisFile> xmlFiles,
+            JavaTypeIndex index,
+            StructureLinks out,
+            WorkBudget budget) {
+        for (AnalysisFile file :
+                xmlFiles.stream().sorted(Comparator.comparing(AnalysisFile::getId)).toList()) {
+            if (budget.exhausted()) {
+                out.parseFailure(file.getId(), budget);
+                continue;
+            }
+            try {
+                read(file, index, out, budget);
+            } catch (RuntimeException | StackOverflowError e) {
+                out.parseFailure(file.getId(), budget);
+            }
+        }
     }
 
-    private static void read(AnalysisFile file, JavaTypeIndex index, StructureLinks out) {
+    private static void read(
+            AnalysisFile file, JavaTypeIndex index, StructureLinks out, WorkBudget budget) {
         long self = file.getId();
         String code = file.getContent() == null ? "" : file.getContent();
-        Handler handler = new Handler(index, code);
+        // 파서는 중간에 멈출 수 없어 글자 수로 미리 차감한다. 요소마다 다시 차감한다
+        budget.spend(code.length() / 4 + 1);
+        Handler handler = new Handler(index, code, budget);
         try {
             parser().parse(new InputSource(new StringReader(code)), handler);
         } catch (SAXParseException e) {
-            parseError(out, self, Math.max(e.getLineNumber(), 1), e.getMessage());
+            if (budget.exhausted()) {
+                out.parseFailure(self, budget);
+            } else {
+                parseError(out, self, Math.max(e.getLineNumber(), 1), e.getMessage());
+            }
             return;
         } catch (SAXException | IOException e) {
-            parseError(out, self, 1, e.getMessage());
+            // 요소마다 쓰는 예산이 파서 안에서 SAXException으로 감싸여 나올 수 있다
+            if (budget.exhausted()) {
+                out.parseFailure(self, budget);
+            } else {
+                parseError(out, self, 1, e.getMessage());
+            }
             return;
         }
         if (handler.namespaceFile != null) {
@@ -119,6 +145,7 @@ public final class MyBatisXmlReader {
 
         private final JavaTypeIndex index;
         private final String code;
+        private final WorkBudget budget;
 
         /** 줄 시작 offset (0부터). 요소마다 처음부터 줄을 다시 세지 않게 한 번 만든다. */
         private final int[] lineStarts;
@@ -129,9 +156,10 @@ public final class MyBatisXmlReader {
         int namespaceLine;
         final Map<Long, Integer> typeLines = new TreeMap<>();
 
-        Handler(JavaTypeIndex index, String code) {
+        Handler(JavaTypeIndex index, String code, WorkBudget budget) {
             this.index = index;
             this.code = code;
+            this.budget = budget;
             this.lineStarts = lineStarts(code);
         }
 
@@ -182,6 +210,7 @@ public final class MyBatisXmlReader {
             int end = Math.min(code.length(), offset + Math.max(locator.getColumnNumber() - 1, 0));
             String open = "<" + qName;
             int floor = Math.max(0, end - MAX_TAG_LENGTH);
+            budget.spend(end - floor + 1);
             for (int start = Math.min(end, code.length() - open.length());
                     start >= floor;
                     start--) {

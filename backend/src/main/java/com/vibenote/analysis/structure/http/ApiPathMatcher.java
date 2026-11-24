@@ -1,6 +1,7 @@
 package com.vibenote.analysis.structure.http;
 
 import com.vibenote.analysis.explain.ApiEndpoint;
+import com.vibenote.analysis.structure.WorkBudget;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -33,7 +34,8 @@ public final class ApiPathMatcher {
 
     private ApiPathMatcher() {}
 
-    public static ApiMatch match(List<ApiEndpoint> apis, String contextPath, FeRequest request) {
+    public static ApiMatch match(
+            List<ApiEndpoint> apis, String contextPath, FeRequest request, WorkBudget budget) {
         // context-path는 업로드한 설정 파일 값이라 길이 상한이 없다. 한 번만 나누고, 고정 세그먼트만으로 요청보다 길면 비교하지 않는다
         List<ApiSegment> prefix = compact(parse(contextPath == null ? "" : contextPath));
         if (fixedCount(prefix) > request.path().size()) {
@@ -47,7 +49,7 @@ public final class ApiPathMatcher {
             List<ApiSegment> pattern = new ArrayList<>(prefix);
             pattern.addAll(parse(api.path()));
             pattern = compact(pattern);
-            if (matches(pattern, request.path())) {
+            if (matches(pattern, request.path(), budget)) {
                 candidates.add(Candidate.of(api.fileId(), pattern));
             }
         }
@@ -105,7 +107,8 @@ public final class ApiPathMatcher {
      * 패턴 세그먼트 i 이후가 경로 세그먼트 j 이후와 맞는지를 뒤에서부터 채운다 (O(패턴 × 경로) 시간, 행 두 개만 둬 O(경로) 메모리). 고정 세그먼트 수로
      * 길이가 맞을 수 없으면 표를 채우지 않는다.
      */
-    private static boolean matches(List<ApiSegment> pattern, List<PathSegment> path) {
+    private static boolean matches(
+            List<ApiSegment> pattern, List<PathSegment> path, WorkBudget budget) {
         int p = pattern.size();
         int n = path.size();
         int fixed = fixedCount(pattern);
@@ -116,6 +119,7 @@ public final class ApiPathMatcher {
         boolean[] cur = new boolean[n + 1];
         next[n] = true;
         for (int i = p - 1; i >= 0; i--) {
+            budget.spend(n + 1);
             ApiSegment segment = pattern.get(i);
             for (int j = n; j >= 0; j--) {
                 if (segment.type() == Type.MULTI) {
