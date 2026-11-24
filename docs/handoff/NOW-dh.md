@@ -4,24 +4,24 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
 
-갱신: 2026-11-24 12:12 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/F-21a-structure-graph
+갱신: 2026-11-24 12:27 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/F-21a-structure-graph
 
 ## 현재 기능
 
-**F-21a 구조 시각화: 파일 의존 그래프** (P1) spec `docs/specs/F-21a-structure-graph.md` — APPROVED, `/implement` 진행 중. 이번 세션: AC1~AC6 완료 → AC7~AC11(HTTP)
+**F-21a 구조 시각화: 파일 의존 그래프** (P1) spec `docs/specs/F-21a-structure-graph.md` — APPROVED, `/implement` 진행 중. 이번 세션: BE 계산 AC1~AC12 완료 → AC12·AC13 API
 
 ## 진행
 
 - ✅ AC1~AC3 `analysis/structure/java/JavaStructureReader`(JavaParser 3.28.2, 2026-05-31 출시): 타입 위치·어노테이션·단일/static import·정적 호출 대상을 파일 안→단일 import→같은 패키지→와일드카드 순으로 해석. import 줄도 근거(줄 번호)로 센다. import 없는 단순 이름은 FQN을 몰라 NOT_SELECTED를 만들지 않음
 - ✅ AC4 `xml/MyBatisXmlReader`: 줄 번호가 필요해 DOM 대신 SAX(외부 DTD·엔티티 off, 시작 태그 첫 줄 역추적). XXE 테스트 포함
 - ✅ AC5 `js/JsTokenizer`(템플릿 중첩·정규식/나눗셈·.vue script만 원본 위치 유지), AC6 `js/JsModuleReader`·`JsModule`·`JsImport`(import·export from·import()·require, @/ = 가장 가까운 상위 src/). .css 등 코드 아닌 확장자는 NOT_SELECTED 안 남김
+- ✅ AC7~AC12 `js/JsDeclarations`(const·매개변수 범위·함수·export·호출), `http/UrlEvaluator`·`UrlValue`, `HttpLinker`(받는 쪽 판정·baseURL·래퍼 한 단계 인라인), `ApiPathMatcher`, `ContextPathReader`(SnakeYAML Safe), `StructureAnalyzer`(중복·정렬·상한). 테스트 40개+ 통과
 - 공용: `structure/` EdgeType·UnresolvedKind·UnresolvedReason·StructureEdge·UnresolvedLink·StructureLinks, 테스트 `StructureFiles`
 
 ## 바로 다음 할 일
 
-1. AC7~AC10: `JsModuleReader`에 export·const·함수(매개변수·본문 범위)·HTTP 호출 후보 추출을 더하고 `http/UrlEvaluator`로 URL·baseURL·래퍼 한 단계 인라인 계산. 테스트 `http/UrlEvaluatorTest`, `StructureAnalyzerTest#AC7_…`~`#AC10_…` (오탐 방지: router.push·Map.get·route path)
-2. AC11 `http/ApiPathMatcher` (+ApiPathMatcherTest)
-3. 그 뒤 AC12 `StructureAnalyzer`, AC13 컨트롤러, FE AC14~AC17
+1. AC12·AC13 API: `StructureProperties`(analysis.structure.max-edges 150·max-unresolved 100, application.yml), `StructureService`(checkViewable → 파일 content 조회 → 개요 apis·ContextPathReader → StructureAnalyzer), `StructureController` GET /api/analyses/{id:d+}/structure (Tag 분석). `StructureControllerTest#AC12_…`·`#AC13_…`(IntegrationTestBase), openapi.json 재생성
+2. FE AC14~AC17: mermaid 버전 고정 → utils/mermaid.js·structure.js → MermaidDiagram.vue → AnalysisStructureTab.vue → AnalysisDetailView TABS
 
 ## 막힌 점 / 결정 필요
 

@@ -1,19 +1,32 @@
 package com.vibenote.analysis.structure.js;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 
-/** 토큰으로 읽은 JS·Vue 파일 하나 (F-21a AC6~AC10). */
+/** 토큰으로 읽은 JS·Vue 파일 하나와 그 선언·내보내기·호출 (F-21a AC6~AC10). */
 public final class JsModule {
 
     private final long fileId;
     private final String path;
+    private final String source;
     private final List<JsToken> tokens;
     private final List<JsImport> imports = new ArrayList<>();
+    private final List<JsDecl> decls = new ArrayList<>();
+    private final List<JsFunction> functions = new ArrayList<>();
+    private final Map<String, JsExport> exports = new HashMap<>();
+    private final Set<String> axiosNames = new HashSet<>();
+    private final List<JsCall> calls = new ArrayList<>();
+    private final List<List<JsToken>> defaultsBaseUrls = new ArrayList<>();
 
-    public JsModule(long fileId, String path, List<JsToken> tokens) {
+    public JsModule(long fileId, String path, String source, List<JsToken> tokens) {
         this.fileId = fileId;
         this.path = path;
+        this.source = source;
         this.tokens = tokens;
     }
 
@@ -31,5 +44,70 @@ public final class JsModule {
 
     public List<JsImport> imports() {
         return imports;
+    }
+
+    public List<JsDecl> decls() {
+        return decls;
+    }
+
+    public List<JsFunction> functions() {
+        return functions;
+    }
+
+    /** 내보낸 이름({@code default} 포함) → 내보낸 것. */
+    public Map<String, JsExport> exports() {
+        return exports;
+    }
+
+    /** {@code import X from 'axios'}·{@code const X = require('axios')}의 X. */
+    public Set<String> axiosNames() {
+        return axiosNames;
+    }
+
+    public List<JsCall> calls() {
+        return calls;
+    }
+
+    /** {@code X.defaults.baseURL = 식}의 식 (X는 axios 이름). */
+    public List<List<JsToken>> defaultsBaseUrls() {
+        return defaultsBaseUrls;
+    }
+
+    /** offset에서 보이는 name 선언 중 가장 안쪽 것. */
+    public Optional<JsDecl> lookup(String name, int offset) {
+        JsDecl best = null;
+        for (JsDecl decl : decls) {
+            if (decl.name().equals(name)
+                    && decl.visibleAt(offset)
+                    && (best == null || decl.scopeStart() > best.scopeStart())) {
+                best = decl;
+            }
+        }
+        return Optional.ofNullable(best);
+    }
+
+    /** 파일 최상위 선언. */
+    public Optional<JsDecl> lookupTopLevel(String name) {
+        return decls.stream().filter(d -> d.name().equals(name) && d.scopeStart() < 0).findFirst();
+    }
+
+    /** 이 지역 이름을 가져온 import와 그 가져온 이름. */
+    public Optional<Map.Entry<JsImport, String>> importOf(String local) {
+        for (JsImport imp : imports) {
+            String imported = imp.bindings().get(local);
+            if (imported != null) {
+                return Optional.of(Map.entry(imp, imported));
+            }
+        }
+        return Optional.empty();
+    }
+
+    /** 원문 [start, end)를 공백 하나로 접어 max자까지. */
+    public String excerpt(int start, int end, int max) {
+        String text =
+                source.substring(Math.max(0, start), Math.min(source.length(), end))
+                        .replaceAll("\s+", " ")
+                        .strip();
+        return text.length() <= max ? text : text.substring(0, max);
     }
 }

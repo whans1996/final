@@ -54,8 +54,14 @@ public final class JsModuleReader {
                         e.getMessage());
                 continue;
             }
-            JsModule module = new JsModule(file.getId(), file.getPath(), tokens);
+            JsModule module =
+                    new JsModule(
+                            file.getId(),
+                            file.getPath(),
+                            file.getContent() == null ? "" : file.getContent(),
+                            tokens);
             readImports(module);
+            JsDeclarations.read(module);
             linkImports(module, paths, out);
             modules.put(file.getId(), module);
         }
