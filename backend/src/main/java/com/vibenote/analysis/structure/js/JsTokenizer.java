@@ -1,7 +1,9 @@
 package com.vibenote.analysis.structure.js;
 
 import com.vibenote.analysis.structure.js.JsToken.Kind;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -39,6 +41,9 @@ public final class JsTokenizer {
                     "instanceof",
                     "yield",
                     "await");
+
+    /** 뒤의 괄호가 문의 조건인 키워드. 그 괄호를 닫은 뒤에는 값이 아니라 문이 온다. */
+    private static final Set<String> CONDITION_WORDS = Set.of("if", "while", "for", "with");
 
     private static final Pattern SCRIPT_OPEN =
             Pattern.compile("<script\\b[^>]*>", Pattern.CASE_INSENSITIVE);
@@ -105,6 +110,9 @@ public final class JsTokenizer {
     private List<JsToken> lex(boolean inTemplate) {
         List<JsToken> tokens = new ArrayList<>();
         int depth = 0;
+        // 여는 괄호마다 if·while·for·with의 조건 괄호인지. 조건 괄호를 닫은 ) 뒤의 /는 정규식을 시작할 수 있다
+        Deque<Boolean> parens = new ArrayDeque<>();
+        boolean closedCondition = false;
         while (pos < src.length()) {
             char c = src.charAt(pos);
             if (c == '\n') {
@@ -127,7 +135,7 @@ public final class JsTokenizer {
                 tokens.add(string(c));
             } else if (c == '`') {
                 tokens.add(template());
-            } else if (c == '/' && regexAllowed(tokens)) {
+            } else if (c == '/' && regexAllowed(tokens, closedCondition)) {
                 JsToken regex = regex();
                 tokens.add(regex != null ? regex : punct("/"));
             } else if (Character.isJavaIdentifierStart(c)) {
@@ -153,6 +161,13 @@ public final class JsTokenizer {
                     depth++;
                 } else if (c == '}') {
                     depth--;
+                } else if (c == '(') {
+                    parens.push(
+                            !tokens.isEmpty()
+                                    && CONDITION_WORDS.contains(tokens.getLast().text())
+                                    && tokens.getLast().kind() == Kind.IDENT);
+                } else if (c == ')') {
+                    closedCondition = !parens.isEmpty() && parens.pop();
                 }
                 tokens.add(punct(operatorAt()));
             }
@@ -163,17 +178,20 @@ public final class JsTokenizer {
         return tokens;
     }
 
-    private static boolean regexAllowed(List<JsToken> tokens) {
+    /** closedCondition: 직전 토큰 )가 if·while·for·with의 조건 괄호를 닫았는지. */
+    private static boolean regexAllowed(List<JsToken> tokens, boolean closedCondition) {
         if (tokens.isEmpty()) {
             return true;
         }
         JsToken prev = tokens.get(tokens.size() - 1);
         return switch (prev.kind()) {
             case PUNCT ->
-                    !prev.text().equals(")")
-                            && !prev.text().equals("]")
-                            && !prev.text().equals("++")
-                            && !prev.text().equals("--");
+                    prev.text().equals(")")
+                            ? closedCondition
+                            : !prev.text().equals(")")
+                                    && !prev.text().equals("]")
+                                    && !prev.text().equals("++")
+                                    && !prev.text().equals("--");
             case IDENT -> REGEX_AFTER_WORDS.contains(prev.text());
             default -> false;
         };

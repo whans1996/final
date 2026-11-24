@@ -139,4 +139,20 @@ class JsTokenizerTest {
         assertThat(tokens).hasSize(100_000).allMatch(t -> t.kind() == Kind.STRING);
         assertThat(JsTokenizer.tokenize("'\\u{41}b'").get(0).value()).isEqualTo("Ab");
     }
+
+    @Test
+    void AC5_조건_괄호_뒤의_슬래시는_정규식이고_값_괄호_뒤는_나눗셈이다() {
+        assertThat(JsTokenizer.tokenize("if (ready) /['\"]/.test(value);"))
+                .extracting(JsToken::kind, JsToken::text)
+                .contains(org.assertj.core.groups.Tuple.tuple(Kind.REGEX, "/['\"]/"));
+        assertThat(JsTokenizer.tokenize("while (x) /a/g.test(y)"))
+                .extracting(JsToken::kind)
+                .contains(Kind.REGEX);
+        assertThat(JsTokenizer.tokenize("const r = (a) / b / c"))
+                .extracting(JsToken::kind)
+                .doesNotContain(Kind.REGEX);
+        assertThat(JsTokenizer.tokenize("if ((a) / b / c) {}"))
+                .extracting(JsToken::kind)
+                .doesNotContain(Kind.REGEX);
+    }
 }

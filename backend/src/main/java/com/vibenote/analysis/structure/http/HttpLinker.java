@@ -138,9 +138,13 @@ public final class HttpLinker {
             return new Receiver(ReceiverType.AXIOS, module, List.of());
         }
         if (decl.isPresent()) {
-            return decl.get().kind() == JsDecl.Kind.CONST
-                    ? instance(decl.get().init(), module)
-                    : null;
+            if (decl.get().kind() != JsDecl.Kind.CONST) {
+                return null;
+            }
+            if (requiresAxios(decl.get().init())) {
+                return new Receiver(ReceiverType.AXIOS, module, List.of());
+            }
+            return instance(decl.get().init(), module);
         }
         Optional<Map.Entry<JsImport, String>> imported = module.importOf(name);
         if (imported.isEmpty() || imported.get().getKey().target() == null) {
@@ -158,6 +162,16 @@ public final class HttpLinker {
                 .filter(d -> d.kind() == JsDecl.Kind.CONST)
                 .map(d -> instance(d.init(), target))
                 .orElse(null);
+    }
+
+    /** {@code const axios = require('axios')}의 초기값. */
+    private static boolean requiresAxios(List<JsToken> init) {
+        return init.size() == 4
+                && init.get(0).is("require")
+                && init.get(1).is("(")
+                && init.get(2).kind() == JsToken.Kind.STRING
+                && init.get(2).value().equals("axios")
+                && init.get(3).is(")");
     }
 
     /** {@code A.create(…)}(A는 그 모듈의 axios 이름) 식이면 인스턴스. */
@@ -180,10 +194,20 @@ public final class HttpLinker {
 
     private record Expr(List<JsToken> tokens, JsModule module, Bindings bindings) {}
 
-    /** 객체 리터럴의 속성. props가 null이면 객체 리터럴이 아니거나 값을 모른다. */
-    private record Config(Map<String, Expr> props, JsFunction paramOf) {
+    /**
+     * 객체 리터럴의 속성. props가 null이면 객체 리터럴이 아니거나 값을 모른다. unknown은 {@code ...전개} 뒤에 직접 적지 않은 속성의 값(값을
+     * 모르는 식)이다. 전개가 덮어쓸 수 있으므로 없는 속성으로 보지 않는다.
+     */
+    private record Config(Map<String, Expr> props, JsFunction paramOf, Expr unknown) {
+        Config(Map<String, Expr> props, JsFunction paramOf) {
+            this(props, paramOf, null);
+        }
+
         Expr prop(String name) {
-            return props == null ? null : props.get(name);
+            if (props == null) {
+                return null;
+            }
+            return props.containsKey(name) ? props.get(name) : unknown;
         }
     }
 
@@ -350,11 +374,18 @@ public final class HttpLinker {
             return new Config(null, null);
         }
         Map<String, Expr> props = new LinkedHashMap<>();
+        Expr unknown = null;
         for (List<JsToken> prop : splitTopLevel(tokens.subList(1, tokens.size() - 1))) {
             if (prop.isEmpty()) {
                 continue;
             }
             JsToken key = prop.get(0);
+            if (key.is("...")) {
+                // 전개는 앞의 속성을 덮어쓸 수 있고 무엇이 들어오는지 모른다
+                props.clear();
+                unknown = new Expr(List.of(), module, bindings);
+                continue;
+            }
             boolean named = key.kind() == JsToken.Kind.IDENT || key.kind() == JsToken.Kind.STRING;
             if (named && prop.size() == 1 && key.kind() == JsToken.Kind.IDENT) {
                 props.put(key.text(), new Expr(prop, module, bindings));
@@ -362,7 +393,7 @@ public final class HttpLinker {
                 props.put(key.value(), new Expr(prop.subList(2, prop.size()), module, bindings));
             }
         }
-        return new Config(props, null);
+        return new Config(props, null, unknown);
     }
 
     // ---- 래퍼 인라인 (AC10) ----
@@ -372,10 +403,13 @@ public final class HttpLinker {
     /** 같은 파일의 {@code f(…)}와, f를 내보낸 이름으로 import한 선별 파일의 호출. */
     private List<Site> callSites(JsFunction wrapper, JsModule module) {
         List<Site> sites = new ArrayList<>();
+        // 부른 곳에서 보이는 선언이 래퍼 자신의 선언일 때만 래퍼 호출이다 (매개변수·지역 변수가 이름을 가리면 다른 함수)
+        Optional<JsDecl> own = module.lookup(wrapper.name(), wrapper.start());
         for (JsCall call : module.calls()) {
             if (call.member() == null
                     && call.receiver().equals(wrapper.name())
-                    && !wrapper.contains(call.start())) {
+                    && !wrapper.contains(call.start())
+                    && module.lookup(call.receiver(), call.start()).equals(own)) {
                 sites.add(new Site(module, call));
             }
         }
@@ -411,7 +445,10 @@ public final class HttpLinker {
                                                                                 .equals(local)
                                                                         && exportedAs.contains(
                                                                                 call.member());
-                                                        if (direct || viaNamespace) {
+                                                        boolean shadowed =
+                                                                other.lookup(local, call.start())
+                                                                        .isPresent();
+                                                        if ((direct || viaNamespace) && !shadowed) {
                                                             sites.add(new Site(other, call));
                                                         }
                                                     }

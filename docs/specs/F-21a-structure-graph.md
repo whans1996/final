@@ -136,6 +136,7 @@ SC-07에 **"구조" 탭**을 추가해 선별 파일(최대 30개) 사이의 의
   - DTO `AnalysisStructureResponse`·`StructureNode`·`StructureEdge`·`UnresolvedLink`, enum `EdgeType`·`UnresolvedKind`·`UnresolvedReason`
 - `ApiDetector`는 바꾸지 않는다. AC11의 `{name:regex}` 비교에 쓰는 정규식은 `Pattern.compile` 실패 시 1세그먼트 변수로 보고, 매칭은 세그먼트 하나(200자 이하)에만 적용한다
 - **계산량 상한 (11-24 `/pr-review`)**: 이 API는 공개 분석이면 누구나 반복 호출하고 결과를 저장하지 않으므로, 업로드한 코드가 계산량을 불리지 못하게 한다. URL 식 하나의 피연산자 2,000개·값 2,048자(넘으면 그 식은 `URL_UNKNOWN`), config 식별자 따라가기 16단계, 템플릿 리터럴 중첩 64단계와 정규식 후보 실패 스캔 파일당 1천만 자(넘으면 그 파일 `PARSE_ERROR`), `{name:regex}` 매칭은 글자 읽기 10만 회(넘으면 맞지 않음), `**`는 표 채우기 O(패턴×경로²), XML 내부 엔티티 펼침 10만 자(넘으면 `PARSE_ERROR`). 줄 번호·이름 조회는 색인으로 선형 시간에 한다
+- **확정 규칙 보완 (PR #118 Codex 리뷰)**: 래퍼 인라인은 부른 곳에서 보이는 선언이 래퍼 자신일 때만(매개변수·지역 이름이 가리면 제외, AC10). config의 `...전개` 뒤에 직접 적지 않은 url·method·baseURL은 값을 모른다(AC7). `+`에서 숫자끼리 만나면 동적 조각, 정수가 아닌 숫자 리터럴도 동적 조각(AC8). `{name}.json`·`*.json`처럼 섞인 세그먼트는 세그먼트 전체를 정규식으로 비교(AC11). `const axios = require('axios')`도 axios 받는 쪽(AC7). `if`·`while`·`for`·`with` 조건 괄호를 닫은 `)` 뒤의 `/`는 정규식(AC5)
 - 설정: `analysis.structure.max-edges: 150`, `analysis.structure.max-unresolved: 100`
 
 ### 5.2 FE

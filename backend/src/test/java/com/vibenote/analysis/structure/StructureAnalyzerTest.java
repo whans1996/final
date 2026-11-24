@@ -590,4 +590,109 @@ class StructureAnalyzerTest {
                 .extracting(UnresolvedLink::detail)
                 .containsExactly("axios.get( base + '/x' )");
     }
+
+    @Test
+    void AC10_래퍼와_같은_이름이_가려진_곳의_호출은_인라인하지_않는다() {
+        AnalysisStructureResponse response =
+                run(
+                        List.of(api("GET", "/api/todos", 100), api("GET", "/api/items", 101)),
+                        js(
+                                1,
+                                "src/a.js",
+                                """
+                                import axios from 'axios'
+                                function request(url) { return axios.get(url) }
+                                function unrelated(request) { request('/api/todos') }
+                                request('/api/items')
+                                """),
+                        js(
+                                3,
+                                "src/http.js",
+                                """
+                                import axios from 'axios'
+                                export function get(url) { return axios.get(url) }
+                                """),
+                        js(
+                                4,
+                                "src/c.js",
+                                """
+                                import { get } from './http.js'
+                                function f(get) { get('/api/todos') }
+                                get('/api/items')
+                                """));
+
+        assertThat(http(response)).containsExactly(edge(1, 101, 4), edge(4, 101, 3));
+    }
+
+    @Test
+    void AC7_config_전개_뒤에_직접_적지_않은_속성은_값을_모른다() {
+        AnalysisStructureResponse response =
+                run(
+                        List.of(api("GET", "/api/todos", 100), api("POST", "/api/todos", 101)),
+                        js(
+                                1,
+                                "src/a.js",
+                                """
+                                import axios from 'axios'
+                                const opts = { method: 'POST' }
+                                axios({ url: '/api/todos', ...opts })
+                                axios({ ...opts, url: '/api/todos', method: 'GET' })
+                                axios({ ...opts, baseURL: '/api', url: '/todos', method: 'GET' })
+                                axios({ ...opts, baseURL: '/api', url: '/todos' })
+                                """));
+
+        // 전개가 덮어쓸 수 있는 url(3)·baseURL(4)·method(6)는 값을 모른다. 전개 뒤에 직접 적은 값만 확정한다(5)
+        assertThat(http(response)).containsExactly(edge(1, 100, 5));
+        assertThat(httpUnresolved(response))
+                .extracting(UnresolvedLink::line, UnresolvedLink::reason)
+                .containsExactly(
+                        tuple(3, UnresolvedReason.URL_UNKNOWN),
+                        tuple(4, UnresolvedReason.BASE_URL_UNKNOWN),
+                        tuple(6, UnresolvedReason.AMBIGUOUS));
+    }
+
+    @Test
+    void AC8_숫자끼리_더한_값은_문자열로_잇지_않고_동적_조각이다() {
+        AnalysisStructureResponse response =
+                run(
+                        List.of(
+                                api("GET", "/api/todos/12", 100),
+                                api("GET", "/api/todos/3", 101),
+                                api("GET", "/api/todos/11", 102)),
+                        js(
+                                1,
+                                "src/a.js",
+                                """
+                                import axios from 'axios'
+                                axios.get('/api/todos/' + (1 + 2))
+                                const n = 1
+                                axios.get('/api/todos/' + n + 1)
+                                axios.get(`/api/todos/${n + 2}`)
+                                axios.get('/api/todos/' + 1.50)
+                                """));
+
+        assertThat(http(response)).containsExactly(edge(1, 102, 4));
+        assertThat(httpUnresolved(response))
+                .extracting(UnresolvedLink::line, UnresolvedLink::reason)
+                .containsExactly(
+                        tuple(2, UnresolvedReason.AMBIGUOUS),
+                        tuple(5, UnresolvedReason.AMBIGUOUS),
+                        tuple(6, UnresolvedReason.AMBIGUOUS));
+    }
+
+    @Test
+    void AC7_require로_가져온_axios도_받는_쪽으로_본다() {
+        AnalysisStructureResponse response =
+                run(
+                        List.of(api("GET", "/api/todos", 100)),
+                        js(
+                                1,
+                                "src/a.js",
+                                """
+                                const axios = require('axios')
+                                axios.get('/api/todos')
+                                """));
+
+        assertThat(http(response)).containsExactly(edge(1, 100, 2));
+    }
 }

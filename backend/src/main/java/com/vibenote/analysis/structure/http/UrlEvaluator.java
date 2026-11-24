@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.regex.Pattern;
 
 /**
  * URL 식 계산 (F-21a AC8·AC10). 문자열, 템플릿({@code ${}}는 값을 알면 넣고 모르면 동적 조각), {@code +} 연결, 보이는 {@code
@@ -50,15 +51,39 @@ public final class UrlEvaluator {
         return budget < 0 ? UrlValue.dynamic() : value;
     }
 
+    /**
+     * 계산한 값과 그 값이 숫자인지. JS의 {@code +}는 양쪽이 숫자면 더하기라서, 숫자끼리 만나면 문자열로 잇지 않고 동적 조각으로 둔다 ({@code
+     * '/todos/' + (1 + 2)}가 {@code /todos/12}가 되지 않게).
+     */
+    private record Typed(UrlValue value, boolean number) {
+        static Typed text(UrlValue value) {
+            return new Typed(value, false);
+        }
+    }
+
+    /** 이 모양의 정수만 JS가 문자열로 바꿔도 원문과 같다 ({@code 1.50}·{@code 0x10}·{@code 1e3}은 다르다). */
+    private static final Pattern CANONICAL_INTEGER = Pattern.compile("0|[1-9][0-9]{0,14}");
+
     private UrlValue eval(List<JsToken> tokens, JsModule module, Bindings bindings, int depth) {
+        return typed(tokens, module, bindings, depth).value();
+    }
+
+    private Typed typed(List<JsToken> tokens, JsModule module, Bindings bindings, int depth) {
         if (tokens == null || tokens.isEmpty() || depth > MAX_DEPTH || budget < 0) {
-            return UrlValue.dynamic();
+            return Typed.text(UrlValue.dynamic());
         }
-        UrlValue value = UrlValue.literal("");
+        Typed acc = null;
         for (List<JsToken> part : splitPlus(tokens)) {
-            value = capped(value.plus(operand(part, module, bindings, depth)));
+            Typed next = operand(part, module, bindings, depth);
+            if (acc == null) {
+                acc = next;
+            } else if (acc.number() && next.number()) {
+                acc = Typed.text(UrlValue.dynamic());
+            } else {
+                acc = Typed.text(capped(acc.value().plus(next.value())));
+            }
         }
-        return value;
+        return acc;
     }
 
     /** 값이 {@link #MAX_LENGTH}를 넘으면 예산을 다 쓴 것으로 본다. */
@@ -70,24 +95,29 @@ public final class UrlEvaluator {
         return value;
     }
 
-    private UrlValue operand(List<JsToken> part, JsModule module, Bindings bindings, int depth) {
+    private Typed operand(List<JsToken> part, JsModule module, Bindings bindings, int depth) {
         if (--budget < 0) {
-            return UrlValue.dynamic();
+            return Typed.text(UrlValue.dynamic());
         }
         if (part.size() == 1) {
             JsToken token = part.get(0);
             return switch (token.kind()) {
-                case STRING -> UrlValue.literal(token.value());
-                case NUMBER -> UrlValue.literal(token.text());
-                case TEMPLATE -> template(token, module, bindings, depth);
+                case STRING -> Typed.text(UrlValue.literal(token.value()));
+                case NUMBER ->
+                        new Typed(
+                                CANONICAL_INTEGER.matcher(token.text()).matches()
+                                        ? UrlValue.literal(token.text())
+                                        : UrlValue.dynamic(),
+                                true);
+                case TEMPLATE -> Typed.text(template(token, module, bindings, depth));
                 case IDENT -> identifier(token, module, bindings, depth);
-                default -> UrlValue.dynamic();
+                default -> Typed.text(UrlValue.dynamic());
             };
         }
         if (part.size() > 2 && part.get(0).is("(") && part.get(part.size() - 1).is(")")) {
-            return eval(part.subList(1, part.size() - 1), module, bindings, depth + 1);
+            return typed(part.subList(1, part.size() - 1), module, bindings, depth + 1);
         }
-        return UrlValue.dynamic();
+        return Typed.text(UrlValue.dynamic());
     }
 
     private UrlValue template(JsToken token, JsModule module, Bindings bindings, int depth) {
@@ -101,7 +131,7 @@ public final class UrlEvaluator {
         return value;
     }
 
-    private UrlValue identifier(JsToken token, JsModule module, Bindings bindings, int depth) {
+    private Typed identifier(JsToken token, JsModule module, Bindings bindings, int depth) {
         String name = token.text();
         Optional<JsDecl> decl = module.lookup(name, token.start());
         if (decl.isPresent()) {
@@ -111,13 +141,13 @@ public final class UrlEvaluator {
                     if (d.function().equals(bindings.function())) {
                         Arg arg = bindings.args().get(name);
                         yield arg == null
-                                ? UrlValue.dynamic()
-                                : eval(arg.tokens(), arg.module(), Bindings.NONE, depth + 1);
+                                ? Typed.text(UrlValue.dynamic())
+                                : typed(arg.tokens(), arg.module(), Bindings.NONE, depth + 1);
                     }
-                    yield UrlValue.dynamic(d.function());
+                    yield Typed.text(UrlValue.dynamic(d.function()));
                 }
-                case CONST -> eval(d.init(), module, bindings, depth + 1);
-                default -> UrlValue.dynamic();
+                case CONST -> typed(d.init(), module, bindings, depth + 1);
+                default -> Typed.text(UrlValue.dynamic());
             };
         }
         Optional<Map.Entry<JsImport, String>> imported = module.importOf(name);
@@ -127,21 +157,21 @@ public final class UrlEvaluator {
                 return exported(target, imported.get().getValue(), depth);
             }
         }
-        return UrlValue.dynamic();
+        return Typed.text(UrlValue.dynamic());
     }
 
-    private UrlValue exported(JsModule target, String name, int depth) {
+    private Typed exported(JsModule target, String name, int depth) {
         JsExport export = target.exports().get(name);
         if (export == null) {
-            return UrlValue.dynamic();
+            return Typed.text(UrlValue.dynamic());
         }
         if (export.expr() != null) {
-            return eval(export.expr(), target, Bindings.NONE, depth + 1);
+            return typed(export.expr(), target, Bindings.NONE, depth + 1);
         }
         return target.lookupTopLevel(export.local())
                 .filter(d -> d.kind() == JsDecl.Kind.CONST)
-                .map(d -> eval(d.init(), target, Bindings.NONE, depth + 1))
-                .orElseGet(UrlValue::dynamic);
+                .map(d -> typed(d.init(), target, Bindings.NONE, depth + 1))
+                .orElseGet(() -> Typed.text(UrlValue.dynamic()));
     }
 
     /** 괄호 밖의 {@code +}로 나눈다. */

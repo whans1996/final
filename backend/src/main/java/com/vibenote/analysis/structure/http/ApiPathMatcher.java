@@ -96,6 +96,8 @@ public final class ApiPathMatcher {
         return ok[0][0];
     }
 
+    private static final Pattern NEVER = Pattern.compile("(?!)");
+
     private enum Type {
         LITERAL,
         VARIABLE,
@@ -109,7 +111,7 @@ public final class ApiPathMatcher {
             if (s.equals("**") || (s.startsWith("{*") && s.endsWith("}"))) {
                 return new ApiSegment(Type.MULTI, null, null);
             }
-            if (s.startsWith("{") && s.endsWith("}") && s.indexOf(':') > 0) {
+            if (s.startsWith("{") && closingBrace(s, 0) == s.length() - 1 && s.indexOf(':') > 0) {
                 String regex = s.substring(s.indexOf(':') + 1, s.length() - 1);
                 try {
                     return new ApiSegment(Type.VARIABLE, null, Pattern.compile(regex));
@@ -117,10 +119,66 @@ public final class ApiPathMatcher {
                     return new ApiSegment(Type.VARIABLE, null, null);
                 }
             }
-            if (s.contains("{") || s.contains("*")) {
+            if (s.equals("*") || (s.startsWith("{") && closingBrace(s, 0) == s.length() - 1)) {
                 return new ApiSegment(Type.VARIABLE, null, null);
             }
+            if (s.contains("{") || s.contains("*")) {
+                return new ApiSegment(Type.VARIABLE, null, mixed(s));
+            }
             return new ApiSegment(Type.LITERAL, s, null);
+        }
+
+        /**
+         * {@code {name}.json}·{@code *.json}·{@code v{n:\d+}}처럼 변수와 글자가 섞인 세그먼트를 세그먼트 전체 정규식으로 바꾼다.
+         * 글자 부분도 맞아야 한다. 정규식이 잘못됐으면 아무것과도 맞지 않는다 (확정한 연결만 그린다).
+         */
+        private static Pattern mixed(String s) {
+            StringBuilder regex = new StringBuilder();
+            StringBuilder literal = new StringBuilder();
+            int i = 0;
+            while (i < s.length()) {
+                char c = s.charAt(i);
+                int close = c == '{' ? closingBrace(s, i) : -1;
+                if (c == '*' || close > 0) {
+                    if (!literal.isEmpty()) {
+                        regex.append(Pattern.quote(literal.toString()));
+                        literal.setLength(0);
+                    }
+                    if (c == '*') {
+                        regex.append(".*");
+                        i++;
+                    } else {
+                        String inner = s.substring(i + 1, close);
+                        int colon = inner.indexOf(':');
+                        regex.append(colon < 0 ? ".+" : "(?:" + inner.substring(colon + 1) + ")");
+                        i = close + 1;
+                    }
+                } else {
+                    literal.append(c);
+                    i++;
+                }
+            }
+            if (!literal.isEmpty()) {
+                regex.append(Pattern.quote(literal.toString()));
+            }
+            try {
+                return Pattern.compile(regex.toString());
+            } catch (PatternSyntaxException e) {
+                return NEVER;
+            }
+        }
+
+        /** 짝이 맞는 닫는 중괄호 위치. 없으면 -1. */
+        private static int closingBrace(String s, int open) {
+            int depth = 0;
+            for (int i = open; i < s.length(); i++) {
+                if (s.charAt(i) == '{') {
+                    depth++;
+                } else if (s.charAt(i) == '}' && --depth == 0) {
+                    return i;
+                }
+            }
+            return -1;
         }
 
         boolean accepts(PathSegment fe) {

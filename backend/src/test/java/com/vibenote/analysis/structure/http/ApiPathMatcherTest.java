@@ -148,4 +148,23 @@ class ApiPathMatcherTest {
         assertThat(match(req("GET", "/a/b/z"), "", api("GET", path, 100)))
                 .isEqualTo(ApiMatch.matched(100));
     }
+
+    @Test
+    void AC11_변수와_글자가_섞인_세그먼트는_세그먼트_전체를_비교한다() {
+        assertThat(match(req("GET", "/files/foo.txt"), "", api("GET", "/files/{name}.json", 100)))
+                .isEqualTo(ApiMatch.NONE);
+        assertThat(match(req("GET", "/files/foo.json"), "", api("GET", "/files/{name}.json", 100)))
+                .isEqualTo(ApiMatch.matched(100));
+        assertThat(match(req("GET", "/files/foo.txt"), "", api("GET", "/files/*.json", 100)))
+                .isEqualTo(ApiMatch.NONE);
+        assertThat(match(req("GET", "/files/a.json"), "", api("GET", "/files/*.json", 100)))
+                .isEqualTo(ApiMatch.matched(100));
+        assertThat(match(req("GET", "/v12/x"), "", api("GET", "/v{n:\\d+}/x", 100)))
+                .isEqualTo(ApiMatch.matched(100));
+        assertThat(match(req("GET", "/vx/x"), "", api("GET", "/v{n:\\d+}/x", 100)))
+                .isEqualTo(ApiMatch.NONE);
+        // FE 와일드카드는 섞인 세그먼트와도 맞는다
+        assertThat(match(req("GET", "/files/*"), "", api("GET", "/files/{name}.json", 100)))
+                .isEqualTo(ApiMatch.matched(100));
+    }
 }
