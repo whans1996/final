@@ -84,22 +84,25 @@ public final class HttpLinker {
 
     /** 호출 하나. 예산을 다 썼거나 계산 중 예외가 나면 HTTP 호출인지만 가려 URL_UNKNOWN으로 남긴다 (분류는 색인 조회라 예산을 쓰지 않는다). */
     private void link(JsCall call, JsModule module) {
-        HttpCall http = null;
         try {
-            http = classify(call, module);
-            if (http == null) {
-                return;
-            }
             if (!budget.exhausted()) {
-                budget.spend();
-                handle(http);
+                HttpCall http = classify(call, module);
+                if (http != null) {
+                    budget.spend();
+                    handle(http);
+                }
                 return;
             }
         } catch (RuntimeException | StackOverflowError e) {
-            // 아래에서 URL_UNKNOWN으로 남긴다
+            // 아래에서 HTTP 호출인지 다시 가려 URL_UNKNOWN으로 남긴다
         }
-        if (http != null) {
-            unresolved(module, call, UnresolvedReason.URL_UNKNOWN);
+        try {
+            // 예산을 다 쓴 뒤의 조회는 예산을 쓰지 않는다
+            if (classify(call, module) != null) {
+                unresolved(module, call, UnresolvedReason.URL_UNKNOWN);
+            }
+        } catch (RuntimeException | StackOverflowError e) {
+            // HTTP 호출인지 가려낼 수 없으면 남기지 않는다
         }
     }
 

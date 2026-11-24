@@ -32,13 +32,6 @@ public final class StructureAnalyzer {
                     .thenComparingLong(StructureEdge::to)
                     .thenComparing(StructureEdge::type);
 
-    private static final Comparator<UnresolvedLink> UNRESOLVED_ORDER =
-            Comparator.comparingLong(UnresolvedLink::fileId)
-                    .thenComparingInt(UnresolvedLink::line)
-                    .thenComparing(UnresolvedLink::kind)
-                    .thenComparing(UnresolvedLink::reason)
-                    .thenComparing(UnresolvedLink::detail);
-
     /** 설정이 없을 때의 작업 예산 ({@link StructureProperties}와 같은 값). */
     static final long DEFAULT_MAX_WORK_STEPS = 20_000_000;
 
@@ -69,7 +62,7 @@ public final class StructureAnalyzer {
             List<AnalysisFile> files, List<ApiEndpoint> apis, String contextPath) {
         List<AnalysisFile> sorted =
                 files.stream().sorted(Comparator.comparing(AnalysisFile::getId)).toList();
-        StructureLinks links = new StructureLinks();
+        StructureLinks links = new StructureLinks(maxUnresolved);
         WorkBudget budget = new WorkBudget(maxWorkSteps, maxWorkTime);
 
         JavaTypeIndex index =
@@ -106,8 +99,7 @@ public final class StructureAnalyzer {
                     (a, b) -> a.line() <= b.line() ? a : b);
         }
         List<StructureEdge> edges = unique.values().stream().sorted(EDGE_ORDER).toList();
-        List<UnresolvedLink> unresolved =
-                links.unresolved().stream().distinct().sorted(UNRESOLVED_ORDER).toList();
+        List<UnresolvedLink> unresolved = links.unresolved();
 
         return new AnalysisStructureResponse(
                 sorted.stream().map(StructureAnalyzer::node).toList(),

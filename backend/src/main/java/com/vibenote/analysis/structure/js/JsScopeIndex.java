@@ -1,5 +1,6 @@
 package com.vibenote.analysis.structure.js;
 
+import com.vibenote.analysis.structure.WorkBudget;
 import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -68,8 +69,16 @@ final class JsScopeIndex {
 
     /** offset에서 보이는 가장 안쪽 선언. 없으면 null. */
     JsDecl lookup(int offset) {
+        return lookup(offset, null);
+    }
+
+    /** 올라가는 걸음마다 예산을 쓴다 (예산을 다 쓴 뒤에는 쓰지 않는다: 남은 호출을 가려내는 조회는 막지 않는다). */
+    JsDecl lookup(int offset, WorkBudget budget) {
         int x = lastStartingAtOrBefore(offset);
         while (x >= 0 && ends[x] <= offset) {
+            if (budget != null && !budget.exhausted()) {
+                budget.spend();
+            }
             int j = jump[x];
             x = j != x && ends[j] <= offset ? j : parent[x];
         }

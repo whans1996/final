@@ -61,7 +61,7 @@ class StructureWorkloadTest {
     @Test
     void AC7_같은_이름_매개변수가_많아도_이름_조회는_색인으로_한다() {
         StringBuilder body = new StringBuilder();
-        for (int i = 0; i < 40_000; i++) {
+        for (int i = 0; i < 30_000; i++) {
             body.append("function f").append(i).append("(url) { axios.get(url) }\n");
         }
         sentinelReached("src/params.js", body.toString());
@@ -69,7 +69,7 @@ class StructureWorkloadTest {
 
     @Test
     void AC7_깊게_중첩된_같은_이름_선언_밖의_조회도_색인으로_한다() {
-        int n = 50_000;
+        int n = 40_000;
         String body = "{ let u = 1\n".repeat(n) + "}".repeat(n) + "\n" + "axios.get(u)\n".repeat(n);
         sentinelReached("src/nested.js", body);
     }

@@ -141,4 +141,36 @@ class JsModuleReaderTest {
 
         assertThat(links.edges()).containsExactly(imp(1, 2, 110_001));
     }
+
+    @Test
+    void AC5_파일과_분석_전체의_토큰_상한을_넘는_파일은_PARSE_ERROR다() {
+        StructureLinks links = new StructureLinks();
+        var modules =
+                JsModuleReader.read(
+                        List.of(
+                                js(1, "src/a.js", "a;b;c;"),
+                                js(2, "src/big.js", "a;".repeat(20)),
+                                js(3, "src/c.js", "a;".repeat(10)),
+                                js(4, "src/d.js", "a;".repeat(10))),
+                        links,
+                        WorkBudget.unlimited(),
+                        30,
+                        40);
+
+        assertThat(modules).containsOnlyKeys(1L, 3L);
+        assertThat(links.unresolved())
+                .containsExactly(
+                        new UnresolvedLink(
+                                2,
+                                1,
+                                UnresolvedKind.PARSE,
+                                UnresolvedReason.PARSE_ERROR,
+                                JsTokenizer.TOO_MANY_TOKENS),
+                        new UnresolvedLink(
+                                4,
+                                1,
+                                UnresolvedKind.PARSE,
+                                UnresolvedReason.PARSE_ERROR,
+                                JsTokenizer.TOO_MANY_TOKENS));
+    }
 }

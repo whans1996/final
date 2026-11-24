@@ -109,8 +109,11 @@ public final class JsModule {
         if (named.isEmpty()) {
             return Optional.empty();
         }
+        if (!budget.exhausted()) {
+            budget.spend();
+        }
         return Optional.ofNullable(
-                scopes.computeIfAbsent(name, k -> new JsScopeIndex(named)).lookup(offset));
+                scopes.computeIfAbsent(name, k -> new JsScopeIndex(named)).lookup(offset, budget));
     }
 
     /**

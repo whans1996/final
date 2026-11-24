@@ -102,7 +102,8 @@ class JsTokenizerTest {
                         </script>
                         <style>.a { color: red }</style>
                         """,
-                        WorkBudget.unlimited());
+                        WorkBudget.unlimited(),
+                        Integer.MAX_VALUE);
 
         assertThat(texts(tokens)).containsExactly("import", "api", "from", "'./api'");
         assertThat(tokens.get(0).line()).isEqualTo(5);
@@ -172,5 +173,29 @@ class JsTokenizerTest {
         assertThat(JsTokenizer.tokenize("if (x) {} /a/.test(y)"))
                 .extracting(JsToken::kind)
                 .contains(Kind.REGEX);
+    }
+
+    // ---- 5.3절 3: 메모리 ----
+
+    @Test
+    void AC5_토큰이_상한을_넘는_파일은_오류다() {
+        assertThatThrownBy(() -> JsTokenizer.tokenize("a;".repeat(10), WorkBudget.unlimited(), 5))
+                .isInstanceOf(JsSyntaxException.class)
+                .hasMessage(JsTokenizer.TOO_MANY_TOKENS);
+        assertThat(JsTokenizer.tokenize("a;".repeat(10), WorkBudget.unlimited(), 20)).hasSize(20);
+    }
+
+    @Test
+    void AC5_템플릿_토큰은_원문을_복사하지_않고_한_글자_구두점은_문자열을_공유한다() {
+        List<JsToken> tokens = JsTokenizer.tokenize("f(`a${`b${c}`}d`)(x)");
+
+        JsToken template = tokens.get(2);
+        assertThat(template.kind()).isEqualTo(Kind.TEMPLATE);
+        assertThat(template.start()).isEqualTo(2);
+        assertThat(template.end()).isEqualTo(16);
+        assertThat(template.text()).isEqualTo("`");
+        assertThat(template.quasis()).containsExactly("a", "d");
+        assertThat(tokens.get(1).text()).isSameAs(tokens.get(4).text());
+        assertThat(tokens.get(3).text()).isSameAs(tokens.get(6).text());
     }
 }

@@ -60,34 +60,66 @@ public final class JsTokenizer {
     /** 코드 포인트 이스케이프(백슬래시 u 중괄호)에서 닫는 중괄호를 찾는 범위. */
     private static final int MAX_CODE_POINT_ESCAPE = 16;
 
+    /** 토큰 수가 상한을 넘은 파일의 오류 메시지 (그 파일은 PARSE_ERROR, 5.3절 3). */
+    public static final String TOO_MANY_TOKENS = "코드가 너무 길어 해석하지 않았습니다.";
+
+    /** 템플릿 토큰의 text·value. 원문은 start·end 위치로 알 수 있으므로 복사하지 않는다 (중첩된 템플릿마다 바깥 원문 전체를 다시 복사하지 않게). */
+    private static final String TEMPLATE_TEXT = "`";
+
+    /** 한 글자 구두점 문자열. 토큰마다 새 문자열을 만들지 않고 공유한다. */
+    private static final String[] SINGLE_CHARS = new String[128];
+
+    static {
+        for (char c = 0; c < SINGLE_CHARS.length; c++) {
+            SINGLE_CHARS[c] = String.valueOf(c);
+        }
+    }
+
     private final String src;
     private final WorkBudget budget;
+    private final int maxTokens;
+    private int produced;
     private int pos;
     private int line = 1;
     private int templateDepth;
     private long failedRegexScan;
 
-    private JsTokenizer(String src, WorkBudget budget) {
+    private JsTokenizer(String src, WorkBudget budget, int maxTokens) {
         this.src = src;
         this.budget = budget;
+        this.maxTokens = maxTokens;
     }
 
     public static List<JsToken> tokenize(String code) {
-        return tokenize(code, WorkBudget.unlimited());
+        return tokenize(code, WorkBudget.unlimited(), Integer.MAX_VALUE);
     }
 
-    /** 토큰 하나마다 예산을 쓴다. */
-    public static List<JsToken> tokenize(String code, WorkBudget budget) {
-        return new JsTokenizer(code == null ? "" : code, budget).lex(false);
+    /** 토큰 하나마다 예산을 쓴다. 템플릿 안 토큰까지 maxTokens개를 넘으면 {@link #TOO_MANY_TOKENS}. */
+    public static List<JsToken> tokenize(String code, WorkBudget budget, int maxTokens) {
+        return new JsTokenizer(code == null ? "" : code, budget, maxTokens).lex(false);
     }
 
     /** {@code .vue}는 {@code <script>} 블록만 읽는다. 블록 밖은 줄바꿈만 남기고 공백으로 바꿔 줄 번호·위치를 원본과 같게 둔다. */
-    public static List<JsToken> tokenizeFile(String path, String content, WorkBudget budget) {
+    public static List<JsToken> tokenizeFile(
+            String path, String content, WorkBudget budget, int maxTokens) {
         String code = content == null ? "" : content;
         if (path.toLowerCase(Locale.ROOT).endsWith(".vue")) {
             code = scriptBlocks(code);
         }
-        return tokenize(code, budget);
+        return tokenize(code, budget, maxTokens);
+    }
+
+    /** 이 목록에 새로 붙은 토큰만큼 예산을 쓰고 개수 상한을 본다. 센 개수를 돌려준다. */
+    private int account(List<JsToken> tokens, int counted) {
+        int added = tokens.size() - counted;
+        if (added > 0) {
+            budget.spend(added);
+            produced += added;
+            if (produced > maxTokens) {
+                throw new JsSyntaxException(TOO_MANY_TOKENS, line);
+            }
+        }
+        return tokens.size();
     }
 
     static String scriptBlocks(String vue) {
@@ -138,12 +170,9 @@ public final class JsTokenizer {
         // 여는 중괄호마다 식 자리(객체 리터럴)인지. 객체를 닫은 } 뒤의 /는 나눗셈이다
         Deque<Boolean> braces = new ArrayDeque<>();
         boolean closedObject = false;
-        int counted = tokens.size();
+        int counted = 0;
         while (pos < src.length()) {
-            if (tokens.size() > counted) {
-                budget.spend(tokens.size() - counted);
-                counted = tokens.size();
-            }
+            counted = account(tokens, counted);
             char c = src.charAt(pos);
             if (c == '\n') {
                 line++;
@@ -185,6 +214,7 @@ public final class JsTokenizer {
                 tokens.add(simple(Kind.NUMBER, start));
             } else if (inTemplate && c == '}' && depth == 0) {
                 pos++;
+                account(tokens, counted);
                 return tokens;
             } else {
                 if (c == '{') {
@@ -207,6 +237,7 @@ public final class JsTokenizer {
         if (inTemplate) {
             throw new JsSyntaxException("템플릿 리터럴이 끝나지 않았습니다.", line);
         }
+        account(tokens, counted);
         return tokens;
     }
 
@@ -276,7 +307,8 @@ public final class JsTokenizer {
                 return op;
             }
         }
-        return String.valueOf(src.charAt(pos));
+        char c = src.charAt(pos);
+        return c < SINGLE_CHARS.length ? SINGLE_CHARS[c] : String.valueOf(c);
     }
 
     private JsToken punct(String text) {
@@ -358,11 +390,10 @@ public final class JsTokenizer {
         }
         quasis.add(quasi.toString());
         templateDepth--;
-        String text = src.substring(start, pos);
         return new JsToken(
                 Kind.TEMPLATE,
-                text,
-                text,
+                TEMPLATE_TEXT,
+                TEMPLATE_TEXT,
                 startLine,
                 start,
                 pos,

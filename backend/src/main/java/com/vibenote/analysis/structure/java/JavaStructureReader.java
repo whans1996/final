@@ -56,6 +56,7 @@ import java.util.regex.Pattern;
  * 대문자 세그먼트까지를 타입 FQN으로 쓴다. 심볼 해석기는 쓰지 않으므로 import 없는 단순 이름이 선별되지 않은 타입이면 FQN을 몰라 남기지 않는다.
  *
  * <p>작업 예산을 다 썼거나 파일 하나를 읽다 예상하지 못한 예외가 나면 그 파일은 PARSE_ERROR다 (타입 이름은 파일 이름으로 남아 다른 파일이 가리킬 수 있다).
+ * AST는 메모리를 많이 써서 파일마다 파싱해 쓰고 바로 버린다: 1차로 선언된 타입 이름만 모으고, 2차로 다시 파싱해 참조를 읽는다 (5.3절 3).
  */
 public final class JavaStructureReader {
 
@@ -83,19 +84,38 @@ public final class JavaStructureReader {
         JavaTypeIndex index = new JavaTypeIndex(Map.copyOf(types), rootPackage(packages));
 
         for (Parsed p : parsed) {
-            if (p.unit() == null) {
+            if (p.error() != null) {
                 out.parseError(p.file().getId(), p.errorLine(), p.error());
             } else if (budget.exhausted()) {
                 out.parseFailure(p.file().getId(), budget);
             } else {
                 try {
-                    new FileReader(p, index, budget).read(out);
+                    ParseResult<CompilationUnit> result = parseCode(p.file(), budget);
+                    if (result.getResult().isEmpty()) {
+                        out.parseFailure(p.file().getId(), budget);
+                        continue;
+                    }
+                    new FileReader(p, result.getResult().get(), index, budget).read(out);
                 } catch (RuntimeException | StackOverflowError e) {
                     out.parseFailure(p.file().getId(), budget);
                 }
             }
         }
         return index;
+    }
+
+    /**
+     * 파서는 중간에 멈출 수 없어 글자 수로 미리 차감한다 (토큰 하나 ≈ 4글자). 토큰 목록은 노드 줄 번호에 필요해 끄지 않는다 ({@code
+     * storeTokens(false)}면 위치가 사라진다).
+     */
+    private static ParseResult<CompilationUnit> parseCode(AnalysisFile file, WorkBudget budget) {
+        String code = file.getContent() == null ? "" : file.getContent();
+        budget.spend(code.length() / 4 + 1);
+        ParserConfiguration config =
+                new ParserConfiguration()
+                        .setLanguageLevel(ParserConfiguration.LanguageLevel.JAVA_21)
+                        .setAttributeComments(false);
+        return new JavaParser(config).parse(code);
     }
 
     /** 예산 안에서 파싱한다. 예산을 다 썼거나 예외가 나면 파일 이름만으로 타입을 등록한 실패 결과다. */
@@ -116,22 +136,14 @@ public final class JavaStructureReader {
         } catch (RuntimeException | StackOverflowError e) {
             // 패키지를 모르면 단순 이름만 등록한다
         }
-        return new Parsed(
-                file, null, pkg, Set.of(qualify(pkg, fileTypeName(file.getPath()))), detail, 1);
+        return new Parsed(file, pkg, Set.of(qualify(pkg, fileTypeName(file.getPath()))), detail, 1);
     }
 
     private static Parsed parse(AnalysisFile file, WorkBudget budget) {
-        String code = file.getContent() == null ? "" : file.getContent();
-        // 파서는 중간에 멈출 수 없어 글자 수로 미리 차감한다 (토큰 하나 ≈ 4글자)
-        budget.spend(code.length() / 4 + 1);
         String fileType = fileTypeName(file.getPath());
-        ParserConfiguration config =
-                new ParserConfiguration()
-                        .setLanguageLevel(ParserConfiguration.LanguageLevel.JAVA_21)
-                        .setAttributeComments(false);
-        ParseResult<CompilationUnit> result = new JavaParser(config).parse(code);
+        ParseResult<CompilationUnit> result = parseCode(file, budget);
         if (!result.isSuccessful() || result.getResult().isEmpty()) {
-            Matcher m = PACKAGE_LINE.matcher(code);
+            Matcher m = PACKAGE_LINE.matcher(file.getContent() == null ? "" : file.getContent());
             String pkg = m.find() ? m.group(1) : "";
             Problem problem = result.getProblems().isEmpty() ? null : result.getProblems().get(0);
             String message = problem == null ? "Java 코드를 해석하지 못했습니다." : problem.getMessage();
@@ -143,12 +155,7 @@ public final class JavaStructureReader {
                                     .map(range -> range.begin.line)
                                     .orElse(1);
             return new Parsed(
-                    file,
-                    null,
-                    pkg,
-                    Set.of(qualify(pkg, fileType)),
-                    truncate(message.strip()),
-                    line);
+                    file, pkg, Set.of(qualify(pkg, fileType)), truncate(message.strip()), line);
         }
         CompilationUnit unit = result.getResult().get();
         String pkg =
@@ -159,7 +166,7 @@ public final class JavaStructureReader {
             budget.spend();
             type.getFullyQualifiedName().ifPresent(declared::add);
         }
-        return new Parsed(file, unit, pkg, declared, null, 0);
+        return new Parsed(file, pkg, declared, null, 0);
     }
 
     /** 선별된 모든 Java 파일 패키지의 공통 접두. 2단 미만이면 빈 문자열 (AC2). */
@@ -193,9 +200,9 @@ public final class JavaStructureReader {
         return text.length() <= MAX_DETAIL ? text : text.substring(0, MAX_DETAIL);
     }
 
+    /** 1차 파싱 결과. error가 null이면 파싱에 성공했다 (AST는 보관하지 않는다). */
     private record Parsed(
             AnalysisFile file,
-            CompilationUnit unit,
             String pkg,
             Set<String> declaredTypes,
             String error,
@@ -211,6 +218,7 @@ public final class JavaStructureReader {
     private static final class FileReader {
 
         private final Parsed parsed;
+        private final CompilationUnit unit;
         private final JavaTypeIndex index;
         private final WorkBudget budget;
 
@@ -225,14 +233,14 @@ public final class JavaStructureReader {
         private final Map<Long, Integer> edgeLines = new TreeMap<>();
         private final Map<String, Integer> missingLines = new LinkedHashMap<>();
 
-        FileReader(Parsed parsed, JavaTypeIndex index, WorkBudget budget) {
+        FileReader(Parsed parsed, CompilationUnit unit, JavaTypeIndex index, WorkBudget budget) {
             this.parsed = parsed;
+            this.unit = unit;
             this.index = index;
             this.budget = budget;
         }
 
         void read(StructureLinks out) {
-            CompilationUnit unit = parsed.unit();
             unit.findAll(VariableDeclarator.class)
                     .forEach(v -> variable(v.getNameAsString(), declaratorScope(v)));
             unit.findAll(Parameter.class)

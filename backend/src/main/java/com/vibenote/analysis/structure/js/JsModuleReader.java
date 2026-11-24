@@ -33,6 +33,12 @@ public final class JsModuleReader {
     private static final List<String> SUFFIXES = List.of("", ".js", ".mjs", ".vue", "/index.js");
     private static final Set<String> CODE_EXTENSIONS = Set.of("js", "mjs", "vue");
 
+    /** 파일 하나의 토큰 수 상한. 넘으면 그 파일은 PARSE_ERROR (토큰은 HTTP 판정까지 메모리에 둔다, 5.3절 3). */
+    static final int MAX_FILE_TOKENS = 500_000;
+
+    /** 분석 하나에서 메모리에 두는 토큰 수 합계 상한. 넘게 하는 파일은 PARSE_ERROR. */
+    static final int MAX_TOTAL_TOKENS = 2_000_000;
+
     private JsModuleReader() {}
 
     /**
@@ -41,6 +47,16 @@ public final class JsModuleReader {
      */
     public static Map<Long, JsModule> read(
             List<AnalysisFile> files, StructureLinks out, WorkBudget budget) {
+        return read(files, out, budget, MAX_FILE_TOKENS, MAX_TOTAL_TOKENS);
+    }
+
+    static Map<Long, JsModule> read(
+            List<AnalysisFile> files,
+            StructureLinks out,
+            WorkBudget budget,
+            int maxFileTokens,
+            int maxTotalTokens) {
+        int kept = 0;
         Map<String, Long> paths = new HashMap<>();
         files.forEach(f -> paths.putIfAbsent(f.getPath(), f.getId()));
 
@@ -53,13 +69,19 @@ public final class JsModuleReader {
             }
             try {
                 String content = file.getContent() == null ? "" : file.getContent();
-                List<JsToken> tokens = JsTokenizer.tokenizeFile(file.getPath(), content, budget);
+                List<JsToken> tokens =
+                        JsTokenizer.tokenizeFile(
+                                file.getPath(),
+                                content,
+                                budget,
+                                Math.min(maxFileTokens, maxTotalTokens - kept));
                 JsModule module =
                         new JsModule(file.getId(), file.getPath(), content, tokens, budget);
                 readImports(module);
                 JsDeclarations.read(module);
                 linkImports(module, paths, out);
                 modules.put(file.getId(), module);
+                kept += tokens.size();
             } catch (JsSyntaxException e) {
                 out.parseError(file.getId(), e.getLine(), e.getMessage());
             } catch (RuntimeException | StackOverflowError e) {
