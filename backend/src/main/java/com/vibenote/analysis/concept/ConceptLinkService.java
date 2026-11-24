@@ -62,7 +62,7 @@ public class ConceptLinkService {
         int inserted = mapper.insertAll(analysisId, links);
         if (inserted < links.size()) {
             log.warn(
-                    "analysis {}: 추출 중 삭제된 개념 {}개를 연결하지 않았다 (요청 {})",
+                    "analysis {}: 추출 중 삭제된 개념 {}개를 연결하지 않았다 (요청 id 목록 {})",
                     analysisId,
                     links.size() - inserted,
                     links.stream().map(LinkRow::conceptId).toList());
