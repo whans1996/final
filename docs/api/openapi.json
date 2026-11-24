@@ -2218,7 +2218,7 @@
             "type" : [ "string", "null" ]
           },
           "viewable" : {
-            "description" : "요청한 사람이 볼 수 있는지 (삭제되지 않았고, 공개이거나 내 분석)",
+            "description" : "요청한 사람이 볼 수 있는지 (삭제되지 않았고, 내 분석이거나 탈퇴하지 않은 회원의 공개 분석)",
             "example" : true,
             "type" : "boolean"
           }

@@ -4,8 +4,9 @@ import com.vibenote.post.domain.Post;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
- * 상세의 분석 첨부 (F-17 AC5). 삭제되지 않았고 공개이거나 요청한 사람이 주인이면 viewable이고, 아니면 제목·프로젝트명을 숨긴다 (F-19 전에는 모든 분석이
- * 비공개).
+ * 상세의 분석 첨부 (F-17 AC5). 삭제되지 않았고, 요청한 사람이 주인이거나 공개이면서 주인이 탈퇴하지 않았으면 viewable이고, 아니면 제목·프로젝트명을 숨긴다.
+ * 분석 상세의 열람 기준(F-19 AC10 {@code AnalysisMapper} viewable)과 맞춘다 (#92). 첨부는 DONE 분석만 되고 미완료 분석은 공개할 수
+ * 없으므로 상태는 따로 보지 않는다.
  */
 @Schema(description = "분석 첨부")
 public record PostAnalysisAttachment(
@@ -13,7 +14,7 @@ public record PostAnalysisAttachment(
                 long id,
         @Schema(
                         requiredMode = Schema.RequiredMode.REQUIRED,
-                        description = "요청한 사람이 볼 수 있는지 (삭제되지 않았고, 공개이거나 내 분석)",
+                        description = "요청한 사람이 볼 수 있는지 (삭제되지 않았고, 내 분석이거나 탈퇴하지 않은 회원의 공개 분석)",
                         example = "true")
                 boolean viewable,
         @Schema(
@@ -34,7 +35,7 @@ public record PostAnalysisAttachment(
         if (row.getAnalysisId() == null) return null;
         boolean viewable =
                 !row.isAnalysisDeleted()
-                        && (row.isAnalysisPublic()
+                        && ((row.isAnalysisPublic() && row.isAnalysisOwnerActive())
                                 || (viewerId != null && viewerId.equals(row.getAnalysisOwnerId())));
         return viewable
                 ? new PostAnalysisAttachment(

@@ -27,6 +27,7 @@ public class Post {
     // 상세 조회에서만 채운다 (첨부 표시·viewable 판단)
     private Long analysisOwnerId;
     private boolean analysisPublic;
+    private boolean analysisOwnerActive;
     private boolean analysisDeleted;
     private String analysisTitle;
     private String analysisProjectName;
@@ -185,6 +186,14 @@ public class Post {
 
     public void setAnalysisPublic(boolean analysisPublic) {
         this.analysisPublic = analysisPublic;
+    }
+
+    public boolean isAnalysisOwnerActive() {
+        return analysisOwnerActive;
+    }
+
+    public void setAnalysisOwnerActive(boolean analysisOwnerActive) {
+        this.analysisOwnerActive = analysisOwnerActive;
     }
 
     public boolean isAnalysisDeleted() {
