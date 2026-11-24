@@ -232,6 +232,32 @@ describe('AdminChallengeEditView (F-24 AC13)', () => {
     expect(wrapper.find('form').exists()).toBe(false)
   })
 
+  it('AC13 같은 화면에서 다른 챌린지 주소로 바뀌면 그 챌린지를 다시 불러와 그 id로 저장한다', async () => {
+    let resolveFirst
+    adminApi.fetchAdminChallenge
+      .mockImplementationOnce(() => new Promise((resolve) => (resolveFirst = resolve)))
+      .mockResolvedValueOnce(detail({ id: 8, title: '8번 챌린지' }))
+    adminApi.updateAdminChallenge.mockResolvedValue(detail({ id: 8 }))
+    const { wrapper, router } = await mountEdit('/admin/challenges/7/edit')
+
+    await router.push('/admin/challenges/8/edit')
+    await flushPromises()
+    // 7번 응답이 늦게 와도 8번 화면을 덮어쓰지 않는다
+    resolveFirst(detail())
+    await flushPromises()
+
+    expect(adminApi.fetchAdminChallenge).toHaveBeenLastCalledWith(8)
+    expect(wrapper.find('[name="title"]').element.value).toBe('8번 챌린지')
+
+    await save(wrapper)
+    expect(adminApi.updateAdminChallenge).toHaveBeenCalledWith(8, expect.anything())
+
+    await router.push('/admin/challenges/new')
+    await flushPromises()
+    expect(wrapper.find('h1').text()).toBe('새 챌린지')
+    expect(wrapper.find('[name="title"]').element.value).toBe('')
+  })
+
   it('AC13 저장 중에는 버튼이 비활성이다', async () => {
     let resolve
     adminApi.createAdminChallenge.mockReturnValue(new Promise((r) => (resolve = r)))

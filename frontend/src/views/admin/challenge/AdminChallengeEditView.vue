@@ -1,7 +1,7 @@
 <script setup>
 // SC-21 관리자 챌린지 편집 (F-24 AC13). /admin/challenges/new(등록, POST)와 /admin/challenges/:id/edit(PUT)가 같은 화면을 쓴다.
 // 클라이언트 검증을 통과해야 요청하고, 서버 400 details는 필드 아래에 보인다. 시작한 챌린지는 목표·시작일 입력을 잠근다.
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import {
   createAdminChallenge,
@@ -16,8 +16,10 @@ import { todayIso, validateChallengeForm } from '@/components/challenge/admin/va
 const route = useRoute()
 const router = useRouter()
 
-const isNew = route.name === 'admin-challenge-new'
-const challengeId = isNew ? null : Number(route.params.id)
+// 관리자 레이아웃의 RouterView가 화면을 재사용하므로(편집 A → 편집 B, 편집 → 새 챌린지) 주소에서 매번 다시 읽는다
+const EDITOR_ROUTES = ['admin-challenge-new', 'admin-challenge-edit']
+const isNew = computed(() => route.name === 'admin-challenge-new')
+const challengeId = computed(() => (isNew.value ? null : Number(route.params.id)))
 
 const EMPTY = {
   title: '',
@@ -33,7 +35,7 @@ const FIELDS = Object.keys(EMPTY).filter((key) => key !== 'removeImage')
 
 const form = ref({ ...EMPTY })
 const challenge = ref(null)
-const loading = ref(!isNew)
+const loading = ref(!isNew.value)
 const loadError = ref('')
 const notFound = ref(false)
 const saving = ref(false)
@@ -43,12 +45,11 @@ const submitError = ref('')
 /** 진행 중·종료 챌린지는 목표 유형·목표값·시작일을 바꿀 수 없다 (AC7) */
 const locked = computed(() => Boolean(challenge.value) && challenge.value.status !== 'UPCOMING')
 
-async function load() {
+async function load(id) {
   loading.value = true
-  loadError.value = ''
-  notFound.value = false
   try {
-    const result = await fetchAdminChallenge(challengeId)
+    const result = await fetchAdminChallenge(id)
+    if (id !== challengeId.value) return // 그사이 다른 챌린지로 옮겼으면 늦은 응답은 버린다
     challenge.value = result
     form.value = {
       title: result.title,
@@ -61,16 +62,34 @@ async function load() {
       removeImage: false,
     }
   } catch (error) {
+    if (id !== challengeId.value) return
     if (errorCode(error) === 'CHALLENGE_404') notFound.value = true
     else loadError.value = errorMessage(error)
   } finally {
-    loading.value = false
+    if (id === challengeId.value) loading.value = false
   }
 }
 
-onMounted(() => {
-  if (!isNew) load()
-})
+/** 주소가 가리키는 챌린지로 화면 상태를 처음부터 다시 맞춘다 */
+function reset() {
+  form.value = { ...EMPTY }
+  challenge.value = null
+  loadError.value = ''
+  notFound.value = false
+  fieldErrors.value = {}
+  submitError.value = ''
+  loading.value = !isNew.value
+  if (!isNew.value) load(challengeId.value)
+}
+
+watch(
+  () => [route.name, route.params.id],
+  () => {
+    // 목록 등 다른 화면으로 나갈 때는 다시 불러오지 않는다
+    if (EDITOR_ROUTES.includes(route.name)) reset()
+  },
+  { immediate: true },
+)
 
 /** 목록에서 들어왔으면 그 목록 조건(탭·페이지)으로, 아니면 기본 목록으로 돌아간다 */
 function listLocation() {
@@ -94,13 +113,14 @@ async function save() {
   if (Object.keys(fieldErrors.value).length > 0) return
 
   saving.value = true
+  const creating = isNew.value
   const body = { ...form.value, title: form.value.title.trim() }
   try {
-    if (isNew) await createAdminChallenge(body)
-    else await updateAdminChallenge(challengeId, body)
+    if (creating) await createAdminChallenge(body)
+    else await updateAdminChallenge(challengeId.value, body)
     await router.push({
       ...listLocation(),
-      state: { notice: isNew ? '챌린지를 등록했습니다.' : '저장했습니다.' },
+      state: { notice: creating ? '챌린지를 등록했습니다.' : '저장했습니다.' },
     })
   } catch (error) {
     showSubmitError(error)
