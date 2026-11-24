@@ -139,6 +139,10 @@ public final class UrlEvaluator {
             JsDecl d = decl.get();
             return switch (d.kind()) {
                 case PARAM -> {
+                    if (module.reassigned(d)) {
+                        // 본문에서 다시 대입하면 부른 곳의 인자가 그 값이 아니다
+                        yield Typed.text(UrlValue.dynamic());
+                    }
                     if (d.function().equals(bindings.function())) {
                         Arg arg = bindings.args().get(name);
                         yield arg == null

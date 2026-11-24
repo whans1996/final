@@ -52,6 +52,22 @@ final class JsDeclarations {
                     "var",
                     "class");
 
+    /** 뒤에 식이 오는 키워드. 그 뒤의 function은 함수 식이다. */
+    private static final Set<String> EXPRESSION_BEFORE =
+            Set.of(
+                    "return",
+                    "typeof",
+                    "new",
+                    "await",
+                    "yield",
+                    "in",
+                    "of",
+                    "instanceof",
+                    "case",
+                    "void",
+                    "delete",
+                    "throw");
+
     private static final Set<String> NOT_CONTINUING =
             Set.of("(", "[", "{", "!", "~", "++", "--", "...", ")", "]", "}", ";", ",");
 
@@ -276,23 +292,49 @@ final class JsDeclarations {
         if (JsTokens.is(t, j, "*")) {
             j++;
         }
-        String name = null;
+        int start = JsTokens.is(t, i - 1, "async") ? i - 1 : i;
+        // 문장 자리의 function f는 선언(둘러싼 블록에 f), 식 자리(= function f, (function f)는 f가 그 함수 안에서만 보인다
+        boolean declaration = statementStart(start);
+        String own = null;
         if (JsTokens.kind(t, j) == JsToken.Kind.IDENT && JsTokens.is(t, j + 1, "(")) {
-            name = t.get(j).text();
+            own = t.get(j).text();
             j++;
-        } else {
-            name = assignedName(JsTokens.is(t, i - 1, "async") ? i - 1 : i);
         }
+        String name = own != null && declaration ? own : assignedName(start);
         if (!JsTokens.is(t, j, "(") || match[j] < 0 || !JsTokens.is(t, match[j] + 1, "{")) {
             return;
         }
         int bodyOpen = match[j] + 1;
-        addFunction(name, j, bodyEnd(bodyOpen));
-        if (name != null && JsTokens.kind(t, i + 1) == JsToken.Kind.IDENT) {
-            int[] scope = scopeOf(i);
-            module.decls()
-                    .add(new JsDecl(name, Kind.FUNCTION, scope[0], scope[1], List.of(), null));
+        int end = bodyEnd(bodyOpen);
+        addFunction(name, j, end);
+        if (own != null) {
+            int[] scope = declaration ? scopeOf(i) : new int[] {t.get(j).start(), end};
+            module.decls().add(new JsDecl(own, Kind.FUNCTION, scope[0], scope[1], List.of(), null));
         }
+    }
+
+    /**
+     * k가 문장 시작인지: 앞 토큰이 없거나 문장·블록 경계, export default 뒤, 또는 앞 토큰이 이전 줄에 있고 식을 잇는 토큰(연산자, return 등)이
+     * 아닐 때 (세미콜론 없이 줄바꿈으로 끝난 문장).
+     */
+    private boolean statementStart(int k) {
+        if (k == 0) {
+            return true;
+        }
+        JsToken prev = t.get(k - 1);
+        if (prev.is(";")
+                || prev.is("{")
+                || prev.is("}")
+                || prev.is(")")
+                || prev.is("export")
+                || prev.is("default")
+                || prev.is("else")) {
+            return true;
+        }
+        boolean continues =
+                (prev.kind() == JsToken.Kind.PUNCT && !prev.is("]"))
+                        || EXPRESSION_BEFORE.contains(prev.text());
+        return prev.line() < t.get(k).line() && !continues;
     }
 
     private void arrow(int a) {

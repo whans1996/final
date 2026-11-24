@@ -377,6 +377,9 @@ public final class HttpLinker {
             }
             JsDecl d = decl.get();
             if (d.kind() == JsDecl.Kind.PARAM) {
+                if (module.reassigned(d)) {
+                    return Config.unresolved(null);
+                }
                 if (d.function().equals(bindings.function())) {
                     // 부른 곳이 그 인자를 넘기지 않았으면 config가 없다
                     Arg arg = bindings.args().get(name.text());
@@ -422,10 +425,7 @@ public final class HttpLinker {
     /** config 값에 쓰는 속성. 이 속성을 바꾸는 쓰기가 있으면 초기값을 믿지 않는다. */
     private static final Set<String> CONFIG_KEYS = Set.of("url", "method", "baseURL");
 
-    private static final Set<String> ASSIGN_OPS =
-            Set.of(
-                    "=", "+=", "-=", "*=", "/=", "%=", "**=", "<<=", ">>=", ">>>=", "&=", "|=",
-                    "^=", "&&=", "||=", "??=");
+    private static final Set<String> ASSIGN_OPS = JsModule.ASSIGN_OPS;
 
     /** 대괄호 안 계산된 키로 쓰는 모양을 찾을 때 볼 토큰 수. */
     private static final int MAX_COMPUTED_KEY_TOKENS = 64;

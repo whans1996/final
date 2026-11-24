@@ -19,6 +19,14 @@ public final class JsModule {
     private final List<JsDecl> decls = new ArrayList<>();
     private final Map<String, List<JsDecl>> declsByName = new HashMap<>();
     private int indexed;
+    private Set<JsDecl> reassigned;
+
+    /** 대입 연산자. {@code ==}·{@code =>}는 토크나이저가 따로 나눈다. */
+    public static final Set<String> ASSIGN_OPS =
+            Set.of(
+                    "=", "+=", "-=", "*=", "/=", "%=", "**=", "<<=", ">>=", ">>>=", "&=", "|=",
+                    "^=", "&&=", "||=", "??=");
+
     private final List<JsFunction> functions = new ArrayList<>();
     private final Map<String, JsExport> exports = new HashMap<>();
     private final Set<String> axiosNames = new HashSet<>();
@@ -98,6 +106,66 @@ public final class JsModule {
         return decl.isEmpty()
                 || (decl.get().kind() == JsDecl.Kind.CONST
                         && JsDeclarations.isRequireAxios(decl.get().init()));
+    }
+
+    /**
+     * 이 선언이 파일 어딘가에서 다시 대입되는지 ({@code x = …}·{@code x += …}·{@code x++}). 매개변수 목록 안의 기본값({@code (x
+     * = 1) =>})은 대입이 아니다. 선언을 다 읽은 뒤 처음 물을 때 한 번 훑는다.
+     */
+    public boolean reassigned(JsDecl decl) {
+        if (reassigned == null) {
+            reassigned = findReassigned();
+        }
+        return reassigned.contains(decl);
+    }
+
+    private Set<JsDecl> findReassigned() {
+        Set<Integer> paramNames = new HashSet<>();
+        Map<Integer, Integer> indexByStart = new HashMap<>();
+        for (int i = 0; i < tokens.size(); i++) {
+            indexByStart.put(tokens.get(i).start(), i);
+        }
+        for (JsFunction fn : functions) {
+            Integer at = indexByStart.get(fn.start());
+            if (at == null) {
+                continue;
+            }
+            if (!tokens.get(at).is("(")) {
+                paramNames.add(fn.start());
+                continue;
+            }
+            int depth = 0;
+            for (int i = at; i < tokens.size(); i++) {
+                JsToken token = tokens.get(i);
+                if (token.is("(")) {
+                    depth++;
+                } else if (token.is(")") && --depth == 0) {
+                    break;
+                } else if (token.kind() == JsToken.Kind.IDENT) {
+                    paramNames.add(token.start());
+                }
+            }
+        }
+        Set<JsDecl> out = new HashSet<>();
+        for (int i = 0; i < tokens.size(); i++) {
+            JsToken token = tokens.get(i);
+            if (token.kind() != JsToken.Kind.IDENT
+                    || paramNames.contains(token.start())
+                    || (i > 0 && (tokens.get(i - 1).is(".") || tokens.get(i - 1).is("?.")))) {
+                continue;
+            }
+            boolean write =
+                    (i + 1 < tokens.size()
+                                    && (ASSIGN_OPS.contains(tokens.get(i + 1).text())
+                                            || tokens.get(i + 1).is("++")
+                                            || tokens.get(i + 1).is("--")))
+                            || (i > 0
+                                    && (tokens.get(i - 1).is("++") || tokens.get(i - 1).is("--")));
+            if (write) {
+                lookup(token.text(), token.start()).ifPresent(out::add);
+            }
+        }
+        return out;
     }
 
     /** 파일 최상위 선언. */

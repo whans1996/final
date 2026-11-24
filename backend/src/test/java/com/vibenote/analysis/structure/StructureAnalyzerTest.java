@@ -1052,4 +1052,44 @@ class StructureAnalyzerTest {
         assertThat(http(response)).containsExactly(edge(1, 100, 5));
         assertThat(httpUnresolved(response)).isEmpty();
     }
+
+    @Test
+    void AC10_다시_대입한_매개변수는_부른_곳의_인자로_바꾸지_않는다() {
+        AnalysisStructureResponse response =
+                run(
+                        List.of(api("GET", "/api/todos", 100)),
+                        js(
+                                1,
+                                "src/a.js",
+                                """
+                                function request(url) { url = '/api/other'; return fetch(url) }
+                                request('/api/todos')
+                                const get = (path = '/x') => fetch(path)
+                                get('/api/todos')
+                                """));
+
+        assertThat(http(response)).containsExactly(edge(1, 100, 4));
+        assertThat(httpUnresolved(response))
+                .extracting(UnresolvedLink::line, UnresolvedLink::reason)
+                .containsExactly(tuple(1, UnresolvedReason.URL_UNKNOWN));
+    }
+
+    @Test
+    void AC7_이름_있는_함수_식의_이름은_그_함수_안에서만_보인다() {
+        AnalysisStructureResponse response =
+                run(
+                        List.of(api("GET", "/api/todos", 100), api("GET", "/api/items", 101)),
+                        js(
+                                1,
+                                "src/a.js",
+                                """
+                                import axios from 'axios'
+                                const helper = function fetch() {}
+                                fetch('/api/todos')
+                                const h2 = function axios() {}
+                                axios.get('/api/items')
+                                """));
+
+        assertThat(http(response)).containsExactly(edge(1, 100, 3), edge(1, 101, 5));
+    }
 }
