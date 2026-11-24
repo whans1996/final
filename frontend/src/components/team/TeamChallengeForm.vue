@@ -12,7 +12,11 @@ defineProps({
 
 const emit = defineEmits(['submit'])
 
+// Start date upper bound, same as server TeamChallengeService.MAX_START_AHEAD_DAYS (#95)
+const MAX_START_AHEAD_DAYS = 365
+
 const today = todayString()
+const maxStartDate = addDays(today, MAX_START_AHEAD_DAYS)
 const form = reactive({ startDate: today, endDate: addDays(today, 6), targetRate: 80 })
 
 function onSubmit() {
@@ -31,7 +35,13 @@ function onSubmit() {
     <div class="fields">
       <label>
         시작일
-        <input v-model="form.startDate" type="date" name="startDate" :min="today" />
+        <input
+          v-model="form.startDate"
+          type="date"
+          name="startDate"
+          :min="today"
+          :max="maxStartDate"
+        />
         <span v-if="fieldErrors.startDate" class="field-error" data-error="startDate">
           {{ fieldErrors.startDate }}
         </span>

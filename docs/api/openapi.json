@@ -1324,7 +1324,7 @@
             "type" : "string"
           },
           "startDate" : {
-            "description" : "시작일 (YYYY-MM-DD, 오늘이거나 그 뒤)",
+            "description" : "시작일 (YYYY-MM-DD, 오늘부터 오늘 + 365일까지)",
             "example" : "2026-11-25",
             "format" : "date",
             "type" : "string"
@@ -7591,7 +7591,7 @@
                 }
               }
             },
-            "description" : "analysisId·startDate·endDate·targetRate 오류, 시작일이 오늘 전, 종료일이 시작일 전, 30일 초과 (COMMON_400, 필드별 details)"
+            "description" : "analysisId·startDate·endDate·targetRate 오류, 시작일이 오늘 전이거나 오늘 + 365일 뒤, 종료일이 시작일 전, 30일 초과 (COMMON_400, 필드별 details)"
           },
           "401" : {
             "content" : {

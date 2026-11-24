@@ -25,7 +25,7 @@ public record CreateTeamChallengeRequest(
                         requiredMode = Schema.RequiredMode.REQUIRED,
                         type = "string",
                         format = "date",
-                        description = "시작일 (YYYY-MM-DD, 오늘이거나 그 뒤)",
+                        description = "시작일 (YYYY-MM-DD, 오늘부터 오늘 + 365일까지)",
                         example = "2026-11-25")
                 String startDate,
         @Schema(

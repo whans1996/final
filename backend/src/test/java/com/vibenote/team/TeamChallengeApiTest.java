@@ -216,6 +216,8 @@ class TeamChallengeApiTest extends TeamTestSupport {
         cases.put("startDate", body(a, null, "2026-12-01", 80));
         cases.put("startDate ", body(a, "2026/11/25", "2026-12-01", 80));
         cases.put("startDate  ", body(a, "2026-11-23", "2026-12-01", 80));
+        cases.put("startDate   ", body(a, "2027-11-25", "2027-11-30", 80)); // 오늘 + 366일 (#95)
+        cases.put("startDate    ", body(a, "+10000-01-01", "+10000-01-05", 80)); // DATE 범위 밖
         cases.put("endDate", body(a, "2026-11-25", null, 80));
         cases.put("endDate ", body(a, "2026-11-25", "12-01", 80));
         cases.put("endDate  ", body(a, "2026-11-25", "2026-11-24", 80));
@@ -238,13 +240,17 @@ class TeamChallengeApiTest extends TeamTestSupport {
     void AC2_경계값_목표_1과_100_시작일_오늘_기간_정확히_30일은_통과한다() throws Exception {
         Example e = example();
         long b = sharedAnalysis(e.team(), e.u(), "b");
+        long c = sharedAnalysis(e.team(), e.u(), "c");
 
         create(e.team(), e.u(), body(e.analysis(), "2026-11-24", "2026-12-23", 1))
                 .andExpect(status().isCreated());
         create(e.team(), e.u(), body(b, "2026-11-24", "2026-11-24", 100))
                 .andExpect(status().isCreated());
+        // 시작일 상한 = 오늘 + 365일 (#95)
+        create(e.team(), e.u(), body(c, "2027-11-24", "2027-12-23", 80))
+                .andExpect(status().isCreated());
 
-        assertThat(challengeCount(e.team())).isEqualTo(2);
+        assertThat(challengeCount(e.team())).isEqualTo(3);
     }
 
     // ── AC3 ──
