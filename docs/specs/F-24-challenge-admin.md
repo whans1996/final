@@ -101,8 +101,8 @@
   "goalValue": 10,
   "status": "UPCOMING",
   "participantCount": 0,
-  "createdAt": "2026-11-24T08:50:00",
-  "updatedAt": "2026-11-24T08:50:00"
+  "createdAt": "2026-11-24T08:50:00+09:00",
+  "updatedAt": "2026-11-24T08:50:00+09:00"
 }
 ```
 
@@ -218,10 +218,10 @@
 - [x] Flyway 마이그레이션 (없음 확인)
 - [x] AC별 실패 테스트 작성 (red 확인)
 - [x] BE 구현 (green)
-- [ ] FE 구현 (green)
+- [x] FE 구현 (green)
 - [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
 - [x] `docs/conventions.md` 3절 CHALLENGE 에러 코드
-- [ ] contract-checker 통과
+- [x] contract-checker 통과
 - [ ] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일)
 - [ ] reviewer 지적 사항 반영
 - [ ] 산출물 반영 (화면 설계서 SC-21 절·스크린샷, 유스케이스 UC51 대안 흐름)
