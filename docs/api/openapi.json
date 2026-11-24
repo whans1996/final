@@ -1104,13 +1104,13 @@
             "type" : "integer"
           },
           "endDate" : {
-            "description" : "종료일 (YYYY-MM-DD, 시작일 이후, 기간은 양끝 포함 최대 30일)",
+            "description" : "종료일 (YYYY-MM-DD, 시작일과 같거나 그 뒤, 기간은 양끝 포함 최대 30일)",
             "example" : "2026-12-01",
             "format" : "date",
             "type" : "string"
           },
           "startDate" : {
-            "description" : "시작일 (YYYY-MM-DD, 오늘 이후)",
+            "description" : "시작일 (YYYY-MM-DD, 오늘이거나 그 뒤)",
             "example" : "2026-11-25",
             "format" : "date",
             "type" : "string"
