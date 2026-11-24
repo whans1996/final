@@ -35,7 +35,8 @@ const actionError = ref('')
 // 삭제 확인 대화상자에 띄운 챌린지
 const pendingDelete = ref(null)
 const deleting = ref(false)
-const confirmButton = ref(null)
+// 대화상자가 열리면 되돌릴 수 없는 삭제 대신 취소에 포커스를 둔다
+const cancelButton = ref(null)
 
 const text = (value) => (typeof value === 'string' ? value : '')
 
@@ -132,7 +133,7 @@ async function askDelete(challenge) {
   actionError.value = ''
   pendingDelete.value = challenge
   await nextTick()
-  confirmButton.value?.focus()
+  cancelButton.value?.focus()
 }
 
 function cancelDelete() {
@@ -207,6 +208,7 @@ async function confirmDelete() {
         </p>
         <div class="dialog-actions">
           <button
+            ref="cancelButton"
             type="button"
             data-action="cancel-delete"
             :disabled="deleting"
@@ -215,7 +217,6 @@ async function confirmDelete() {
             취소
           </button>
           <button
-            ref="confirmButton"
             type="button"
             class="danger"
             data-action="confirm-delete"

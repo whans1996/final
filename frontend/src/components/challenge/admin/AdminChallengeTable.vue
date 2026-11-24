@@ -115,6 +115,7 @@ th {
 }
 
 .title {
+  min-width: 9em;
   white-space: normal;
   font-weight: 600;
 }
