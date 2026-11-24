@@ -4,7 +4,7 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
 
-갱신: 2026-11-24 10:32 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/F-25-challenge-participation
+갱신: 2026-11-24 10:37 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/F-25-challenge-participation
 
 ## 현재 기능
 
@@ -13,18 +13,17 @@
 ## 진행
 
 - ✅ BE AC1~AC11 (`2daa6c6`), FE AC16 (`2d877e7`), AC12·AC13 (`535cdf8`), AC14·AC15 (`3b835dc`). 커밋 hook verify fe 통과
-- ✅ contract-checker 불일치 0 (11-24). 산출물 문서 반영: UC33 "기획 기준" 해제, 화면 설계서 SC-12·13 절 추가, SC-04·18 챌린지 절
+- ✅ contract-checker 불일치 0, ui-verifier 통과(비로그인 6경로 × 데스크톱·모바일), Chrome으로 로그인 참여·취소·대시보드·프로필·내 챌린지 확인 (11-24). 상단 여백 보정, 스크린샷 SC-12·13·04 추가. 산출물 문서 반영: UC33 "기획 기준" 해제, 화면 설계서 SC-12·13 절 추가, SC-04·18 챌린지 절
 - #101(Actions 결제 막힘): 사용자 결정 11-24 "로컬 구현 계속, PR·머지는 복구 뒤"
 
 ## 바로 다음 할 일
 
-1. 실행 중 BE가 이 브랜치 빌드가 아니다 (`GET /api/challenges` 401). 사람이 BE를 이 브랜치로 다시 띄운 뒤(`cd backend && ./gradlew bootRun --args='--spring.profiles.active=local'`) ui-verifier로 `/challenges`·`/challenges/{id}` 비로그인 데스크톱·모바일 점검
-2. 관리자 화면으로 로컬 챌린지 몇 개 만들고, 연결된 Chrome으로 참여·취소·대시보드·프로필 절 확인 → 스크린샷 `docs/산출물/screens/SC-12-*.png`·`SC-13-*.png`를 화면 설계서 SC-12·13 절에 표로 추가
-3. `node scripts/verify.mjs all` → `/pr-review` (PR 본문 `Closes #99`)
+1. `node scripts/verify.mjs all` 통과 확인 → `/pr-review` (PR 본문 `Closes #99`, 공통 코드 변경 @JoonseobKim). #101 때문에 CI는 복구 뒤
+2. 로컬 BE는 이 브랜치로 다시 띄워 둠 (11-24 10:34, 이전 8080 프로세스는 옛 빌드라 종료)
 
 ## 막힌 점 / 결정 필요
 
-- 사람: BE 재시작(위 1), 노션 팀원 초대, #77 담당(F-08 A·F-13 B 걸침), #101 Actions 결제 확인
+- 사람: 노션 팀원 초대, #77 담당(F-08 A·F-13 B 걸침), #101 Actions 결제 확인
 
 ## 주의
 

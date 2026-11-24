@@ -116,6 +116,7 @@ function applyParticipation({ participantCount, participation }) {
   gap: var(--space-4);
   max-width: 720px;
   margin: 0 auto;
+  padding: var(--space-8) 0;
 }
 
 .image {

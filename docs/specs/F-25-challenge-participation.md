@@ -257,8 +257,8 @@
 - [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
 - [x] `docs/conventions.md` 3절 CHALLENGE 에러 코드
 - [x] contract-checker 통과 (11-24, 불일치 0)
-- [ ] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일)
+- [x] ui-verifier 통과 (11-24 비로그인 6경로 데스크톱·모바일, 로그인 참여·취소·대시보드·프로필·내 챌린지는 Chrome으로 확인)
 - [ ] reviewer 지적 사항 반영
-- [ ] 산출물 반영 — 문서 완료, SC-12·13 스크린샷 남음 (화면 설계서 SC-12·13 절·스크린샷, SC-04·18 챌린지 절, 유스케이스 UC33 "기획 기준" 해제·대안 흐름)
+- [x] 산출물 반영 (화면 설계서 SC-12·13 절·스크린샷, SC-04·18 챌린지 절, 유스케이스 UC33 "기획 기준" 해제·대안 흐름)
 - [ ] PR CI 초록
 - [ ] 상태 DONE (PR 머지 후)

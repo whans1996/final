@@ -164,6 +164,7 @@ const changePage = (page) => go({ page })
 .challenges {
   max-width: 1080px;
   margin: 0 auto;
+  padding: var(--space-8) 0;
 }
 
 h1 {
