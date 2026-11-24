@@ -8,8 +8,12 @@ import org.apache.ibatis.annotations.Param;
 @Mapper
 public interface AnalysisConceptMapper {
 
-    /** links가 비면 부르지 않는다 (VALUES가 빈 SQL 오류). */
-    void insertAll(@Param("analysisId") long analysisId, @Param("links") List<LinkRow> links);
+    /**
+     * links 중 지금 concepts에 남아 있는 카드만 넣는다 (#77). links가 비면 부르지 않는다 (빈 SELECT는 SQL 오류).
+     *
+     * @return 넣은 행 수
+     */
+    int insertAll(@Param("analysisId") long analysisId, @Param("links") List<LinkRow> links);
 
     /**
      * 분석의 연결 전체와 카드 상태·파일 경로. 파일이 있는 것 먼저 {@code file_id} 오름차순, 그다음 {@code concept_id} 오름차순 (AC7).

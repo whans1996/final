@@ -2,11 +2,18 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.vibenote.analysis.concept.AnalysisConceptMapper">
 
+    <!-- #77: 카탈로그 스냅샷 뒤 지워진 카드는 JOIN에서 빠진다. REPEATABLE READ의 INSERT ... SELECT는 concepts 행을
+         공유 잠금으로 읽어(최신 커밋 기준) 저장이 끝날 때까지 그 카드의 삭제를 막는다 -->
     <insert id="insertAll">
-        INSERT INTO analysis_concepts (analysis_id, concept_id, file_id, line_hint, context_note) VALUES
-        <foreach collection="links" item="l" separator=",">
-            (#{analysisId}, #{l.conceptId}, #{l.fileId}, #{l.lineHint}, #{l.contextNote})
-        </foreach>
+        INSERT INTO analysis_concepts (analysis_id, concept_id, file_id, line_hint, context_note)
+        SELECT #{analysisId}, c.id, l.file_id, l.line_hint, l.context_note
+        FROM (
+            <foreach collection="links" item="l" separator=" UNION ALL ">
+                SELECT #{l.conceptId} AS concept_id, #{l.fileId} AS file_id, #{l.lineHint} AS line_hint,
+                       #{l.contextNote} AS context_note
+            </foreach>
+        ) l
+        JOIN concepts c ON c.id = l.concept_id
     </insert>
 
     <resultMap id="link" type="com.vibenote.analysis.concept.AnalysisConceptMapper$LinkRow">
