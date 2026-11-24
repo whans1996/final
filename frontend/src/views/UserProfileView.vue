@@ -1,5 +1,5 @@
 <script setup>
-// SC-18 프로필 (F-03 AC9, F-12 찜한 카드 절 AC15, F-04 팔로우 영역 AC9). 누구나 볼 수 있다. 참여 챌린지 영역은 F-25에서 더한다.
+// SC-18 프로필 (F-03 AC9, F-12 찜한 카드 절 AC15, F-04 팔로우 영역 AC9). 누구나 볼 수 있다. 참여 챌린지 절은 F-25 AC15.
 import { computed, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
@@ -8,6 +8,7 @@ import { errorCode, errorMessage } from '@/api/http'
 import { LEVELS } from '@/utils/authValidation'
 import UserWishes from '@/components/concept/UserWishes.vue'
 import FollowSummary from '@/components/follow/FollowSummary.vue'
+import UserChallenges from '@/components/challenge/UserChallenges.vue'
 
 const route = useRoute()
 const auth = useAuthStore()
@@ -97,6 +98,7 @@ watch(userId, load, { immediate: true })
       </ul>
 
       <UserWishes :user-id="userId" :is-me="isMe" />
+      <UserChallenges :user-id="userId" :is-me="isMe" />
     </template>
   </section>
 </template>

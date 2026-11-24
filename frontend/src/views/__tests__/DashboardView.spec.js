@@ -4,12 +4,15 @@ import DashboardView from '@/views/dashboard/DashboardView.vue'
 import * as reviewPlansApi from '@/api/reviewPlans'
 import * as analysesApi from '@/api/analyses'
 import * as recommendationsApi from '@/api/recommendations'
+import * as challengesApi from '@/api/challenges'
+import { myChallenge } from '@/components/challenge/__tests__/fixtures'
 import { recommendation } from '@/components/recommendation/__tests__/fixtures'
 import { apiError, mountAt } from './viewTestUtils'
 
 vi.mock('@/api/reviewPlans')
 vi.mock('@/api/analyses')
 vi.mock('@/api/recommendations')
+vi.mock('@/api/challenges')
 
 function concept(id) {
   return {
@@ -73,6 +76,12 @@ describe('DashboardView (F-16 SC-04)', () => {
     })
     recommendationsApi.fetchRecommendations.mockResolvedValue({
       items: [recommendation(51), recommendation(52)],
+    })
+    challengesApi.fetchMyChallenges.mockResolvedValue({
+      items: [myChallenge(7), myChallenge(6)],
+      page: 1,
+      size: 3,
+      total: 2,
     })
   })
 
@@ -189,5 +198,54 @@ describe('DashboardView (F-16 SC-04)', () => {
     expect(section(wrapper, 'today').text()).toContain('불러오는 중…')
     expect(section(wrapper, 'recent').text()).toContain('불러오는 중…')
     expect(section(wrapper, 'recommendations').text()).toContain('추천을 만드는 중…')
+  })
+
+  it('F-25 AC14 참여 중 챌린지 절은 진행 중 참여 챌린지 최대 3개와 D-n·달성도 바, 전체 보기를 보여 준다', async () => {
+    const { wrapper } = await mountView()
+    const challenges = section(wrapper, 'challenges')
+
+    expect(challengesApi.fetchMyChallenges).toHaveBeenCalledWith({
+      status: 'ONGOING',
+      page: 1,
+      size: 3,
+    })
+    expect(challenges.find('h2').text()).toBe('참여 중 챌린지')
+    expect(challenges.findAll('[data-challenge-id]').map((r) => r.attributes('href'))).toEqual([
+      '/challenges/7',
+      '/challenges/6',
+    ])
+    expect(challenges.findAll('[data-field="dday"]')).toHaveLength(2)
+    expect(challenges.findAll('[role="progressbar"]')).toHaveLength(2)
+    expect(challenges.find('[data-action="all-challenges"]').attributes('href')).toBe(
+      '/challenges?status=MY',
+    )
+  })
+
+  it('F-25 AC14 참여 중인 챌린지가 없으면 안내와 챌린지 둘러보기 링크', async () => {
+    challengesApi.fetchMyChallenges.mockResolvedValue({ items: [], page: 1, size: 3, total: 0 })
+    const { wrapper } = await mountView()
+    const challenges = section(wrapper, 'challenges')
+
+    expect(challenges.text()).toContain('참여 중인 챌린지가 없습니다.')
+    expect(challenges.find('[data-action="browse-challenges"]').attributes('href')).toBe(
+      '/challenges',
+    )
+  })
+
+  it('F-25 AC14 이 절만 실패하면 절 안에 메시지와 다시 시도, 다른 절은 그대로다', async () => {
+    challengesApi.fetchMyChallenges.mockRejectedValueOnce(
+      apiError(500, { code: 'COMMON_500', message: '챌린지 오류' }),
+    )
+    const { wrapper } = await mountView()
+
+    expect(section(wrapper, 'challenges').find('[role="alert"]').text()).toBe('챌린지 오류')
+    expect(section(wrapper, 'today').find('[role="alert"]').exists()).toBe(false)
+    expect(section(wrapper, 'recent').findAll('[data-analysis-id]')).toHaveLength(2)
+
+    await section(wrapper, 'challenges').find('[data-action="retry-challenges"]').trigger('click')
+    await flushPromises()
+
+    expect(challengesApi.fetchMyChallenges).toHaveBeenCalledTimes(2)
+    expect(section(wrapper, 'challenges').findAll('[data-challenge-id]')).toHaveLength(2)
   })
 })
