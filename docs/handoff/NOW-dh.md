@@ -3,7 +3,7 @@
 > 김동환(A 영역: AI·분석·학습 루프) 전용. 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
-갱신: 2026-11-24 17:21 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/F-21a-structure-graph
+갱신: 2026-11-24 17:28 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/F-21a-structure-graph
 
 ## 현재 기능
 
@@ -15,11 +15,11 @@
 - ✅ 전수 점검 4영역 약 40건 → spec 5.3절 1~7로 정리
 - ✅ 5.3-3 완료: `d22972e` WorkBudget·파일별 예외 격리, `e4adde6` 제곱 경로 색인화(`JsScopeIndex` 등, `StructureWorkloadTest` 12개), `c5a45f7` 메모리 상한(토큰 파일 50만·합계 200만, unresolved 상한+1 보관, Java AST 파일마다 두 번 파싱). spec 5.3-3 끝에 구현 메모
 - ✅ 5.3-1 완료 `d796d18`: `JsDecl.Kind.UNKNOWN`(TS식 매개변수·catch 이름, `with` 본문), `JsModule.lookupKnown`으로 가린 바깥 이름이 HTTP면 `HttpLinker`가 `SHADOWED` → URL_UNKNOWN. 키워드·계산된·`#` 메서드, 구조 분해 catch·대입, for 머리, 다시 대입 래퍼, 최상위 래퍼만 다른 파일, 전개 인자, import axios만 믿음. `StructureAnalyzerTest` "5.3절 1" 8개, 구조 테스트 122개 통과. spec 5.3-1 끝에 구현 메모
-- 🟡 5.3-5 진행: ① `5a3aa56` 매개변수 붙은 URL도 부른 곳 인라인 먼저(부른 곳 없으면 와일드카드 유지), 호스트 이름 자리 동적 조각은 URL_UNKNOWN·BASE_URL_UNKNOWN(스킴·userinfo·포트 조각은 그 구성 요소 안) ② `baa446a` 로컬·baseURL 호스트가 아닌 절대 URL은 NO_MATCHING_API(detail `GET host/path`, `HttpLinker.ourHost`). 구조 테스트 125개
+- 🟡 5.3-5 진행: ① `5a3aa56` 매개변수 붙은 URL도 부른 곳 인라인 먼저(부른 곳 없으면 와일드카드 유지), 호스트 이름 자리 동적 조각은 URL_UNKNOWN·BASE_URL_UNKNOWN(스킴·userinfo·포트 조각은 그 구성 요소 안) ② `baa446a` 로컬·baseURL 호스트가 아닌 절대 URL은 NO_MATCHING_API(detail `GET host/path`, `HttpLinker.ourHost`) ③④ `8a961a8` 와일드카드가 API 리터럴·정규식과 맞섰거나 메서드 모름이면 한 파일일 때만 고름(아니면 AMBIGUOUS), 순위 `**` 없는 것→리터럴→변수 무게(`*` 100). 기존 테스트 2개 기대값 바꿈(의도). 구조 테스트 128개
 
 ## 바로 다음 할 일
 
-1. spec 5.3-5 남은 하위 항목 ③ 와일드카드·메서드 모름이면 후보가 한 파일일 때만 고르기(아니면 AMBIGUOUS) ④ 순위 `**` 없는 것→리터럴 많은 것→변수 적은 것, `*`>`{v}` (`ApiPathMatcher`, `ApiPathMatcherTest`에 실패 테스트 먼저) ⑤ baseURL 쓰기 여럿·`+=`·defaults 변형, fetch 재대입·interceptors ⑥ `ContextPathReader` profiles 맵 ⑦ ApiDetector 잘림 시 변수 없는 일치만. 끝나면 spec 5.3-5에 구현 메모 → 2·6(토크나이저, `JsTokenizer.scriptBlocks`의 `SCRIPT_OPEN` 정규식도 선형으로) → 4(캐시, `StructureService`, 선별 파일 불변·soft delete 확인 먼저, `StructureServiceTest`는 아직 없음). 5.3-7은 follow-up 이슈(area:A)
+1. spec 5.3-5 남은 하위 항목 ⑤ baseURL 쓰기 여럿·`+=`·defaults 변형, fetch 재대입·interceptors ⑥ `ContextPathReader` profiles 맵 ⑦ ApiDetector 잘림 시 변수 없는 일치만. 끝나면 spec 5.3-5에 구현 메모 → 2·6(토크나이저, `JsTokenizer.scriptBlocks`의 `SCRIPT_OPEN` 정규식도 선형으로) → 4(캐시, `StructureService`, 선별 파일 불변·soft delete 확인 먼저, `StructureServiceTest`는 아직 없음). 5.3-7은 follow-up 이슈(area:A)
 2. `node scripts/verify.mjs all` → push → `gh pr ready 118` → `node scripts/codex-review.mjs 118 --request --wait --status` (background)
 3. Codex COMPLETE + CI 초록 → `docs(F-21a): 완료 표시 (spec DONE)` → 사람이 GitHub에서 머지
 
