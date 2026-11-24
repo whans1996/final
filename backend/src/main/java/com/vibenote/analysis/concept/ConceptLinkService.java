@@ -12,12 +12,16 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /** 검증한 개념 항목을 저장한다 (F-08 AC1·AC5). 새 초안 INSERT와 analysis_concepts INSERT를 한 트랜잭션으로 한다. */
 @Service
 public class ConceptLinkService {
+
+    private static final Logger log = LoggerFactory.getLogger(ConceptLinkService.class);
 
     private final ConceptDraftService draftService;
     private final AnalysisConceptMapper mapper;
@@ -51,8 +55,17 @@ public class ConceptLinkService {
                         LinkRow.of(conceptId, item.fileId(), item.lineHint(), item.contextNote()));
             }
         }
-        if (!links.isEmpty()) {
-            mapper.insertAll(analysisId, links);
+        if (links.isEmpty()) {
+            return;
+        }
+        // 카탈로그를 읽은 뒤 관리자가 지운 카드(F-13)는 FK 위반 대신 빠진다 (#77)
+        int inserted = mapper.insertAll(analysisId, links);
+        if (inserted < links.size()) {
+            log.warn(
+                    "analysis {}: 추출 중 삭제된 개념 {}개를 연결하지 않았다 (요청 id 목록 {})",
+                    analysisId,
+                    links.size() - inserted,
+                    links.stream().map(LinkRow::conceptId).toList());
         }
     }
 
