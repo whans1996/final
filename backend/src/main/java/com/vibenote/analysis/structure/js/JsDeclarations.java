@@ -6,6 +6,7 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Deque;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -170,7 +171,39 @@ final class JsDeclarations {
         }
     }
 
+    /** 템플릿 {@code ${}} 안에서 이름을 새로 만드는 토큰. */
+    private static final Set<String> TEMPLATE_DECLARING =
+            Set.of("const", "let", "var", "function", "class", "catch", "=>");
+
+    /**
+     * 템플릿 {@code ${}} 안에서 이름을 선언하면(함수 본문·화살표 매개변수 등) 그 범위를 따로 모델링하지 않고, 그 식 안의 이름을 모두 식 전체에서
+     * UNKNOWN으로 둔다 (5.3절 1 안전하게 실패). 바깥 HTTP 이름을 가렸으면 URL_UNKNOWN이 된다.
+     */
+    private void shadowTemplateNames() {
+        if (t.isEmpty()
+                || t.stream().noneMatch(token -> TEMPLATE_DECLARING.contains(token.text()))) {
+            return;
+        }
+        int from = t.getFirst().start();
+        int to = t.getLast().end();
+        Set<String> names = new HashSet<>();
+        for (int i = 0; i < t.size(); i++) {
+            budget.spend();
+            JsToken token = t.get(i);
+            if (token.kind() == JsToken.Kind.IDENT
+                    && !JsTokens.isMemberName(t, i)
+                    && !KEYWORDS.contains(token.text())
+                    && names.add(token.text())) {
+                module.decls()
+                        .add(new JsDecl(token.text(), Kind.UNKNOWN, from, to, List.of(), null));
+            }
+        }
+    }
+
     private void readAll() {
+        if (inTemplate) {
+            shadowTemplateNames();
+        }
         for (int i = 0; i < t.size(); i++) {
             budget.spend();
             readAt(i);

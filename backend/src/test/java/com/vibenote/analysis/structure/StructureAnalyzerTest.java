@@ -1270,6 +1270,29 @@ class StructureAnalyzerTest {
     // ---- 5.3절 1: 이름은 안전하게 실패 ----
 
     @Test
+    void AC7_템플릿_안에서_선언한_이름이_바깥_axios를_가리면_간선이_아니다() {
+        AnalysisStructureResponse response =
+                run(
+                        List.of(api("GET", "/api/todos", 100), api("GET", "/api/items", 101)),
+                        js(
+                                1,
+                                "src/a.js",
+                                """
+                                import axios from 'axios'
+                                const a = `${(() => { const axios = new Map(); return axios.get('/api/todos') })()}`
+                                const b = `${(function (fetch) { return fetch('/api/todos') })(f)}`
+                                const c = `${axios.get('/api/items')}`
+                                """));
+
+        assertThat(http(response)).containsExactly(edge(1, 101, 4));
+        assertThat(httpUnresolved(response))
+                .extracting(UnresolvedLink::line, UnresolvedLink::reason)
+                .containsExactly(
+                        tuple(2, UnresolvedReason.URL_UNKNOWN),
+                        tuple(3, UnresolvedReason.URL_UNKNOWN));
+    }
+
+    @Test
     void AC7_매개변수의_모델링하지_않은_이름도_가리고_HTTP였을_이름이면_URL_UNKNOWN이다() {
         AnalysisStructureResponse response =
                 run(
