@@ -3,7 +3,7 @@
 // 검증과 저장 버튼은 편집 화면(AdminChallengeEditView)이 둔다. 이미지는 고른 파일을 object URL로 미리 보여 주고,
 // 바꾸거나 화면을 떠나면 이전 주소를 해제한다.
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
-import { GOAL_TYPES, LOCK_MESSAGE } from './labels'
+import { GOAL_TYPES, LOCK_MESSAGE } from '@/components/challenge/labels'
 import {
   DESCRIPTION_MAX,
   GOAL_VALUE_MAX,

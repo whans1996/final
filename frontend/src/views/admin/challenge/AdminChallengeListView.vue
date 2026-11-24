@@ -7,7 +7,7 @@ import { deleteAdminChallenge, fetchAdminChallenges } from '@/api/adminChallenge
 import { errorMessage } from '@/api/http'
 import AdminChallengeStatusTabs from '@/components/challenge/admin/AdminChallengeStatusTabs.vue'
 import AdminChallengeTable from '@/components/challenge/admin/AdminChallengeTable.vue'
-import { CHALLENGE_STATUSES } from '@/components/challenge/admin/labels'
+import { CHALLENGE_STATUSES } from '@/components/challenge/labels'
 import EmptyState from '@/components/common/EmptyState.vue'
 import PageNav from '@/components/common/PageNav.vue'
 import { overflowLastPage } from '@/utils/pagination'

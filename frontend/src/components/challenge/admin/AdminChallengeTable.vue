@@ -2,7 +2,7 @@
 // SC-21 관리자 챌린지 표 (F-24 AC11). 640px 이하에서는 같은 마크업을 CSS로 카드형 행으로 바꾼다 (각 칸 앞에 data-label을 보인다).
 // 삭제는 확인 대화상자를 목록 화면이 띄우므로 delete 이벤트로 올린다.
 import { RouterLink } from 'vue-router'
-import { goalIcon, goalLabel, periodLabel, statusLabel } from './labels'
+import { goalIcon, goalLabel, periodLabel, statusLabel } from '@/components/challenge/labels'
 
 defineProps({
   /** AdminChallengeSummaryResponse[] */

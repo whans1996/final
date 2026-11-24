@@ -1,5 +1,7 @@
 // 관리자 챌린지 폼 클라이언트 검증 (F-24 AC13). 규칙과 문구는 BE AdminChallengeRequest·AdminChallengeService와 같다.
 // 서버도 같은 검증을 하므로, 여기서는 요청 전에 바로 고칠 수 있는 것을 알려 주는 용도다.
+// 오늘(options.today)은 호출하는 쪽이 utils/seoulDate의 todayInSeoul()로 넘긴다 (F-25 AC16).
+import { daysBetween } from '@/utils/seoulDate'
 
 export const TITLE_MAX = 100
 export const DESCRIPTION_MAX = 2000
@@ -28,15 +30,7 @@ export const MESSAGES = {
   imageNotAllowed: 'jpg·png·webp 이미지만 올릴 수 있습니다.',
 }
 
-/** 오늘 날짜 'yyyy-MM-dd' (브라우저 시간대). */
-export function todayIso(now = new Date()) {
-  const pad = (n) => String(n).padStart(2, '0')
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
-}
-
 const DATE = /^\d{4}-\d{2}-\d{2}$/
-const toDay = (iso) =>
-  Date.UTC(+iso.slice(0, 4), +iso.slice(5, 7) - 1, +iso.slice(8, 10)) / 86400000
 
 /** 이미지 파일 사유. 문제가 없으면 null. */
 export function imageProblem(file) {
@@ -65,7 +59,7 @@ export function validateChallengeForm(form, { today, originalEndDate = null }) {
   if (!start) errors.startDate = MESSAGES.startRequired
   if (!end) errors.endDate = MESSAGES.endRequired
   else if (start && end < start) errors.endDate = MESSAGES.endBeforeStart
-  else if (start && toDay(end) - toDay(start) + 1 > PERIOD_MAX_DAYS) {
+  else if (start && daysBetween(start, end) + 1 > PERIOD_MAX_DAYS) {
     errors.endDate = MESSAGES.periodTooLong
   } else if (end !== originalEndDate && end < today) errors.endDate = MESSAGES.endInPast
 

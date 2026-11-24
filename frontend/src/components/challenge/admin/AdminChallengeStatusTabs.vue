@@ -1,6 +1,6 @@
 <script setup>
 // SC-21 관리자 챌린지 목록의 상태 탭 (F-24 AC11). 상태는 저장하지 않고 서버가 오늘 기준으로 계산한다.
-import { CHALLENGE_STATUSES } from './labels'
+import { CHALLENGE_STATUSES } from '@/components/challenge/labels'
 
 defineProps({
   /** 'ALL' | 'UPCOMING' | 'ONGOING' | 'ENDED' */
