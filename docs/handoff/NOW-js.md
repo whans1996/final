@@ -1,7 +1,7 @@
 # NOW — 김준섭 현재 작업 스냅샷
 
 > 김준섭(B 영역: 카드·소셜) 전용. 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
-갱신: 2026-11-24 14:20 · 작업자: JoonseobKim · PC: js-home · 브랜치: feature/issue-44-sync-tests
+갱신: 2026-11-24 14:23 · 작업자: JoonseobKim · PC: js-home · 브랜치: feature/issue-44-sync-tests
 
 ---
 
@@ -18,7 +18,7 @@
 
 ## 바로 다음 할 일
 
-1. #44 PR 열기 → CI 초록·Codex COMPLETE(`node scripts/codex-review.mjs <PR> --request --wait --status`) → 사람이 GitHub에서 머지
+1. #44 PR #120: Codex ✅ f1ade0d, Backend CI 진행 중(나머지 초록) → CI 초록 확인 후 사람이 GitHub에서 머지 (머지되면 #44는 close-issues가 닫음)
 2. #77·#44 뒤에는 멈춘다 (사용자 지시 11-24). 남은 후보: WBS 1.8 화면 설계서 챌린지 SC-12·13·21(기한 11/28), Phase 6은 나중에
 
 ## 막힌 점 / 결정 필요
