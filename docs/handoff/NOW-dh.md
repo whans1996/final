@@ -4,22 +4,23 @@
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
 
-갱신: 2026-11-24 10:53 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/F-25-challenge-participation
+갱신: 2026-11-24 11:16 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/F-25-challenge-participation
 
 ## 현재 기능
 
-**F-25 챌린지 참여·달성도** spec `docs/specs/F-25-challenge-participation.md` — APPROVED, `/implement` 마무리 (AC1~AC16 전부 green)
+**F-25 챌린지 참여·달성도** spec `docs/specs/F-25-challenge-participation.md` — APPROVED, **PR #106 열림** (`/pr-review` 8단계 Codex 루프 중)
 
 ## 진행
 
-- ✅ BE AC1~AC11 (`2daa6c6`), FE AC16 (`2d877e7`), AC12·AC13 (`535cdf8`), AC14·AC15 (`3b835dc`). 커밋 hook verify fe 통과
-- ✅ contract-checker 불일치 0, ui-verifier 통과(비로그인 6경로 × 데스크톱·모바일), Chrome으로 로그인 참여·취소·대시보드·프로필·내 챌린지 확인 (11-24). 상단 여백 보정, 스크린샷 SC-12·13·04 추가. 산출물 문서 반영: UC33 "기획 기준" 해제, 화면 설계서 SC-12·13 절 추가, SC-04·18 챌린지 절
-- ✅ #101 해결 (11-24): 원인은 11월 Actions 무료 분 2,000분 소진 → 저장소 public 전환(사람 실행), 결정로그 `5fe8053`. 이 브랜치 CI 수동 실행 success
+- ✅ AC1~AC16 구현·테스트, contract-checker 불일치 0, ui-verifier·Chrome 확인, 산출물 반영
+- ✅ `/pr-review` (11-24): verify all 통과. reviewer 반드시 1 → `beb5593`(cancel `findForUpdate`), 권장 2 → `dba5663`(join·cancel READ_COMMITTED, `ChallengeParticipationConcurrencyTest`), 권장 4 → `5f21b00`, 권장 1·3 → #104·#105
+- ✅ PR #106 생성 (head `62fd298`), CI `pull_request` 실행 시작, Codex 리뷰 대기 (`node scripts/codex-review.mjs 106 --request --wait --status`)
 
 ## 바로 다음 할 일
 
-1. `node scripts/verify.mjs all` 통과 확인 → `/pr-review` (PR 본문 `Closes #99`, 공통 코드 변경 @JoonseobKim). CI 정상
-2. 로컬 BE는 이 브랜치로 다시 띄워 둠 (11-24 10:34, 이전 8080 프로세스는 옛 빌드라 종료)
+1. Codex 판정 확인: `node scripts/codex-review.mjs 106 --request --wait --status`. FINDINGS면 `/pr-review` 8-3 규칙대로 (AC·보안만 이 PR, 그 밖 P2는 이슈 이관 후 `--resolve`)
+2. `gh pr checks 106` 초록 확인. 김준섭 #102·#103이 먼저 머지되면 `git merge origin/develop` → push → CI 재확인
+3. Codex ✅ + CI 초록이면 spec 헤더 `DONE (PR #106)` 커밋(`docs(F-25): 완료 표시 (spec DONE)`) → GitHub에서 머지
 
 ## 막힌 점 / 결정 필요
 
@@ -28,4 +29,4 @@
 ## 주의
 
 - 리뷰 지적은 '무시 가능'도 직접 확인한다 (11-20 사용자 지시) · 하네스 동결(11-23): 버그·작업 막는 문제만 고친다
-- 공통 파일 변경(ErrorCode, SecurityConfig, feed.ActivityService·ActivityMapper, FE AdminChallengeEditView·App.spec·UserProfileView) → PR "공통 코드 변경"에 적고 @JoonseobKim 멘션 (`node scripts/owners.mjs --diff origin/develop`로 확인)
+- PR #106은 공통 파일(ErrorCode, SecurityConfig, feed.ActivityService·Mapper, openapi.json, admin challenge 뷰, UserProfileView·App.spec) 변경을 PR 설명에 적고 @JoonseobKim 멘션함
