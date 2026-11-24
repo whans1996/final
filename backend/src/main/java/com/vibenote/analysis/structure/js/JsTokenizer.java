@@ -88,6 +88,16 @@ public final class JsTokenizer {
         Matcher open = SCRIPT_OPEN.matcher(vue);
         int from = 0;
         while (open.find(from)) {
+            // 블록 밖 HTML 주석 안의 <script>는 실행되지 않는다
+            int comment = vue.indexOf("<!--", from);
+            if (comment >= 0 && comment < open.start()) {
+                int commentEnd = vue.indexOf("-->", comment + 4);
+                if (commentEnd < 0) {
+                    break;
+                }
+                from = commentEnd + 3;
+                continue;
+            }
             Matcher close = SCRIPT_CLOSE.matcher(vue);
             int end = close.find(open.end()) ? close.start() : vue.length();
             for (int i = open.end(); i < end; i++) {

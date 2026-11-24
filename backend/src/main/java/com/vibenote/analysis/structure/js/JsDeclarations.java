@@ -62,9 +62,17 @@ final class JsDeclarations {
     /** 토큰 위치마다 가장 안쪽 {@code {}}의 여는 위치. 없으면 -1. */
     private final int[] block;
 
+    /** 템플릿 {@code ${}} 안의 토큰이면 true. 호출·화살표 함수만 모은다 (선언은 범위를 알 수 없어 이름을 잘못 가린다). */
+    private final boolean inTemplate;
+
     private JsDeclarations(JsModule module) {
+        this(module, module.tokens(), false);
+    }
+
+    private JsDeclarations(JsModule module, List<JsToken> tokens, boolean inTemplate) {
         this.module = module;
-        this.t = module.tokens();
+        this.inTemplate = inTemplate;
+        this.t = tokens;
         this.match = new int[t.size()];
         this.block = new int[t.size()];
         Deque<Integer> open = new ArrayDeque<>();
@@ -92,8 +100,20 @@ final class JsDeclarations {
     static void read(JsModule module) {
         JsDeclarations d = new JsDeclarations(module);
         d.readImportsOfAxios();
-        for (int i = 0; i < d.t.size(); i++) {
-            d.readAt(i);
+        d.readAll();
+    }
+
+    private void readAll() {
+        for (int i = 0; i < t.size(); i++) {
+            readAt(i);
+        }
+        // 템플릿 ${} 안의 식도 실행된다 (`${fetch('/x')}`). 토큰은 원본 offset을 그대로 가진다
+        for (JsToken token : t) {
+            if (token.kind() == JsToken.Kind.TEMPLATE) {
+                for (List<JsToken> part : token.parts()) {
+                    new JsDeclarations(module, part, true).readAll();
+                }
+            }
         }
     }
 
@@ -121,6 +141,9 @@ final class JsDeclarations {
             return;
         }
         if (JsTokens.isMemberName(t, i)) {
+            return;
+        }
+        if (inTemplate && KEYWORDS.contains(token.text())) {
             return;
         }
         switch (token.text()) {

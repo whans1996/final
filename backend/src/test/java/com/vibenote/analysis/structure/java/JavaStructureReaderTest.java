@@ -277,4 +277,26 @@ class JavaStructureReaderTest {
         assertThat(error.reason()).isEqualTo(UnresolvedReason.PARSE_ERROR);
         assertThat(error.detail()).isNotBlank().hasSizeLessThanOrEqualTo(200);
     }
+
+    @Test
+    void AC1_중첩_타입_이름은_그_타입_범위_안에서만_자기_파일이다() {
+        StructureLinks links =
+                read(
+                        java(
+                                1,
+                                "com.example.app.Main",
+                                """
+                                package com.example.app;
+                                class Main {
+                                    static class Nested { static class Result {} Result inner; }
+                                    Result result;
+                                }
+                                """),
+                        java(
+                                2,
+                                "com.example.app.Result",
+                                "package com.example.app;\npublic class Result {}"));
+
+        assertThat(links.edges()).containsExactly(imp(1, 2, 4));
+    }
 }

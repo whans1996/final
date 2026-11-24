@@ -164,6 +164,16 @@ public final class HttpLinker {
                 .orElse(null);
     }
 
+    /** 이 자리의 이름이 axios인지: import한 이름이 가려지지 않았거나, 보이는 선언이 {@code require('axios')}다. */
+    private static boolean axiosAt(JsToken name, JsModule module) {
+        if (!module.axiosNames().contains(name.text())) {
+            return false;
+        }
+        Optional<JsDecl> decl = module.lookup(name.text(), name.start());
+        return decl.isEmpty()
+                || (decl.get().kind() == JsDecl.Kind.CONST && requiresAxios(decl.get().init()));
+    }
+
     /** {@code const axios = require('axios')}의 초기값. */
     private static boolean requiresAxios(List<JsToken> init) {
         return init.size() == 4
@@ -174,10 +184,10 @@ public final class HttpLinker {
                 && init.get(3).is(")");
     }
 
-    /** {@code A.create(…)}(A는 그 모듈의 axios 이름) 식이면 인스턴스. */
+    /** {@code A.create(…)}(A는 그 자리에서 보이는 axios) 식이면 인스턴스. 매개변수·지역 변수가 axios 이름을 가리면 axios가 아니다. */
     private static Receiver instance(List<JsToken> init, JsModule module) {
         if (init.size() < 5
-                || !module.axiosNames().contains(init.get(0).text())
+                || !axiosAt(init.get(0), module)
                 || !init.get(1).is(".")
                 || !init.get(2).is("create")
                 || !init.get(3).is("(")
@@ -195,21 +205,29 @@ public final class HttpLinker {
     private record Expr(List<JsToken> tokens, JsModule module, Bindings bindings) {}
 
     /**
-     * 객체 리터럴의 속성. props가 null이면 객체 리터럴이 아니거나 값을 모른다. unknown은 {@code ...전개} 뒤에 직접 적지 않은 속성의 값(값을
-     * 모르는 식)이다. 전개가 덮어쓸 수 있으므로 없는 속성으로 보지 않는다.
+     * 객체 리터럴의 속성. props가 null이면 config가 없거나({@link #NONE}) 객체 리터럴로 계산하지 못했다({@link #unresolved}).
+     * unknown은 계산하지 못한 config나 {@code ...전개} 뒤에 직접 적지 않은 속성의 값(값을 모르는 식)이다. 그 속성이 들어 있을 수 있으므로 없는
+     * 속성으로 보지 않는다 (예: {@code axios.create(getConfig())}의 baseURL은 BASE_URL_UNKNOWN).
      */
     private record Config(Map<String, Expr> props, JsFunction paramOf, Expr unknown) {
-        Config(Map<String, Expr> props, JsFunction paramOf) {
-            this(props, paramOf, null);
+
+        /** config 인자가 없다. 모든 속성이 없다. */
+        static final Config NONE = new Config(null, null, null);
+
+        static Config unresolved(JsFunction paramOf) {
+            return new Config(null, paramOf, UNKNOWN);
         }
 
         Expr prop(String name) {
             if (props == null) {
-                return null;
+                return unknown;
             }
             return props.containsKey(name) ? props.get(name) : unknown;
         }
     }
+
+    /** 값을 모르는 식. 계산하면 동적 조각이다. */
+    private static final Expr UNKNOWN = new Expr(List.of(), null, Bindings.NONE);
 
     private record Outcome(FeRequest request, UnresolvedReason reason, JsFunction paramOf) {
         static Outcome failed(UnresolvedReason reason, JsFunction paramOf) {
@@ -345,33 +363,37 @@ public final class HttpLinker {
      * cfg}처럼 돌고 도는 식별자는 {@link #MAX_CONFIG_DEPTH}에서 끊는다.
      */
     private Config config(List<JsToken> tokens, JsModule module, Bindings bindings, int depth) {
-        if (tokens == null || tokens.isEmpty() || depth > MAX_CONFIG_DEPTH) {
-            return new Config(null, null);
+        if (tokens == null || tokens.isEmpty()) {
+            return Config.NONE;
+        }
+        if (depth > MAX_CONFIG_DEPTH) {
+            return Config.unresolved(null);
         }
         if (tokens.size() == 1 && tokens.get(0).kind() == JsToken.Kind.IDENT) {
             JsToken name = tokens.get(0);
             Optional<JsDecl> decl = module.lookup(name.text(), name.start());
             if (decl.isEmpty()) {
-                return new Config(null, null);
+                return Config.unresolved(null);
             }
             JsDecl d = decl.get();
             if (d.kind() == JsDecl.Kind.PARAM) {
                 if (d.function().equals(bindings.function())) {
+                    // 부른 곳이 그 인자를 넘기지 않았으면 config가 없다
                     Arg arg = bindings.args().get(name.text());
                     return arg == null
-                            ? new Config(null, null)
+                            ? Config.NONE
                             : config(arg.tokens(), arg.module(), Bindings.NONE, depth + 1);
                 }
-                return new Config(null, d.function());
+                return Config.unresolved(d.function());
             }
             return d.kind() == JsDecl.Kind.CONST
                     ? config(d.init(), module, bindings, depth + 1)
-                    : new Config(null, null);
+                    : Config.unresolved(null);
         }
         if (!tokens.get(0).is("{")
                 || !tokens.get(tokens.size() - 1).is("}")
                 || closingParen(tokens, 0) != tokens.size() - 1) {
-            return new Config(null, null);
+            return Config.unresolved(null);
         }
         Map<String, Expr> props = new LinkedHashMap<>();
         Expr unknown = null;

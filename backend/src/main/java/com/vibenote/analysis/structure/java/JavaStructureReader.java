@@ -18,8 +18,12 @@ import com.github.javaparser.ast.expr.MethodCallExpr;
 import com.github.javaparser.ast.expr.MethodReferenceExpr;
 import com.github.javaparser.ast.expr.NameExpr;
 import com.github.javaparser.ast.expr.TypePatternExpr;
+import com.github.javaparser.ast.nodeTypes.NodeWithTypeParameters;
+import com.github.javaparser.ast.stmt.BlockStmt;
+import com.github.javaparser.ast.stmt.LocalClassDeclarationStmt;
+import com.github.javaparser.ast.stmt.LocalRecordDeclarationStmt;
+import com.github.javaparser.ast.stmt.Statement;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
-import com.github.javaparser.ast.type.TypeParameter;
 import com.vibenote.analysis.domain.AnalysisFile;
 import com.vibenote.analysis.structure.EdgeType;
 import com.vibenote.analysis.structure.StructureLinks;
@@ -170,7 +174,6 @@ public final class JavaStructureReader {
 
         private final Parsed parsed;
         private final JavaTypeIndex index;
-        private final Set<String> localTypes = new HashSet<>();
         private final Set<String> variables = new HashSet<>();
         private final Map<String, String> singleImports = new HashMap<>();
         private final List<String> wildcardImports = new ArrayList<>();
@@ -184,10 +187,6 @@ public final class JavaStructureReader {
 
         void read(StructureLinks out) {
             CompilationUnit unit = parsed.unit();
-            for (TypeDeclaration<?> type : unit.findAll(TypeDeclaration.class)) {
-                localTypes.add(type.getNameAsString());
-            }
-            unit.findAll(TypeParameter.class).forEach(t -> localTypes.add(t.getNameAsString()));
             unit.findAll(VariableDeclarator.class).forEach(v -> variables.add(v.getNameAsString()));
             unit.findAll(Parameter.class).forEach(p -> variables.add(p.getNameAsString()));
             unit.findAll(TypePatternExpr.class).forEach(p -> variables.add(p.getNameAsString()));
@@ -246,7 +245,7 @@ public final class JavaStructureReader {
         }
 
         private void reference(String name, Node at) {
-            Target target = resolve(name);
+            Target target = resolve(name, at);
             if (target == null) {
                 return;
             }
@@ -258,7 +257,7 @@ public final class JavaStructureReader {
             }
         }
 
-        private Target resolve(String name) {
+        private Target resolve(String name, Node at) {
             String[] segments = name.split("\\.");
             if (segments.length > 1 && Character.isLowerCase(segments[0].charAt(0))) {
                 for (int k = 0; k < segments.length; k++) {
@@ -270,7 +269,7 @@ public final class JavaStructureReader {
                 return null;
             }
             String simple = segments[0];
-            if (localTypes.contains(simple)) {
+            if (declaredAround(simple, at)) {
                 return new Target(parsed.file().getId(), null);
             }
             String imported = singleImports.get(simple);
@@ -288,6 +287,52 @@ public final class JavaStructureReader {
                 }
             }
             return null;
+        }
+
+        /**
+         * at에서 보이는 이 파일 안의 타입 이름인지: 바깥쪽으로 올라가며 둘러싼 타입 자신과 그 멤버 타입, 타입 매개변수, 블록 안 지역 클래스, 최상위 타입을
+         * 본다. 중첩 타입 이름은 그 타입 범위 밖에서는 같은 패키지의 다른 파일을 가리킬 수 있다.
+         */
+        private static boolean declaredAround(String simple, Node at) {
+            for (Node node = at; node != null; node = node.getParentNode().orElse(null)) {
+                if (node instanceof TypeDeclaration<?> type) {
+                    if (type.getNameAsString().equals(simple)
+                            || type.getMembers().stream()
+                                    .anyMatch(
+                                            m ->
+                                                    m instanceof TypeDeclaration<?> inner
+                                                            && inner.getNameAsString()
+                                                                    .equals(simple))) {
+                        return true;
+                    }
+                }
+                if (node instanceof NodeWithTypeParameters<?> generic
+                        && generic.getTypeParameters().stream()
+                                .anyMatch(p -> p.getNameAsString().equals(simple))) {
+                    return true;
+                }
+                if (node instanceof BlockStmt block
+                        && block.getStatements().stream()
+                                .anyMatch(stmt -> localTypeName(stmt).equals(simple))) {
+                    return true;
+                }
+                if (node instanceof CompilationUnit cu
+                        && cu.getTypes().stream()
+                                .anyMatch(type -> type.getNameAsString().equals(simple))) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private static String localTypeName(Statement stmt) {
+            if (stmt instanceof LocalClassDeclarationStmt local) {
+                return local.getClassDeclaration().getNameAsString();
+            }
+            if (stmt instanceof LocalRecordDeclarationStmt local) {
+                return local.getRecordDeclaration().getNameAsString();
+            }
+            return "";
         }
 
         private static Optional<String> dottedName(Expression expr) {

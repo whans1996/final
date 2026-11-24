@@ -695,4 +695,92 @@ class StructureAnalyzerTest {
 
         assertThat(http(response)).containsExactly(edge(1, 100, 2));
     }
+
+    @Test
+    void AC7_axios_이름이_가려진_곳의_create는_인스턴스가_아니다() {
+        AnalysisStructureResponse response =
+                run(
+                        List.of(api("GET", "/api/todos", 100)),
+                        js(
+                                1,
+                                "src/a.js",
+                                """
+                                import axios from 'axios'
+                                function f(axios) { const http = axios.create({ baseURL: '/api' }); http.get('/todos') }
+                                """),
+                        js(
+                                2,
+                                "src/b.js",
+                                """
+                                const ax = require('axios')
+                                const http = ax.create({ baseURL: '/api' })
+                                http.get('/todos')
+                                """));
+
+        assertThat(http(response)).containsExactly(edge(2, 100, 3));
+        assertThat(httpUnresolved(response)).isEmpty();
+    }
+
+    @Test
+    void AC9_config를_계산하지_못하면_baseURL을_모른다() {
+        AnalysisStructureResponse response =
+                run(
+                        List.of(api("GET", "/api/todos", 100)),
+                        js(
+                                1,
+                                "src/a.js",
+                                """
+                                import axios from 'axios'
+                                const http = axios.create(getConfig())
+                                http.get('/api/todos')
+                                const plain = axios.create()
+                                plain.get('/api/todos')
+                                axios.get('/api/todos', getOptions())
+                                """));
+
+        assertThat(http(response)).containsExactly(edge(1, 100, 5));
+        assertThat(httpUnresolved(response))
+                .extracting(UnresolvedLink::line, UnresolvedLink::reason)
+                .containsExactly(
+                        tuple(3, UnresolvedReason.BASE_URL_UNKNOWN),
+                        tuple(6, UnresolvedReason.BASE_URL_UNKNOWN));
+    }
+
+    @Test
+    void AC7_템플릿_안의_호출도_HTTP_호출로_본다() {
+        AnalysisStructureResponse response =
+                run(
+                        List.of(api("GET", "/api/todos", 100), api("GET", "/api/items", 101)),
+                        js(
+                                1,
+                                "src/a.js",
+                                """
+                                import axios from 'axios'
+                                const a = `${fetch('/api/todos')}`
+                                const b = `x${`${axios.get('/api/items')}`}`
+                                """));
+
+        assertThat(http(response)).containsExactly(edge(1, 100, 2), edge(1, 101, 3));
+    }
+
+    @Test
+    void AC5_vue_HTML_주석_안의_script는_코드가_아니다() {
+        AnalysisStructureResponse response =
+                run(
+                        List.of(api("GET", "/api/todos", 100), api("GET", "/api/items", 101)),
+                        js(
+                                1,
+                                "src/views/A.vue",
+                                """
+                                <template>
+                                  <!-- <script>fetch('/api/todos')</script> -->
+                                  <div/>
+                                </template>
+                                <script setup>
+                                fetch('/api/items')
+                                </script>
+                                """));
+
+        assertThat(http(response)).containsExactly(edge(1, 101, 6));
+    }
 }
