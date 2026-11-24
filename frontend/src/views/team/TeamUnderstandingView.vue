@@ -46,6 +46,8 @@ const showForm = computed(() => isOwner.value && challenges.value !== null && !o
 
 let lastRequest = 0
 let lastChallengeRequest = 0
+// 경로(팀·분석)가 바뀔 때마다 올린다. 목록 다시 불러오기와 상관없이 만들기 요청의 결과를 버릴지 정한다
+let routeVersion = 0
 
 async function load() {
   const request = ++lastRequest
@@ -81,20 +83,20 @@ async function loadChallenges() {
 }
 
 async function onCreate(body) {
-  const request = lastChallengeRequest
+  const request = routeVersion
   creating.value = true
   formFieldErrors.value = {}
   formError.value = ''
   try {
     await createTeamChallenge(teamId.value, { analysisId: analysisId.value, ...body })
-    if (request === lastChallengeRequest) await loadChallenges()
+    if (request === routeVersion) await loadChallenges()
   } catch (error) {
-    if (request !== lastChallengeRequest) return
+    if (request !== routeVersion) return
     const details = errorCode(error) === 'COMMON_400' ? errorDetails(error) : null
     if (details && Object.keys(details).length > 0) formFieldErrors.value = details
     else formError.value = errorMessage(error)
   } finally {
-    if (request === lastChallengeRequest) creating.value = false
+    if (request === routeVersion) creating.value = false
   }
 }
 
@@ -102,6 +104,7 @@ watch(
   [teamId, analysisId],
   () => {
     if (route.name !== 'team-understanding') return
+    routeVersion++
     challenges.value = null
     creating.value = false
     formFieldErrors.value = {}

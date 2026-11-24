@@ -280,6 +280,19 @@ describe('TeamUnderstandingView SC-24 팀 목표 (F-20c AC12·AC13)', () => {
     expect(form(wrapper).exists()).toBe(false)
   })
 
+  it('AC12 만든 뒤 다시 불러온 목록에 열린 목표가 없으면 폼의 제출 버튼이 다시 활성이다', async () => {
+    teamsApi.fetchTeamChallenges.mockResolvedValue([])
+    teamsApi.createTeamChallenge.mockResolvedValue(challenge())
+    const { wrapper } = await mountAs(3)
+
+    await form(wrapper).trigger('submit')
+    await flushPromises()
+
+    expect(teamsApi.fetchTeamChallenges).toHaveBeenCalledTimes(2)
+    expect(form(wrapper).exists()).toBe(true)
+    expect(wrapper.find('[data-action="create-challenge"]').attributes('disabled')).toBeUndefined()
+  })
+
   it('AC12 400은 필드 아래, 409·404는 폼 아래에 보여 주고 입력을 유지한다', async () => {
     teamsApi.createTeamChallenge
       .mockRejectedValueOnce(
