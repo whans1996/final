@@ -4,7 +4,7 @@
 // 안전 규칙: 커밋 안 된 변경(추적 파일)이 있거나 병합 중이면 건드리지 않고 알리기만 한다. 충돌하면 바로 merge --abort로
 // 되돌리고 충돌 파일을 알린다. push는 하지 않는다 (다음 커밋 push 때 같이 올라간다. Codex 재리뷰를 불필요하게 일으키지 않음).
 // 단 develop 병합에서 양쪽이 고친 merge=union 파일이 있으면 GitHub PR이 충돌로 보이므로 지금 push하라고 안내한다 (#86).
-// 끄기: PC마다 `git config vibenote.autoSync false` (다시 켜기: `git config --unset vibenote.autoSync`).
+// 끄기: PC마다 `git config vibenote.autoSync false` (off·no·0도 됨. 다시 켜기: `git config --unset vibenote.autoSync`).
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { PROTECTED_BRANCHES, ROOT, currentBranch, git, isMerging } from './common.mjs';
@@ -14,8 +14,9 @@ const DEVELOP_TARGET = /^(feature|fix)\//;
 // hook 제한(15초) 안에서 fetch와 함께 끝나야 한다. 로컬 병합은 보통 1초 안이다
 const MERGE_TIMEOUT = 6000;
 
+// git의 불리언 해석을 그대로 쓴다: false·no·off·0(대소문자 무관)이면 끈다. 없거나 불리언이 아닌 값이면 켜 둔다 (#44)
 export function autoSyncEnabled(cwd = ROOT) {
-  return git(['config', '--get', 'vibenote.autoSync'], { cwd }).out.toLowerCase() !== 'false';
+  return git(['config', '--type=bool', '--get', 'vibenote.autoSync'], { cwd }).out !== 'false';
 }
 
 /**
@@ -92,7 +93,9 @@ function mergeOne({ ref, label, ffOnly }, cwd) {
   const count = Number(git(['rev-list', '--count', `HEAD..${ref}`], { cwd }).out) || 0;
   if (count === 0) return { ok: true, line: null };
   const target = git(['rev-parse', ref], { cwd }).out;
-  const r = git(['merge', ffOnly ? '--ff-only' : '--no-edit', ref], { cwd, timeout: MERGE_TIMEOUT });
+  // 사용자 설정 merge.ff·branch.<name>.mergeOptions(only면 develop 병합이 매번 실패, false·--no-ff면 내 원격 받기도 병합 커밋)가
+  // 결과를 바꾸지 않게 명령줄 옵션으로 고정한다. 명령줄이 두 설정보다 우선한다 (#44)
+  const r = git(['merge', ...(ffOnly ? ['--ff-only'] : ['--ff', '--no-edit']), ref], { cwd, timeout: MERGE_TIMEOUT });
   if (r.ok) {
     const files = git(['diff', '--name-only', before, 'HEAD'], { cwd }).out.split('\n').filter(Boolean);
     const notes = mergeNotes(files);
