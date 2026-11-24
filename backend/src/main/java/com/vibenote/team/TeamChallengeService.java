@@ -37,6 +37,9 @@ public class TeamChallengeService {
     static final int MAX_CHALLENGES = 20;
     static final int MAX_DAYS = 30;
 
+    /** 시작일 상한(오늘 + n일). MySQL DATE 범위(9999-12-31)를 넘는 날짜가 500이 되지 않게 막는다 (#95). */
+    static final int MAX_START_AHEAD_DAYS = 365;
+
     /** 진행 중(종료일 ASC) → 예정(시작일 ASC) → 종료(종료일 DESC), 같으면 목표 id DESC (AC4). */
     private static final Comparator<TeamChallengeResponse> ORDER =
             Comparator.comparingInt((TeamChallengeResponse r) -> statusRank(r.status()))
@@ -200,8 +203,8 @@ public class TeamChallengeService {
     private record Period(LocalDate start, LocalDate end) {}
 
     /**
-     * {@code @Valid}와 같은 제약과 날짜 규칙(형식, 시작일 ≥ 오늘, 종료일 ≥ 시작일, 양끝 포함 30일 이하)을 팀장 확인 뒤에 검증하고, 필드별 첫 사유를
-     * {@code COMMON_400} details로 던진다.
+     * {@code @Valid}와 같은 제약과 날짜 규칙(형식, 오늘 ≤ 시작일 ≤ 오늘 + 365일, 종료일 ≥ 시작일, 양끝 포함 30일 이하)을 팀장 확인 뒤에
+     * 검증하고, 필드별 첫 사유를 {@code COMMON_400} details로 던진다.
      */
     private Period validate(CreateTeamChallengeRequest request, LocalDate today) {
         Map<String, String> details = new TreeMap<>();
@@ -212,6 +215,8 @@ public class TeamChallengeService {
         LocalDate end = parseDate(request.endDate(), "endDate", "종료일", details);
         if (start != null && start.isBefore(today)) {
             details.putIfAbsent("startDate", "시작일은 오늘이거나 그 뒤여야 합니다.");
+        } else if (start != null && start.isAfter(today.plusDays(MAX_START_AHEAD_DAYS))) {
+            details.putIfAbsent("startDate", "시작일은 오늘부터 " + MAX_START_AHEAD_DAYS + "일 안이어야 합니다.");
         }
         if (start != null && end != null) {
             if (end.isBefore(start)) {
