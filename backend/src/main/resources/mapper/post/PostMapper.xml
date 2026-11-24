@@ -45,6 +45,7 @@
                p.content,
                a.user_id AS analysis_owner_id,
                COALESCE(a.is_public, FALSE) AS analysis_public,
+               EXISTS (SELECT 1 FROM users au WHERE au.id = a.user_id AND au.status = 'ACTIVE') AS analysis_owner_active,
                (a.deleted_at IS NOT NULL) AS analysis_deleted,
                a.title AS analysis_title,
                a.project_name AS analysis_project_name,

@@ -30,7 +30,7 @@ AI로 코딩하는 학습자가 **코드 이해 Q&A·학습 후기·자유** 게
 | AC2 | 게시판·제목·본문이 다른 글들이 있을 때 | `boardType=QNA`, `keyword=트랜잭션`, 둘을 함께 주면 | `boardType`은 그 게시판 글만, `keyword`는 **제목 또는 본문**에 부분 일치하는 글만(대소문자 무시) 받고, 둘을 함께 주면 둘 다 만족하는 글만 받는다. `keyword`는 앞뒤 공백을 빼고, 빈 문자열이면 조건이 없는 것으로 본다. `%`·`_`는 글자 그대로 찾는다. `boardType`이 `QNA`·`REVIEW`·`FREE`가 아니거나 `keyword`가 51자 이상이면 400 `COMMON_400`과 `details`의 해당 필드를 받는다 |
 | AC3 | 작성자가 탈퇴한(`users.status = 'WITHDRAWN'`) 글이 있을 때 | 목록과 상세를 요청하면 | 그 글도 목록·`total`·상세에 그대로 나오고 `authorId`는 `null`, `authorNickname`은 `"탈퇴한 사용자"`다. 활성 회원의 글은 `authorId`와 현재 닉네임을 담는다 |
 | AC4 | 글 P(조회수 7)가 있을 때 | 누구나 `GET /api/posts/{P}`를 두 번 요청하면 | 200과 3절 `PostDetailResponse`를 받고, 응답 `viewCount`가 8, 9로 오른다 (작성자 본인이 열어도 오른다). 없는 id(`999999`)면 404 `POST_404` "게시글을 찾을 수 없습니다."이고 아무 글의 조회수도 바뀌지 않는다 |
-| AC5 | P에 분석 A 또는 개념 카드 C가 첨부되어 있을 때 | 상세를 요청하면 | 분석 첨부는 `analysis: {id, viewable, title, projectName}`으로 온다. A가 삭제되지 않았고(`deleted_at IS NULL`) **공개(`is_public`)이거나 요청한 사람이 A의 주인**이면 `viewable: true`와 제목·프로젝트명을, 아니면(비공개를 남이 볼 때, 비로그인, 삭제된 분석) `viewable: false`와 `title`·`projectName`이 `null`이다. 카드 첨부는 `concept: {id, viewable, name, category, difficulty, summary}`로 오고, C가 `PUBLISHED`가 아니면 `viewable: false`이고 나머지가 `null`이다. 첨부가 없으면 둘 다 `null`이다. 목록의 `attachmentType`은 `viewable`과 상관없이 첨부 종류를 알린다 |
+| AC5 | P에 분석 A 또는 개념 카드 C가 첨부되어 있을 때 | 상세를 요청하면 | 분석 첨부는 `analysis: {id, viewable, title, projectName}`으로 온다. A가 삭제되지 않았고(`deleted_at IS NULL`) **공개(`is_public`)이면서 주인이 탈퇴하지 않았거나(`ACTIVE`, F-19 AC10과 같은 기준, #92) 요청한 사람이 A의 주인**이면 `viewable: true`와 제목·프로젝트명을, 아니면(비공개를 남이 볼 때, 비로그인, 삭제된 분석, 탈퇴한 회원의 공개 분석) `viewable: false`와 `title`·`projectName`이 `null`이다. 카드 첨부는 `concept: {id, viewable, name, category, difficulty, summary}`로 오고, C가 `PUBLISHED`가 아니면 `viewable: false`이고 나머지가 `null`이다. 첨부가 없으면 둘 다 `null`이다. 목록의 `attachmentType`은 `viewable`과 상관없이 첨부 종류를 알린다 |
 | AC6 | 로그인 회원 U가 | `POST /api/posts` `{boardType:"QNA", title:"  @Transactional이 안 먹어요  ", content:"같은 클래스 안에서 ...", analysisId: A}`(A는 U의 DONE 분석)을 보내면 | 201과 `{id}`를 받는다. 저장된 `title`·`content`는 앞뒤 공백을 뺀 값이고 `view_count`는 0이다. 같은 트랜잭션에서 `activities`에 `(U, POST, 글 id)` 한 행이 생긴다. `conceptId`로 `PUBLISHED` 카드를 첨부해도 201이다. A가 비공개여도 첨부할 수 있다 (보이는 범위는 AC5) |
 | AC7 | 로그인 회원이 | `boardType`이 없음·잘못된 값, `title`이 없음·공백만·101자, `content`가 없음·공백만·5001자(길이는 앞뒤 공백 제외)이거나 `analysisId`와 `conceptId`를 **둘 다** 보내면 | 400 `COMMON_400`과 `details`에 해당 필드(`boardType`·`title`·`content`·`conceptId`)와 사유를 받는다. 제목 100자·본문 5000자 정확히는 성공한다. 글과 활동은 생기지 않는다 |
 | AC8 | 로그인 회원 U가 | `analysisId`로 남의 분석·DONE이 아닌 분석·삭제된 분석·없는 id를 보내면 / `conceptId`로 `DRAFT`·`HIDDEN` 카드나 없는 id를 보내면 | 각각 400 `POST_001` "첨부할 수 없는 분석입니다." / 400 `POST_002` "첨부할 수 없는 개념 카드입니다."를 받고 글은 생기지 않는다. 남의 분석이 있는지 없는지는 응답으로 구분되지 않는다 |
@@ -194,7 +194,7 @@ AI로 코딩하는 학습자가 **코드 이해 Q&A·학습 후기·자유** 게
 | AC | 테스트 위치 | 종류 |
 |---|---|---|
 | AC1~AC3 | `PostListApiTest#AC1_...`~`#AC3_...` (페이지·정렬·commentCount·attachmentType, boardType·keyword 조합·trim·`%`·`_` 리터럴·400, 탈퇴 작성자) | MockMvc + Testcontainers 통합 |
-| AC4, AC5 | `PostDetailApiTest#AC4_...`, `#AC5_...` (공개·비공개×주인·남·비로그인·삭제된 분석, DRAFT 카드) | MockMvc 통합 |
+| AC4, AC5 | `PostDetailApiTest#AC4_...`, `#AC5_...` (공개·비공개×주인·남·비로그인·삭제된 분석·탈퇴한 주인, DRAFT 카드) | MockMvc 통합 |
 | AC6~AC8 | `PostWriteApiTest#AC6_...`~`#AC8_...` (활동 행, 경계 100·101·5000·5001, 첨부 둘 다, 첨부 실패 4종·2종) | MockMvc 통합 |
 | AC9~AC11 | `PostWriteApiTest#AC9_...`~`#AC11_...` (통째 교체·조회수 유지·활동 없음, 댓글 CASCADE·활동 유지, 403이 400보다 먼저) | MockMvc 통합 |
 | AC12 | `PostAuthApiTest#AC12_...` (토큰 없음·만료·형식 오류·탈퇴 회원 토큰, 공개 경로에 깨진 토큰) | MockMvc 통합 |
