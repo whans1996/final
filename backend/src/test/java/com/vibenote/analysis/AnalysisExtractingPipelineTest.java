@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeast;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
@@ -216,6 +217,38 @@ class AnalysisExtractingPipelineTest extends AnalysisTestSupport {
         assertThat(analysisRow(id).get("status")).isEqualTo("DONE");
         assertThat(links(id)).isEmpty();
         assertThat(requests().stream().filter(r -> r.stage() == LlmStage.CONCEPT)).hasSize(1);
+    }
+
+    /** 카탈로그를 읽은 뒤 LLM 응답을 기다리는 사이 관리자가 초안을 지워도(F-13) 분석은 DONE이고 남은 카드만 연결한다. */
+    @Test
+    void issue77_추출_중_관리자가_초안을_지워도_남은_카드만_연결하고_DONE() throws IOException {
+        long kept = insertConcept("f08-test-남음", "PUBLISHED");
+        long draft = insertConcept("f08-test-지워질 초안", "DRAFT");
+        long id = prepare(createUser("f08i77", "JUNIOR"), "JUNIOR");
+        doAnswer(
+                        invocation -> {
+                            jdbc.update("DELETE FROM concepts WHERE id = ?", draft);
+                            return new LlmResponse(
+                                    """
+                                    {"concepts": [
+                                      {"conceptId": %d, "fileNo": 1, "contextNote": "지워짐"},
+                                      {"conceptId": %d, "fileNo": 2, "contextNote": "남음"}
+                                    ]}
+                                    """
+                                            .formatted(draft, kept),
+                                    "fake",
+                                    0,
+                                    0);
+                        })
+                .when(llmClient)
+                .complete(argThat(r -> r != null && r.stage() == LlmStage.CONCEPT));
+
+        pipeline.run(id);
+
+        Map<String, Object> row = analysisRow(id);
+        assertThat(row.get("status")).isEqualTo("DONE");
+        assertThat(row.get("error_code")).isNull();
+        assertThat(links(id)).extracting(r -> r.get("context_note")).containsExactly("남음");
     }
 
     @Test
