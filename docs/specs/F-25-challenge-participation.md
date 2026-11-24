@@ -251,14 +251,14 @@
 
 - [x] 브랜치 `feature/F-25-challenge-participation`
 - [x] Flyway 마이그레이션 (없음 확인)
-- [ ] AC별 실패 테스트 작성 (red 확인) — BE AC1~AC11 완료, FE 남음
+- [x] AC별 실패 테스트 작성 (red 확인)
 - [x] BE 구현 (green)
-- [ ] FE 구현 (green)
-- [ ] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
+- [x] FE 구현 (green)
+- [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
 - [x] `docs/conventions.md` 3절 CHALLENGE 에러 코드
-- [ ] contract-checker 통과
+- [x] contract-checker 통과 (11-24, 불일치 0)
 - [ ] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일)
 - [ ] reviewer 지적 사항 반영
-- [ ] 산출물 반영 (화면 설계서 SC-12·13 절·스크린샷, SC-04·18 챌린지 절, 유스케이스 UC33 "기획 기준" 해제·대안 흐름)
+- [ ] 산출물 반영 — 문서 완료, SC-12·13 스크린샷 남음 (화면 설계서 SC-12·13 절·스크린샷, SC-04·18 챌린지 절, 유스케이스 UC33 "기획 기준" 해제·대안 흐름)
 - [ ] PR CI 초록
 - [ ] 상태 DONE (PR 머지 후)
