@@ -1,29 +1,30 @@
 # NOW — 김준섭 현재 작업 스냅샷
 
 > 김준섭(B 영역: 카드·소셜) 전용. 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
-갱신: 2026-11-24 09:47 · 작업자: JoonseobKim · PC: js-home · 브랜치: feature/issue-95-team-challenge-date-range
+갱신: 2026-11-24 10:34 · 작업자: JoonseobKim · PC: js-home · 브랜치: feature/issue-96-team-json-type-error
 
 ---
 
 ## 현재 기능
 
-**#95** F-20c 팀 목표 시작일 상한 (follow-up, `feature/issue-95-team-challenge-date-range`). **PR #100 열림**, Codex ✅ 53db47f (지적 없음)
+**#96** F-20c "형식 검증보다 먼저"의 예외 명시 (follow-up, `feature/issue-96-team-json-type-error`). **PR #102 열림**, Codex ✅ ea6108a (지적 없음). CI는 #101로 미실행
 
 ## 진행
 
-- ✅ BE 상한(오늘 + 365일) fb6acd9, 400 Swagger 설명 60a8211, FE 시작일 `:max` 2f0b2b9 (+ SC-24 화면 설계서)
-- ✅ verifier 전체 통과(FE 625), contract-checker 불일치는 60a8211로 해소, reviewer 반드시 수정 0·권장 2 모두 반영
-- ✅ PR 설명 `.harness/pr-issue-95.md` (Closes #95), PR #100 생성, Codex ✅ 53db47f
+- ✅ 방향 (2) 규칙 명시로 결정(11-24): `docs/conventions.md` 3절 문단 93930ad + reviewer 권장 2건(본문 없음·JSON null·415, `boardType` 예시) ea6108a, 결정로그 1행
+- ✅ verify all 통과(BE 988, FE 657), reviewer 반드시 수정 0, contract-checker 생략(API 변경 없음)
+- ✅ PR 설명 `.harness/pr-issue-96.md` (Closes #96, @whans1996 멘션), PR #102, Codex ✅ ea6108a
 
 ## 바로 다음 할 일
 
-1. PR #100 CI 초록 확인(`gh pr checks 100`) → GitHub에서 머지 (F-24 PR #97이 먼저 머지되면 `git merge origin/develop` → push → CI 재확인)
-2. 다음 이슈: #96 (숫자 필드 타입 오류가 팀원에게 403보다 400 먼저), 그다음 #92
+1. #101 복구(저장소 주인 whans1996 계정 Actions 결제·한도) 뒤 PR #102 CI 재실행(`gh run rerun <id>` 또는 빈 docs 커밋 push) → 초록 확인 → GitHub에서 머지 → #96 닫혔는지 확인
+2. 다음 이슈: #92 (F-17 게시글 분석 첨부 viewable이 주인 탈퇴 미고려, F-19 공개 열람과 불일치). `feature/issue-92-...`를 develop에서 분기
+3. 그다음 산출물: `docs/산출물/03-ERD.md`를 현재 스키마(V8·V9 팀, F-24·25 챌린지)에 맞춰 갱신. SC-01 랜딩·디자인 기준은 F-25 머지 후 2차 기획에서 디자인 방향을 정한 뒤 (사용자 합의 11-24)
 
 ## 막힌 점 / 결정 필요
 
-- 없음
+- 🔴 #101 Actions 미실행 → 머지 대기 (사용자 결정 11-24: 로컬 verify로 진행, CI는 복구 뒤 확인)
 
 ## 주의
 
-- 공통 파일은 `docs/api/openapi.json` 설명 문구 2곳뿐 (PR에서 @whans1996 멘션)
+- PR #102 CI 체크 fail은 전부 job 미시작(2초, 결제 한도)이며 테스트 실패가 아니다
