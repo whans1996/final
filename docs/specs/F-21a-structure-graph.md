@@ -169,7 +169,7 @@ Codex가 9회 재리뷰 동안 같은 종류의 구멍을 회차마다 하나씩
      - ApiDetector의 incomplete는 50개 잘림, 경로를 알 수 없는 메서드·클래스 매핑, 190자 넘는 경로 제외 중 하나라도 있을 때다. `StructureService`가 선별 파일을 다시 훑어 구한다. 이때 확정하지 못한 후보는 AMBIGUOUS로 둔다.
      - 테스트는 `StructureAnalyzerTest` "5.3절 5", `ApiPathMatcherTest`, `ApiDetectorTest#F21a_…`에 있다.
 6. **토크나이저 (AC5)**: `<script\b`는 `<script(?=[\s>/])`로, 여는 태그 속성 안의 `>`(따옴표 안) 허용, regex 안 `\` 다음 줄바꿈은 실패, CR 단독·U+2028·U+2029 줄 끝, 값 뒤 TS `!` 다음 `/`는 나눗셈, `?.` 뒤 숫자는 `?`+`.5`. **구현(11-24)**: `scriptBlocks`는 여는 태그·주석·닫는 태그 뒤로만 나아가고, 닫히지 않은 여는 태그(`>` 없음)를 만나면 거기서 멈춘다. 따옴표는 `=` 바로 뒤에서만 값을 연다. CRLF는 한 줄이다. U+2028·U+2029는 문자열 안에 그대로 둘 수 있고(ES2019) CR은 문자열을 끝내지 못한 오류다. `!`는 같은 줄의 값 바로 뒤일 때만 non-null 단언으로 본다(줄이 바뀌면 `!/x/`는 정규식). 테스트 `JsTokenizerTest` "5.3절 2·6" 9개.
-7. **넘기는 것 (follow-up)**: JSX(`.js` 안 React, 지원 스택 밖이라 지금처럼 `PARSE_ERROR`), 템플릿 `${}` 안의 함수·const 범위, 비엄격 모드 블록 함수 선언(Annex B), HEAD↔GET·끝 슬래시·`axios(url, cfg)`·`postForm` 등 간선이 빠지는 쪽만인 것, 여러 줄 토큰의 끝 줄, `ApiDetector` 클래스 위치 정규식(F-07 코드), config 별칭(`const c2 = cfg`) 변경.
+7. **넘기는 것 (follow-up #121)**: JSX(`.js` 안 React, 지원 스택 밖이라 지금처럼 `PARSE_ERROR`), 템플릿 `${}` 안의 함수·const 범위, 비엄격 모드 블록 함수 선언(Annex B), HEAD↔GET·끝 슬래시·`axios(url, cfg)`·`postForm` 등 간선이 빠지는 쪽만인 것, 여러 줄 토큰의 끝 줄, `ApiDetector` 클래스 위치 정규식(F-07 코드), config 별칭(`const c2 = cfg`) 변경.
 
 각 항목은 실패하는 테스트를 먼저 쓴다 (`StructureAnalyzerTest`·`JsTokenizerTest`·`ApiPathMatcherTest`·`StructureServiceTest` 등, 계산량은 `assertTimeoutPreemptively`).
 
