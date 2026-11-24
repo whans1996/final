@@ -65,6 +65,9 @@ final class JsDeclarations {
     /** 템플릿 {@code ${}} 안의 토큰이면 true. 호출·화살표 함수만 모은다 (선언은 범위를 알 수 없어 이름을 잘못 가린다). */
     private final boolean inTemplate;
 
+    /** {@code X.defaults.baseURL =}의 X 위치 (X는 axios 이름). */
+    private final List<Integer> defaultsCandidates = new ArrayList<>();
+
     private JsDeclarations(JsModule module) {
         this(module, module.tokens(), false);
     }
@@ -106,6 +109,12 @@ final class JsDeclarations {
     private void readAll() {
         for (int i = 0; i < t.size(); i++) {
             readAt(i);
+        }
+        // 선언을 다 모은 뒤에야 그 자리의 axios 이름이 가려졌는지 안다
+        for (int i : defaultsCandidates) {
+            if (module.axiosAt(t.get(i).text(), t.get(i).start())) {
+                module.defaultsBaseUrls().add(t.subList(i + 6, expressionEnd(i + 6)));
+            }
         }
         // 템플릿 ${} 안의 식도 실행된다 (`${fetch('/x')}`). 토큰은 원본 offset을 그대로 가진다
         for (JsToken token : t) {
@@ -185,7 +194,7 @@ final class JsDeclarations {
         }
     }
 
-    private static boolean isRequireAxios(List<JsToken> init) {
+    static boolean isRequireAxios(List<JsToken> init) {
         return init.size() == 4
                 && init.get(0).is("require")
                 && init.get(1).is("(")
@@ -429,7 +438,7 @@ final class JsDeclarations {
                 && JsTokens.is(t, i + 3, ".")
                 && JsTokens.is(t, i + 4, "baseURL")
                 && JsTokens.is(t, i + 5, "=")) {
-            module.defaultsBaseUrls().add(t.subList(i + 6, expressionEnd(i + 6)));
+            defaultsCandidates.add(i);
         }
     }
 

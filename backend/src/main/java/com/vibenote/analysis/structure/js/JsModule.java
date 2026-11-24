@@ -86,6 +86,20 @@ public final class JsModule {
         return Optional.ofNullable(best);
     }
 
+    /**
+     * offset에서 name이 axios인지: import·require로 얻은 axios 이름이고, 그 자리에서 매개변수·지역 변수가 가리지 않았거나 보이는 선언이
+     * {@code require('axios')}다.
+     */
+    public boolean axiosAt(String name, int offset) {
+        if (!axiosNames.contains(name)) {
+            return false;
+        }
+        Optional<JsDecl> decl = lookup(name, offset);
+        return decl.isEmpty()
+                || (decl.get().kind() == JsDecl.Kind.CONST
+                        && JsDeclarations.isRequireAxios(decl.get().init()));
+    }
+
     /** 파일 최상위 선언. */
     public Optional<JsDecl> lookupTopLevel(String name) {
         return declsNamed(name).stream().filter(d -> d.scopeStart() < 0).findFirst();

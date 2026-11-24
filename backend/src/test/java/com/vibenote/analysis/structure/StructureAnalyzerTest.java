@@ -783,4 +783,62 @@ class StructureAnalyzerTest {
 
         assertThat(http(response)).containsExactly(edge(1, 101, 6));
     }
+
+    @Test
+    void AC9_axios_이름이_가려진_곳의_defaults_baseURL은_쓰지_않는다() {
+        AnalysisStructureResponse response =
+                run(
+                        List.of(api("GET", "/api/todos", 100)),
+                        js(
+                                1,
+                                "src/a.js",
+                                """
+                                import axios from 'axios'
+                                function unrelated(axios) { axios.defaults.baseURL = '/wrong' }
+                                axios.get('/api/todos')
+                                """));
+
+        assertThat(http(response)).containsExactly(edge(1, 100, 3));
+    }
+
+    @Test
+    void AC7_config의_계산된_키와_접근자는_전개처럼_값을_모르게_한다() {
+        AnalysisStructureResponse response =
+                run(
+                        List.of(api("GET", "/api/todos", 100), api("POST", "/api/todos", 101)),
+                        js(
+                                1,
+                                "src/a.js",
+                                """
+                                import axios from 'axios'
+                                axios({ url: '/api/todos', ['method']: 'POST' })
+                                axios({ url: '/api/todos', method: 'POST', get method() { return 'GET' } })
+                                axios({ method: 'GET', url: '/api/todos' })
+                                """));
+
+        assertThat(http(response)).containsExactly(edge(1, 100, 4));
+        assertThat(httpUnresolved(response))
+                .extracting(UnresolvedLink::line, UnresolvedLink::reason)
+                .containsExactly(
+                        tuple(2, UnresolvedReason.URL_UNKNOWN),
+                        tuple(3, UnresolvedReason.URL_UNKNOWN));
+    }
+
+    @Test
+    void AC8_baseURL을_붙인_뒤_점_세그먼트를_정규화한다() {
+        AnalysisStructureResponse response =
+                run(
+                        List.of(api("GET", "/todos", 100), api("GET", "/api/todos/{id}", 101)),
+                        js(
+                                1,
+                                "src/a.js",
+                                """
+                                import axios from 'axios'
+                                fetch('https://api.example.test/api/../todos')
+                                const http = axios.create({ baseURL: '/api/v1' })
+                                http.get('../todos/./1')
+                                """));
+
+        assertThat(http(response)).containsExactly(edge(1, 100, 2), edge(1, 101, 4));
+    }
 }

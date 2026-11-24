@@ -133,18 +133,14 @@ public final class HttpLinker {
     }
 
     private Receiver receiver(String name, int offset, JsModule module) {
-        Optional<JsDecl> decl = module.lookup(name, offset);
-        if (decl.isEmpty() && module.axiosNames().contains(name)) {
+        if (module.axiosAt(name, offset)) {
             return new Receiver(ReceiverType.AXIOS, module, List.of());
         }
+        Optional<JsDecl> decl = module.lookup(name, offset);
         if (decl.isPresent()) {
-            if (decl.get().kind() != JsDecl.Kind.CONST) {
-                return null;
-            }
-            if (requiresAxios(decl.get().init())) {
-                return new Receiver(ReceiverType.AXIOS, module, List.of());
-            }
-            return instance(decl.get().init(), module);
+            return decl.get().kind() == JsDecl.Kind.CONST
+                    ? instance(decl.get().init(), module)
+                    : null;
         }
         Optional<Map.Entry<JsImport, String>> imported = module.importOf(name);
         if (imported.isEmpty() || imported.get().getKey().target() == null) {
@@ -164,30 +160,10 @@ public final class HttpLinker {
                 .orElse(null);
     }
 
-    /** 이 자리의 이름이 axios인지: import한 이름이 가려지지 않았거나, 보이는 선언이 {@code require('axios')}다. */
-    private static boolean axiosAt(JsToken name, JsModule module) {
-        if (!module.axiosNames().contains(name.text())) {
-            return false;
-        }
-        Optional<JsDecl> decl = module.lookup(name.text(), name.start());
-        return decl.isEmpty()
-                || (decl.get().kind() == JsDecl.Kind.CONST && requiresAxios(decl.get().init()));
-    }
-
-    /** {@code const axios = require('axios')}의 초기값. */
-    private static boolean requiresAxios(List<JsToken> init) {
-        return init.size() == 4
-                && init.get(0).is("require")
-                && init.get(1).is("(")
-                && init.get(2).kind() == JsToken.Kind.STRING
-                && init.get(2).value().equals("axios")
-                && init.get(3).is(")");
-    }
-
     /** {@code A.create(…)}(A는 그 자리에서 보이는 axios) 식이면 인스턴스. 매개변수·지역 변수가 axios 이름을 가리면 axios가 아니다. */
     private static Receiver instance(List<JsToken> init, JsModule module) {
         if (init.size() < 5
-                || !axiosAt(init.get(0), module)
+                || !module.axiosAt(init.get(0).text(), init.get(0).start())
                 || !init.get(1).is(".")
                 || !init.get(2).is("create")
                 || !init.get(3).is("(")
@@ -328,7 +304,25 @@ public final class HttpLinker {
                 segments = joined;
             }
         }
-        return new Outcome(new FeRequest(method, List.copyOf(segments)), null, null);
+        return new Outcome(new FeRequest(method, normalizeDots(segments)), null, null);
+    }
+
+    /** baseURL을 붙인 경로의 {@code .}은 빼고 {@code ..}은 앞 세그먼트를 지운다 (HTTP 클라이언트가 보내기 전에 하는 정규화). */
+    private static List<PathSegment> normalizeDots(List<PathSegment> segments) {
+        List<PathSegment> out = new ArrayList<>();
+        for (PathSegment segment : segments) {
+            if (".".equals(segment.literal())) {
+                continue;
+            }
+            if ("..".equals(segment.literal())) {
+                if (!out.isEmpty()) {
+                    out.remove(out.size() - 1);
+                }
+                continue;
+            }
+            out.add(segment);
+        }
+        return List.copyOf(out);
     }
 
     /** 인스턴스면 {@code create} config의 baseURL, axios면 선별 파일 어디든 첫 {@code axios.defaults.baseURL}. */
@@ -402,17 +396,17 @@ public final class HttpLinker {
                 continue;
             }
             JsToken key = prop.get(0);
-            if (key.is("...")) {
-                // 전개는 앞의 속성을 덮어쓸 수 있고 무엇이 들어오는지 모른다
-                props.clear();
-                unknown = new Expr(List.of(), module, bindings);
-                continue;
-            }
             boolean named = key.kind() == JsToken.Kind.IDENT || key.kind() == JsToken.Kind.STRING;
             if (named && prop.size() == 1 && key.kind() == JsToken.Kind.IDENT) {
                 props.put(key.text(), new Expr(prop, module, bindings));
-            } else if (named && prop.size() > 2 && prop.get(1).is(":")) {
+            } else if ((named || key.kind() == JsToken.Kind.NUMBER)
+                    && prop.size() > 2
+                    && prop.get(1).is(":")) {
                 props.put(key.value(), new Expr(prop.subList(2, prop.size()), module, bindings));
+            } else {
+                // 전개(...)·계산된 키([k])·접근자(get k())·메서드(k())는 앞의 속성을 덮어쓸 수 있고 무엇이 되는지 모른다
+                props.clear();
+                unknown = new Expr(List.of(), module, bindings);
             }
         }
         return new Config(props, null, unknown);
