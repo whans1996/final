@@ -46,8 +46,15 @@ public final class JsTokenizer {
     /** 뒤의 괄호가 문의 조건인 키워드. 그 괄호를 닫은 뒤에는 값이 아니라 문이 온다. */
     private static final Set<String> CONDITION_WORDS = Set.of("if", "while", "for", "with");
 
+    /** 여는 태그의 이름까지. 속성과 닫는 {@code >}는 {@link #tagEnd}가 따옴표를 보며 찾는다. */
     private static final Pattern SCRIPT_OPEN =
-            Pattern.compile("<script\\b[^>]*>", Pattern.CASE_INSENSITIVE);
+            Pattern.compile("<script(?=[\\s>/])", Pattern.CASE_INSENSITIVE);
+
+    private static final int SCRIPT_OPEN_LENGTH = "<script".length();
+
+    /** {@code .vue}의 {@code <script lang="ts|tsx">}는 읽지 않는다 (spec 5.3절 2·8절). */
+    private static final Set<String> TS_LANGS = Set.of("ts", "tsx");
+
     private static final Pattern SCRIPT_CLOSE =
             Pattern.compile("</script\\s*>", Pattern.CASE_INSENSITIVE);
 
@@ -99,7 +106,10 @@ public final class JsTokenizer {
         return new JsTokenizer(code == null ? "" : code, budget, maxTokens).lex(false);
     }
 
-    /** {@code .vue}는 {@code <script>} 블록만 읽는다. 블록 밖은 줄바꿈만 남기고 공백으로 바꿔 줄 번호·위치를 원본과 같게 둔다. */
+    /**
+     * {@code .vue}는 {@code <script>} 블록만 읽는다. 블록 밖은 줄 끝만 남기고 공백으로 바꿔 줄 번호·위치를 원본과 같게 둔다. TS 블록이 있으면
+     * 그 여는 태그 줄의 {@link JsSyntaxException}이다.
+     */
     public static List<JsToken> tokenizeFile(
             String path, String content, WorkBudget budget, int maxTokens) {
         String code = content == null ? "" : content;
@@ -122,20 +132,28 @@ public final class JsTokenizer {
         return tokens.size();
     }
 
+    /** 한 번 훑는다: 찾은 여는 태그·주석·닫는 태그 뒤로만 나아가고, 닫히지 않은 여는 태그를 만나면 멈춘다 (5.3절 6). */
     static String scriptBlocks(String vue) {
         char[] out = vue.toCharArray();
         boolean[] keep = new boolean[out.length];
         Matcher open = SCRIPT_OPEN.matcher(vue);
         Matcher close = SCRIPT_CLOSE.matcher(vue);
         int from = 0;
-        // from 이후 첫 HTML 주석 시작. from이 지나친 때만 다시 찾는다 (블록마다 파일 끝까지 다시 찾지 않게)
+        // from 이후 첫 여는 태그·HTML 주석 시작. from이 지나친 때만 다시 찾는다 (파일 끝까지 거듭 찾지 않게)
+        int openAt = -1;
         int comment = vue.indexOf("<!--");
-        while (open.find(from)) {
+        while (from < vue.length()) {
+            if (openAt < from) {
+                if (!open.find(from)) {
+                    break;
+                }
+                openAt = open.start();
+            }
             if (comment >= 0 && comment < from) {
                 comment = vue.indexOf("<!--", from);
             }
             // 블록 밖 HTML 주석 안의 <script>는 실행되지 않는다
-            if (comment >= 0 && comment < open.start()) {
+            if (comment >= 0 && comment < openAt) {
                 int commentEnd = vue.indexOf("-->", comment + 4);
                 if (commentEnd < 0) {
                     break;
@@ -143,21 +161,124 @@ public final class JsTokenizer {
                 from = commentEnd + 3;
                 continue;
             }
-            int end = close.find(open.end()) ? close.start() : vue.length();
-            for (int i = open.end(); i < end; i++) {
+            int attrs = openAt + SCRIPT_OPEN_LENGTH;
+            int gt = tagEnd(vue, attrs);
+            if (gt < 0) {
+                break;
+            }
+            String lang = langOf(vue.substring(attrs, gt));
+            if (lang != null && TS_LANGS.contains(lang.trim().toLowerCase(Locale.ROOT))) {
+                throw new JsSyntaxException(
+                        "TypeScript 스크립트(lang=\"" + lang + "\")는 지원하지 않습니다.",
+                        1 + lineBreaks(vue, 0, openAt));
+            }
+            int end = close.find(gt + 1) ? close.start() : vue.length();
+            for (int i = gt + 1; i < end; i++) {
                 keep[i] = true;
             }
             from = end >= vue.length() ? vue.length() : close.end();
-            if (from >= vue.length()) {
-                break;
-            }
         }
         for (int i = 0; i < out.length; i++) {
-            if (!keep[i] && out[i] != '\n' && out[i] != '\r') {
+            if (!keep[i] && !isLineTerminator(out[i])) {
                 out[i] = ' ';
             }
         }
         return new String(out);
+    }
+
+    /** 여는 태그를 닫는 {@code >}의 위치. 속성 값 따옴표 안의 {@code >}는 건너뛴다. 없으면 -1. */
+    private static int tagEnd(String s, int from) {
+        char quote = 0;
+        boolean valueStart = false;
+        for (int i = from; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (quote != 0) {
+                if (c == quote) {
+                    quote = 0;
+                }
+            } else if (c == '>') {
+                return i;
+            } else if (valueStart && (c == '"' || c == '\'')) {
+                quote = c;
+                valueStart = false;
+            } else if (c == '=') {
+                valueStart = true;
+            } else if (!Character.isWhitespace(c)) {
+                valueStart = false;
+            }
+        }
+        return -1;
+    }
+
+    /** 여는 태그 속성 문자열에서 {@code lang} 값 (이름은 대소문자 무시). 없으면 null. */
+    private static String langOf(String attrs) {
+        int i = 0;
+        int n = attrs.length();
+        while (i < n) {
+            char c = attrs.charAt(i);
+            if (Character.isWhitespace(c) || c == '/') {
+                i++;
+                continue;
+            }
+            int nameStart = i;
+            while (i < n
+                    && !Character.isWhitespace(attrs.charAt(i))
+                    && attrs.charAt(i) != '='
+                    && attrs.charAt(i) != '/') {
+                i++;
+            }
+            String name = attrs.substring(nameStart, i);
+            while (i < n && Character.isWhitespace(attrs.charAt(i))) {
+                i++;
+            }
+            String value = "";
+            if (i < n && attrs.charAt(i) == '=') {
+                i++;
+                while (i < n && Character.isWhitespace(attrs.charAt(i))) {
+                    i++;
+                }
+                if (i < n && (attrs.charAt(i) == '"' || attrs.charAt(i) == '\'')) {
+                    int close = attrs.indexOf(attrs.charAt(i), i + 1);
+                    int valueEnd = close < 0 ? n : close;
+                    value = attrs.substring(i + 1, valueEnd);
+                    i = valueEnd + 1;
+                } else {
+                    int valueStart = i;
+                    while (i < n && !Character.isWhitespace(attrs.charAt(i))) {
+                        i++;
+                    }
+                    value = attrs.substring(valueStart, i);
+                }
+            }
+            if (name.equalsIgnoreCase("lang")) {
+                return value;
+            }
+        }
+        return null;
+    }
+
+    /** JS 줄 끝 문자 (LF·CR·U+2028·U+2029). */
+    private static boolean isLineTerminator(char c) {
+        return c == '\n' || c == '\r' || c == ' ' || c == ' ';
+    }
+
+    /** i의 문자가 줄을 끝내는지. CRLF는 LF에서 한 번만 센다. */
+    private static boolean endsLine(String s, int i) {
+        char c = s.charAt(i);
+        return c == '\r'
+                ? i + 1 >= s.length() || s.charAt(i + 1) != '\n'
+                : c == '\n' || c == ' ' || c == ' ';
+    }
+
+    /** [from, to)의 줄 끝 수. */
+    private static int lineBreaks(String s, int from, int to) {
+        int count = 0;
+        for (int i = from; i < to; i++) {
+            if (endsLine(s, i)) {
+                count++;
+            }
+        }
+        return count;
     }
 
     /** 토큰을 읽는다. inTemplate이면 짝이 맞는 {@code }}에서 멈추고 그 {@code }}를 소비한다. */
@@ -170,17 +291,21 @@ public final class JsTokenizer {
         // 여는 중괄호마다 식 자리(객체 리터럴)인지. 객체를 닫은 } 뒤의 /는 나눗셈이다
         Deque<Boolean> braces = new ArrayDeque<>();
         boolean closedObject = false;
+        // 마지막 ! 가 같은 줄 값 바로 뒤(TS non-null 단언)인지. 그 뒤의 /는 나눗셈이다
+        boolean postfixBang = false;
         int counted = 0;
         while (pos < src.length()) {
             counted = account(tokens, counted);
             char c = src.charAt(pos);
-            if (c == '\n') {
-                line++;
+            if (isLineTerminator(c)) {
+                if (endsLine(src, pos)) {
+                    line++;
+                }
                 pos++;
             } else if (Character.isWhitespace(c) || c == ' ' || c == '﻿') {
                 pos++;
             } else if (c == '/' && peek(1) == '/') {
-                while (pos < src.length() && src.charAt(pos) != '\n') {
+                while (pos < src.length() && !isLineTerminator(src.charAt(pos))) {
                     pos++;
                 }
             } else if (c == '/' && peek(1) == '*') {
@@ -194,7 +319,8 @@ public final class JsTokenizer {
                 tokens.add(string(c));
             } else if (c == '`') {
                 tokens.add(template());
-            } else if (c == '/' && regexAllowed(tokens, closedCondition, closedObject)) {
+            } else if (c == '/'
+                    && regexAllowed(tokens, closedCondition, closedObject, postfixBang)) {
                 JsToken regex = regex();
                 tokens.add(regex != null ? regex : punct("/"));
             } else if (Character.isJavaIdentifierStart(c)) {
@@ -231,7 +357,15 @@ public final class JsTokenizer {
                 } else if (c == ')') {
                     closedCondition = !parens.isEmpty() && parens.pop();
                 }
-                tokens.add(punct(operatorAt()));
+                String op = operatorAt();
+                if (op.equals("!")) {
+                    postfixBang =
+                            !tokens.isEmpty()
+                                    && tokens.getLast().line() == line
+                                    && !regexAllowed(
+                                            tokens, closedCondition, closedObject, postfixBang);
+                }
+                tokens.add(punct(op));
             }
         }
         if (inTemplate) {
@@ -279,23 +413,26 @@ public final class JsTokenizer {
 
     /**
      * closedCondition: 직전 토큰 )가 if·while·for·with의 조건 괄호를 닫았는지. closedObject: 직전 토큰 }가 객체 리터럴을
-     * 닫았는지.
+     * 닫았는지. postfixBang: 직전 토큰 !가 TS non-null 단언(같은 줄 값 바로 뒤)인지.
      */
     private static boolean regexAllowed(
-            List<JsToken> tokens, boolean closedCondition, boolean closedObject) {
+            List<JsToken> tokens,
+            boolean closedCondition,
+            boolean closedObject,
+            boolean postfixBang) {
         if (tokens.isEmpty()) {
             return true;
         }
         JsToken prev = tokens.get(tokens.size() - 1);
         return switch (prev.kind()) {
             case PUNCT ->
-                    prev.text().equals(")")
-                            ? closedCondition
-                            : prev.text().equals("}")
-                                    ? !closedObject
-                                    : !prev.text().equals("]")
-                                            && !prev.text().equals("++")
-                                            && !prev.text().equals("--");
+                    switch (prev.text()) {
+                        case ")" -> closedCondition;
+                        case "}" -> !closedObject;
+                        case "!" -> !postfixBang;
+                        case "]", "++", "--" -> false;
+                        default -> true;
+                    };
             case IDENT -> REGEX_AFTER_WORDS.contains(prev.text());
             default -> false;
         };
@@ -303,7 +440,8 @@ public final class JsTokenizer {
 
     private String operatorAt() {
         for (String op : OPERATORS) {
-            if (src.startsWith(op, pos)) {
+            // a?.5:1 은 조건 연산자 ? 와 소수 .5 다
+            if (src.startsWith(op, pos) && !(op.equals("?.") && Character.isDigit(peek(2)))) {
                 return op;
             }
         }
@@ -328,7 +466,7 @@ public final class JsTokenizer {
         pos++;
         StringBuilder value = new StringBuilder();
         while (true) {
-            if (pos >= src.length() || src.charAt(pos) == '\n') {
+            if (pos >= src.length() || src.charAt(pos) == '\n' || src.charAt(pos) == '\r') {
                 throw new JsSyntaxException("문자열이 끝나지 않았습니다.", startLine);
             }
             char c = src.charAt(pos);
@@ -339,6 +477,10 @@ public final class JsTokenizer {
             if (c == '\\') {
                 escape(value);
             } else {
+                // U+2028·U+2029는 문자열 안에 그대로 올 수 있다 (ES2019)
+                if (isLineTerminator(c)) {
+                    line++;
+                }
                 value.append(c);
                 pos++;
             }
@@ -381,7 +523,7 @@ public final class JsTokenizer {
                 quasi.setLength(0);
                 parts.add(lex(true));
             } else {
-                if (c == '\n') {
+                if (endsLine(src, pos)) {
                     line++;
                 }
                 quasi.append(c);
@@ -413,12 +555,13 @@ public final class JsTokenizer {
             case 'f' -> out.append('\f');
             case 'v' -> out.append('\u000B');
             case '0' -> out.append('\0');
-            case '\n' -> line++;
+            // 줄 이음: 백슬래시 뒤 줄 끝은 값에 넣지 않는다
+            case '\n', ' ', ' ' -> line++;
             case '\r' -> {
                 if (peek(0) == '\n') {
                     pos++;
-                    line++;
                 }
+                line++;
             }
             case 'x' -> out.append(hex(2));
             case 'u' -> {
@@ -463,10 +606,14 @@ public final class JsTokenizer {
         boolean inClass = false;
         while (i < src.length()) {
             char c = src.charAt(i);
-            if (c == '\n') {
+            if (isLineTerminator(c)) {
                 return failedRegex(i - start);
             }
             if (c == '\\') {
+                // 정규식은 줄을 잇지 못한다: 백슬래시 다음 줄 끝도 실패
+                if (i + 1 < src.length() && isLineTerminator(src.charAt(i + 1))) {
+                    return failedRegex(i + 1 - start);
+                }
                 i += 2;
                 continue;
             }
@@ -501,11 +648,7 @@ public final class JsTokenizer {
     }
 
     private void advanceTo(int end) {
-        for (int i = pos; i < end; i++) {
-            if (src.charAt(i) == '\n') {
-                line++;
-            }
-        }
+        line += lineBreaks(src, pos, end);
         pos = end;
     }
 }

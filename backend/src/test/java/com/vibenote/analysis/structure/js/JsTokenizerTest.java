@@ -198,4 +198,136 @@ class JsTokenizerTest {
         assertThat(tokens.get(1).text()).isSameAs(tokens.get(4).text());
         assertThat(tokens.get(3).text()).isSameAs(tokens.get(6).text());
     }
+
+    // ---- 5.3절 2·6: TS 블록, 토크나이저 ----
+
+    private static List<JsToken> vue(String content) {
+        return JsTokenizer.tokenizeFile(
+                "src/App.vue", content, WorkBudget.unlimited(), Integer.MAX_VALUE);
+    }
+
+    @Test
+    void AC5_vue의_TS_script_블록은_그_줄의_PARSE_ERROR다() {
+        for (String lang : List.of("lang=\"ts\"", "lang='tsx'", "LANG=TS", "lang = \"ts\"")) {
+            assertThatThrownBy(
+                            () ->
+                                    vue(
+                                            "<template><div/></template>\n"
+                                                    + "<script>\n"
+                                                    + "export default {}\n"
+                                                    + "</script>\n"
+                                                    + "<script setup "
+                                                    + lang
+                                                    + ">\nconst a = 1\n</script>\n"))
+                    .as(lang)
+                    .isInstanceOf(JsSyntaxException.class)
+                    .extracting("line")
+                    .isEqualTo(5);
+        }
+        assertThat(texts(vue("<script lang=\"js\">\nconst a = 1\n</script>")))
+                .containsExactly("const", "a", "=", "1");
+        assertThat(texts(vue("<script data-lang=\"ts\">\nconst a = 1\n</script>")))
+                .containsExactly("const", "a", "=", "1");
+    }
+
+    @Test
+    void AC5_script_뒤에_공백_닫는_꺾쇠_슬래시가_와야_script_태그다() {
+        List<JsToken> tokens =
+                vue(
+                        """
+                        <template><script-view>axios.get('/x')</script-view></template>
+                        <script>
+                        import api from './api'
+                        </script>
+                        """);
+
+        assertThat(texts(tokens)).containsExactly("import", "api", "from", "'./api'");
+        assertThat(tokens.get(0).line()).isEqualTo(3);
+    }
+
+    @Test
+    void AC5_script_여는_태그_속성의_따옴표_안_꺾쇠는_태그_끝이_아니다() {
+        List<JsToken> tokens =
+                vue(
+                        """
+                        <script setup data-x="a>b" data-y='c>d'>
+                        import api from './api'
+                        </script>
+                        """);
+
+        assertThat(texts(tokens)).containsExactly("import", "api", "from", "'./api'");
+    }
+
+    @Test
+    void AC5_닫히지_않은_script_여는_태그가_반복돼도_제한_시간_안에_나눈다() {
+        String content = "<script ".repeat(100_000);
+
+        List<JsToken> tokens = assertTimeoutPreemptively(Duration.ofSeconds(5), () -> vue(content));
+
+        assertThat(tokens).isEmpty();
+    }
+
+    @Test
+    void AC5_정규식_안_백슬래시_다음_줄바꿈이면_정규식이_아니다() {
+        for (String end : List.of("\n", "\r", " ", " ")) {
+            List<JsToken> tokens = JsTokenizer.tokenize("x = /b\\" + end + "c/; f('/y')");
+            assertThat(tokens).extracting(JsToken::kind).doesNotContain(Kind.REGEX);
+            assertThat(tokens).extracting(JsToken::value).contains("/y");
+        }
+    }
+
+    @Test
+    void AC5_CR_단독과_U2028_U2029도_줄_끝이다() {
+        List<JsToken> tokens = JsTokenizer.tokenize("a\rb c d\r\ne\n/*\r*/f");
+        assertThat(tokens).extracting(JsToken::line).containsExactly(1, 2, 3, 4, 5, 7);
+
+        assertThat(texts(JsTokenizer.tokenize("// x\rfetch('/a')")))
+                .containsExactly("fetch", "(", "'/a'", ")");
+        assertThat(texts(JsTokenizer.tokenize("// x fetch('/a')")))
+                .containsExactly("fetch", "(", "'/a'", ")");
+        assertThatThrownBy(() -> JsTokenizer.tokenize("const s = 'abc\rdef'"))
+                .isInstanceOf(JsSyntaxException.class);
+        // ES2019부터 U+2028·U+2029는 문자열 안에 그대로 쓸 수 있다
+        assertThat(JsTokenizer.tokenize("'a b'; c").get(0).value()).isEqualTo("a b");
+        assertThat(JsTokenizer.tokenize("'a b'; c").get(2).line()).isEqualTo(2);
+        List<JsToken> continued = JsTokenizer.tokenize("'a\\\rb'; c");
+        assertThat(continued.get(0).value()).isEqualTo("ab");
+        assertThat(continued.get(2).line()).isEqualTo(2);
+        assertThat(JsTokenizer.tokenize("`a\rb`; c").get(2).line()).isEqualTo(2);
+        assertThat(JsTokenizer.tokenize("x = /a /; f('/y')"))
+                .extracting(JsToken::kind)
+                .doesNotContain(Kind.REGEX);
+    }
+
+    @Test
+    void AC5_vue의_CR_단독_줄도_원본_줄_번호로_읽는다() {
+        List<JsToken> tokens =
+                vue("<template>\r<div/>\r</template> <script>\rimport a from './a'\r</script>\r");
+
+        assertThat(texts(tokens)).containsExactly("import", "a", "from", "'./a'");
+        assertThat(tokens.get(0).line()).isEqualTo(5);
+    }
+
+    @Test
+    void AC5_값_뒤_TS_느낌표_다음_슬래시는_나눗셈이다() {
+        List<JsToken> tokens = JsTokenizer.tokenize("const n = x! / 2; fetch('/a')");
+        assertThat(tokens).extracting(JsToken::kind).doesNotContain(Kind.REGEX);
+        assertThat(tokens).extracting(JsToken::value).contains("/a");
+        assertThat(JsTokenizer.tokenize("const n = f()! / 2 / 3; g('/a')"))
+                .extracting(JsToken::kind)
+                .doesNotContain(Kind.REGEX);
+
+        assertThat(JsTokenizer.tokenize("if (!/a/.test(s)) {}"))
+                .extracting(JsToken::kind)
+                .contains(Kind.REGEX);
+        assertThat(JsTokenizer.tokenize("a\n!/x/.test(s)"))
+                .extracting(JsToken::kind)
+                .contains(Kind.REGEX);
+    }
+
+    @Test
+    void AC5_물음표_점_뒤_숫자는_조건_연산자와_소수다() {
+        assertThat(texts(JsTokenizer.tokenize("a?.5:1"))).containsExactly("a", "?", ".5", ":", "1");
+        assertThat(texts(JsTokenizer.tokenize("a?.b"))).containsExactly("a", "?.", "b");
+    }
 }
