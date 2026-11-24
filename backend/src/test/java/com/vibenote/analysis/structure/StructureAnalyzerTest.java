@@ -841,4 +841,53 @@ class StructureAnalyzerTest {
 
         assertThat(http(response)).containsExactly(edge(1, 100, 2), edge(1, 101, 4));
     }
+
+    @Test
+    void AC7_블록_안_var는_함수_전체에서_axios를_가린다() {
+        AnalysisStructureResponse response =
+                run(
+                        List.of(api("GET", "/api/todos", 100)),
+                        js(
+                                1,
+                                "src/a.js",
+                                """
+                                import axios from 'axios'
+                                function f() { if (true) { var axios = new Map() } axios.get('/api/todos') }
+                                """),
+                        js(
+                                2,
+                                "src/b.js",
+                                """
+                                import axios from 'axios'
+                                function g() { if (true) { let axios = 1 } axios.get('/api/todos') }
+                                """));
+
+        assertThat(http(response)).containsExactly(edge(2, 100, 2));
+        assertThat(httpUnresolved(response)).isEmpty();
+    }
+
+    @Test
+    void AC8_문자열_하나뿐인_URL도_길이_상한을_넘으면_URL_UNKNOWN이다() {
+        String longPath = "/a".repeat(2_000);
+        AnalysisStructureResponse response =
+                run(
+                        List.of(api("GET", "/api/todos", 100)),
+                        js(
+                                1,
+                                "src/a.js",
+                                "import axios from 'axios'\n"
+                                        + "axios.get('"
+                                        + longPath
+                                        + "')\n"
+                                        + "const LONG = `"
+                                        + longPath
+                                        + "`\n"
+                                        + "axios.get(LONG)\n"));
+
+        assertThat(httpUnresolved(response))
+                .extracting(UnresolvedLink::line, UnresolvedLink::reason)
+                .containsExactly(
+                        tuple(2, UnresolvedReason.URL_UNKNOWN),
+                        tuple(4, UnresolvedReason.URL_UNKNOWN));
+    }
 }

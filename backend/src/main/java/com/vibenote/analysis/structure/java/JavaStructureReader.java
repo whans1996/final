@@ -8,6 +8,7 @@ import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.ImportDeclaration;
 import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.PackageDeclaration;
+import com.github.javaparser.ast.body.FieldDeclaration;
 import com.github.javaparser.ast.body.Parameter;
 import com.github.javaparser.ast.body.TypeDeclaration;
 import com.github.javaparser.ast.body.VariableDeclarator;
@@ -18,8 +19,10 @@ import com.github.javaparser.ast.expr.MethodCallExpr;
 import com.github.javaparser.ast.expr.MethodReferenceExpr;
 import com.github.javaparser.ast.expr.NameExpr;
 import com.github.javaparser.ast.expr.TypePatternExpr;
+import com.github.javaparser.ast.expr.VariableDeclarationExpr;
 import com.github.javaparser.ast.nodeTypes.NodeWithTypeParameters;
 import com.github.javaparser.ast.stmt.BlockStmt;
+import com.github.javaparser.ast.stmt.ExpressionStmt;
 import com.github.javaparser.ast.stmt.LocalClassDeclarationStmt;
 import com.github.javaparser.ast.stmt.LocalRecordDeclarationStmt;
 import com.github.javaparser.ast.stmt.Statement;
@@ -174,7 +177,10 @@ public final class JavaStructureReader {
 
         private final Parsed parsed;
         private final JavaTypeIndex index;
-        private final Set<String> variables = new HashSet<>();
+
+        /** 변수 이름 → 그 변수가 보이는 범위 노드들 (메서드·람다·블록·for·try·타입 등). */
+        private final Map<String, List<Node>> variableScopes = new HashMap<>();
+
         private final Map<String, String> singleImports = new HashMap<>();
         private final List<String> wildcardImports = new ArrayList<>();
         private final Map<Long, Integer> edgeLines = new TreeMap<>();
@@ -187,9 +193,18 @@ public final class JavaStructureReader {
 
         void read(StructureLinks out) {
             CompilationUnit unit = parsed.unit();
-            unit.findAll(VariableDeclarator.class).forEach(v -> variables.add(v.getNameAsString()));
-            unit.findAll(Parameter.class).forEach(p -> variables.add(p.getNameAsString()));
-            unit.findAll(TypePatternExpr.class).forEach(p -> variables.add(p.getNameAsString()));
+            unit.findAll(VariableDeclarator.class)
+                    .forEach(v -> variable(v.getNameAsString(), declaratorScope(v)));
+            unit.findAll(Parameter.class)
+                    .forEach(p -> variable(p.getNameAsString(), p.getParentNode().orElse(null)));
+            unit.findAll(TypePatternExpr.class)
+                    .forEach(
+                            p ->
+                                    variable(
+                                            p.getNameAsString(),
+                                            p.findAncestor(BlockStmt.class)
+                                                    .map(Node.class::cast)
+                                                    .orElse(p.getParentNode().orElse(null))));
 
             for (ImportDeclaration imp : unit.getImports()) {
                 String name = imp.getNameAsString();
@@ -240,8 +255,44 @@ public final class JavaStructureReader {
         /** 정적 호출·필드 접근·메서드 참조의 대상. 이름으로만 된 식이고 첫 이름이 변수가 아닐 때만 타입 이름으로 본다. */
         private void scope(Expression expr) {
             dottedName(expr)
-                    .filter(name -> !variables.contains(name.split("\\.")[0]))
+                    .filter(name -> !variableAt(name.split("\\.")[0], expr))
                     .ifPresent(name -> reference(name, expr));
+        }
+
+        private void variable(String name, Node scope) {
+            if (scope != null) {
+                variableScopes.computeIfAbsent(name, k -> new ArrayList<>()).add(scope);
+            }
+        }
+
+        /** 필드는 그 타입 전체, 지역 변수는 선언을 담은 블록·for·try가 범위다. */
+        private static Node declaratorScope(VariableDeclarator v) {
+            Node node = v.getParentNode().orElse(null);
+            if (node instanceof FieldDeclaration field) {
+                return field.getParentNode().orElse(null);
+            }
+            while (node != null
+                    && (node instanceof VariableDeclarationExpr
+                            || node instanceof ExpressionStmt)) {
+                node = node.getParentNode().orElse(null);
+            }
+            return node;
+        }
+
+        /** at에서 name 변수가 보이는지 (그 변수의 범위 노드가 at의 조상인지). */
+        private boolean variableAt(String name, Node at) {
+            List<Node> scopes = variableScopes.get(name);
+            if (scopes == null) {
+                return false;
+            }
+            for (Node node = at; node != null; node = node.getParentNode().orElse(null)) {
+                for (Node scope : scopes) {
+                    if (scope == node) {
+                        return true;
+                    }
+                }
+            }
+            return false;
         }
 
         private void reference(String name, Node at) {

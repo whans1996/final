@@ -299,4 +299,28 @@ class JavaStructureReaderTest {
 
         assertThat(links.edges()).containsExactly(imp(1, 2, 4));
     }
+
+    @Test
+    void AC1_변수_이름은_보이는_범위에서만_타입_이름을_가린다() {
+        StructureLinks links =
+                read(
+                        java(
+                                1,
+                                "com.example.app.Main",
+                                """
+                                package com.example.app;
+                                class Main {
+                                    void third(Object Util) { Util.hashCode(); }
+                                    void first(Object Util) {}
+                                    void second() { Util.help(); }
+                                }
+                                """),
+                        java(
+                                2,
+                                "com.example.app.Util",
+                                "package com.example.app;\n"
+                                        + "public class Util { static void help() {} }"));
+
+        assertThat(links.edges()).containsExactly(imp(1, 2, 5));
+    }
 }

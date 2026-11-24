@@ -48,7 +48,8 @@ public final class UrlEvaluator {
     public UrlValue eval(List<JsToken> tokens, JsModule module, Bindings bindings) {
         budget = MAX_OPERANDS;
         UrlValue value = eval(tokens, module, bindings, 0);
-        return budget < 0 ? UrlValue.dynamic() : value;
+        // 문자열 하나뿐인 식은 이어 붙이지 않아 capped를 거치지 않는다. 최종 값에도 길이 상한을 둔다
+        return budget < 0 || value.text().length() > MAX_LENGTH ? UrlValue.dynamic() : value;
     }
 
     /**

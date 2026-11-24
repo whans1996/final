@@ -172,7 +172,8 @@ final class JsDeclarations {
 
     private void declarators(int i) {
         Kind kind = t.get(i).is("const") ? Kind.CONST : Kind.VARIABLE;
-        int[] scope = scopeOf(i);
+        // var는 블록이 아니라 둘러싼 함수 전체(없으면 파일)가 범위다
+        int[] scope = t.get(i).is("var") ? functionScopeOf(i) : scopeOf(i);
         int j = i + 1;
         while (JsTokens.kind(t, j) == JsToken.Kind.IDENT) {
             String name = t.get(j).text();
@@ -211,6 +212,20 @@ final class JsDeclarations {
         }
         int close = match[open];
         return new int[] {t.get(open).start(), close < 0 ? Integer.MAX_VALUE : t.get(close).end()};
+    }
+
+    /** i를 둘러싼 가장 안쪽 함수의 범위. 없으면 파일 전체. */
+    private int[] functionScopeOf(int i) {
+        int offset = t.get(i).start();
+        JsFunction inner = null;
+        for (JsFunction fn : module.functions()) {
+            if (fn.contains(offset) && (inner == null || fn.start() > inner.start())) {
+                inner = fn;
+            }
+        }
+        return inner == null
+                ? new int[] {-1, Integer.MAX_VALUE}
+                : new int[] {inner.start(), inner.end()};
     }
 
     // ---- 함수 ----
