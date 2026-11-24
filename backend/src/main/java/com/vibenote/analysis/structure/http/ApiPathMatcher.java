@@ -34,13 +34,19 @@ public final class ApiPathMatcher {
     private ApiPathMatcher() {}
 
     public static ApiMatch match(List<ApiEndpoint> apis, String contextPath, FeRequest request) {
-        String prefix = contextPath == null ? "" : contextPath;
+        // context-path는 업로드한 설정 파일 값이라 길이 상한이 없다. 한 번만 나누고, 고정 세그먼트만으로 요청보다 길면 비교하지 않는다
+        List<ApiSegment> prefix = compact(parse(contextPath == null ? "" : contextPath));
+        if (fixedCount(prefix) > request.path().size()) {
+            return ApiMatch.NONE;
+        }
         List<Candidate> candidates = new ArrayList<>();
         for (ApiEndpoint api : apis) {
             if (api.fileId() == null || !methodMatches(api.method(), request.method())) {
                 continue;
             }
-            List<ApiSegment> pattern = parse(prefix + "/" + api.path());
+            List<ApiSegment> pattern = new ArrayList<>(prefix);
+            pattern.addAll(parse(api.path()));
+            pattern = compact(pattern);
             if (matches(pattern, request.path())) {
                 candidates.add(Candidate.of(api.fileId(), pattern));
             }
@@ -74,26 +80,55 @@ public final class ApiPathMatcher {
         return segments;
     }
 
+    /** 이어진 {@code **}는 하나와 같다. 그래서 {@code **} 수는 고정 세그먼트 수 + 1 이하가 된다. */
+    private static List<ApiSegment> compact(List<ApiSegment> pattern) {
+        List<ApiSegment> out = new ArrayList<>(pattern.size());
+        for (ApiSegment s : pattern) {
+            if (s.type() != Type.MULTI || out.isEmpty() || out.getLast().type() != Type.MULTI) {
+                out.add(s);
+            }
+        }
+        return out;
+    }
+
+    private static int fixedCount(List<ApiSegment> pattern) {
+        int fixed = 0;
+        for (ApiSegment s : pattern) {
+            if (s.type() != Type.MULTI) {
+                fixed++;
+            }
+        }
+        return fixed;
+    }
+
     /**
-     * 패턴 세그먼트 i 이후가 경로 세그먼트 j 이후와 맞는지를 뒤에서부터 표로 채운다. {@code **}가 여럿이어도 O(패턴 × 경로²)이다 (분할을 모두 다시
-     * 시도하지 않는다).
+     * 패턴 세그먼트 i 이후가 경로 세그먼트 j 이후와 맞는지를 뒤에서부터 채운다 (O(패턴 × 경로) 시간, 행 두 개만 둬 O(경로) 메모리). 고정 세그먼트 수로
+     * 길이가 맞을 수 없으면 표를 채우지 않는다.
      */
     private static boolean matches(List<ApiSegment> pattern, List<PathSegment> path) {
         int p = pattern.size();
         int n = path.size();
-        boolean[][] ok = new boolean[p + 1][n + 1];
-        ok[p][n] = true;
+        int fixed = fixedCount(pattern);
+        if (fixed > n || (fixed == p && p != n)) {
+            return false;
+        }
+        boolean[] next = new boolean[n + 1];
+        boolean[] cur = new boolean[n + 1];
+        next[n] = true;
         for (int i = p - 1; i >= 0; i--) {
             ApiSegment segment = pattern.get(i);
             for (int j = n; j >= 0; j--) {
                 if (segment.type() == Type.MULTI) {
-                    ok[i][j] = ok[i + 1][j] || (j < n && ok[i][j + 1]);
+                    cur[j] = next[j] || (j < n && cur[j + 1]);
                 } else {
-                    ok[i][j] = j < n && ok[i + 1][j + 1] && segment.accepts(path.get(j));
+                    cur[j] = j < n && next[j + 1] && segment.accepts(path.get(j));
                 }
             }
+            boolean[] swap = next;
+            next = cur;
+            cur = swap;
         }
-        return ok[0][0];
+        return next[0];
     }
 
     private static final Pattern NEVER = Pattern.compile("(?!)");

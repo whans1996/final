@@ -175,6 +175,7 @@ final class JsDeclarations {
             case "const", "let", "var" -> declarators(i);
             case "function" -> function(i);
             case "catch" -> catchParam(i);
+            case "class" -> classDecl(i);
             case "export" -> export(i);
             default -> {
                 if (!KEYWORDS.contains(token.text())) {
@@ -256,6 +257,39 @@ final class JsDeclarations {
         }
         int close = match[open];
         return new int[] {t.get(open).start(), close < 0 ? Integer.MAX_VALUE : t.get(close).end()};
+    }
+
+    /**
+     * class 이름. 문장 자리의 {@code class X}는 둘러싼 블록에서, 식 자리({@code = class X {}})의 X는 그 클래스 안에서만 보이고 바깥
+     * 이름을 가린다. 값은 모른다.
+     */
+    private void classDecl(int i) {
+        if (JsTokens.kind(t, i + 1) != JsToken.Kind.IDENT || JsTokens.is(t, i + 1, "extends")) {
+            return;
+        }
+        int body = i + 2;
+        while (body < t.size() && !t.get(body).is("{")) {
+            if ((t.get(body).is("(") || t.get(body).is("[")) && match[body] > body) {
+                body = match[body];
+            }
+            body++;
+        }
+        if (body >= t.size() || match[body] < 0) {
+            return;
+        }
+        int[] scope =
+                statementStart(i)
+                        ? scopeOf(i)
+                        : new int[] {t.get(i + 1).start(), t.get(match[body]).end()};
+        module.decls()
+                .add(
+                        new JsDecl(
+                                t.get(i + 1).text(),
+                                Kind.VARIABLE,
+                                scope[0],
+                                scope[1],
+                                List.of(),
+                                null));
     }
 
     /** {@code catch (e) {…}}의 e. 그 블록 안에서만 보이고 바깥 이름을 가린다. */

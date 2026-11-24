@@ -155,4 +155,20 @@ class JsTokenizerTest {
                 .extracting(JsToken::kind)
                 .doesNotContain(Kind.REGEX);
     }
+
+    @Test
+    void AC5_객체_리터럴을_닫은_중괄호_뒤의_슬래시는_나눗셈이고_블록_뒤는_정규식이다() {
+        List<JsToken> tokens = JsTokenizer.tokenize("const n = {} / 2; fetch('/todos');");
+        assertThat(tokens).extracting(JsToken::kind).doesNotContain(Kind.REGEX);
+        assertThat(tokens).extracting(JsToken::value).contains("/todos");
+        assertThat(JsTokenizer.tokenize("const m = x ? {a: 1} / 2 : {}; f('/a')"))
+                .extracting(JsToken::kind)
+                .doesNotContain(Kind.REGEX);
+        assertThat(JsTokenizer.tokenize("function f() {}\n/a/g.test(y)"))
+                .extracting(JsToken::kind)
+                .contains(Kind.REGEX);
+        assertThat(JsTokenizer.tokenize("if (x) {} /a/.test(y)"))
+                .extracting(JsToken::kind)
+                .contains(Kind.REGEX);
+    }
 }

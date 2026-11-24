@@ -167,4 +167,22 @@ class ApiPathMatcherTest {
         assertThat(match(req("GET", "/files/*"), "", api("GET", "/files/{name}.json", 100)))
                 .isEqualTo(ApiMatch.matched(100));
     }
+
+    @Test
+    void AC11_context_path가_아주_길어도_메모리와_시간_안에_판정한다() {
+        String contextPath = "/a".repeat(200_000);
+        FeRequest request = req("GET", "/a".repeat(1_000));
+        ApiEndpoint[] apis = new ApiEndpoint[30];
+        for (int i = 0; i < apis.length; i++) {
+            apis[i] = api("GET", "/api/todos/" + i, 100 + i);
+        }
+
+        ApiMatch result =
+                assertTimeoutPreemptively(
+                        Duration.ofSeconds(5), () -> match(request, contextPath, apis));
+
+        assertThat(result).isEqualTo(ApiMatch.NONE);
+        assertThat(match(req("GET", "/a/a/x/y"), "/**/**/a", api("GET", "/x/{v}", 100)))
+                .isEqualTo(ApiMatch.matched(100));
+    }
 }

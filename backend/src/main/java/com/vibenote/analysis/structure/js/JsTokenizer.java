@@ -123,6 +123,9 @@ public final class JsTokenizer {
         // 여는 괄호마다 if·while·for·with의 조건 괄호인지. 조건 괄호를 닫은 ) 뒤의 /는 정규식을 시작할 수 있다
         Deque<Boolean> parens = new ArrayDeque<>();
         boolean closedCondition = false;
+        // 여는 중괄호마다 식 자리(객체 리터럴)인지. 객체를 닫은 } 뒤의 /는 나눗셈이다
+        Deque<Boolean> braces = new ArrayDeque<>();
+        boolean closedObject = false;
         while (pos < src.length()) {
             char c = src.charAt(pos);
             if (c == '\n') {
@@ -145,7 +148,7 @@ public final class JsTokenizer {
                 tokens.add(string(c));
             } else if (c == '`') {
                 tokens.add(template());
-            } else if (c == '/' && regexAllowed(tokens, closedCondition)) {
+            } else if (c == '/' && regexAllowed(tokens, closedCondition, closedObject)) {
                 JsToken regex = regex();
                 tokens.add(regex != null ? regex : punct("/"));
             } else if (Character.isJavaIdentifierStart(c)) {
@@ -169,8 +172,10 @@ public final class JsTokenizer {
             } else {
                 if (c == '{') {
                     depth++;
+                    braces.push(objectBrace(tokens));
                 } else if (c == '}') {
                     depth--;
+                    closedObject = !braces.isEmpty() && braces.pop();
                 } else if (c == '(') {
                     parens.push(
                             !tokens.isEmpty()
@@ -188,8 +193,48 @@ public final class JsTokenizer {
         return tokens;
     }
 
-    /** closedCondition: 직전 토큰 )가 if·while·for·with의 조건 괄호를 닫았는지. */
-    private static boolean regexAllowed(List<JsToken> tokens, boolean closedCondition) {
+    /**
+     * 지금 여는 {@code {}가 식 자리(객체 리터럴)인지. 연산자·{@code (}·{@code ,}·{@code :}·{@code return} 같은 값 앞 자리면 객체이고,
+     * 문 끝·블록 경계·{@code )}·{@code =>}·이름 뒤면 블록이다.
+     */
+    private static boolean objectBrace(List<JsToken> tokens) {
+        if (tokens.isEmpty()) {
+            return false;
+        }
+        JsToken prev = tokens.getLast();
+        return switch (prev.kind()) {
+            case PUNCT -> !BLOCK_BEFORE.contains(prev.text());
+            case IDENT -> OBJECT_AFTER_WORDS.contains(prev.text());
+            default -> false;
+        };
+    }
+
+    /** 이 토큰 뒤의 { 는 블록이다. */
+    private static final Set<String> BLOCK_BEFORE =
+            Set.of(")", ";", "{", "}", "=>", "]", "++", "--");
+
+    /** 이 낱말 뒤의 { 는 객체 리터럴이다. */
+    private static final Set<String> OBJECT_AFTER_WORDS =
+            Set.of(
+                    "return",
+                    "typeof",
+                    "instanceof",
+                    "in",
+                    "of",
+                    "new",
+                    "delete",
+                    "void",
+                    "throw",
+                    "yield",
+                    "await",
+                    "case");
+
+    /**
+     * closedCondition: 직전 토큰 )가 if·while·for·with의 조건 괄호를 닫았는지. closedObject: 직전 토큰 }가 객체 리터럴을
+     * 닫았는지.
+     */
+    private static boolean regexAllowed(
+            List<JsToken> tokens, boolean closedCondition, boolean closedObject) {
         if (tokens.isEmpty()) {
             return true;
         }
@@ -198,10 +243,11 @@ public final class JsTokenizer {
             case PUNCT ->
                     prev.text().equals(")")
                             ? closedCondition
-                            : !prev.text().equals(")")
-                                    && !prev.text().equals("]")
-                                    && !prev.text().equals("++")
-                                    && !prev.text().equals("--");
+                            : prev.text().equals("}")
+                                    ? !closedObject
+                                    : !prev.text().equals("]")
+                                            && !prev.text().equals("++")
+                                            && !prev.text().equals("--");
             case IDENT -> REGEX_AFTER_WORDS.contains(prev.text());
             default -> false;
         };

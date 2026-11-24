@@ -1111,4 +1111,23 @@ class StructureAnalyzerTest {
         assertThat(http(response)).containsExactly(edge(1, 100, 4));
         assertThat(httpUnresolved(response)).isEmpty();
     }
+
+    @Test
+    void AC7_지역_class_선언도_axios를_가린다() {
+        AnalysisStructureResponse response =
+                run(
+                        List.of(api("GET", "/api/todos", 100)),
+                        js(
+                                1,
+                                "src/a.js",
+                                """
+                                import axios from 'axios'
+                                function f() { class axios { static get(x) { return x } } axios.get('/api/todos') }
+                                const C = class fetch { m() { fetch('/api/todos') } }
+                                fetch('/api/todos')
+                                """));
+
+        assertThat(http(response)).containsExactly(edge(1, 100, 4));
+        assertThat(httpUnresolved(response)).isEmpty();
+    }
 }
