@@ -9,22 +9,24 @@ const admin = { isLoggedIn: true, isAdmin: true }
 const labels = (items) => items.map((i) => i.label)
 
 describe('navItems (F-00b AC8)', () => {
-  it('AC8 비로그인은 개념 카드·커뮤니티·로그인·회원가입을 본다 (F-09 AC9, F-17 AC13)', () => {
+  it('AC8 비로그인은 개념 카드·커뮤니티·챌린지·로그인·회원가입을 본다 (F-09 AC9, F-17 AC13, F-25 AC12)', () => {
     expect(labels(navItems(routes, loggedOut))).toEqual([
       '개념 카드',
       '커뮤니티',
+      '챌린지',
       '로그인',
       '회원가입',
     ])
   })
 
-  it('AC8 로그인하면 대시보드(F-16 AC9)·개념 카드·커뮤니티(F-17 AC13)·피드(F-04 AC11)·팀(F-20a AC12)·분석 요청·내 분석·복습(F-15 AC12)을 본다', () => {
+  it('AC8 로그인하면 대시보드(F-16 AC9)·개념 카드·커뮤니티(F-17 AC13)·피드(F-04 AC11)·팀(F-20a AC12)·챌린지(F-25 AC12)·분석 요청·내 분석·복습(F-15 AC12)을 본다', () => {
     expect(navItems(routes, user)).toEqual([
       { label: '대시보드', to: '/dashboard' },
       { label: '개념 카드', to: '/concepts' },
       { label: '커뮤니티', to: '/community' },
       { label: '피드', to: '/feed' },
       { label: '팀', to: '/teams' },
+      { label: '챌린지', to: '/challenges' },
       { label: '분석 요청', to: '/analyses/new' },
       { label: '내 분석', to: '/analyses' },
       { label: '복습', to: '/review-plans' },
@@ -38,6 +40,7 @@ describe('navItems (F-00b AC8)', () => {
       { label: '커뮤니티', to: '/community' },
       { label: '피드', to: '/feed' },
       { label: '팀', to: '/teams' },
+      { label: '챌린지', to: '/challenges' },
       { label: '분석 요청', to: '/analyses/new' },
       { label: '내 분석', to: '/analyses' },
       { label: '복습', to: '/review-plans' },
