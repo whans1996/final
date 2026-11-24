@@ -154,9 +154,12 @@ public enum ErrorCode {
     /** 설정된 LLM이 폴백까지 모두 응답하지 못함. 호출자는 파이프라인 단계를 FAILED로 표시한다 (F-00). */
     LLM_503(HttpStatus.SERVICE_UNAVAILABLE, "AI 응답을 받지 못했습니다. 잠시 후 다시 시도해 주세요."),
 
-// ── CHALLENGE (A F-24·F-25) ──
-
-;
+    // ── CHALLENGE (A F-24·F-25) ──
+    /** 없는 챌린지의 조회·수정·삭제 (F-24 AC5·AC6·AC8). */
+    CHALLENGE_404(HttpStatus.NOT_FOUND, "챌린지를 찾을 수 없습니다."),
+    /** 시작한(진행 중·종료) 챌린지의 목표 유형·목표값·시작일 변경 (F-24 AC7). 참여자의 달성도 기준을 지킨다. */
+    CHALLENGE_001(HttpStatus.CONFLICT, "이미 시작한 챌린지는 목표와 시작일을 바꿀 수 없습니다."),
+    ;
 
     private final HttpStatus status;
     private final String message;

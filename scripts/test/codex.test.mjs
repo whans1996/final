@@ -155,12 +155,12 @@ const summary = (sha, status, { at = 0, findings = false } = {}) =>
   );
 const req = (sha, min, { retry = false } = {}) =>
   human('whans1996', iso(min), `@codex review\n\n<!-- codex-review-request: ${sha} -->${retry ? `\n<!-- codex-review-retry: ${sha} -->` : ''}`);
-const judge = (comments, { now = 0, docsOnly = [] } = {}) =>
+const judge = (comments, { now = 0, docsOnly = [], findings = [] } = {}) =>
   judgeReview({
     pr: 7,
     h: { sha: HEAD, state: 'OPEN' },
     comments,
-    findingTimes: () => [],
+    findingTimes: () => findings,
     docsOnlySince: (b) => docsOnly.includes(b),
     now: T0 + now * 60_000,
   });
@@ -174,6 +174,26 @@ test('judgeReview 기존 판정: 완료·지적·이전 커밋·요청 대기·�
   assert.equal(docs.verdict, 'COMPLETE');
   assert.match(docs.msg, /^head 1111111 문서만 변경/);
   assert.equal(judgeReview({ pr: 7, h: { sha: HEAD, state: 'MERGED' }, comments: [] }).verdict, 'CLOSED');
+});
+
+test('상태 댓글의 지적 표시가 이전 커밋 지적의 누적이어도, 모든 인라인 지적보다 늦은 그 커밋의 영수증이 있으면 지적 없음이다 (PR #97)', () => {
+  const receipt = (sha, min) =>
+    bot(
+      iso(min),
+      `<!-- codex-review-receipt:v1 -->\n\nCodex Review: Didn't find any major issues. Keep it up!\n\n**Reviewed commit:** \`${sha.slice(0, 10)}\``,
+    );
+  const earlier = { findings: [iso(-30)] };
+  // head 리뷰: 영수증 + has_any_findings:true 상태 댓글 (Codex가 PR의 미해결 스레드를 누적해 표시)
+  const head = judge([summary(HEAD, 'completed', { at: 10, findings: true }), receipt(HEAD, 9)], earlier);
+  assert.equal(head.verdict, 'COMPLETE');
+  // 영수증 뒤에 인라인 지적이 달렸으면 지적이 있는 것이다
+  assert.equal(judge([summary(HEAD, 'completed', { at: 10, findings: true }), receipt(HEAD, 9)], { findings: [iso(9.5)] }).verdict, 'FINDINGS');
+  // 영수증이 없으면 상태 댓글 그대로
+  assert.equal(judge([summary(HEAD, 'completed', { at: 10, findings: true })], earlier).verdict, 'FINDINGS');
+  // 그 뒤 문서만 push해도 그 커밋을 기준으로 COMPLETE (spec DONE 커밋)
+  const docs = judge([summary(PREV, 'completed', { at: 10, findings: true }), receipt(PREV, 9)], { ...earlier, docsOnly: [PREV] });
+  assert.equal(docs.verdict, 'COMPLETE');
+  assert.match(docs.msg, /문서만 변경/);
 });
 
 test('Codex 리뷰 실패(failed)는 RUNNING이 아니라 재요청 대상, 재시도 뒤 또 실패하면 ERROR (#48)', () => {
