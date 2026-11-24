@@ -1239,4 +1239,199 @@ class StructureAnalyzerTest {
                         parseError(5, StructureLinks.FAILED_DETAIL));
         assertThat(response.edgesTruncated()).isFalse();
     }
+
+    // ---- 5.3절 1: 이름은 안전하게 실패 ----
+
+    @Test
+    void AC7_매개변수의_모델링하지_않은_이름도_가리고_HTTP였을_이름이면_URL_UNKNOWN이다() {
+        AnalysisStructureResponse response =
+                run(
+                        List.of(api("GET", "/api/todos", 100), api("GET", "/api/items", 101)),
+                        js(
+                                1,
+                                "src/a.js",
+                                """
+                                import axios from 'axios'
+                                const url = '/api/todos'
+                                function request(u) { return fetch(u) }
+                                const f = (url: string) => fetch(url)
+                                function g(axios: any) { axios.get('/api/todos') }
+                                const h = (fetch: any) => fetch('/api/todos')
+                                const k = (request: any) => request('/api/todos')
+                                axios.get(url)
+                                request('/api/items')
+                                """));
+
+        assertThat(http(response)).containsExactly(edge(1, 100, 8), edge(1, 101, 9));
+        assertThat(httpUnresolved(response))
+                .extracting(UnresolvedLink::line, UnresolvedLink::reason)
+                .containsExactly(
+                        tuple(4, UnresolvedReason.URL_UNKNOWN),
+                        tuple(5, UnresolvedReason.URL_UNKNOWN),
+                        tuple(6, UnresolvedReason.URL_UNKNOWN),
+                        tuple(7, UnresolvedReason.URL_UNKNOWN));
+    }
+
+    @Test
+    void AC7_키워드_계산된_비공개_이름_메서드와_구조_분해_catch의_매개변수도_axios를_가린다() {
+        AnalysisStructureResponse response =
+                run(
+                        List.of(api("GET", "/api/todos", 100)),
+                        js(
+                                1,
+                                "src/a.js",
+                                """
+                                import axios from 'axios'
+                                const o = { delete(axios) { axios.get('/api/todos') } }
+                                class A { ['x'](axios) { axios.get('/api/todos') } }
+                                class B { #m(axios) { axios.get('/api/todos') } }
+                                try {} catch ({ axios }) { axios.get('/api/todos') }
+                                axios.get('/api/todos')
+                                """));
+
+        assertThat(http(response)).containsExactly(edge(1, 100, 6));
+        assertThat(httpUnresolved(response)).isEmpty();
+    }
+
+    @Test
+    void AC10_구조_분해나_for_머리로_다시_대입한_매개변수는_부른_곳의_인자로_바꾸지_않는다() {
+        AnalysisStructureResponse response =
+                run(
+                        List.of(api("GET", "/api/todos", 100)),
+                        js(
+                                1,
+                                "src/a.js",
+                                """
+                                function a(url) { [url] = ['/x']; return fetch(url) }
+                                function b(url) { ({ url } = { url: '/x' }); return fetch(url) }
+                                function c(url) { for (url of ['/x']) {} return fetch(url) }
+                                a('/api/todos')
+                                b('/api/todos')
+                                c('/api/todos')
+                                """));
+
+        assertThat(http(response)).isEmpty();
+        assertThat(httpUnresolved(response))
+                .extracting(UnresolvedLink::line, UnresolvedLink::reason)
+                .containsExactly(
+                        tuple(1, UnresolvedReason.URL_UNKNOWN),
+                        tuple(2, UnresolvedReason.URL_UNKNOWN),
+                        tuple(3, UnresolvedReason.URL_UNKNOWN));
+    }
+
+    @Test
+    void AC10_다시_대입되는_let_var_래퍼는_인라인하지_않는다() {
+        AnalysisStructureResponse response =
+                run(
+                        List.of(api("GET", "/api/todos", 100)),
+                        js(
+                                1,
+                                "src/a.js",
+                                """
+                                let get = (url) => fetch(url)
+                                var load = function (url) { return fetch(url) }
+                                get = window.other
+                                load = null
+                                get('/api/todos')
+                                load('/api/todos')
+                                """));
+
+        assertThat(http(response)).isEmpty();
+        assertThat(httpUnresolved(response))
+                .extracting(UnresolvedLink::line, UnresolvedLink::reason)
+                .containsExactly(
+                        tuple(1, UnresolvedReason.URL_UNKNOWN),
+                        tuple(2, UnresolvedReason.URL_UNKNOWN));
+    }
+
+    @Test
+    void AC10_다른_파일의_부른_곳은_최상위_래퍼에만_잇는다() {
+        AnalysisStructureResponse response =
+                run(
+                        List.of(api("GET", "/api/todos", 100), api("GET", "/api/items", 101)),
+                        js(
+                                3,
+                                "src/http.js",
+                                """
+                                export function get(url) { return fetch('/api/items') }
+                                function outer() { function get(url) { return fetch(url) } return get }
+                                """),
+                        js(
+                                4,
+                                "src/c.js",
+                                """
+                                import { get } from './http.js'
+                                get('/api/todos')
+                                """));
+
+        assertThat(http(response)).containsExactly(edge(3, 101, 1));
+        assertThat(httpUnresolved(response))
+                .extracting(UnresolvedLink::fileId, UnresolvedLink::line, UnresolvedLink::reason)
+                .containsExactly(tuple(3L, 2, UnresolvedReason.URL_UNKNOWN));
+    }
+
+    @Test
+    void AC10_부른_곳의_전개_인자부터_뒤_매개변수는_값을_모른다() {
+        AnalysisStructureResponse response =
+                run(
+                        List.of(api("GET", "/api/todos", 100)),
+                        js(
+                                1,
+                                "src/a.js",
+                                """
+                                function req(a, url) { return fetch(url) }
+                                const args = ['/x', '/api/todos']
+                                req(...args)
+                                req('/x', ...args)
+                                req(...args, '/api/todos')
+                                """));
+
+        assertThat(http(response)).isEmpty();
+        assertThat(httpUnresolved(response))
+                .extracting(UnresolvedLink::line, UnresolvedLink::reason)
+                .containsExactly(
+                        tuple(3, UnresolvedReason.URL_UNKNOWN),
+                        tuple(4, UnresolvedReason.URL_UNKNOWN),
+                        tuple(5, UnresolvedReason.URL_UNKNOWN));
+    }
+
+    @Test
+    void AC7_with_안의_호출은_URL_UNKNOWN이다() {
+        AnalysisStructureResponse response =
+                run(
+                        List.of(api("GET", "/api/todos", 100)),
+                        js(
+                                1,
+                                "src/a.js",
+                                """
+                                const url = '/api/todos'
+                                with (obj) { fetch(url) }
+                                with (obj) fetch('/api/todos')
+                                fetch(url)
+                                """));
+
+        assertThat(http(response)).containsExactly(edge(1, 100, 4));
+        assertThat(httpUnresolved(response))
+                .extracting(UnresolvedLink::line, UnresolvedLink::reason)
+                .containsExactly(
+                        tuple(2, UnresolvedReason.URL_UNKNOWN),
+                        tuple(3, UnresolvedReason.URL_UNKNOWN));
+    }
+
+    @Test
+    void AC7_require로_얻은_axios_이름은_그_선언이_보이는_곳에서만_axios다() {
+        AnalysisStructureResponse response =
+                run(
+                        List.of(api("GET", "/api/todos", 100), api("GET", "/api/items", 101)),
+                        js(
+                                1,
+                                "src/a.js",
+                                """
+                                function f() { const axios = require('axios'); return axios.get('/api/todos') }
+                                axios.get('/api/items')
+                                """));
+
+        assertThat(http(response)).containsExactly(edge(1, 100, 1));
+        assertThat(httpUnresolved(response)).isEmpty();
+    }
 }

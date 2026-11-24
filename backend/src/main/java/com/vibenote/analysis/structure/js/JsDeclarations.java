@@ -19,6 +19,8 @@ import java.util.Set;
  *       ,}·닫는 괄호, 또는 줄바꿈(앞 토큰이 연산자이거나 다음 토큰이 {@code .}·이항 연산자면 이어짐)이다
  *   <li>함수: {@code function}, 화살표 함수, 객체·클래스 메서드. 이름은 {@code function f}·{@code const f = …}에서만 붙인다
  *   <li>호출: 멤버 이름 자리가 아닌 {@code f(…)}, {@code r.m(…)}·{@code r?.m(…)}
+ *   <li>안전하게 실패 (5.3절 1): 단순 이름·구조 분해가 아닌 매개변수·catch 이름({@code url: string})은 UNKNOWN 선언, {@code
+ *       with} 본문은 그 안의 바깥 이름을 모두 UNKNOWN으로 본다. 구조 분해 대입·for 머리의 대상은 다시 대입으로 센다
  * </ul>
  *
  * <p>계산량 (5.3절 3): 이름 조회는 선언을 모두 읽은 뒤에만 한다(모듈 색인을 한 번 만든다). 둘러싼 함수는 스택으로, 식 끝·class 본문 위치는 한 번 훑은
@@ -73,6 +75,10 @@ final class JsDeclarations {
                     "delete",
                     "throw");
 
+    /** 뒤에 {@code (…) {}}가 오는 문장 키워드. 이 밖의 키워드가 그 모양이면 메서드 이름이다. */
+    private static final Set<String> STATEMENT_HEADS =
+            Set.of("if", "for", "while", "switch", "catch", "with", "function");
+
     private static final Set<String> NOT_CONTINUING =
             Set.of("(", "[", "{", "!", "~", "++", "--", "...", ")", "]", "}", ";", ",");
 
@@ -103,6 +109,9 @@ final class JsDeclarations {
 
     /** 메모를 채울 때 지나온 위치를 담는 버퍼. */
     private int[] visited = new int[16];
+
+    /** 이미 이름을 모은 대입 패턴의 끝. 안쪽 패턴을 다시 훑지 않는다. */
+    private int patternsReadUntil = -1;
 
     private JsDeclarations(JsModule module) {
         this(module, module.tokens(), false, new ArrayList<>());
@@ -184,6 +193,7 @@ final class JsDeclarations {
                                 (local, imported) -> {
                                     if (imported.equals("default")) {
                                         module.axiosNames().add(local);
+                                        module.importedAxiosNames().add(local);
                                     }
                                 });
             }
@@ -192,14 +202,19 @@ final class JsDeclarations {
 
     private void readAt(int i) {
         JsToken token = t.get(i);
-        if (token.kind() != JsToken.Kind.IDENT && !token.is("=>")) {
-            return;
-        }
         if (token.is("=>")) {
             arrow(i);
             return;
         }
-        if (JsTokens.isMemberName(t, i)) {
+        if (token.is("(")) {
+            literalNamedMethod(i);
+            return;
+        }
+        if (token.is("[") || token.is("{")) {
+            assignmentPattern(i);
+            return;
+        }
+        if (token.kind() != JsToken.Kind.IDENT || JsTokens.isMemberName(t, i)) {
             return;
         }
         if (inTemplate && KEYWORDS.contains(token.text())) {
@@ -211,10 +226,15 @@ final class JsDeclarations {
             case "catch" -> catchParam(i);
             case "class" -> classDecl(i);
             case "export" -> export(i);
+            case "for" -> forHead(i);
+            case "with" -> withBody(i);
             default -> {
                 if (!KEYWORDS.contains(token.text())) {
                     callOrMethod(i);
                     defaultsBaseUrl(i);
+                } else if (!STATEMENT_HEADS.contains(token.text()) && JsTokens.is(t, i + 1, "(")) {
+                    // 키워드 이름 메서드 ({ delete(id) {…} })
+                    method(i);
                 }
             }
         }
@@ -257,6 +277,7 @@ final class JsDeclarations {
                     next = end;
                 }
                 module.decls().add(new JsDecl(name, kind, scope[0], scope[1], init, null));
+                module.declaratorNames().add(t.get(j).start());
                 if (isRequireAxios(init)) {
                     module.axiosNames().add(name);
                 }
@@ -316,23 +337,88 @@ final class JsDeclarations {
                                 null));
     }
 
-    /** {@code catch (e) {…}}의 e. 그 블록 안에서만 보이고 바깥 이름을 가린다. */
+    /**
+     * {@code catch (e) {…}}의 e와 구조 분해 catch의 이름. 그 블록 안에서만 보이고 바깥 이름을 가린다. 그 밖의 모양({@code e:
+     * unknown})은 첫 이름을 UNKNOWN으로 둔다.
+     */
     private void catchParam(int i) {
-        if (JsTokens.is(t, i + 1, "(")
-                && JsTokens.kind(t, i + 2) == JsToken.Kind.IDENT
-                && JsTokens.is(t, i + 3, ")")
-                && JsTokens.is(t, i + 4, "{")
-                && match[i + 4] > 0) {
-            module.decls()
-                    .add(
-                            new JsDecl(
-                                    t.get(i + 2).text(),
-                                    Kind.VARIABLE,
-                                    t.get(i + 4).start(),
-                                    t.get(match[i + 4]).end(),
-                                    List.of(),
-                                    null));
+        if (!JsTokens.is(t, i + 1, "(") || match[i + 1] < 0) {
+            return;
         }
+        int close = match[i + 1];
+        if (close <= i + 2 || !JsTokens.is(t, close + 1, "{") || match[close + 1] < 0) {
+            return;
+        }
+        int from = t.get(close + 1).start();
+        int to = t.get(match[close + 1]).end();
+        JsToken first = t.get(i + 2);
+        if (first.is("{") || first.is("[")) {
+            addPattern(t.subList(i + 2, close), from, to);
+        } else if (first.kind() == JsToken.Kind.IDENT) {
+            Kind kind = close == i + 3 ? Kind.VARIABLE : Kind.UNKNOWN;
+            module.decls().add(new JsDecl(first.text(), kind, from, to, List.of(), null));
+        }
+    }
+
+    /**
+     * {@code with (o) 본문}의 본문 범위. 그 안의 이름은 o의 속성일 수 있다 ({@link JsModule#lookup}). 본문이 블록이 아니면 문장
+     * 하나다.
+     */
+    private void withBody(int i) {
+        if (!JsTokens.is(t, i + 1, "(") || match[i + 1] < 0) {
+            return;
+        }
+        int body = match[i + 1] + 1;
+        if (body >= t.size()) {
+            return;
+        }
+        int end;
+        if (t.get(body).is("{") && match[body] > 0) {
+            end = t.get(match[body]).end();
+        } else {
+            int last = expressionEnd(body);
+            end = last > body ? t.get(last - 1).end() : t.get(body).end();
+        }
+        module.withScopes()
+                .add(new JsDecl("with", Kind.UNKNOWN, t.get(body).start(), end, List.of(), null));
+    }
+
+    /** {@code for (x of …)}·{@code for ([a, b] in …)}처럼 선언 없이 for 머리에서 대입하는 이름. */
+    private void forHead(int i) {
+        int open = JsTokens.is(t, i + 1, "await") ? i + 2 : i + 1;
+        if (!JsTokens.is(t, open, "(")) {
+            return;
+        }
+        int j = open + 1;
+        int after;
+        List<JsToken> names;
+        if ((JsTokens.is(t, j, "[") || JsTokens.is(t, j, "{")) && match[j] > j) {
+            after = match[j] + 1;
+            names = patternNames(t.subList(j, after));
+        } else if (JsTokens.kind(t, j) == JsToken.Kind.IDENT
+                && !JsTokens.is(t, j, "const")
+                && !JsTokens.is(t, j, "let")
+                && !JsTokens.is(t, j, "var")) {
+            after = j + 1;
+            names = List.of(t.get(j));
+        } else {
+            return;
+        }
+        if (JsTokens.is(t, after, "of") || JsTokens.is(t, after, "in")) {
+            module.patternWrites().addAll(names);
+        }
+    }
+
+    /**
+     * {@code [a, b] = …}·{@code ({a} = …)} 구조 분해 대입의 대상 이름. 선언({@code const [a] = …})의 패턴도 여기에 걸리지만
+     * 그 이름은 이미 값을 모르는 변수라 결과가 같다.
+     */
+    private void assignmentPattern(int i) {
+        if (i < patternsReadUntil || match[i] <= i || !JsTokens.is(t, match[i] + 1, "=")) {
+            return;
+        }
+        patternsReadUntil = match[i];
+        module.patternWrites().addAll(patternNames(t.subList(i, match[i] + 1)));
     }
 
     /** for 여는 괄호부터 루프 본문 끝까지. */
@@ -451,7 +537,7 @@ final class JsDeclarations {
         addFunctionToModule(fn);
         addParams(fn);
         if (t.get(paramsStart).is("(")) {
-            addDestructured(paramsStart, fn);
+            addBindings(paramsStart, fn);
         }
     }
 
@@ -461,50 +547,102 @@ final class JsDeclarations {
         if (close < 0 || !JsTokens.is(t, close + 1, "{")) {
             return false;
         }
-        JsToken prev = i > 0 ? t.get(i - 1) : null;
-        boolean atMember =
-                prev == null
-                        || prev.is("{")
-                        || prev.is(",")
-                        || prev.is(";")
-                        || prev.is("}")
-                        || prev.is("async")
-                        || prev.is("get")
-                        || prev.is("set")
-                        || prev.is("static")
-                        || prev.is("*");
-        if (atMember) {
+        if (memberStart(i)) {
             addFunction(null, i + 1, bodyEnd(close + 1));
         }
         return true;
+    }
+
+    /**
+     * {@code ['x'](…) {…}}·{@code 'x'(…) {…}}·{@code 0(…) {…}}처럼 이름이 식별자가 아닌 메서드. open은 매개변수 여는
+     * 괄호다.
+     */
+    private void literalNamedMethod(int open) {
+        int close = match[open];
+        if (open == 0 || close < 0 || !JsTokens.is(t, close + 1, "{") || match[close + 1] < 0) {
+            return;
+        }
+        JsToken name = t.get(open - 1);
+        int nameStart;
+        if (name.is("]") && match[open - 1] >= 0) {
+            nameStart = match[open - 1];
+        } else if (name.kind() == JsToken.Kind.STRING || name.kind() == JsToken.Kind.NUMBER) {
+            nameStart = open - 1;
+        } else {
+            return;
+        }
+        if (memberStart(nameStart)) {
+            addFunction(null, open, bodyEnd(close + 1));
+        }
+    }
+
+    /** k가 객체·클래스 멤버 이름이 시작하는 자리인지 (앞 토큰이 멤버 경계나 수식어). */
+    private boolean memberStart(int k) {
+        JsToken prev = k > 0 ? t.get(k - 1) : null;
+        return prev == null
+                || prev.is("{")
+                || prev.is(",")
+                || prev.is(";")
+                || prev.is("}")
+                || prev.is("async")
+                || prev.is("get")
+                || prev.is("set")
+                || prev.is("static")
+                || prev.is("*")
+                || prev.is("#");
     }
 
     private void addFunction(String name, int paramsOpen, int end) {
         JsFunction fn = new JsFunction(name, params(paramsOpen), t.get(paramsOpen).start(), end);
         addFunctionToModule(fn);
         addParams(fn);
-        addDestructured(paramsOpen, fn);
+        addBindings(paramsOpen, fn);
     }
 
     /**
-     * 구조 분해 매개변수({@code {a, b: c, d = 1}}·{@code [x, ...y]})가 만드는 이름. 값은 모르므로 인라인하지 않지만 바깥 이름을 가린다.
-     * 키({@code b:})와 기본값 식 안의 이름은 바인딩이 아니다.
+     * 단순 이름이 아닌 매개변수가 만드는 이름. 구조 분해({@code {a, b: c, d = 1}}·{@code [x, ...y]})는 값을 모르는 변수로, 그 밖의
+     * 모양({@code url: string})은 첫 이름을 UNKNOWN으로 둔다. 인라인하지 않지만 바깥 이름을 가린다. 키({@code b:})와 기본값 식 안의
+     * 이름은 바인딩이 아니다.
      */
-    private void addDestructured(int open, JsFunction fn) {
+    private void addBindings(int open, JsFunction fn) {
         int close = match[open];
         if (close < 0) {
             return;
         }
         for (List<JsToken> param : split(open + 1, close)) {
             int k = !param.isEmpty() && param.get(0).is("...") ? 1 : 0;
-            if (k < param.size() && (param.get(k).is("{") || param.get(k).is("["))) {
+            if (k >= param.size()) {
+                continue;
+            }
+            JsToken first = param.get(k);
+            if (first.is("{") || first.is("[")) {
                 addPattern(param.subList(k, param.size()), fn.start(), fn.end());
+            } else if (first.kind() == JsToken.Kind.IDENT
+                    && k + 1 < param.size()
+                    && !param.get(k + 1).is("=")) {
+                module.decls()
+                        .add(
+                                new JsDecl(
+                                        first.text(),
+                                        Kind.UNKNOWN,
+                                        fn.start(),
+                                        fn.end(),
+                                        List.of(),
+                                        null));
             }
         }
     }
 
-    /** 구조 분해 패턴이 만드는 이름을 [from, to] 범위의 변수로 등록한다. 키({@code b:})와 기본값 식 안의 이름은 바인딩이 아니다. */
+    /** 구조 분해 패턴이 만드는 이름을 [from, to] 범위의 변수로 등록한다. */
     private void addPattern(List<JsToken> param, int from, int to) {
+        for (JsToken name : patternNames(param)) {
+            module.decls().add(new JsDecl(name.text(), Kind.VARIABLE, from, to, List.of(), null));
+        }
+    }
+
+    /** 구조 분해 패턴의 이름 토큰. 키({@code b:}), 기본값 식 안의 이름, 멤버 이름({@code [this.a] = …}의 a)은 바인딩이 아니다. */
+    private List<JsToken> patternNames(List<JsToken> param) {
+        List<JsToken> names = new ArrayList<>();
         int depth = 0;
         int defaultDepth = -1;
         for (int k = 0; k < param.size(); k++) {
@@ -530,11 +668,12 @@ final class JsDeclarations {
             } else if (token.is("=")) {
                 defaultDepth = depth;
             } else if (token.kind() == JsToken.Kind.IDENT
-                    && !(k + 1 < param.size() && param.get(k + 1).is(":"))) {
-                module.decls()
-                        .add(new JsDecl(token.text(), Kind.VARIABLE, from, to, List.of(), null));
+                    && !(k + 1 < param.size() && param.get(k + 1).is(":"))
+                    && !(k > 0 && (param.get(k - 1).is(".") || param.get(k - 1).is("?.")))) {
+                names.add(token);
             }
         }
+        return names;
     }
 
     private void addParams(JsFunction fn) {

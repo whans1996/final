@@ -28,6 +28,23 @@ public final class JsModule {
 
     private Map<String, List<JsDecl>> declsByName;
     private final Map<String, JsScopeIndex> scopes = new HashMap<>();
+
+    /** UNKNOWN을 뺀 선언의 범위 색인 (가린 바깥 이름을 볼 때). */
+    private final Map<String, JsScopeIndex> knownScopes = new HashMap<>();
+
+    /** {@code with} 본문 범위 (이름은 쓰지 않는다). */
+    private final List<JsDecl> withScopes = new ArrayList<>();
+
+    private JsScopeIndex withIndex;
+    private int indexedWiths = -1;
+
+    /** 구조 분해 대입·for 머리처럼 {@code 이름 =} 모양이 아닌 대입 대상 이름. */
+    private final List<JsToken> patternWrites = new ArrayList<>();
+
+    /** {@code const|let|var 이름 = …}의 이름 위치. 초기화는 다시 대입이 아니다. */
+    private final Set<Integer> declaratorNames = new HashSet<>();
+
+    private final Set<String> importedAxiosNames = new HashSet<>();
     private final Map<String, Optional<JsDecl>> topLevel = new HashMap<>();
     private int indexedImports = -1;
     private Map<String, Map.Entry<JsImport, String>> importsByLocal;
@@ -94,6 +111,23 @@ public final class JsModule {
         return axiosNames;
     }
 
+    /** {@code import X from 'axios'}의 X. 보이는 선언이 없을 때 axios로 믿는 이름은 이것뿐이다. */
+    Set<String> importedAxiosNames() {
+        return importedAxiosNames;
+    }
+
+    List<JsDecl> withScopes() {
+        return withScopes;
+    }
+
+    List<JsToken> patternWrites() {
+        return patternWrites;
+    }
+
+    Set<Integer> declaratorNames() {
+        return declaratorNames;
+    }
+
     public List<JsCall> calls() {
         return calls;
     }
@@ -103,8 +137,33 @@ public final class JsModule {
         return defaultsBaseUrls;
     }
 
-    /** offset에서 보이는 name 선언 중 가장 안쪽 것 (범위 색인, O(log)). */
+    /**
+     * offset에서 보이는 name 선언 중 가장 안쪽 것 (범위 색인, O(log)). {@code with} 본문 안에서는 그 본문 안에서 선언한 이름이 아니면 객체
+     * 속성일 수 있으므로 UNKNOWN이다.
+     */
     public Optional<JsDecl> lookup(String name, int offset) {
+        Optional<JsDecl> decl = find(name, offset, scopes, false);
+        JsDecl with = withAt(offset);
+        if (with != null && (decl.isEmpty() || decl.get().scopeStart() < with.scopeStart())) {
+            return Optional.of(
+                    new JsDecl(
+                            name,
+                            JsDecl.Kind.UNKNOWN,
+                            with.scopeStart(),
+                            with.scopeEnd(),
+                            List.of(),
+                            null));
+        }
+        return decl;
+    }
+
+    /** UNKNOWN 선언과 {@code with}를 건너뛴 조회. UNKNOWN이 가린 바깥 이름이 무엇이었는지 볼 때 쓴다. */
+    public Optional<JsDecl> lookupKnown(String name, int offset) {
+        return find(name, offset, knownScopes, true);
+    }
+
+    private Optional<JsDecl> find(
+            String name, int offset, Map<String, JsScopeIndex> index, boolean known) {
         List<JsDecl> named = declsNamed(name);
         if (named.isEmpty()) {
             return Optional.empty();
@@ -112,27 +171,48 @@ public final class JsModule {
         if (!budget.exhausted()) {
             budget.spend();
         }
-        return Optional.ofNullable(
-                scopes.computeIfAbsent(name, k -> new JsScopeIndex(named)).lookup(offset, budget));
+        JsScopeIndex scope =
+                index.computeIfAbsent(
+                        name, k -> new JsScopeIndex(known ? withoutUnknown(named) : named));
+        return Optional.ofNullable(scope.lookup(offset, budget));
     }
 
-    /**
-     * offset에서 name이 axios인지: import·require로 얻은 axios 이름이고, 그 자리에서 매개변수·지역 변수가 가리지 않았거나 보이는 선언이
-     * {@code require('axios')}다.
-     */
-    public boolean axiosAt(String name, int offset) {
-        if (!axiosNames.contains(name)) {
-            return false;
+    private static List<JsDecl> withoutUnknown(List<JsDecl> named) {
+        return named.stream().filter(d -> d.kind() != JsDecl.Kind.UNKNOWN).toList();
+    }
+
+    /** offset을 감싼 가장 안쪽 {@code with} 본문. 없으면 null. */
+    private JsDecl withAt(int offset) {
+        if (withScopes.isEmpty()) {
+            return null;
         }
-        Optional<JsDecl> decl = lookup(name, offset);
-        return decl.isEmpty()
-                || (decl.get().kind() == JsDecl.Kind.CONST
-                        && JsDeclarations.isRequireAxios(decl.get().init()));
+        if (indexedWiths != withScopes.size()) {
+            withIndex = new JsScopeIndex(withScopes);
+            indexedWiths = withScopes.size();
+        }
+        return withIndex.lookup(offset, budget);
+    }
+
+    /** offset에서 name이 axios인지 (조회는 axios 이름일 때만 한다). */
+    public boolean axiosAt(String name, int offset) {
+        return axiosNames.contains(name) && axios(name, lookup(name, offset));
     }
 
     /**
-     * 이 선언이 파일 어딘가에서 다시 대입되는지 ({@code x = …}·{@code x += …}·{@code x++}). 매개변수 목록 안의 기본값({@code (x
-     * = 1) =>})은 대입이 아니다. 선언을 다 읽은 뒤 처음 물을 때 한 번 훑는다.
+     * 보이는 선언이 decl인 자리에서 name이 axios인지: 보이는 선언이 없으면 {@code import X from 'axios'}로 얻은 이름일 때, 있으면 그
+     * 선언이 {@code require('axios')}일 때다 (다른 함수 안의 require 선언은 여기서 보이지 않는다).
+     */
+    public boolean axios(String name, Optional<JsDecl> decl) {
+        if (decl.isEmpty()) {
+            return importedAxiosNames.contains(name);
+        }
+        return decl.get().kind() == JsDecl.Kind.CONST
+                && JsDeclarations.isRequireAxios(decl.get().init());
+    }
+
+    /**
+     * 이 선언이 파일 어딘가에서 다시 대입되는지 ({@code x = …}·{@code x += …}·{@code x++}, 구조 분해 대입, for 머리). 매개변수 목록
+     * 안의 기본값({@code (x = 1) =>})과 선언의 초기화({@code let x = …})는 대입이 아니다. 선언을 다 읽은 뒤 처음 물을 때 한 번 훑는다.
      */
     public boolean reassigned(JsDecl decl) {
         if (reassigned == null) {
@@ -142,7 +222,7 @@ public final class JsModule {
     }
 
     private Set<JsDecl> findReassigned() {
-        Set<Integer> paramNames = new HashSet<>();
+        Set<Integer> notWrites = new HashSet<>(declaratorNames);
         Map<Integer, Integer> indexByStart = new HashMap<>();
         budget.spend(tokens.size());
         for (int i = 0; i < tokens.size(); i++) {
@@ -154,7 +234,7 @@ public final class JsModule {
                 continue;
             }
             if (!tokens.get(at).is("(")) {
-                paramNames.add(fn.start());
+                notWrites.add(fn.start());
                 continue;
             }
             int depth = 0;
@@ -166,7 +246,7 @@ public final class JsModule {
                 } else if (token.is(")") && --depth == 0) {
                     break;
                 } else if (token.kind() == JsToken.Kind.IDENT) {
-                    paramNames.add(token.start());
+                    notWrites.add(token.start());
                 }
             }
         }
@@ -176,7 +256,7 @@ public final class JsModule {
             budget.spend();
             JsToken token = tokens.get(i);
             if (token.kind() != JsToken.Kind.IDENT
-                    || paramNames.contains(token.start())
+                    || notWrites.contains(token.start())
                     || (i > 0 && (tokens.get(i - 1).is(".") || tokens.get(i - 1).is("?.")))) {
                 continue;
             }
@@ -190,6 +270,10 @@ public final class JsModule {
             if (write) {
                 lookup(token.text(), token.start()).ifPresent(out::add);
             }
+        }
+        for (JsToken token : patternWrites) {
+            budget.spend();
+            lookup(token.text(), token.start()).ifPresent(out::add);
         }
         return out;
     }
@@ -209,6 +293,7 @@ public final class JsModule {
                 declsByName.computeIfAbsent(decl.name(), k -> new ArrayList<>()).add(decl);
             }
             scopes.clear();
+            knownScopes.clear();
             topLevel.clear();
             indexedDecls = decls.size();
         }

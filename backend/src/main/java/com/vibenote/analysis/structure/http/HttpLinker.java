@@ -117,26 +117,35 @@ public final class HttpLinker {
     private enum ReceiverType {
         AXIOS,
         INSTANCE,
-        FETCH
+        FETCH,
+
+        /** UNKNOWN 선언({@code with} 포함)이 가린 받는 쪽. 가리지 않았다면 HTTP 호출이었으므로 URL_UNKNOWN이다 (5.3절 1). */
+        SHADOWED
     }
 
     /** createArgs는 INSTANCE의 {@code axios.create(…)} 인자 토큰(없으면 빈 목록)이고 그 모듈이 module이다. */
     private record Receiver(ReceiverType type, JsModule module, List<JsToken> createArgs) {}
+
+    private static final Receiver SHADOWED = new Receiver(ReceiverType.SHADOWED, null, List.of());
 
     private record HttpCall(
             JsCall call, JsModule module, Receiver receiver, Shape shape, int configIndex) {}
 
     private HttpCall classify(JsCall call, JsModule module) {
         if (call.member() == null) {
-            if (call.receiver().equals("fetch")
-                    && module.lookup("fetch", call.start()).isEmpty()
-                    && module.importOf("fetch").isEmpty()) {
-                return new HttpCall(
-                        call,
-                        module,
-                        new Receiver(ReceiverType.FETCH, module, List.of()),
-                        Shape.FETCH,
-                        1);
+            if (call.receiver().equals("fetch") && module.importOf("fetch").isEmpty()) {
+                Optional<JsDecl> decl = module.lookup("fetch", call.start());
+                if (decl.isEmpty()) {
+                    return new HttpCall(
+                            call,
+                            module,
+                            new Receiver(ReceiverType.FETCH, module, List.of()),
+                            Shape.FETCH,
+                            1);
+                }
+                if (unknown(decl) && module.lookupKnown("fetch", call.start()).isEmpty()) {
+                    return new HttpCall(call, module, SHADOWED, Shape.FETCH, 1);
+                }
             }
             Receiver receiver = receiver(call.receiver(), call.start(), module);
             return receiver == null ? null : new HttpCall(call, module, receiver, Shape.CONFIG, 0);
@@ -161,10 +170,20 @@ public final class HttpLinker {
     }
 
     private Receiver receiver(String name, int offset, JsModule module) {
-        if (module.axiosAt(name, offset)) {
+        Optional<JsDecl> decl = module.lookup(name, offset);
+        if (unknown(decl)) {
+            return receiver(name, module.lookupKnown(name, offset), module) == null
+                    ? null
+                    : SHADOWED;
+        }
+        return receiver(name, decl, module);
+    }
+
+    /** 보이는 선언이 decl인 자리의 name. */
+    private Receiver receiver(String name, Optional<JsDecl> decl, JsModule module) {
+        if (module.axios(name, decl)) {
             return new Receiver(ReceiverType.AXIOS, module, List.of());
         }
-        Optional<JsDecl> decl = module.lookup(name, offset);
         if (decl.isPresent()) {
             return decl.get().kind() == JsDecl.Kind.CONST
                     ? instance(decl.get().init(), module)
@@ -186,6 +205,10 @@ public final class HttpLinker {
                 .filter(d -> d.kind() == JsDecl.Kind.CONST)
                 .map(d -> instance(d.init(), target))
                 .orElse(null);
+    }
+
+    private static boolean unknown(Optional<JsDecl> decl) {
+        return decl.isPresent() && decl.get().kind() == JsDecl.Kind.UNKNOWN;
     }
 
     /** 초기값 토큰 목록(선언·내보내기마다 하나) → 인스턴스 판정. 같은 받는 쪽을 부르는 호출마다 초기값을 다시 훑지 않는다. */
@@ -251,6 +274,10 @@ public final class HttpLinker {
     private void handle(HttpCall http) {
         JsCall call = http.call();
         JsModule module = http.module();
+        if (http.receiver() == SHADOWED) {
+            unresolved(module, call, UnresolvedReason.URL_UNKNOWN);
+            return;
+        }
         Outcome outcome = compute(http, Bindings.NONE);
         if (outcome.request() != null) {
             emit(module, call.line(), outcome.request());
@@ -275,10 +302,16 @@ public final class HttpLinker {
                 unresolved(module, call, UnresolvedReason.URL_UNKNOWN);
                 return;
             }
+            if (site.shadowed()) {
+                unresolved(site.module(), site.call(), UnresolvedReason.URL_UNKNOWN);
+                continue;
+            }
             Map<String, Arg> args = new HashMap<>();
+            int spread = firstSpread(site.call());
             for (int i = 0; i < wrapper.params().size(); i++) {
                 String param = wrapper.params().get(i);
-                List<JsToken> arg = site.call().arg(i);
+                // 전개 인자부터는 어느 매개변수에 무엇이 들어갈지 모른다. 전개 식 자체는 계산하면 동적 조각, config로는 값을 모름이다
+                List<JsToken> arg = site.call().arg(Math.min(i, spread));
                 if (!param.isEmpty() && !param.startsWith("...") && arg != null) {
                     args.put(param, new Arg(arg, site.module()));
                 }
@@ -546,7 +579,19 @@ public final class HttpLinker {
 
     // ---- 래퍼 인라인 (AC10) ----
 
-    private record Site(JsModule module, JsCall call) {}
+    /** shadowed면 UNKNOWN 선언이 그 자리의 래퍼 이름을 가려 래퍼 호출인지 모른다 (URL_UNKNOWN). */
+    private record Site(JsModule module, JsCall call, boolean shadowed) {}
+
+    /** 첫 {@code ...전개} 인자 위치. 없으면 Integer.MAX_VALUE. */
+    private static int firstSpread(JsCall call) {
+        for (int i = 0; i < call.args().size(); i++) {
+            List<JsToken> arg = call.args().get(i);
+            if (!arg.isEmpty() && arg.get(0).is("...")) {
+                return i;
+            }
+        }
+        return Integer.MAX_VALUE;
+    }
 
     /** 다른 선별 파일의 import 이름 하나. seq는 (파일 id, import 순서, 이름 순서)로 매긴 순번이다. */
     private record Binding(JsModule module, String local, String imported, int seq) {}
@@ -565,14 +610,28 @@ public final class HttpLinker {
         List<Site> sites = new ArrayList<>();
         // 부른 곳에서 보이는 선언이 래퍼 자신의 선언일 때만 래퍼 호출이다 (매개변수·지역 변수가 이름을 가리면 다른 함수)
         Optional<JsDecl> own = module.lookup(wrapper.name(), wrapper.start());
+        if (own.isPresent() && module.reassigned(own.get())) {
+            // 다시 대입되는 let·var 래퍼는 부른 곳에서 이 함수인지 모른다
+            return sites;
+        }
         for (JsCall call : module.callsTo(wrapper.name(), null)) {
             budget.spend();
-            if (!wrapper.contains(call.start())
-                    && module.lookup(call.receiver(), call.start()).equals(own)) {
-                sites.add(new Site(module, call));
+            if (wrapper.contains(call.start())) {
+                continue;
+            }
+            Optional<JsDecl> seen = module.lookup(call.receiver(), call.start());
+            if (seen.equals(own)) {
+                sites.add(new Site(module, call, false));
+            } else if (unknown(seen)
+                    && module.lookupKnown(call.receiver(), call.start()).equals(own)) {
+                sites.add(new Site(module, call, true));
             }
         }
-        List<String> exportedAs = exportedAs(module, wrapper.name());
+        // 다른 파일이 import로 부를 수 있는 것은 최상위 래퍼뿐이다 (안쪽 함수가 내보낸 이름과 같아도 다른 함수)
+        List<String> exportedAs =
+                own.isPresent() && own.get().scopeStart() < 0
+                        ? exportedAs(module, wrapper.name())
+                        : List.of();
         if (exportedAs.isEmpty()) {
             return sites;
         }
@@ -594,8 +653,12 @@ public final class HttpLinker {
             }
             for (JsCall call : calls) {
                 budget.spend();
-                if (b.module().lookup(b.local(), call.start()).isEmpty()) {
-                    sites.add(new Site(b.module(), call));
+                Optional<JsDecl> seen = b.module().lookup(b.local(), call.start());
+                if (seen.isEmpty()) {
+                    sites.add(new Site(b.module(), call, false));
+                } else if (unknown(seen)
+                        && b.module().lookupKnown(b.local(), call.start()).isEmpty()) {
+                    sites.add(new Site(b.module(), call, true));
                 }
             }
         }

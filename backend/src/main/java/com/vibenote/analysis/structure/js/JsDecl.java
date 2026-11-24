@@ -22,7 +22,13 @@ public record JsDecl(
         CONST,
         VARIABLE,
         PARAM,
-        FUNCTION
+        FUNCTION,
+
+        /**
+         * 모델링하지 않은 선언 자리의 이름이나 {@code with} 안의 이름 (5.3절 1). 값도 모르고, 이 이름이 가린 바깥 이름이 HTTP 받는 쪽·래퍼였다면
+         * 그 호출은 확인하지 못한 연결이다.
+         */
+        UNKNOWN
     }
 
     public boolean visibleAt(int offset) {
