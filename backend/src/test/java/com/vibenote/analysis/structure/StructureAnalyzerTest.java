@@ -1270,6 +1270,26 @@ class StructureAnalyzerTest {
     // ---- 5.3절 1: 이름은 안전하게 실패 ----
 
     @Test
+    void AC10_부른_곳이_넘기지_않은_config_매개변수에_기본값이_있으면_확정하지_않는다() {
+        AnalysisStructureResponse response =
+                run(
+                        List.of(api("GET", "/todos", 100), api("GET", "/items", 101)),
+                        js(
+                                1,
+                                "src/a.js",
+                                """
+                                import axios from 'axios'
+                                function request(url, cfg = { baseURL: '/v2' }) { return axios.get(url, cfg) }
+                                function plain(url, cfg) { return axios.get(url, cfg) }
+                                request('/todos')
+                                plain('/items')
+                                """));
+
+        assertThat(http(response)).containsExactly(edge(1, 101, 5));
+        assertThat(httpUnresolved(response)).extracting(UnresolvedLink::line).containsExactly(4);
+    }
+
+    @Test
     void AC7_템플릿_안에서_선언한_이름이_바깥_axios를_가리면_간선이_아니다() {
         AnalysisStructureResponse response =
                 run(

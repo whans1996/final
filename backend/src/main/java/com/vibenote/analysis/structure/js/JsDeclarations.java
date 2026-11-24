@@ -548,12 +548,15 @@ final class JsDeclarations {
     private void arrow(int a) {
         int paramsStart;
         List<String> params;
+        Set<String> defaulted;
         if (JsTokens.is(t, a - 1, ")") && match[a - 1] >= 0) {
             paramsStart = match[a - 1];
             params = params(paramsStart);
+            defaulted = defaulted(paramsStart);
         } else if (JsTokens.kind(t, a - 1) == JsToken.Kind.IDENT) {
             paramsStart = a - 1;
             params = List.of(t.get(a - 1).text());
+            defaulted = Set.of();
         } else {
             return;
         }
@@ -566,7 +569,7 @@ final class JsDeclarations {
             int last = expressionEnd(a + 1);
             end = last > a + 1 ? t.get(last - 1).end() : t.get(a).end();
         }
-        JsFunction fn = new JsFunction(name, params, t.get(paramsStart).start(), end);
+        JsFunction fn = new JsFunction(name, params, defaulted, t.get(paramsStart).start(), end);
         addFunctionToModule(fn);
         addParams(fn);
         if (t.get(paramsStart).is("(")) {
@@ -626,7 +629,13 @@ final class JsDeclarations {
     }
 
     private void addFunction(String name, int paramsOpen, int end) {
-        JsFunction fn = new JsFunction(name, params(paramsOpen), t.get(paramsOpen).start(), end);
+        JsFunction fn =
+                new JsFunction(
+                        name,
+                        params(paramsOpen),
+                        defaulted(paramsOpen),
+                        t.get(paramsOpen).start(),
+                        end);
         addFunctionToModule(fn);
         addParams(fn);
         addBindings(paramsOpen, fn);
@@ -737,6 +746,23 @@ final class JsDeclarations {
                             && p.get(0).kind() == JsToken.Kind.IDENT
                             && (p.size() == 1 || p.get(1).is("="));
             names.add(simple ? (rest ? "..." : "") + p.get(0).text() : "");
+        }
+        return names;
+    }
+
+    /** 여는 괄호 위치의 매개변수 중 기본값({@code 이름 = 값})이 있는 단순 이름. */
+    private Set<String> defaulted(int open) {
+        Set<String> names = new HashSet<>();
+        int close = match[open];
+        if (close < 0) {
+            return names;
+        }
+        for (List<JsToken> param : split(open + 1, close)) {
+            if (param.size() > 1
+                    && param.get(0).kind() == JsToken.Kind.IDENT
+                    && param.get(1).is("=")) {
+                names.add(param.get(0).text());
+            }
         }
         return names;
     }

@@ -723,11 +723,14 @@ public final class HttpLinker {
                     return Config.unresolved(null);
                 }
                 if (d.function().equals(bindings.function())) {
-                    // 부른 곳이 그 인자를 넘기지 않았으면 config가 없다
+                    // 부른 곳이 그 인자를 넘기지 않았으면 config가 없다. 기본값이 있으면 그 값이라 확정하지 않는다
                     Arg arg = bindings.args().get(name.text());
-                    return arg == null
-                            ? Config.NONE
-                            : config(arg.tokens(), arg.module(), Bindings.NONE, depth + 1);
+                    if (arg == null) {
+                        return d.function().defaulted().contains(name.text())
+                                ? Config.unresolved(null)
+                                : Config.NONE;
+                    }
+                    return config(arg.tokens(), arg.module(), Bindings.NONE, depth + 1);
                 }
                 return Config.unresolved(d.function());
             }
