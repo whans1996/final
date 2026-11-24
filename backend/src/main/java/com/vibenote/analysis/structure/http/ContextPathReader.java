@@ -33,26 +33,31 @@ public final class ContextPathReader {
         String name = file.getPath().substring(file.getPath().lastIndexOf('/') + 1);
         String content = file.getContent() == null ? "" : file.getContent();
         if (name.equals("application.properties")) {
+            // 같은 키가 여러 번이면 마지막 값이 쓰인다
+            String last = null;
             for (String line : content.split("\\R")) {
                 int sep = indexOfSeparator(line);
                 if (sep > 0 && line.substring(0, sep).strip().equals(KEY)) {
-                    return literal(line.substring(sep + 1).strip());
+                    last = line.substring(sep + 1).strip();
                 }
             }
-            return Optional.empty();
+            return literal(last);
         }
         if (name.equals("application.yml") || name.equals("application.yaml")) {
             try {
                 LoaderOptions options = new LoaderOptions();
                 options.setMaxAliasesForCollections(10);
+                // 프로필 없는 문서가 여럿이면 뒤 문서가 앞 문서를 덮어쓴다
+                Object last = null;
                 for (Object doc : new Yaml(new SafeConstructor(options)).loadAll(content)) {
                     if (doc instanceof Map<?, ?> map && !hasProfile(map)) {
-                        Optional<String> value = literal(path(map, KEY));
-                        if (value.isPresent()) {
-                            return value;
+                        Object value = path(map, KEY);
+                        if (value != null) {
+                            last = value;
                         }
                     }
                 }
+                return literal(last);
             } catch (RuntimeException e) {
                 // 읽지 못하는 YAML이면 context-path가 없는 것으로 본다
             }

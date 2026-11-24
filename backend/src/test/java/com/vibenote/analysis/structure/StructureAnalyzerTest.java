@@ -890,4 +890,108 @@ class StructureAnalyzerTest {
                         tuple(2, UnresolvedReason.URL_UNKNOWN),
                         tuple(4, UnresolvedReason.URL_UNKNOWN));
     }
+
+    @Test
+    void AC7_catch_매개변수는_그_블록에서_axios를_가린다() {
+        AnalysisStructureResponse response =
+                run(
+                        List.of(api("GET", "/api/todos", 100)),
+                        js(
+                                1,
+                                "src/a.js",
+                                """
+                                import axios from 'axios'
+                                try { throw new Map() } catch (axios) { axios.get('/api/todos') }
+                                axios.get('/api/todos')
+                                """));
+
+        assertThat(http(response)).containsExactly(edge(1, 100, 3));
+        assertThat(httpUnresolved(response)).isEmpty();
+    }
+
+    @Test
+    void AC10_나머지_매개변수는_인자_하나로_인라인하지_않는다() {
+        AnalysisStructureResponse response =
+                run(
+                        List.of(api("GET", "/api/todos", 100)),
+                        js(
+                                1,
+                                "src/a.js",
+                                """
+                                function request(...url) { return fetch(url) }
+                                request('/api/todos', '/other')
+                                """));
+
+        assertThat(http(response)).isEmpty();
+        assertThat(httpUnresolved(response))
+                .extracting(UnresolvedLink::line, UnresolvedLink::reason)
+                .containsExactly(tuple(2, UnresolvedReason.URL_UNKNOWN));
+    }
+
+    @Test
+    void AC7_const_config의_url_method_baseURL을_바꾸면_값을_모른다() {
+        AnalysisStructureResponse response =
+                run(
+                        List.of(api("GET", "/api/todos", 100)),
+                        js(
+                                1,
+                                "src/a.js",
+                                """
+                                import axios from 'axios'
+                                const cfg = { url: '/api/todos', method: 'GET' }
+                                cfg.url = '/api/other'
+                                axios(cfg)
+                                const ok = { url: '/api/todos', method: 'GET' }
+                                ok.headers = {}
+                                axios(ok)
+                                const c2 = { url: '/api/todos' }
+                                Object.assign(c2, other)
+                                axios(c2)
+                                """));
+
+        assertThat(http(response)).containsExactly(edge(1, 100, 7));
+        assertThat(httpUnresolved(response))
+                .extracting(UnresolvedLink::line, UnresolvedLink::reason)
+                .containsExactly(
+                        tuple(4, UnresolvedReason.URL_UNKNOWN),
+                        tuple(10, UnresolvedReason.URL_UNKNOWN));
+    }
+
+    @Test
+    void AC11_context_path는_마지막_값을_쓰고_마지막이_플레이스홀더면_모른다() {
+        String key = "server.servlet.context-path=";
+        assertThat(
+                        ContextPathReader.read(
+                                List.of(
+                                        file(
+                                                1,
+                                                "src/main/resources/application.properties",
+                                                "config",
+                                                key + "/old\n" + key + "/new\n"))))
+                .isEqualTo("/new");
+        assertThat(
+                        ContextPathReader.read(
+                                List.of(
+                                        file(
+                                                1,
+                                                "src/main/resources/application.properties",
+                                                "config",
+                                                key + "/old\n" + key + "${CTX}\n"))))
+                .isEmpty();
+        assertThat(
+                        ContextPathReader.read(
+                                List.of(
+                                        file(
+                                                1,
+                                                "src/main/resources/application.yml",
+                                                "config",
+                                                "server:\n"
+                                                        + "  servlet:\n"
+                                                        + "    context-path: /old\n"
+                                                        + "---\n"
+                                                        + "server:\n"
+                                                        + "  servlet:\n"
+                                                        + "    context-path: /new\n"))))
+                .isEqualTo("/new");
+    }
 }

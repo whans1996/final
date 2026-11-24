@@ -16,6 +16,7 @@ import com.vibenote.analysis.structure.js.JsModule;
 import com.vibenote.analysis.structure.js.JsToken;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -236,7 +237,7 @@ public final class HttpLinker {
             for (int i = 0; i < wrapper.params().size(); i++) {
                 String param = wrapper.params().get(i);
                 List<JsToken> arg = site.call().arg(i);
-                if (!param.isEmpty() && arg != null) {
+                if (!param.isEmpty() && !param.startsWith("...") && arg != null) {
                     args.put(param, new Arg(arg, site.module()));
                 }
             }
@@ -380,9 +381,10 @@ public final class HttpLinker {
                 }
                 return Config.unresolved(d.function());
             }
-            return d.kind() == JsDecl.Kind.CONST
-                    ? config(d.init(), module, bindings, depth + 1)
-                    : Config.unresolved(null);
+            if (d.kind() != JsDecl.Kind.CONST || mutatedConfigs(module).contains(d)) {
+                return Config.unresolved(null);
+            }
+            return config(d.init(), module, bindings, depth + 1);
         }
         if (!tokens.get(0).is("{")
                 || !tokens.get(tokens.size() - 1).is("}")
@@ -410,6 +412,74 @@ public final class HttpLinker {
             }
         }
         return new Config(props, null, unknown);
+    }
+
+    /** config 값에 쓰는 속성. 이 속성을 바꾸는 쓰기가 있으면 초기값을 믿지 않는다. */
+    private static final Set<String> CONFIG_KEYS = Set.of("url", "method", "baseURL");
+
+    private static final Set<String> ASSIGN_OPS =
+            Set.of(
+                    "=", "+=", "-=", "*=", "/=", "%=", "**=", "<<=", ">>=", ">>>=", "&=", "|=",
+                    "^=", "&&=", "||=", "??=");
+
+    /** 대괄호 안 계산된 키로 쓰는 모양을 찾을 때 볼 토큰 수. */
+    private static final int MAX_COMPUTED_KEY_TOKENS = 64;
+
+    private final Map<JsModule, Set<JsDecl>> mutatedConfigs = new HashMap<>();
+
+    /**
+     * 파일에서 속성이 바뀌는 const 선언: {@code cfg.url|method|baseURL = …}, {@code cfg[k] = …}, {@code delete
+     * cfg.…}, {@code Object.assign(cfg, …)}. const라도 객체는 바뀔 수 있다. 파일마다 한 번 훑는다.
+     */
+    private Set<JsDecl> mutatedConfigs(JsModule module) {
+        return mutatedConfigs.computeIfAbsent(
+                module,
+                m -> {
+                    Set<JsDecl> out = new HashSet<>();
+                    List<JsToken> t = m.tokens();
+                    for (int i = 0; i < t.size(); i++) {
+                        JsToken name = t.get(i);
+                        if (name.kind() != JsToken.Kind.IDENT
+                                || (i > 0 && (t.get(i - 1).is(".") || t.get(i - 1).is("?.")))) {
+                            continue;
+                        }
+                        if (writesConfig(t, i)) {
+                            m.lookup(name.text(), name.start()).ifPresent(out::add);
+                        }
+                    }
+                    return out;
+                });
+    }
+
+    private static boolean writesConfig(List<JsToken> t, int i) {
+        boolean keyWrite =
+                i + 3 < t.size()
+                        && t.get(i + 1).is(".")
+                        && CONFIG_KEYS.contains(t.get(i + 2).text())
+                        && ASSIGN_OPS.contains(t.get(i + 3).text());
+        boolean deleted = i > 0 && t.get(i - 1).is("delete");
+        boolean assigned =
+                i >= 4
+                        && t.get(i - 1).is("(")
+                        && t.get(i - 2).is("assign")
+                        && t.get(i - 3).is(".")
+                        && t.get(i - 4).is("Object");
+        return keyWrite || deleted || assigned || computedKeyWrite(t, i);
+    }
+
+    private static boolean computedKeyWrite(List<JsToken> t, int i) {
+        if (i + 1 >= t.size() || !t.get(i + 1).is("[")) {
+            return false;
+        }
+        int depth = 0;
+        for (int j = i + 1; j < t.size() && j <= i + MAX_COMPUTED_KEY_TOKENS; j++) {
+            if (t.get(j).is("[")) {
+                depth++;
+            } else if (t.get(j).is("]") && --depth == 0) {
+                return j + 1 < t.size() && ASSIGN_OPS.contains(t.get(j + 1).text());
+            }
+        }
+        return false;
     }
 
     // ---- 래퍼 인라인 (AC10) ----

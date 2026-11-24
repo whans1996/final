@@ -158,6 +158,7 @@ final class JsDeclarations {
         switch (token.text()) {
             case "const", "let", "var" -> declarators(i);
             case "function" -> function(i);
+            case "catch" -> catchParam(i);
             case "export" -> export(i);
             default -> {
                 if (!KEYWORDS.contains(token.text())) {
@@ -212,6 +213,25 @@ final class JsDeclarations {
         }
         int close = match[open];
         return new int[] {t.get(open).start(), close < 0 ? Integer.MAX_VALUE : t.get(close).end()};
+    }
+
+    /** {@code catch (e) {…}}의 e. 그 블록 안에서만 보이고 바깥 이름을 가린다. */
+    private void catchParam(int i) {
+        if (JsTokens.is(t, i + 1, "(")
+                && JsTokens.kind(t, i + 2) == JsToken.Kind.IDENT
+                && JsTokens.is(t, i + 3, ")")
+                && JsTokens.is(t, i + 4, "{")
+                && match[i + 4] > 0) {
+            module.decls()
+                    .add(
+                            new JsDecl(
+                                    t.get(i + 2).text(),
+                                    Kind.VARIABLE,
+                                    t.get(i + 4).start(),
+                                    t.get(match[i + 4]).end(),
+                                    List.of(),
+                                    null));
+        }
     }
 
     /** i를 둘러싼 가장 안쪽 함수의 범위. 없으면 파일 전체. */
@@ -312,13 +332,17 @@ final class JsDeclarations {
     private void addParams(JsFunction fn) {
         for (String param : fn.params()) {
             if (!param.isEmpty()) {
+                String name = param.startsWith("...") ? param.substring(3) : param;
                 module.decls()
-                        .add(new JsDecl(param, Kind.PARAM, fn.start(), fn.end(), List.of(), fn));
+                        .add(new JsDecl(name, Kind.PARAM, fn.start(), fn.end(), List.of(), fn));
             }
         }
     }
 
-    /** 여는 괄호 위치의 매개변수 목록. 단순 이름(기본값 허용)·나머지 매개변수만 이름을 갖는다. */
+    /**
+     * 여는 괄호 위치의 매개변수 목록. 단순 이름(기본값 허용)·나머지 매개변수만 이름을 갖고, 나머지 매개변수는 {@code ...이름}이다 (인자 하나가 아니라
+     * 배열이므로 래퍼 인라인 때 인자를 넣지 않는다).
+     */
     private List<String> params(int open) {
         List<String> names = new ArrayList<>();
         int close = match[open];
@@ -326,15 +350,13 @@ final class JsDeclarations {
             return names;
         }
         for (List<JsToken> param : split(open + 1, close)) {
-            List<JsToken> p =
-                    !param.isEmpty() && param.get(0).is("...")
-                            ? param.subList(1, param.size())
-                            : param;
+            boolean rest = !param.isEmpty() && param.get(0).is("...");
+            List<JsToken> p = rest ? param.subList(1, param.size()) : param;
             boolean simple =
                     !p.isEmpty()
                             && p.get(0).kind() == JsToken.Kind.IDENT
                             && (p.size() == 1 || p.get(1).is("="));
-            names.add(simple ? p.get(0).text() : "");
+            names.add(simple ? (rest ? "..." : "") + p.get(0).text() : "");
         }
         return names;
     }
