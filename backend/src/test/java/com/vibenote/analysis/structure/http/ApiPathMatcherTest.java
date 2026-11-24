@@ -131,6 +131,31 @@ class ApiPathMatcherTest {
     }
 
     @Test
+    void AC11_API_목록이_불완전하면_변수_와일드카드_없는_일치만_확정한다() {
+        ApiPathMatcher matcher =
+                new ApiPathMatcher(
+                        List.of(
+                                api("GET", "/api/todos/search", 100),
+                                api("GET", "/api/todos/{id}", 101),
+                                api("GET", "/api/files/**", 102)),
+                        "",
+                        true);
+        WorkBudget budget = WorkBudget.unlimited();
+
+        assertThat(matcher.match(req("GET", "/api/todos/search"), budget))
+                .isEqualTo(ApiMatch.matched(100));
+        // 목록에 없는 /api/todos/latest 같은 API가 받을 수 있다
+        assertThat(matcher.match(req("GET", "/api/todos/5"), budget).status())
+                .isEqualTo(ApiMatch.Status.AMBIGUOUS);
+        assertThat(matcher.match(req("GET", "/api/files/a"), budget).status())
+                .isEqualTo(ApiMatch.Status.AMBIGUOUS);
+        assertThat(matcher.match(req("GET", "/api/todos/*"), budget).status())
+                .isEqualTo(ApiMatch.Status.AMBIGUOUS);
+        assertThat(matcher.match(req("GET", "/api/none"), budget).status())
+                .isEqualTo(ApiMatch.Status.NONE);
+    }
+
+    @Test
     void AC11_순위는_이중_별표_없는_것_리터럴_많은_것_변수_적은_것이고_별표는_변수보다_무겁다() {
         // 이중 별표가 있으면 리터럴이 많아도 밀린다 (Spring 순서)
         assertThat(

@@ -2,6 +2,7 @@ package com.vibenote.analysis.structure;
 
 import com.vibenote.analysis.AnalysisService;
 import com.vibenote.analysis.explain.AnalysisOverview;
+import com.vibenote.analysis.explain.ApiDetector;
 import com.vibenote.analysis.explain.ApiEndpoint;
 import com.vibenote.analysis.structure.http.ContextPathReader;
 import java.util.List;
@@ -32,6 +33,8 @@ public class StructureService {
         AnalysisOverview overview = analysisService.getViewableOverview(userId, analysisId);
         var files = analysisService.findFiles(analysisId);
         List<ApiEndpoint> apis = overview == null ? null : overview.apis();
-        return analyzer.analyze(files, apis, ContextPathReader.read(files));
+        // 개요의 API 목록은 같은 선별 파일로 탐지한 것이다. 잘렸거나 건너뛴 매핑이 있었는지는 다시 훑어 안다
+        boolean incomplete = overview != null && ApiDetector.scan(files).incomplete();
+        return analyzer.analyze(files, apis, ContextPathReader.read(files), incomplete);
     }
 }

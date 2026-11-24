@@ -48,7 +48,15 @@ public final class ApiPathMatcher {
     private final int prefixFixed;
     private final List<Compiled> compiled = new ArrayList<>();
 
+    /** API 목록이 불완전하다. 목록에 없는 더 구체적인 API가 받을 수 있으므로 변수·와일드카드 없는 일치만 확정한다. */
+    private final boolean literalOnly;
+
     public ApiPathMatcher(List<ApiEndpoint> apis, String contextPath) {
+        this(apis, contextPath, false);
+    }
+
+    public ApiPathMatcher(List<ApiEndpoint> apis, String contextPath, boolean literalOnly) {
+        this.literalOnly = literalOnly;
         // context-path는 업로드한 설정 파일 값이라 길이 상한이 없다. 한 번만 나눈다
         List<ApiSegment> prefix = compact(parse(contextPath == null ? "" : contextPath));
         this.prefixFixed = fixedCount(prefix);
@@ -89,6 +97,17 @@ public final class ApiPathMatcher {
         }
         if (candidates.isEmpty()) {
             return ApiMatch.NONE;
+        }
+        if (literalOnly) {
+            candidates =
+                    wildcards
+                            ? List.of()
+                            : candidates.stream()
+                                    .filter(c -> c.variables() == 0 && !c.multi())
+                                    .toList();
+            if (candidates.isEmpty()) {
+                return ApiMatch.AMBIGUOUS;
+            }
         }
         if (request.method() == null || candidates.stream().anyMatch(c -> !c.certain())) {
             List<Long> files = candidates.stream().map(Candidate::fileId).distinct().toList();

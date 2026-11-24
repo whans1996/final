@@ -54,12 +54,21 @@ public final class StructureAnalyzer {
         this.maxWorkTime = maxWorkTime;
     }
 
+    public AnalysisStructureResponse analyze(
+            List<AnalysisFile> files, List<ApiEndpoint> apis, String contextPath) {
+        return analyze(files, apis, contextPath, false);
+    }
+
     /**
      * @param apis 개요의 API 목록. 개요가 없으면 null이고 HTTP 판정을 건너뛴다
      * @param contextPath 선별 설정 파일의 context-path. 없으면 null 또는 빈 문자열
+     * @param apisIncomplete API 목록이 잘렸거나 건너뛴 매핑이 있다. 변수·와일드카드 없는 일치만 확정한다 (5.3절 5)
      */
     public AnalysisStructureResponse analyze(
-            List<AnalysisFile> files, List<ApiEndpoint> apis, String contextPath) {
+            List<AnalysisFile> files,
+            List<ApiEndpoint> apis,
+            String contextPath,
+            boolean apisIncomplete) {
         List<AnalysisFile> sorted =
                 files.stream().sorted(Comparator.comparing(AnalysisFile::getId)).toList();
         StructureLinks links = new StructureLinks(maxUnresolved);
@@ -88,7 +97,7 @@ public final class StructureAnalyzer {
                         links,
                         budget);
         if (apis != null) {
-            HttpLinker.link(modules, apis, contextPath, links, budget);
+            HttpLinker.link(modules, apis, contextPath, apisIncomplete, links, budget);
         }
 
         Map<String, StructureEdge> unique = new LinkedHashMap<>();

@@ -57,11 +57,12 @@ public final class HttpLinker {
             Map<Long, JsModule> modules,
             List<ApiEndpoint> apis,
             String contextPath,
+            boolean apisIncomplete,
             StructureLinks out,
             WorkBudget budget) {
         this.modules = modules;
         this.evaluator = new UrlEvaluator(modules, budget);
-        this.matcher = new ApiPathMatcher(apis, contextPath);
+        this.matcher = new ApiPathMatcher(apis, contextPath, apisIncomplete);
         this.out = out;
         this.budget = budget;
     }
@@ -70,9 +71,10 @@ public final class HttpLinker {
             Map<Long, JsModule> modules,
             List<ApiEndpoint> apis,
             String contextPath,
+            boolean apisIncomplete,
             StructureLinks out,
             WorkBudget budget) {
-        HttpLinker linker = new HttpLinker(modules, apis, contextPath, out, budget);
+        HttpLinker linker = new HttpLinker(modules, apis, contextPath, apisIncomplete, out, budget);
         modules.values().stream()
                 .sorted((a, b) -> Long.compare(a.fileId(), b.fileId()))
                 .forEach(
