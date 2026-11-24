@@ -50,8 +50,11 @@ class UrlEvaluatorTest {
 
         assertThat(UrlValue.literal("http://localhost:8080").toPath().segments()).isEmpty();
         assertThat(UrlValue.literal("//cdn.example/x?y").toPath())
-                .isEqualTo(new UrlValue.UrlPath(true, List.of(lit("x")), false));
+                .isEqualTo(new UrlValue.UrlPath(List.of(lit("x")), "cdn.example"));
         assertThat(UrlValue.literal("/api").toPath().absolute()).isFalse();
+        // 호스트 이름은 userinfo·포트를 뺀다
+        assertThat(withPort.host()).isEqualTo("h.example");
+        assertThat(UrlValue.literal("http://u:p@[::1]:80/x").toPath().host()).isEqualTo("[::1]");
     }
 
     @Test

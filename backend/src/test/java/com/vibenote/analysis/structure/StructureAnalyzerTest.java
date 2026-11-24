@@ -235,7 +235,7 @@ class StructureAnalyzerTest {
                                 import axios from 'axios'
                                 const http = axios.create({ baseURL: import.meta.env.VITE_API_URL })
                                 export const list = () => http.get('/todos')
-                                export const abs = () => http.get('http://h/api/todos/1')
+                                export const abs = () => http.get('http://localhost:8080/api/todos/1')
                                 const v2 = axios.create({ baseURL: '/api' })
                                 export const over = () => v2.get('/todos', { baseURL: '/v2' })
                                 """));
@@ -834,7 +834,7 @@ class StructureAnalyzerTest {
                                 "src/a.js",
                                 """
                                 import axios from 'axios'
-                                fetch('https://api.example.test/api/../todos')
+                                fetch('http://localhost/api/../todos')
                                 const http = axios.create({ baseURL: '/api/v1' })
                                 http.get('../todos/./1')
                                 """));
@@ -1500,5 +1500,59 @@ class StructureAnalyzerTest {
                         tuple(5, UnresolvedReason.URL_UNKNOWN),
                         tuple(9, UnresolvedReason.BASE_URL_UNKNOWN),
                         tuple(10, UnresolvedReason.URL_UNKNOWN));
+    }
+
+    @Test
+    void AC11_절대_URL의_호스트가_로컬도_설정된_baseURL_호스트도_아니면_NO_MATCHING_API다() {
+        AnalysisStructureResponse response =
+                run(
+                        List.of(
+                                api("GET", "/api/todos", 100),
+                                api("GET", "/api/items", 101),
+                                api("GET", "/api/users", 102),
+                                api("GET", "/api/notes", 103),
+                                api("GET", "/api/tags", 104),
+                                api("POST", "/api/todos", 105)),
+                        js(
+                                1,
+                                "src/a.js",
+                                """
+                                import axios from 'axios'
+                                const gh = axios.create({ baseURL: 'https://api.myapp.test/api' })
+                                fetch('https://api.myapp.test/api/todos')
+                                fetch('https://API.MyApp.test:443/api/items')
+                                fetch('https://api.github.com/api/todos')
+                                fetch('http://127.0.0.1:8080/api/users')
+                                axios.post('//cdn.example/api/todos')
+                                fetch('https://prod.myapp.test/api/notes')
+                                fetch('http://[::1]:8080/api/tags')
+                                """),
+                        js(
+                                2,
+                                "src/main.js",
+                                """
+                                import axios from 'axios'
+                                axios.defaults.baseURL = 'https://prod.myapp.test'
+                                """));
+
+        assertThat(http(response))
+                .containsExactly(
+                        edge(1, 100, 3),
+                        edge(1, 101, 4),
+                        edge(1, 102, 6),
+                        edge(1, 103, 8),
+                        edge(1, 104, 9));
+        assertThat(httpUnresolved(response))
+                .containsExactly(
+                        unknown(
+                                1,
+                                5,
+                                UnresolvedReason.NO_MATCHING_API,
+                                "GET api.github.com/api/todos"),
+                        unknown(
+                                1,
+                                7,
+                                UnresolvedReason.NO_MATCHING_API,
+                                "POST cdn.example/api/todos"));
     }
 }

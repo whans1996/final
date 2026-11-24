@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -265,9 +266,11 @@ public final class HttpLinker {
     /** 값을 모르는 식. 계산하면 동적 조각이다. */
     private static final Expr UNKNOWN = new Expr(List.of(), null, Bindings.NONE);
 
-    private record Outcome(FeRequest request, UnresolvedReason reason, JsFunction paramOf) {
+    /** detail은 unresolved에 원문 대신 남길 값이다 (null이면 원문). */
+    private record Outcome(
+            FeRequest request, UnresolvedReason reason, JsFunction paramOf, String detail) {
         static Outcome failed(UnresolvedReason reason, JsFunction paramOf) {
-            return new Outcome(null, reason, paramOf);
+            return new Outcome(null, reason, paramOf, null);
         }
     }
 
@@ -295,7 +298,7 @@ public final class HttpLinker {
             return;
         }
         if (!inlinable) {
-            unresolved(module, call, outcome.reason());
+            unresolved(module, call, outcome);
             return;
         }
         if (sites.isEmpty() || inlineBudget <= 0) {
@@ -327,7 +330,7 @@ public final class HttpLinker {
             if (inlined.request() != null) {
                 emit(site.module(), site.call().line(), inlined.request());
             } else {
-                unresolved(site.module(), site.call(), inlined.reason());
+                unresolved(site.module(), site.call(), inlined);
             }
         }
     }
@@ -376,6 +379,15 @@ public final class HttpLinker {
             return Outcome.failed(UnresolvedReason.URL_UNKNOWN, value.paramOf());
         }
         List<PathSegment> segments = path.segments();
+        if (path.absolute() && !ourHost(path.host())) {
+            // 다른 서버로 가는 요청이다. 경로가 같아도 분석한 컨트롤러가 받지 않는다 (5.3절 5)
+            String target = path.host() + new FeRequest(null, normalizeDots(segments));
+            return new Outcome(
+                    null,
+                    UnresolvedReason.NO_MATCHING_API,
+                    value.paramOf(),
+                    method == null ? target : method + " " + target);
+        }
         if (!path.absolute() && http.receiver().type() != ReceiverType.FETCH) {
             Expr base = config == null ? null : config.prop("baseURL");
             if (base == null) {
@@ -393,7 +405,70 @@ public final class HttpLinker {
             }
         }
         // 경로에 매개변수가 붙었으면 부른 곳마다 인라인할 수 있게 그 함수도 넘긴다 (5.3절 5)
-        return new Outcome(new FeRequest(method, normalizeDots(segments)), null, value.paramOf());
+        return new Outcome(
+                new FeRequest(method, normalizeDots(segments)), null, value.paramOf(), null);
+    }
+
+    /** 이 앱의 서버로 볼 호스트: 로컬 주소와, 선별 파일에서 계산되는 baseURL(axios.defaults·axios.create)의 호스트. */
+    private static final Set<String> LOCAL_HOSTS = Set.of("localhost", "127.0.0.1", "[::1]");
+
+    private Set<String> baseHosts;
+
+    private boolean ourHost(String host) {
+        String h = host.toLowerCase(Locale.ROOT);
+        if (LOCAL_HOSTS.contains(h)) {
+            return true;
+        }
+        if (baseHosts == null) {
+            baseHosts = collectBaseHosts();
+        }
+        return baseHosts.contains(h);
+    }
+
+    /** 분석 하나에서 한 번, 절대 URL이 로컬이 아닐 때만 모은다. */
+    private Set<String> collectBaseHosts() {
+        Set<String> hosts = new HashSet<>();
+        for (JsModule m :
+                modules.values().stream()
+                        .sorted((a, b) -> Long.compare(a.fileId(), b.fileId()))
+                        .toList()) {
+            for (List<JsToken> base : m.defaultsBaseUrls()) {
+                addHost(hosts, new Expr(base, m, Bindings.NONE));
+            }
+            List<List<JsToken>> inits = new ArrayList<>();
+            for (JsDecl d : m.decls()) {
+                if (d.kind() == JsDecl.Kind.CONST && !d.init().isEmpty()) {
+                    inits.add(d.init());
+                }
+            }
+            for (JsExport e : m.exports().values()) {
+                if (e.expr() != null) {
+                    inits.add(e.expr());
+                }
+            }
+            for (List<JsToken> init : inits) {
+                budget.spend();
+                Receiver instance = instance(init, m);
+                if (instance != null) {
+                    addHost(
+                            hosts,
+                            config(instance.createArgs(), instance.module(), Bindings.NONE, 0)
+                                    .prop("baseURL"));
+                }
+            }
+        }
+        return hosts;
+    }
+
+    private void addHost(Set<String> hosts, Expr base) {
+        if (base == null || base.module() == null) {
+            return;
+        }
+        UrlValue value = evaluator.eval(base.tokens(), base.module(), base.bindings());
+        UrlValue.UrlPath path = value.startsDynamic() ? null : value.toPath();
+        if (path != null && path.absolute() && !path.hostUnknown()) {
+            hosts.add(path.host().toLowerCase(Locale.ROOT));
+        }
     }
 
     /** baseURL을 붙인 경로의 {@code .}은 빼고 {@code ..}은 앞 세그먼트를 지운다 (HTTP 클라이언트가 보내기 전에 하는 정규화). */
@@ -744,6 +819,21 @@ public final class HttpLinker {
                             UnresolvedReason.NO_MATCHING_API,
                             request.toString());
         }
+    }
+
+    private void unresolved(JsModule module, JsCall call, Outcome outcome) {
+        if (outcome.detail() == null) {
+            unresolved(module, call, outcome.reason());
+            return;
+        }
+        out.unresolved(
+                module.fileId(),
+                call.line(),
+                UnresolvedKind.HTTP_CALL,
+                outcome.reason(),
+                outcome.detail().length() > MAX_DETAIL
+                        ? outcome.detail().substring(0, MAX_DETAIL)
+                        : outcome.detail());
     }
 
     private void unresolved(JsModule module, JsCall call, UnresolvedReason reason) {
