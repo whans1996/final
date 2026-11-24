@@ -40,6 +40,7 @@ describe('UserProfileView (F-03 AC9)', () => {
     })
     // F-12 찜 절 기본값 (0건)
     conceptsApi.fetchUserWishes.mockResolvedValue({ items: [], page: 1, size: 12, total: 0 })
+    challengesApi.fetchUserChallenges.mockResolvedValue({ items: [], page: 1, size: 6, total: 0 })
   })
 
   it('AC9 프로필 정보와 학습 통계 3개를 보여 준다', async () => {
@@ -191,6 +192,7 @@ describe('UserProfileView 찜한 카드 절 (F-12 AC15)', () => {
       followingCount: 0,
     })
     conceptsApi.fetchUserWishes.mockResolvedValue({ items: [], page: 1, size: 12, total: 4 })
+    challengesApi.fetchUserChallenges.mockResolvedValue({ items: [], page: 1, size: 6, total: 0 })
     usersApi.fetchUserStats.mockResolvedValue({
       analysisCount: 0,
       learnedConceptCount: 0,
@@ -272,6 +274,7 @@ describe('UserProfileView 팔로우 영역 (F-04 AC9)', () => {
   beforeEach(() => {
     vi.resetAllMocks()
     conceptsApi.fetchUserWishes.mockResolvedValue({ items: [], page: 1, size: 12, total: 0 })
+    challengesApi.fetchUserChallenges.mockResolvedValue({ items: [], page: 1, size: 6, total: 0 })
     usersApi.fetchUser.mockResolvedValue(PROFILE)
     usersApi.fetchUserStats.mockResolvedValue({
       analysisCount: 0,
