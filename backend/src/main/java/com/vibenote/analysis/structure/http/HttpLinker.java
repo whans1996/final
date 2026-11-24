@@ -279,18 +279,25 @@ public final class HttpLinker {
             return;
         }
         Outcome outcome = compute(http, Bindings.NONE);
-        if (outcome.request() != null) {
+        JsFunction wrapper = outcome.paramOf();
+        boolean inlinable =
+                wrapper != null
+                        && wrapper.name() != null
+                        && (outcome.request() != null
+                                || outcome.reason() == UnresolvedReason.URL_UNKNOWN);
+        List<Site> sites =
+                inlinable
+                        ? sitesByWrapper.computeIfAbsent(wrapper, w -> callSites(w, module))
+                        : List.of();
+        if (sites.isEmpty() && outcome.request() != null) {
+            // 부른 곳이 없으면 매개변수 자리를 와일드카드로 비교한다
             emit(module, call.line(), outcome.request());
             return;
         }
-        JsFunction wrapper = outcome.paramOf();
-        if (outcome.reason() != UnresolvedReason.URL_UNKNOWN
-                || wrapper == null
-                || wrapper.name() == null) {
+        if (!inlinable) {
             unresolved(module, call, outcome.reason());
             return;
         }
-        List<Site> sites = sitesByWrapper.computeIfAbsent(wrapper, w -> callSites(w, module));
         if (sites.isEmpty() || inlineBudget <= 0) {
             unresolved(module, call, UnresolvedReason.URL_UNKNOWN);
             return;
@@ -364,6 +371,10 @@ public final class HttpLinker {
             return Outcome.failed(UnresolvedReason.URL_UNKNOWN, value.paramOf());
         }
         UrlValue.UrlPath path = value.toPath();
+        if (path.hostUnknown()) {
+            // 어느 서버로 가는지 모른다 (5.3절 5)
+            return Outcome.failed(UnresolvedReason.URL_UNKNOWN, value.paramOf());
+        }
         List<PathSegment> segments = path.segments();
         if (!path.absolute() && http.receiver().type() != ReceiverType.FETCH) {
             Expr base = config == null ? null : config.prop("baseURL");
@@ -372,15 +383,17 @@ public final class HttpLinker {
             }
             if (base != null) {
                 UrlValue baseValue = evaluator.eval(base.tokens(), base.module(), base.bindings());
-                if (baseValue.startsDynamic()) {
+                UrlValue.UrlPath basePath = baseValue.toPath();
+                if (baseValue.startsDynamic() || basePath.hostUnknown()) {
                     return Outcome.failed(UnresolvedReason.BASE_URL_UNKNOWN, null);
                 }
-                List<PathSegment> joined = new ArrayList<>(baseValue.toPath().segments());
+                List<PathSegment> joined = new ArrayList<>(basePath.segments());
                 joined.addAll(segments);
                 segments = joined;
             }
         }
-        return new Outcome(new FeRequest(method, normalizeDots(segments)), null, null);
+        // 경로에 매개변수가 붙었으면 부른 곳마다 인라인할 수 있게 그 함수도 넘긴다 (5.3절 5)
+        return new Outcome(new FeRequest(method, normalizeDots(segments)), null, value.paramOf());
     }
 
     /** baseURL을 붙인 경로의 {@code .}은 빼고 {@code ..}은 앞 세그먼트를 지운다 (HTTP 클라이언트가 보내기 전에 하는 정규화). */

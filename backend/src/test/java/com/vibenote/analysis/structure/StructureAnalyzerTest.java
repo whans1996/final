@@ -1434,4 +1434,71 @@ class StructureAnalyzerTest {
         assertThat(http(response)).containsExactly(edge(1, 100, 1));
         assertThat(httpUnresolved(response)).isEmpty();
     }
+
+    // ---- 5.3절 5: 흔한 코드의 틀린 간선 ----
+
+    @Test
+    void AC10_매개변수가_붙은_URL도_부른_곳이_있으면_인라인을_먼저_한다() {
+        AnalysisStructureResponse response =
+                run(
+                        List.of(
+                                api("GET", "/api/todos", 100),
+                                api("GET", "/api/items/{id}", 101),
+                                api("GET", "/api/users", 102),
+                                api("GET", "/api/notes/{id}", 103)),
+                        js(
+                                1,
+                                "src/a.js",
+                                """
+                                const BASE = '/api'
+                                function get(p) { return fetch(BASE + p) }
+                                get('/todos')
+                                get('/items/1')
+                                function note(id) { return fetch('/api/notes/' + id) }
+                                """));
+
+        // 부른 곳이 없는 래퍼는 지금처럼 동적 조각을 와일드카드로 비교한다
+        assertThat(http(response))
+                .containsExactly(edge(1, 100, 3), edge(1, 101, 4), edge(1, 103, 5));
+        assertThat(httpUnresolved(response)).isEmpty();
+    }
+
+    @Test
+    void AC8_호스트_자리에_동적_조각이_있으면_URL_UNKNOWN이다() {
+        AnalysisStructureResponse response =
+                run(
+                        List.of(
+                                api("GET", "/api/a", 100),
+                                api("GET", "/api/b", 101),
+                                api("GET", "/api/c", 102),
+                                api("GET", "/api/d", 103),
+                                api("GET", "/api/x", 104)),
+                        js(
+                                1,
+                                "src/a.js",
+                                """
+                                import axios from 'axios'
+                                function h(host) { return fetch('http://' + host + '/api/a') }
+                                h('localhost:8080')
+                                const HOST = getHost()
+                                fetch(`https://${HOST}/api/x`)
+                                fetch('http://localhost:' + port + '/api/b')
+                                fetch('http' + s + '://localhost/api/c')
+                                const api = axios.create({ baseURL: `http://${HOST}/api` })
+                                api.get('/x')
+                                fetch('//' + HOST + '/api/x')
+                                fetch('http://user' + u + '@localhost/api/d')
+                                """));
+
+        // 포트·userinfo·스킴의 동적 조각은 호스트를 바꾸지 않는다 (동적 조각은 놓인 URL 구성 요소 안에 머문다고 본다)
+        assertThat(http(response))
+                .containsExactly(
+                        edge(1, 100, 3), edge(1, 101, 6), edge(1, 102, 7), edge(1, 103, 11));
+        assertThat(httpUnresolved(response))
+                .extracting(UnresolvedLink::line, UnresolvedLink::reason)
+                .containsExactly(
+                        tuple(5, UnresolvedReason.URL_UNKNOWN),
+                        tuple(9, UnresolvedReason.BASE_URL_UNKNOWN),
+                        tuple(10, UnresolvedReason.URL_UNKNOWN));
+    }
 }

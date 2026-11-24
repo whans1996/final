@@ -50,7 +50,7 @@ class UrlEvaluatorTest {
 
         assertThat(UrlValue.literal("http://localhost:8080").toPath().segments()).isEmpty();
         assertThat(UrlValue.literal("//cdn.example/x?y").toPath())
-                .isEqualTo(new UrlValue.UrlPath(true, List.of(lit("x"))));
+                .isEqualTo(new UrlValue.UrlPath(true, List.of(lit("x")), false));
         assertThat(UrlValue.literal("/api").toPath().absolute()).isFalse();
     }
 

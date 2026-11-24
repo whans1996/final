@@ -15,7 +15,8 @@ public record UrlValue(String text, JsFunction paramOf) {
 
     static final char DYNAMIC = '\0';
 
-    private static final Pattern SCHEME = Pattern.compile("^[A-Za-z][A-Za-z0-9+.-]*://");
+    /** 스킴 자리의 동적 조각은 스킴 안에 머문다고 본다 ({@code 'http' + s + '://…'}). */
+    private static final Pattern SCHEME = Pattern.compile("^[A-Za-z][A-Za-z0-9+.\\x00-]*://");
 
     public static UrlValue literal(String text) {
         return new UrlValue(text, null);
@@ -44,6 +45,8 @@ public record UrlValue(String text, JsFunction paramOf) {
 
     /**
      * {@code ?}·{@code #} 뒤를 버리고 {@code scheme://호스트[:포트]}를 떼어 세그먼트로 나눈다. 동적 조각이 들어간 세그먼트는 와일드카드다.
+     * 동적 조각은 놓인 URL 구성 요소(스킴·userinfo·호스트 이름·포트·경로 세그먼트) 안에 머문다고 본다. 호스트 이름 자리에 있으면 어느 서버인지 모르므로
+     * hostUnknown이다 (5.3절 5).
      */
     public UrlPath toPath() {
         String s = text;
@@ -52,12 +55,15 @@ public record UrlValue(String text, JsFunction paramOf) {
             s = s.substring(0, cut);
         }
         boolean absolute = false;
+        boolean hostUnknown = false;
         Matcher scheme = SCHEME.matcher(s);
         boolean hasScheme = scheme.lookingAt();
         if (hasScheme || s.startsWith("//")) {
             absolute = true;
             String rest = s.substring(hasScheme ? scheme.end() : 2);
             int slash = rest.indexOf('/');
+            hostUnknown =
+                    hostName(slash < 0 ? rest : rest.substring(0, slash)).indexOf(DYNAMIC) >= 0;
             s = slash < 0 ? "" : rest.substring(slash);
         }
         List<PathSegment> segments = new ArrayList<>();
@@ -69,7 +75,18 @@ public record UrlValue(String text, JsFunction paramOf) {
                                 : PathSegment.literal(part));
             }
         }
-        return new UrlPath(absolute, List.copyOf(segments));
+        return new UrlPath(absolute, List.copyOf(segments), hostUnknown);
+    }
+
+    /** {@code [userinfo@]호스트[:포트]}에서 호스트 이름. IPv6 {@code [::1]}은 괄호까지. */
+    private static String hostName(String authority) {
+        String host = authority.substring(authority.lastIndexOf('@') + 1);
+        if (host.startsWith("[")) {
+            int close = host.indexOf(']');
+            return close < 0 ? host : host.substring(0, close + 1);
+        }
+        int colon = host.indexOf(':');
+        return colon < 0 ? host : host.substring(0, colon);
     }
 
     private static int firstIndexOf(String s, char a, char b) {
@@ -80,6 +97,7 @@ public record UrlValue(String text, JsFunction paramOf) {
 
     /**
      * @param absolute 호스트가 있던 절대 URL이면 true (axios는 이때 baseURL을 붙이지 않는다)
+     * @param hostUnknown 절대 URL의 호스트 이름 자리에 동적 조각이 있다
      */
-    public record UrlPath(boolean absolute, List<PathSegment> segments) {}
+    public record UrlPath(boolean absolute, List<PathSegment> segments, boolean hostUnknown) {}
 }
