@@ -48,8 +48,8 @@ public class TeamChallengeController {
     @ApiResponse(
             responseCode = "400",
             description =
-                    "analysisId·startDate·endDate·targetRate 오류, 시작일이 오늘 전, 종료일이 시작일 전, 30일 초과"
-                            + " (COMMON_400, 필드별 details)",
+                    "analysisId·startDate·endDate·targetRate 오류, 시작일이 오늘 전이거나 오늘 + 365일 뒤, 종료일이 시작일"
+                            + " 전, 30일 초과 (COMMON_400, 필드별 details)",
             content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     @ApiResponse(
             responseCode = "401",

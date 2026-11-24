@@ -18,6 +18,9 @@ describe('TeamChallengeForm SC-24 팀장 목표 만들기 (F-20c AC12)', () => {
     expect(wrapper.find('input[name="startDate"]').element.value).toBe('2026-11-28')
     expect(wrapper.find('input[name="endDate"]').element.value).toBe('2026-12-04')
     expect(wrapper.find('input[name="targetRate"]').element.value).toBe('80')
+    // Start date range = today .. today + 365 days (#95, matches the server rule)
+    expect(wrapper.find('input[name="startDate"]').attributes('min')).toBe('2026-11-28')
+    expect(wrapper.find('input[name="startDate"]').attributes('max')).toBe('2027-11-28')
     expect(wrapper.find('input[name="targetRate"]').attributes('min')).toBe('1')
     expect(wrapper.find('input[name="targetRate"]').attributes('max')).toBe('100')
 
