@@ -129,7 +129,8 @@ public class ChallengeService {
         userService.getActiveMember(userId);
         Challenge challenge = lockOrThrow(challengeId);
         rejectEnded(challenge);
-        ChallengeParticipant participant = participantMapper.find(challengeId, userId).orElse(null);
+        ChallengeParticipant participant =
+                participantMapper.findForUpdate(challengeId, userId).orElse(null);
         if (participant != null) {
             if (participant.isCompleted()) {
                 throw new BusinessException(ErrorCode.CHALLENGE_003);

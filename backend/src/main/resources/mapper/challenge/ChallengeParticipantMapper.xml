@@ -18,6 +18,13 @@
         WHERE challenge_id = #{challengeId} AND user_id = #{userId}
     </select>
 
+    <select id="findForUpdate" resultType="com.vibenote.challenge.domain.ChallengeParticipant">
+        SELECT challenge_id, user_id, progress, completed_at, joined_at
+        FROM challenge_participants
+        WHERE challenge_id = #{challengeId} AND user_id = #{userId}
+        FOR UPDATE
+    </select>
+
     <select id="countByChallenge" resultType="long">
         SELECT COUNT(*) FROM challenge_participants WHERE challenge_id = #{challengeId}
     </select>

@@ -31,6 +31,10 @@ public interface ChallengeParticipantMapper {
     Optional<ChallengeParticipant> find(
             @Param("challengeId") long challengeId, @Param("userId") long userId);
 
+    /** 취소용. 집계(refresh)가 참여 행만 잠그므로 같은 행을 잠그고 최신 달성 여부를 읽는다. */
+    Optional<ChallengeParticipant> findForUpdate(
+            @Param("challengeId") long challengeId, @Param("userId") long userId);
+
     long countByChallenge(long challengeId);
 
     /** 회원이 참여한 챌린지 (joined_at DESC, challenge_id DESC). status가 null이면 전체다. */
