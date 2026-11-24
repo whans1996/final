@@ -1,6 +1,7 @@
 <script setup>
 // SC-23 공유 분석 영역 (F-20b AC10·AC11). 목록을 직접 불러오고, 공유(TeamAnalysisPicker)·해제 후 다시 불러온다.
 // 목록 조회가 실패해도 팀 정보·멤버(부모)는 그대로 보이게 이 영역 안에서만 에러를 보여 준다.
+// 해제에 성공하면 `unshared`를 보낸다 (그 분석의 팀 목표가 함께 지워지므로 부모가 목표 목록을 다시 불러온다, F-20c AC11).
 import { computed, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { MAX_TEAM_ANALYSES, fetchTeamAnalyses, unshareTeamAnalysis } from '@/api/teams'
@@ -13,6 +14,8 @@ const props = defineProps({
   teamId: { type: Number, required: true },
   memberCount: { type: Number, required: true },
 })
+
+const emit = defineEmits(['unshared'])
 
 const items = ref(null)
 const loadError = ref('')
@@ -56,13 +59,20 @@ watch(
 defineExpose({ load })
 
 async function onUnshare(item) {
-  if (!window.confirm('이 분석의 공유를 해제할까요? 팀원의 풀이 기록은 남습니다.')) return
+  if (
+    !window.confirm(
+      '이 분석의 공유를 해제할까요? 팀원의 풀이 기록은 남고, 이 분석의 팀 목표는 함께 삭제됩니다.',
+    )
+  )
+    return
   const teamId = props.teamId
   busy.value = true
   actionError.value = ''
   try {
     await unshareTeamAnalysis(teamId, item.analysisId)
-    if (teamId === props.teamId) await load()
+    if (teamId !== props.teamId) return
+    emit('unshared', item.analysisId)
+    await load()
   } catch (error) {
     if (teamId === props.teamId) actionError.value = errorMessage(error)
   } finally {

@@ -200,7 +200,7 @@ CREATE TABLE team_challenges (
 - [x] Flyway 마이그레이션 (+ `FlywayMigrationTest` 테이블 목록)
 - [x] AC별 실패 테스트 작성 (red 확인)
 - [x] BE 구현 (green)
-- [ ] FE 구현 (green)
+- [x] FE 구현 (green)
 - [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
 - [x] `docs/conventions.md` 3절 `TEAM` 행에 011~013
 - [ ] contract-checker 통과
