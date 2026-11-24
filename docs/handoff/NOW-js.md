@@ -1,26 +1,26 @@
 # NOW — 김준섭 현재 작업 스냅샷
 
 > 김준섭(B 영역: 카드·소셜) 전용. 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
-갱신: 2026-11-24 13:25 · 작업자: JoonseobKim · PC: js-home · 브랜치: feature/common-erd-v10
+갱신: 2026-11-24 14:14 · 작업자: JoonseobKim · PC: js-home · 브랜치: feature/issue-44-sync-tests
 
 ---
 
 ## 현재 기능
 
-**산출물 ERD 갱신** (`docs/산출물/03-ERD.md`, `feature/common-erd-v10`, develop a2c3215에서 분기). 기능 아님, 문서 PR
+**#44 하네스 자동 동기화 다듬기** (`feature/issue-44-sync-tests`, develop 0d7d2e6에서 분기). 이슈 브랜치, 이슈 "제안"이 수용 기준
 
 ## 진행
 
-- ✅ PR #102(#96)·#103(#92) 머지 확인, #92·#96·#101 닫힘
-- ✅ 03-ERD.md를 Flyway V1~V10 기준으로 다시 씀
-  - 도메인별 mermaid erDiagram 3개(회원·소셜·커뮤니티 / 분석·카드·학습 / 챌린지·팀, 26테이블) — mermaid 11.4.1 파서로 3개 모두 통과
-  - 테이블 설명 보강(users 탈퇴 처리, activities 다형 참조, posts #92, comments, challenges·participants F-24·25 규칙, llm_usage_logs), 마이그레이션 이력 표, 정규화 메모(개인 챌린지 저장 vs 팀 목표 계산, 탈퇴와 FK)
-  - 머리말: DDL 정본은 migration, 기획서 3절 ERD는 기획 단계 기록(V7 이후 미반영)으로 표현을 바꿈
+- ✅ #77 PR #119 (`feature/issue-77-concept-link-fk`): CI 초록, Codex ✅ 750f215 → **사람이 GitHub에서 머지 대기**
+- ✅ #44 d3c96bf: `sync.test.mjs` 실제 저장소 테스트 7개(ff 실패·갈라짐·detached·병합 중·autoSync off/no/0·merge.ff only/false), `autoSyncEnabled` `--type=bool`, `mergeOne` `-c merge.ff=true`, session-start "## 자동 동기화"를 Git 블록 뒤로. 하네스 테스트 93개 통과
+- reviewer: 반드시 수정 없음. 권장 3건(`--ff` 명시로 `branch.<name>.mergeOptions`까지 막기, 불리언 아닌 값 경고, detached 테스트 `deepEqual(lines, [])`) 사용자 확인 중
+- PR 설명 `.harness/pr-issue-44.md` (A 영역 하네스 파일 3개 → @whans1996)
 
 ## 바로 다음 할 일
 
-1. PR 열기 (docs 전용, CI·Codex 확인) → 사람이 GitHub에서 머지
-2. 그다음 후보: WBS 1.8·4.3·5.1·5.2·5.4 산출물 초안(최종본은 기능 확정 뒤), B 영역 이슈 없음. SC-01 랜딩·디자인 기준은 F-25 머지됐으니 2차 기획 시작 가능 (사용자 합의 11-24)
+1. 권장 반영 여부 결정 → push → `gh pr create --base develop --title "chore(harness): 자동 동기화 경계 테스트 추가와 설정 해석 다듬기" --body-file .harness/pr-issue-44.md` → Codex 루프
+2. PR #119·#44 PR 머지는 사람이 GitHub에서
+3. #77·#44 뒤에는 멈춘다 (사용자 지시 11-24). Phase 6은 나중에
 
 ## 막힌 점 / 결정 필요
 
