@@ -159,6 +159,38 @@ class ConceptLinkServiceTest extends IntegrationTestBase {
         assertThat(links()).hasSize(3);
     }
 
+    /** 카탈로그 스냅샷 뒤 관리자가 초안을 지워도(F-13) FK 위반 없이 남은 카드만 연결한다. */
+    @Test
+    void issue77_추출_뒤_지워진_카드는_건너뛰고_남은_카드만_연결한다() {
+        long kept = insertConcept("f08-test-남음", "PUBLISHED");
+        long deleted = insertConcept("f08-test-지워짐", "DRAFT");
+        jdbc.update("DELETE FROM concepts WHERE id = ?", deleted);
+
+        service.save(
+                analysisId,
+                List.of(
+                        new ExtractedConcept(deleted, null, fileId, "L1", "지워진 초안"),
+                        new ExtractedConcept(kept, null, fileId, "L2", "남은 카드"),
+                        draft("f08-test-새 초안", null, null, "새")));
+
+        long created =
+                jdbc.queryForObject(
+                        "SELECT id FROM concepts WHERE name = 'f08-test-새 초안'", Long.class);
+        assertThat(links())
+                .extracting(r -> ((Number) r.get("concept_id")).longValue())
+                .containsExactlyInAnyOrder(kept, created);
+    }
+
+    @Test
+    void issue77_연결할_카드가_모두_지워졌으면_아무것도_넣지_않는다() {
+        long deleted = insertConcept("f08-test-지워짐", "DRAFT");
+        jdbc.update("DELETE FROM concepts WHERE id = ?", deleted);
+
+        service.save(analysisId, List.of(new ExtractedConcept(deleted, null, null, null, "x")));
+
+        assertThat(links()).isEmpty();
+    }
+
     @Test
     void AC5_항목이_없으면_아무것도_넣지_않는다() {
         service.save(analysisId, List.of());
