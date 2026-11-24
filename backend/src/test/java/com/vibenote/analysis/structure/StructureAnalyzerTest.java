@@ -325,11 +325,13 @@ class StructureAnalyzerTest {
         AnalysisStructureResponse response =
                 analyzer.analyze(files, apis, ContextPathReader.read(files));
 
-        assertThat(http(response)).containsExactly(edge(71, 100, 2), edge(71, 102, 6));
+        // 메서드를 모르면 후보가 한 파일일 때만 고른다 (5.3절 5): POST search(102)와 GET {id}(103)
+        assertThat(http(response)).containsExactly(edge(71, 100, 2));
         assertThat(httpUnresolved(response))
                 .containsExactly(
                         unknown(71, 3, UnresolvedReason.NO_MATCHING_API, "DELETE /app/api/todos"),
-                        unknown(71, 4, UnresolvedReason.AMBIGUOUS, "GET /app/api/items/1"));
+                        unknown(71, 4, UnresolvedReason.AMBIGUOUS, "GET /app/api/items/1"),
+                        unknown(71, 6, UnresolvedReason.AMBIGUOUS, "/app/api/todos/search"));
     }
 
     @Test

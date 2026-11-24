@@ -77,8 +77,76 @@ class ApiPathMatcherTest {
                                 "",
                                 api("GET", "/api/items/{id}", 100),
                                 api("GET", "/api/items/new", 100),
-                                api("GET", "/api/items/{code}", 101)))
+                                api("GET", "/api/items/{code}", 100)))
                 .isEqualTo(ApiMatch.matched(100));
+    }
+
+    @Test
+    void AC11_FE_와일드카드가_API_리터럴과_맞섰으면_후보가_한_파일일_때만_고른다() {
+        // 와일드카드가 search일 수도 다른 값일 수도 있다
+        assertThat(
+                        match(
+                                        req("GET", "/api/todos/*"),
+                                        "",
+                                        api("GET", "/api/todos/search", 100),
+                                        api("GET", "/api/todos/{id}", 101))
+                                .status())
+                .isEqualTo(ApiMatch.Status.AMBIGUOUS);
+        assertThat(
+                        match(
+                                        req("GET", "/api/items/*"),
+                                        "",
+                                        api("GET", "/api/items/{id}", 100),
+                                        api("GET", "/api/items/new", 100),
+                                        api("GET", "/api/items/{code}", 101))
+                                .status())
+                .isEqualTo(ApiMatch.Status.AMBIGUOUS);
+        // 변수·이중 별표와만 맞섰으면 지금처럼 가장 구체적인 후보를 고른다
+        assertThat(
+                        match(
+                                req("GET", "/api/todos/*"),
+                                "",
+                                api("GET", "/api/todos/{id}", 100),
+                                api("GET", "/api/**", 101)))
+                .isEqualTo(ApiMatch.matched(100));
+    }
+
+    @Test
+    void AC11_메서드를_모르면_후보가_한_파일일_때만_고른다() {
+        assertThat(
+                        match(
+                                        req(null, "/api/items/new"),
+                                        "",
+                                        api("GET", "/api/items/new", 100),
+                                        api("DELETE", "/api/items/{id}", 101))
+                                .status())
+                .isEqualTo(ApiMatch.Status.AMBIGUOUS);
+        assertThat(
+                        match(
+                                req(null, "/api/items/new"),
+                                "",
+                                api("GET", "/api/items/new", 100),
+                                api("DELETE", "/api/items/{id}", 100)))
+                .isEqualTo(ApiMatch.matched(100));
+    }
+
+    @Test
+    void AC11_순위는_이중_별표_없는_것_리터럴_많은_것_변수_적은_것이고_별표는_변수보다_무겁다() {
+        // 이중 별표가 있으면 리터럴이 많아도 밀린다 (Spring 순서)
+        assertThat(
+                        match(
+                                req("GET", "/api/a/b/c"),
+                                "",
+                                api("GET", "/api/a/b/**", 100),
+                                api("GET", "/api/{x}/{y}/{z}", 101)))
+                .isEqualTo(ApiMatch.matched(101));
+        assertThat(
+                        match(
+                                req("GET", "/api/a/b"),
+                                "",
+                                api("GET", "/api/*/b", 100),
+                                api("GET", "/api/{x}/b", 101)))
+                .isEqualTo(ApiMatch.matched(101));
     }
 
     @Test

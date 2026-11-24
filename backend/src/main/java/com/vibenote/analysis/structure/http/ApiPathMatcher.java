@@ -13,7 +13,11 @@ import java.util.regex.PatternSyntaxException;
  *
  * <p>서버 경로 = context-path + API path를 세그먼트 단위로 비교한다. API의 {@code {name}}·{@code *}은 1세그먼트({@code
  * {name:regex}}는 FE 세그먼트가 리터럴이면 정규식까지), {@code **}·{@code {*name}}은 0개 이상이고 FE 와일드카드는 API 리터럴과도
- * 맞는다. 후보 중 리터럴 세그먼트 많은 것 → 변수 적은 것 → {@code **} 없는 것을 고르고, 남은 최상위 후보의 파일이 하나면 그 파일이다.
+ * 맞는다. 후보 중 {@code **} 없는 것 → 리터럴 세그먼트 많은 것 → 변수 적은 것({@code *}는 {@code {v}}보다 무겁다, Spring 순서)을
+ * 고르고, 남은 최상위 후보의 파일이 하나면 그 파일이다.
+ *
+ * <p>FE 와일드카드가 API의 리터럴·정규식 세그먼트와 맞서야만 맞는 후보가 있거나 메서드를 모르면, 실제 요청이 어느 후보로 갈지 모르므로 후보가 모두 한 파일일 때만 그
+ * 파일이다 (5.3절 5).
  *
  * <p>API 경로는 분석마다 한 번 나누고 정규식을 컴파일한다 (요청마다 다시 하지 않는다, 5.3절 3).
  */
@@ -28,11 +32,15 @@ public final class ApiPathMatcher {
      */
     static final int MAX_REGEX_STEPS = 100_000;
 
+    /** 변수 무게. {@code *}는 {@code {v}}보다 덜 구체적이다 (Spring PathPattern 점수와 같은 비율). */
+    private static final int VARIABLE_WEIGHT = 1;
+
+    private static final int STAR_WEIGHT = 100;
+
     private static final Comparator<Candidate> MOST_SPECIFIC =
-            Comparator.comparingInt(Candidate::literals)
-                    .reversed()
-                    .thenComparingInt(Candidate::variables)
-                    .thenComparing(Candidate::multi);
+            Comparator.comparing(Candidate::multi)
+                    .thenComparing(Comparator.comparingInt(Candidate::literals).reversed())
+                    .thenComparingInt(Candidate::variables);
 
     /** context-path + API path를 나누고 이어진 {@code **}를 합친 패턴. */
     private record Compiled(ApiEndpoint api, List<ApiSegment> pattern, int fixed) {}
@@ -65,18 +73,26 @@ public final class ApiPathMatcher {
         if (prefixFixed > request.path().size()) {
             return ApiMatch.NONE;
         }
+        boolean wildcards = request.path().stream().anyMatch(PathSegment::wildcard);
         List<Candidate> candidates = new ArrayList<>();
         for (Compiled c : compiled) {
             budget.spend();
             if (!methodMatches(c.api().method(), request.method())) {
                 continue;
             }
-            if (matches(c.pattern(), c.fixed(), request.path(), budget)) {
-                candidates.add(Candidate.of(c.api().fileId(), c.pattern()));
+            if (matches(c.pattern(), c.fixed(), request.path(), false, budget)) {
+                // 와일드카드가 변수·이중 별표와만 맞서도 맞으면 그 값이 무엇이든 이 후보와 맞는다
+                boolean certain =
+                        !wildcards || matches(c.pattern(), c.fixed(), request.path(), true, budget);
+                candidates.add(Candidate.of(c.api().fileId(), c.pattern(), certain));
             }
         }
         if (candidates.isEmpty()) {
             return ApiMatch.NONE;
+        }
+        if (request.method() == null || candidates.stream().anyMatch(c -> !c.certain())) {
+            List<Long> files = candidates.stream().map(Candidate::fileId).distinct().toList();
+            return files.size() == 1 ? ApiMatch.matched(files.get(0)) : ApiMatch.AMBIGUOUS;
         }
         Candidate best = candidates.stream().min(MOST_SPECIFIC).orElseThrow();
         List<Long> files =
@@ -127,10 +143,14 @@ public final class ApiPathMatcher {
 
     /**
      * 패턴 세그먼트 i 이후가 경로 세그먼트 j 이후와 맞는지를 뒤에서부터 채운다 (O(패턴 × 경로) 시간, 행 두 개만 둬 O(경로) 메모리). 고정 세그먼트 수로
-     * 길이가 맞을 수 없으면 표를 채우지 않는다.
+     * 길이가 맞을 수 없으면 표를 채우지 않는다. strict면 FE 와일드카드는 정규식 없는 변수·이중 별표와만 맞는다.
      */
     private static boolean matches(
-            List<ApiSegment> pattern, int fixed, List<PathSegment> path, WorkBudget budget) {
+            List<ApiSegment> pattern,
+            int fixed,
+            List<PathSegment> path,
+            boolean strict,
+            WorkBudget budget) {
         int p = pattern.size();
         int n = path.size();
         if (fixed > n || (fixed == p && p != n)) {
@@ -146,7 +166,7 @@ public final class ApiPathMatcher {
                 if (segment.type() == Type.MULTI) {
                     cur[j] = next[j] || (j < n && cur[j + 1]);
                 } else {
-                    cur[j] = j < n && next[j + 1] && segment.accepts(path.get(j));
+                    cur[j] = j < n && next[j + 1] && segment.accepts(path.get(j), strict);
                 }
             }
             boolean[] swap = next;
@@ -164,28 +184,49 @@ public final class ApiPathMatcher {
         MULTI
     }
 
-    /** API 경로 세그먼트. regex는 {@code {name:regex}}에서 컴파일된 것만 있다. */
-    private record ApiSegment(Type type, String literal, Pattern regex) {
+    /**
+     * API 경로 세그먼트. regex는 {@code {name:regex}}·섞인 세그먼트에서 컴파일된 것만 있다. weight는 변수 무게({@code *}가 들어가면
+     * 더 무겁다).
+     */
+    private record ApiSegment(Type type, String literal, Pattern regex, int weight) {
 
         static ApiSegment of(String s) {
             if (s.equals("**") || (s.startsWith("{*") && s.endsWith("}"))) {
-                return new ApiSegment(Type.MULTI, null, null);
+                return new ApiSegment(Type.MULTI, null, null, 0);
             }
             if (s.startsWith("{") && closingBrace(s, 0) == s.length() - 1 && s.indexOf(':') > 0) {
                 String regex = s.substring(s.indexOf(':') + 1, s.length() - 1);
                 try {
-                    return new ApiSegment(Type.VARIABLE, null, Pattern.compile(regex));
+                    return new ApiSegment(
+                            Type.VARIABLE, null, Pattern.compile(regex), VARIABLE_WEIGHT);
                 } catch (PatternSyntaxException e) {
-                    return new ApiSegment(Type.VARIABLE, null, null);
+                    return new ApiSegment(Type.VARIABLE, null, null, VARIABLE_WEIGHT);
                 }
             }
-            if (s.equals("*") || (s.startsWith("{") && closingBrace(s, 0) == s.length() - 1)) {
-                return new ApiSegment(Type.VARIABLE, null, null);
+            if (s.equals("*")) {
+                return new ApiSegment(Type.VARIABLE, null, null, STAR_WEIGHT);
+            }
+            if (s.startsWith("{") && closingBrace(s, 0) == s.length() - 1) {
+                return new ApiSegment(Type.VARIABLE, null, null, VARIABLE_WEIGHT);
             }
             if (s.contains("{") || s.contains("*")) {
-                return new ApiSegment(Type.VARIABLE, null, mixed(s));
+                return new ApiSegment(
+                        Type.VARIABLE, null, mixed(s), bareStar(s) ? STAR_WEIGHT : VARIABLE_WEIGHT);
             }
-            return new ApiSegment(Type.LITERAL, s, null);
+            return new ApiSegment(Type.LITERAL, s, null, 0);
+        }
+
+        /** 중괄호 밖에 {@code *}가 있다. */
+        private static boolean bareStar(String s) {
+            for (int i = 0; i < s.length(); i++) {
+                int close = s.charAt(i) == '{' ? closingBrace(s, i) : -1;
+                if (close > 0) {
+                    i = close;
+                } else if (s.charAt(i) == '*') {
+                    return true;
+                }
+            }
+            return false;
         }
 
         /**
@@ -241,9 +282,10 @@ public final class ApiPathMatcher {
             return -1;
         }
 
-        boolean accepts(PathSegment fe) {
+        /** strict면 FE 와일드카드는 어떤 값이어도 맞는 세그먼트(정규식 없는 변수·이중 별표)와만 맞는다. */
+        boolean accepts(PathSegment fe, boolean strict) {
             if (fe.wildcard()) {
-                return true;
+                return !strict || type == Type.MULTI || (type == Type.VARIABLE && regex == null);
             }
             return switch (type) {
                 case LITERAL -> literal.equals(fe.literal());
@@ -298,20 +340,25 @@ public final class ApiPathMatcher {
         }
     }
 
-    private record Candidate(long fileId, int literals, int variables, boolean multi) {
+    /**
+     * @param variables 변수 무게의 합
+     * @param certain FE 와일드카드가 어떤 값이어도 이 후보와 맞는다
+     */
+    private record Candidate(
+            long fileId, int literals, int variables, boolean multi, boolean certain) {
 
-        static Candidate of(long fileId, List<ApiSegment> pattern) {
+        static Candidate of(long fileId, List<ApiSegment> pattern, boolean certain) {
             int literals = 0;
             int variables = 0;
             boolean multi = false;
             for (ApiSegment s : pattern) {
                 switch (s.type()) {
                     case LITERAL -> literals++;
-                    case VARIABLE -> variables++;
+                    case VARIABLE -> variables += s.weight();
                     case MULTI -> multi = true;
                 }
             }
-            return new Candidate(fileId, literals, variables, multi);
+            return new Candidate(fileId, literals, variables, multi, certain);
         }
     }
 }
