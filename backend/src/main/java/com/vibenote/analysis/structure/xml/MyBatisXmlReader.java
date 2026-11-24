@@ -192,11 +192,16 @@ public final class MyBatisXmlReader {
             return line;
         }
 
+        /** MyBatis는 중첩 타입을 이진 이름({@code Dto$Row})으로 쓴다. 색인은 정식 이름({@code Dto.Row})이다. */
+        private static String canonical(String name) {
+            return name.strip().replace('$', '.');
+        }
+
         @Override
         public void startElement(String uri, String localName, String qName, Attributes attrs) {
             int line = startLine(qName);
             if (qName.equals("mapper") && attrs.getValue("namespace") != null) {
-                String namespace = attrs.getValue("namespace").strip();
+                String namespace = canonical(attrs.getValue("namespace"));
                 Optional<Long> target = index.fileOf(namespace);
                 if (target.isPresent()) {
                     namespaceFile = target.get();
@@ -208,7 +213,7 @@ public final class MyBatisXmlReader {
             for (String name : TYPE_ATTRIBUTES) {
                 String value = attrs.getValue(name);
                 if (value != null) {
-                    index.fileOf(value.strip())
+                    index.fileOf(canonical(value))
                             .ifPresent(to -> typeLines.merge(to, line, Math::min));
                 }
             }

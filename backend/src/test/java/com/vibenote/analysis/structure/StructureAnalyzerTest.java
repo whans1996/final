@@ -994,4 +994,62 @@ class StructureAnalyzerTest {
                                                         + "    context-path: /new\n"))))
                 .isEqualTo("/new");
     }
+
+    @Test
+    void AC10_래퍼_호출_곱이_커도_제한_시간_안에_한_간선으로_모은다() {
+        StringBuilder code = new StringBuilder("function request(url) {\n");
+        code.append("  fetch(url)\n".repeat(3_000));
+        code.append("}\n");
+        code.append("request('/api/todos')\n".repeat(3_000));
+
+        AnalysisStructureResponse response =
+                assertTimeoutPreemptively(
+                        LIMIT,
+                        () ->
+                                run(
+                                        List.of(api("GET", "/api/todos", 100)),
+                                        js(1, "src/a.js", code.toString())));
+
+        assertThat(http(response)).containsExactly(edge(1, 100, 3_003));
+    }
+
+    @Test
+    void AC7_구조_분해_매개변수도_axios를_가린다() {
+        AnalysisStructureResponse response =
+                run(
+                        List.of(api("GET", "/api/todos", 100)),
+                        js(
+                                1,
+                                "src/a.js",
+                                """
+                                import axios from 'axios'
+                                function f({ axios }) { axios.get('/api/todos') }
+                                const g = ([axios, b = axios]) => axios.get('/api/todos')
+                                axios.get('/api/todos')
+                                """));
+
+        assertThat(http(response)).containsExactly(edge(1, 100, 4));
+        assertThat(httpUnresolved(response)).isEmpty();
+    }
+
+    @Test
+    void AC7_for_머리의_let_const는_루프_안에서만_가린다() {
+        AnalysisStructureResponse response =
+                run(
+                        List.of(api("GET", "/api/todos", 100)),
+                        js(
+                                1,
+                                "src/a.js",
+                                """
+                                import axios from 'axios'
+                                function f() {
+                                  for (let axios of []) {}
+                                  for (const axios of []) axios.get('/api/x');
+                                  axios.get('/api/todos')
+                                }
+                                """));
+
+        assertThat(http(response)).containsExactly(edge(1, 100, 5));
+        assertThat(httpUnresolved(response)).isEmpty();
+    }
 }

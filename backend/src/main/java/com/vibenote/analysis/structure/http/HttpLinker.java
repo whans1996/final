@@ -227,12 +227,17 @@ public final class HttpLinker {
             unresolved(module, call, outcome.reason());
             return;
         }
-        List<Site> sites = callSites(wrapper, module);
-        if (sites.isEmpty()) {
+        List<Site> sites = sitesByWrapper.computeIfAbsent(wrapper, w -> callSites(w, module));
+        if (sites.isEmpty() || inlineBudget <= 0) {
             unresolved(module, call, UnresolvedReason.URL_UNKNOWN);
             return;
         }
         for (Site site : sites) {
+            // 래퍼 안 호출 수 × 부른 곳 수만큼 계산하므로 분석 하나의 인라인 계산 횟수에 상한을 둔다
+            if (--inlineBudget < 0) {
+                unresolved(module, call, UnresolvedReason.URL_UNKNOWN);
+                return;
+            }
             Map<String, Arg> args = new HashMap<>();
             for (int i = 0; i < wrapper.params().size(); i++) {
                 String param = wrapper.params().get(i);
@@ -426,6 +431,13 @@ public final class HttpLinker {
     private static final int MAX_COMPUTED_KEY_TOKENS = 64;
 
     private final Map<JsModule, Set<JsDecl>> mutatedConfigs = new HashMap<>();
+
+    /** 분석 하나에서 래퍼를 부른 곳마다 다시 계산하는 횟수의 상한. 넘으면 남은 래퍼 안 호출은 URL_UNKNOWN이다. */
+    static final int MAX_INLINE_EVALUATIONS = 10_000;
+
+    private int inlineBudget = MAX_INLINE_EVALUATIONS;
+
+    private final Map<JsFunction, List<Site>> sitesByWrapper = new HashMap<>();
 
     /**
      * 파일에서 속성이 바뀌는 const 선언: {@code cfg.url|method|baseURL = …}, {@code cfg[k] = …}, {@code delete

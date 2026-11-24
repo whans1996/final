@@ -171,4 +171,31 @@ class MyBatisXmlReaderTest {
                 .extracting(UnresolvedLink::kind, UnresolvedLink::reason)
                 .containsExactly(tuple(UnresolvedKind.PARSE, UnresolvedReason.PARSE_ERROR));
     }
+
+    @Test
+    void AC4_중첩_타입의_이진_이름도_선별_파일로_푼다() {
+        AnalysisFile dto =
+                java(
+                        4,
+                        "com.example.todo.Dto",
+                        "package com.example.todo;\n"
+                                + "public class Dto { public static class Row {} public interface"
+                                + " Mapper {} }");
+        String xml =
+                DOCTYPE
+                        + "<mapper namespace=\"com.example.todo.Dto$Mapper\">\n"
+                        + "<select id=\"a\" resultType=\"com.example.todo.Dto$Row\"/>\n"
+                        + "</mapper>";
+
+        StructureLinks links = new StructureLinks();
+        JavaTypeIndex index = JavaStructureReader.read(List.of(dto), links);
+        StructureLinks out = new StructureLinks();
+        MyBatisXmlReader.read(List.of(mapperXml(10, xml)), index, out);
+
+        assertThat(out.edges())
+                .containsExactlyInAnyOrder(
+                        new StructureEdge(4, 10, EdgeType.MYBATIS, 1),
+                        new StructureEdge(10, 4, EdgeType.MYBATIS, 4));
+        assertThat(out.unresolved()).isEmpty();
+    }
 }

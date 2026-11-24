@@ -173,8 +173,13 @@ final class JsDeclarations {
 
     private void declarators(int i) {
         Kind kind = t.get(i).is("const") ? Kind.CONST : Kind.VARIABLE;
-        // var는 블록이 아니라 둘러싼 함수 전체(없으면 파일)가 범위다
-        int[] scope = t.get(i).is("var") ? functionScopeOf(i) : scopeOf(i);
+        // var는 블록이 아니라 둘러싼 함수 전체(없으면 파일)가, for 머리의 let·const는 그 루프가 범위다
+        int[] scope =
+                t.get(i).is("var")
+                        ? functionScopeOf(i)
+                        : JsTokens.is(t, i - 1, "(") && JsTokens.is(t, i - 2, "for")
+                                ? loopScopeOf(i - 1)
+                                : scopeOf(i);
         int j = i + 1;
         while (JsTokens.kind(t, j) == JsToken.Kind.IDENT) {
             String name = t.get(j).text();
@@ -232,6 +237,22 @@ final class JsDeclarations {
                                     List.of(),
                                     null));
         }
+    }
+
+    /** for 여는 괄호부터 루프 본문 끝까지. */
+    private int[] loopScopeOf(int open) {
+        int close = match[open];
+        if (close < 0) {
+            return scopeOf(open);
+        }
+        int end;
+        if (JsTokens.is(t, close + 1, "{") && match[close + 1] > 0) {
+            end = t.get(match[close + 1]).end();
+        } else {
+            int last = expressionEnd(close + 1);
+            end = last > close + 1 ? t.get(last - 1).end() : t.get(close).end();
+        }
+        return new int[] {t.get(open).start(), end};
     }
 
     /** i를 둘러싼 가장 안쪽 함수의 범위. 없으면 파일 전체. */
@@ -295,8 +316,12 @@ final class JsDeclarations {
             int last = expressionEnd(a + 1);
             end = last > a + 1 ? t.get(last - 1).end() : t.get(a).end();
         }
-        module.functions().add(new JsFunction(name, params, t.get(paramsStart).start(), end));
-        addParams(module.functions().get(module.functions().size() - 1));
+        JsFunction fn = new JsFunction(name, params, t.get(paramsStart).start(), end);
+        module.functions().add(fn);
+        addParams(fn);
+        if (t.get(paramsStart).is("(")) {
+            addDestructured(paramsStart, fn);
+        }
     }
 
     /** {@code name(…) {…}} 객체·클래스 메서드. 이름은 붙이지 않는다(래퍼로 인라인하지 않음). */
@@ -327,6 +352,60 @@ final class JsDeclarations {
         JsFunction fn = new JsFunction(name, params(paramsOpen), t.get(paramsOpen).start(), end);
         module.functions().add(fn);
         addParams(fn);
+        addDestructured(paramsOpen, fn);
+    }
+
+    /**
+     * 구조 분해 매개변수({@code {a, b: c, d = 1}}·{@code [x, ...y]})가 만드는 이름. 값은 모르므로 인라인하지 않지만 바깥 이름을 가린다.
+     * 키({@code b:})와 기본값 식 안의 이름은 바인딩이 아니다.
+     */
+    private void addDestructured(int open, JsFunction fn) {
+        int close = match[open];
+        if (close < 0) {
+            return;
+        }
+        for (List<JsToken> param : split(open + 1, close)) {
+            int k = !param.isEmpty() && param.get(0).is("...") ? 1 : 0;
+            if (k >= param.size() || !(param.get(k).is("{") || param.get(k).is("["))) {
+                continue;
+            }
+            int depth = 0;
+            int defaultDepth = -1;
+            for (; k < param.size(); k++) {
+                JsToken token = param.get(k);
+                boolean opens = token.is("{") || token.is("[") || token.is("(");
+                boolean closes = token.is("}") || token.is("]") || token.is(")");
+                if (defaultDepth >= 0) {
+                    if (opens) {
+                        depth++;
+                    } else if (closes) {
+                        depth--;
+                    }
+                    if (depth < defaultDepth || (token.is(",") && depth == defaultDepth)) {
+                        defaultDepth = -1;
+                    }
+                    continue;
+                }
+                if (opens) {
+                    depth++;
+                } else if (closes) {
+                    depth--;
+                } else if (token.is("=")) {
+                    defaultDepth = depth;
+                } else if (token.kind() == JsToken.Kind.IDENT
+                        && !(k + 1 < param.size() && param.get(k + 1).is(":"))) {
+                    module.decls()
+                            .add(
+                                    new JsDecl(
+                                            token.text(),
+                                            Kind.VARIABLE,
+                                            fn.start(),
+                                            fn.end(),
+                                            List.of(),
+                                            null));
+                }
+            }
+        }
     }
 
     private void addParams(JsFunction fn) {
