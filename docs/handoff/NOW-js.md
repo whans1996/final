@@ -1,7 +1,7 @@
 # NOW — 김준섭 현재 작업 스냅샷
 
 > 김준섭(B 영역: 카드·소셜) 전용. 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
-갱신: 2026-11-24 10:13 · 작업자: JoonseobKim · PC: js-home · 브랜치: feature/issue-96-team-json-type-error
+갱신: 2026-11-24 10:34 · 작업자: JoonseobKim · PC: js-home · 브랜치: feature/issue-96-team-json-type-error
 
 ---
 
@@ -19,6 +19,7 @@
 
 1. #101 복구(저장소 주인 whans1996 계정 Actions 결제·한도) 뒤 PR #102 CI 재실행(`gh run rerun <id>` 또는 빈 docs 커밋 push) → 초록 확인 → GitHub에서 머지 → #96 닫혔는지 확인
 2. 다음 이슈: #92 (F-17 게시글 분석 첨부 viewable이 주인 탈퇴 미고려, F-19 공개 열람과 불일치). `feature/issue-92-...`를 develop에서 분기
+3. 그다음 산출물: `docs/산출물/03-ERD.md`를 현재 스키마(V8·V9 팀, F-24·25 챌린지)에 맞춰 갱신. SC-01 랜딩·디자인 기준은 F-25 머지 후 2차 기획에서 디자인 방향을 정한 뒤 (사용자 합의 11-24)
 
 ## 막힌 점 / 결정 필요
 
