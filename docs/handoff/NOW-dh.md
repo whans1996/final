@@ -11,14 +11,9 @@
 
 ## 진행
 
-- ✅ Codex 1~9차 지적 반영 (9차 3건 `a94d89e`: 경로 비교 메모리 P1, class 이름 가림, 객체 리터럴 뒤 나눗셈). 재리뷰 9회
-- ✅ 전수 점검 4영역 약 40건 → spec 5.3절 1~7로 정리
-- ✅ 5.3-3 완료: `d22972e` WorkBudget·파일별 예외 격리, `e4adde6` 제곱 경로 색인화(`JsScopeIndex` 등, `StructureWorkloadTest` 12개), `c5a45f7` 메모리 상한(토큰 파일 50만·합계 200만, unresolved 상한+1 보관, Java AST 파일마다 두 번 파싱). spec 5.3-3 끝에 구현 메모
-- ✅ 5.3-1 완료 `d796d18`: `JsDecl.Kind.UNKNOWN`(TS식 매개변수·catch 이름, `with` 본문), `JsModule.lookupKnown`으로 가린 바깥 이름이 HTTP면 `HttpLinker`가 `SHADOWED` → URL_UNKNOWN. 키워드·계산된·`#` 메서드, 구조 분해 catch·대입, for 머리, 다시 대입 래퍼, 최상위 래퍼만 다른 파일, 전개 인자, import axios만 믿음. `StructureAnalyzerTest` "5.3절 1" 8개, 구조 테스트 122개 통과. spec 5.3-1 끝에 구현 메모
-- ✅ 5.3-5 완료 (7개): `5a3aa56` 인라인 먼저·호스트 자리 동적, `baa446a` 외부 호스트 NO_MATCHING_API, `8a961a8` 와일드카드·메서드 모름은 한 파일일 때만·Spring 순위, `312d7e5` axios defaults 변형·인터셉터·fetch 바꿔 끼우기, `b2ec249` profiles 맵, `6249215` ApiDetector 불완전 시 리터럴 일치만(나머지 AMBIGUOUS). spec 5.3-5 끝에 구현 메모. 구조 관련 테스트 144개
-- ✅ 5.3-2·6 완료 `0fab493`: `.vue` TS script는 여는 태그 줄 PARSE_ERROR, `scriptBlocks` 한 번 훑기·`<script(?=[s>/])`·속성 따옴표 안 `>`, CR 단독·U+2028·U+2029 줄 끝, 정규식 안 ``+줄 끝 실패, 같은 줄 값 뒤 `!` 다음 `/` 나눗셈, `?.5`는 `?`+`.5`. `JsTokenizerTest` 9개 추가, 구조 테스트 153개 통과. spec 구현 메모
-- ✅ 5.3-4 완료 `6f950d5` (#117 Closes): `StructureCache` DONE만 LRU 64, 같은 분석 동시 요청은 future 대기, 전체 동시 계산 2개·10초 대기 뒤 `ANALYSIS_007`(503, 사용자 결정·결정로그), 예산 다 쓴 결과는 캐시 안 함, `AnalysisDeletedEvent`로 커밋 뒤 비움, `checkViewableDetail`로 매 요청 열람 확인. `StructureServiceTest` 8개
-- ✅ 5.3-7: follow-up #121 (area:A). verify all 통과, PR 설명 갱신(Closes #117, 공통: ErrorCode·application.yml·conventions)
+- ✅ Codex 1~9차 지적 반영(재리뷰 9회) → 전수 점검 약 40건을 spec 5.3절 1~7로 정리 (11-24 결정)
+- ✅ 5.3절 1~7 모두 완료 (각 항목 끝에 spec 구현 메모): 1 `d796d18` 이름 UNKNOWN·`lookupKnown` · 3 `d22972e`·`e4adde6`·`c5a45f7` WorkBudget·색인화·메모리 상한 · 5 `5a3aa56`~`6249215` 흔한 코드의 틀린 간선 7개 · 2·6 `0fab493` 토크나이저(TS script PARSE_ERROR, 줄 끝 4종, `<script` 경계, TS `!`, `?.5`) · 4 `6f950d5` 캐시(#117: DONE만 LRU 64, 같은 분석 하나만 계산, 동시 2개·10초 대기 뒤 `ANALYSIS_007` 503 — 사용자 결정, 예산 다 쓴 결과는 캐시 안 함, 삭제 이벤트로 비움) · 7 follow-up #121
+- ✅ verify all 통과, push, PR 설명 갱신(Closes #117, 공통: ErrorCode·application.yml·conventions → @JoonseobKim), `gh pr ready 118`, Codex 재리뷰 요청
 
 ## 바로 다음 할 일
 
@@ -36,4 +31,3 @@
 - 이 PC의 Git Bash heredoc에서 python `'''` 문자열은 백슬래시가 풀리거나 파싱이 깨진다 → Java 편집은 Edit 도구나 Write로 만든 스크립트 파일로
 - 간선은 (from, to)마다 첫 줄만 남는다 → 테스트에서 "이 줄은 간선이 아니다"를 볼 때는 다른 API로 구분한다
 - 내 영역 이슈 #104·#105(F-25 집계)는 F-21 뒤 기능 사이에 처리
-- PR 설명 "공통 코드 변경"에 `application.yml`(structure 예산 2줄) 적고 @JoonseobKim 멘션
