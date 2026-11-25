@@ -2,11 +2,9 @@ package com.vibenote.analysis.pipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.ArrayList;
-import java.util.List;
 import org.junit.jupiter.api.Test;
 
-/** layer 판정과 선별 우선순위 (F-05a 5.2절, AC5·AC7). */
+/** layer 판정 (F-05a 5.2절 AC5, F-07 AC12, F-26a 5.3절 AC4). 선별은 {@link ImportanceRankerTest}. */
 class FileSelectorTest {
 
     private static Layer layer(String path) {
@@ -26,7 +24,8 @@ class FileSelectorTest {
         assertThat(layer("frontend/src/router/index.js")).isEqualTo(Layer.JS);
         assertThat(layer("frontend/src/stores/auth.js")).isEqualTo(Layer.JS);
         assertThat(layer("frontend/src/api/http.mjs")).isEqualTo(Layer.JS);
-        assertThat(layer("frontend/vite.config.js")).isEqualTo(Layer.JS);
+        // F-26a AC4: *.config.js는 js보다 config가 먼저다
+        assertThat(layer("frontend/vite.config.js")).isEqualTo(Layer.CONFIG);
         assertThat(layer("src/main/java/a/SecurityConfig.java")).isEqualTo(Layer.CONFIG);
         assertThat(layer("src/main/resources/application.yml")).isEqualTo(Layer.CONFIG);
         assertThat(layer("src/main/resources/application-local.properties"))
@@ -48,53 +47,6 @@ class FileSelectorTest {
     void AC5_layer_값은_소문자로_저장한다() {
         assertThat(Layer.CONTROLLER.value()).isEqualTo("controller");
         assertThat(Layer.OTHER.value()).isEqualTo("other");
-    }
-
-    @Test
-    void AC5_우선순위와_경로순으로_정렬한다() {
-        List<SourceFile> files =
-                List.of(
-                        new SourceFile("z/Util.java", "u"),
-                        new SourceFile("a/domain/User.java", "d"),
-                        new SourceFile("b/BController.java", "c2"),
-                        new SourceFile("a/AController.java", "c1"),
-                        new SourceFile("App.vue", "v"),
-                        new SourceFile("a/UserService.java", "s"),
-                        new SourceFile("application.yml", "y"),
-                        new SourceFile("main.js", "j"),
-                        new SourceFile("a/UserMapper.xml", "m"));
-
-        List<SelectedFile> selected = FileSelector.select(files, 30);
-
-        assertThat(selected)
-                .extracting(SelectedFile::path)
-                .containsExactly(
-                        "a/AController.java",
-                        "b/BController.java",
-                        "a/UserService.java",
-                        "a/UserMapper.xml",
-                        "App.vue",
-                        "main.js",
-                        "application.yml",
-                        "a/domain/User.java",
-                        "z/Util.java");
-        assertThat(selected.get(0).layer()).isEqualTo(Layer.CONTROLLER);
-        assertThat(selected.get(0).content()).isEqualTo("c1");
-    }
-
-    @Test
-    void AC7_상한을_넘으면_우선순위_상위만_고른다() {
-        List<SourceFile> files = new ArrayList<>();
-        for (int i = 0; i < 40; i++) {
-            files.add(new SourceFile(String.format("u/Util%02d.java", i), "u"));
-        }
-        files.add(new SourceFile("z/ZController.java", "c"));
-
-        List<SelectedFile> selected = FileSelector.select(files, 30);
-
-        assertThat(selected).hasSize(30);
-        assertThat(selected.get(0).path()).isEqualTo("z/ZController.java");
-        assertThat(selected.get(29).path()).isEqualTo("u/Util28.java");
     }
 
     @Test
@@ -148,17 +100,108 @@ class FileSelectorTest {
     }
 
     @Test
-    void AC12_선별할_때_내용으로_controller를_판정한다() {
-        List<SelectedFile> selected =
-                FileSelector.select(
-                        List.of(
-                                new SourceFile("a/Util.java", "class Util {}"),
-                                new SourceFile(
-                                        "web/ArticlesApi.java",
-                                        "@RestController class ArticlesApi {}")),
-                        30);
+    void AC4_Service_어노테이션이면_파일명과_상관없이_service() {
+        assertThat(
+                        FileSelector.layer(
+                                "src/main/java/a/AnalysisPipeline.java",
+                                "@Service\npublic class AnalysisPipeline {}"))
+                .isEqualTo(Layer.SERVICE);
+        assertThat(
+                        FileSelector.layer(
+                                "src/main/java/a/Pipe.java",
+                                "@org.springframework.stereotype.Service class Pipe {}"))
+                .isEqualTo(Layer.SERVICE);
+        assertThat(FileSelector.layer("src/main/java/a/Flow.java", "@ServiceActivator class F {}"))
+                .isEqualTo(Layer.OTHER);
+    }
 
-        assertThat(selected.get(0).path()).isEqualTo("web/ArticlesApi.java");
-        assertThat(selected.get(0).layer()).isEqualTo(Layer.CONTROLLER);
+    @Test
+    void AC4_Repository_어노테이션과_Repository_파일명과_Mapper_어노테이션은_mapper() {
+        assertThat(
+                        FileSelector.layer(
+                                "src/main/java/a/UserStore.java",
+                                "@Repository\npublic class UserStore {}"))
+                .isEqualTo(Layer.MAPPER);
+        assertThat(layer("src/main/java/a/TodoRepository.java")).isEqualTo(Layer.MAPPER);
+        assertThat(
+                        FileSelector.layer(
+                                "src/main/java/a/TodoQueries.java",
+                                "@Mapper\npublic interface TodoQueries {}"))
+                .isEqualTo(Layer.MAPPER);
+    }
+
+    @Test
+    void AC4_Configuration_어노테이션이면_config이고_ConfigurationProperties는_아니다() {
+        assertThat(
+                        FileSelector.layer(
+                                "src/main/java/a/WebSetup.java",
+                                "@Configuration\npublic class WebSetup {}"))
+                .isEqualTo(Layer.CONFIG);
+        assertThat(
+                        FileSelector.layer(
+                                "src/main/java/a/AppProps.java",
+                                "@ConfigurationProperties(\"app\")\npublic record AppProps() {}"))
+                .isEqualTo(Layer.OTHER);
+    }
+
+    @Test
+    void AC4_models_밖의_Entity는_domain() {
+        assertThat(
+                        FileSelector.layer(
+                                "src/main/java/a/models/Todo.java",
+                                "@Entity\npublic class Todo {}"))
+                .isEqualTo(Layer.DOMAIN);
+        assertThat(
+                        FileSelector.layer(
+                                "src/main/java/a/Todo.java",
+                                "@Table(name = \"todos\")\npublic class Todo {}"))
+                .isEqualTo(Layer.DOMAIN);
+    }
+
+    @Test
+    void AC4_JS_설정_파일은_js가_아니라_config() {
+        assertThat(layer("frontend/vite.config.js")).isEqualTo(Layer.CONFIG);
+        assertThat(layer("eslint.config.mjs")).isEqualTo(Layer.CONFIG);
+        assertThat(layer("frontend/vitest.config.ts")).isEqualTo(Layer.CONFIG);
+        assertThat(layer("frontend/src/config.js")).isEqualTo(Layer.JS);
+    }
+
+    @Test
+    void AC4_테스트_폴더와_테스트_파일명은_test() {
+        assertThat(
+                        FileSelector.layer(
+                                "src/test/java/FooControllerTest.java",
+                                "@RestController class FooControllerTest {}"))
+                .isEqualTo(Layer.TEST);
+        assertThat(layer("src/main/java/a/FooIT.java")).isEqualTo(Layer.TEST);
+        assertThat(layer("frontend/src/views/__tests__/Home.spec.js")).isEqualTo(Layer.TEST);
+        assertThat(layer("frontend/src/a.test.ts")).isEqualTo(Layer.TEST);
+        assertThat(layer("e2e/login.js")).isEqualTo(Layer.TEST);
+        assertThat(layer("src/main/java/a/Contest.java")).isEqualTo(Layer.OTHER);
+    }
+
+    @Test
+    void AC4_마이그레이션_폴더와_Flyway_파일명은_migration이고_md는_doc() {
+        assertThat(layer("src/main/resources/db/migration/V1__init.sql"))
+                .isEqualTo(Layer.MIGRATION);
+        assertThat(layer("db/changelog/master.yaml")).isEqualTo(Layer.MIGRATION);
+        assertThat(layer("migrations/001.sql")).isEqualTo(Layer.MIGRATION);
+        assertThat(layer("sql/V2__add.sql")).isEqualTo(Layer.MIGRATION);
+        assertThat(layer("src/main/resources/schema.sql")).isEqualTo(Layer.OTHER);
+        assertThat(layer("README.md")).isEqualTo(Layer.DOC);
+        assertThat(layer("docs/test/guide.md")).isEqualTo(Layer.DOC);
+    }
+
+    @Test
+    void AC4_주석_속_어노테이션은_보지_않는다() {
+        String commented =
+                """
+                // @Service
+                /* @Repository @Configuration @Entity */
+                public class Plain {}
+                """;
+
+        assertThat(FileSelector.layer("src/main/java/a/Plain.java", commented))
+                .isEqualTo(Layer.OTHER);
     }
 }

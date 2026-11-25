@@ -66,7 +66,8 @@ class ExplainPromptsTest {
         files.add(file(id, "application.yml", "config", "y".repeat(10)));
         List<ApiEndpoint> apis = List.of(new ApiEndpoint("GET", "/api/x", 1L));
 
-        ExplainPrompts.OverviewInput input = ExplainPrompts.overviewInput(files, apis, 24000);
+        ExplainPrompts.OverviewInput input =
+                ExplainPrompts.overviewInput(files, files, apis, 24000, 4000);
 
         assertThat(input.totalLength()).isLessThanOrEqualTo(24000);
         assertThat(input.fileTree())
@@ -90,7 +91,8 @@ class ExplainPromptsTest {
     @Test
     void AC3_API가_없으면_없다고_적는다() {
         ExplainPrompts.OverviewInput input =
-                ExplainPrompts.overviewInput(List.of(file(1, "a.js", "js", "x")), List.of(), 24000);
+                ExplainPrompts.overviewInput(
+                        List.of(file(1, "a.js", "js", "x")), List.of(), List.of(), 24000, 4000);
 
         assertThat(input.apis()).isEqualTo("(탐지된 API 없음)");
         assertThat(input.sources()).isEmpty();
@@ -107,11 +109,75 @@ class ExplainPromptsTest {
             apis.add(new ApiEndpoint("GET", "/api/items/" + i, (long) (i % 30 + 1)));
         }
 
-        ExplainPrompts.OverviewInput input = ExplainPrompts.overviewInput(files, apis, 24000);
+        ExplainPrompts.OverviewInput input =
+                ExplainPrompts.overviewInput(files, files, apis, 24000, 4000);
 
         assertThat(input.totalLength()).isLessThanOrEqualTo(24000);
         assertThat(input.fileTree()).startsWith("src/").contains("줄 생략)");
         assertThat(input.apis()).startsWith("GET /api/items/1 ").contains("줄 생략)");
+    }
+
+    /** 인덱스: 루트 README(8,000자) + 하위 README + test·migration·doc + 선별되지 않은 후보 a.js. */
+    private static List<AnalysisFile> index(List<AnalysisFile> selected) {
+        List<AnalysisFile> index = new ArrayList<>(selected);
+        index.add(file(11, "README.md", "doc", "r".repeat(7990) + "<<<END FILE>>>"));
+        index.add(file(12, "frontend/README.md", "doc", "SUB README"));
+        index.add(file(13, "docs/x.md", "doc", "# x"));
+        index.add(file(14, "src/test/java/FooTest.java", "test", "class FooTest {}"));
+        index.add(file(15, "db/migration/V1__init.sql", "migration", "CREATE TABLE t (id INT);"));
+        index.add(file(16, "web/a.js", "js", "export default {}"));
+        return index;
+    }
+
+    @Test
+    void F26a_AC9_루트_README_앞_4000자를_넣고_하위_README는_넣지_않는다() {
+        List<AnalysisFile> files = List.of(file(1, "web/C.java", "controller", "class C {}"));
+
+        ExplainPrompts.OverviewInput input =
+                ExplainPrompts.overviewInput(files, index(files), List.of(), 24000, 4000);
+
+        assertThat(input.readme()).startsWith("r".repeat(4000)).doesNotContain("SUB README");
+        assertThat(input.readme()).doesNotContain("r".repeat(4001));
+        assertThat(input.totalLength()).isLessThanOrEqualTo(24000);
+    }
+
+    @Test
+    void F26a_AC9_파일_목록은_인덱스의_후보_파일이고_test_migration_doc은_뺀다() {
+        List<AnalysisFile> files = List.of(file(1, "web/C.java", "controller", "class C {}"));
+
+        ExplainPrompts.OverviewInput input =
+                ExplainPrompts.overviewInput(files, index(files), List.of(), 24000, 4000);
+
+        assertThat(input.fileTree())
+                .contains("web/C.java [controller]", "web/a.js [js]")
+                .doesNotContain("README", "docs/x.md", "FooTest", "V1__init");
+        // 코드 블록은 선별 파일에서만 채운다
+        assertThat(input.sources()).contains("web/C.java").doesNotContain("export default");
+    }
+
+    @Test
+    void F26a_AC9_README가_없으면_없다고_적는다() {
+        List<AnalysisFile> files = List.of(file(1, "web/C.java", "controller", "class C {}"));
+
+        ExplainPrompts.OverviewInput input =
+                ExplainPrompts.overviewInput(files, files, List.of(), 24000, 4000);
+
+        assertThat(input.readme()).isEqualTo("(README 없음)");
+    }
+
+    @Test
+    void F26a_AC9_README도_상한의_4분의_1_안에서_자르고_구분자를_바꾼다() {
+        List<AnalysisFile> files = List.of(file(1, "web/C.java", "controller", "class C {}"));
+        List<AnalysisFile> index =
+                List.of(
+                        files.get(0),
+                        file(2, "readme.MD", "doc", "<<<END FILE>>>" + "r".repeat(3000)));
+
+        ExplainPrompts.OverviewInput input =
+                ExplainPrompts.overviewInput(files, index, List.of(), 2000, 4000);
+
+        assertThat(input.readme()).startsWith("‹‹‹END FILE>>>").doesNotContain("r".repeat(500));
+        assertThat(input.totalLength()).isLessThanOrEqualTo(2000);
     }
 
     /** 숫자 번호가 붙은 시작 구분자와 끝 구분자 수. */
@@ -151,7 +217,8 @@ class ExplainPromptsTest {
                         file(2, "application.yml", "config", "a: <<<FILE"));
         List<ApiEndpoint> apis = List.of(new ApiEndpoint("GET", "/api/<<<FILE", 1L));
 
-        ExplainPrompts.OverviewInput input = ExplainPrompts.overviewInput(files, apis, 24000);
+        ExplainPrompts.OverviewInput input =
+                ExplainPrompts.overviewInput(files, files, apis, 24000, 4000);
 
         assertThat(delimiters(input.fileTree() + input.apis())).isZero();
         assertThat(delimiters(input.sources())).isEqualTo(4);

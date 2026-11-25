@@ -3,22 +3,22 @@
 > 김동환(A 영역: AI·분석·학습 루프) 전용. 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
-갱신: 2026-11-25 15:55 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/issue-146-challenge-recount
+갱신: 2026-11-25 19:18 · 작업자: whans1996@naver.com · PC: dh-home · 브랜치: feature/F-26a-index-selection
 
 ## 현재 기능
 
-**follow-up #143·#146 동시 처리** (사용자 지시 11-25). PR #149·#151 머지 완료(이슈 6개 닫힘).
+**F-26a 수집·선별 개편** PR #157 — CI ✅ · Codex COMPLETE · spec DONE 표시 완료 → **사람 머지 대기**. spec `docs/specs/F-26a-index-selection.md`
 
 ## 진행
 
-- 🟡 **PR #153** #146 (`feature/issue-146-challenge-recount`, head 1d7a7f4): `challenge/ChallengeRecountJob.recountEnded()`(매일 00:10, 종료일 최근 7일 미달성 참여, 참여마다 READ_COMMITTED) + `ChallengeProgressService.recountOpen` + 공통 `SchedulingConfig`·`application.yml challenge.recount-cron`·`IntegrationTestBase` `-`. verify all ✅, reviewer 반드시 0·권장 2 반영. **CI ✅ · Codex ✅ 1d7a7f4** → 머지 대기(사람)
-- ✅ **PR #154** #143 머지됨 (#143 닫힘). #153에 develop 합침(fd98501), CI ✅
-- ⏸️ 하네스 묶음(#130·#133~#136)은 재동결 유지
+- ✅ AC1~AC11 구현, PR 전 리뷰 반영, Codex 1차 P2 수정 `12dead8`, 2차 P2 3건 이관(#156·#158·#159)
+- ✅ spec 헤더 `DONE (PR #157)`, 10절 "PR CI 초록"·"상태 DONE" 체크 (docs만이라 Codex 재리뷰 없음)
+- 후속 이슈: #155 FE·화면설계서·F-05a "200개 · 10MB" 문구 · #156 readingOrder · #158 cjs 설정 · #159 config 상한 위치
 
 ## 바로 다음 할 일
 
-1. PR #153: CI ✅·Codex ✅ → GitHub에서 머지(사람)
-2. 남은 worktree 폴더 `.claude/worktrees/agent-a6c5d8d9db43acfd5` 삭제(긴 경로라 사람이 PowerShell `\?` 경로로) + `git worktree prune` + `git branch -D worktree-agent-a6c5d8d9db43acfd5`
+1. `gh pr checks 157` 초록 재확인 → 사람이 GitHub에서 PR #157 머지 (상대가 먼저 develop에 머지했으면 `git merge origin/develop` → push → CI 재확인 후)
+2. 머지 뒤 `git switch develop && git pull` → 새 세션에서 #158·#159를 `feature/issue-158-config-collect` 하나로 묶어 처리 (수집 필터에 `*.config.cjs` 추가, config 상한을 후보 단계가 아니라 실제 선별에 적용). #155는 F-28 화면 때 흡수, #156은 F-26b에서
 3. 11/27 Figma 세션 → 11/29~ V-1 MVP 감사
 
 ## 막힌 점 / 결정 필요
@@ -27,6 +27,6 @@
 
 ## 주의
 
+- PR #157이 공통 파일(ErrorCode·V12·application.yml·WithdrawalApiTest·openapi.json)을 바꿈 → 본문에 @JoonseobKim 멘션함. 다음 마이그레이션은 V13
 - 커밋 범위는 F-xx|common|harness만 · Git Bash에서 `/pr-review` 같은 인자는 MSYS 경로 변환됨 (`MSYS_NO_PATHCONV=1`)
-- Codex: 3회차부터 P2는 follow-up 이관 · 진행현황·WBS·간트는 `/progress` docs PR에서만
-- 이 PC에 python 없음 (파일 편집은 Edit·node로)
+- node 스크립트로 Java 편집 시 백슬래시가 깨짐 → Edit 도구 사용 · 이 PC에 python 없음

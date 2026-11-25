@@ -25,7 +25,7 @@ class FileExplainerTest {
         return analysis;
     }
 
-    static final ExplainProperties PROPS = new ExplainProperties(6, 6000, 24000);
+    static final ExplainProperties PROPS = new ExplainProperties(6, 6000, 24000, 4000);
 
     private final List<AnalysisFile> batch =
             List.of(

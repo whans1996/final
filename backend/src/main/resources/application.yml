@@ -60,10 +60,16 @@ app:
 # 분석 요청·파이프라인 (docs/specs/F-05a-analysis-request-zip.md 5절). 업로드 ZIP은 {app.upload-dir}/analysis-tmp/에 잠시 둔다.
 analysis:
   daily-limit: 5
-  max-files: 200
-  max-total-bytes: 10MB
+  # 인덱스 상한 (docs/specs/F-26a-index-selection.md 5.1절). 넘으면 실패시키지 않고 뒤의 파일을 버린다
+  max-index-files: 2000
+  max-index-bytes: 30MB
   max-file-bytes: 1MB
   max-selected-files: 30
+  # 중요도 선별 (docs/specs/F-26a-index-selection.md 5.4절). 그래프 예산은 구조 탭 요청(analysis.structure)과 따로 둔다
+  selection:
+    max-config: 3
+    max-work-steps: 50000000
+    max-work-time: 10s
   # 공개 저장소 URL 수집 (docs/specs/F-05b-analysis-request-url.md 5.1절). 첫 요청은 아래 API 주소로만 하고,
   # 리다이렉트는 같은 스킴·포트의 allowed-hosts만 따라간다 (SSRF 방어)
   fetch:
@@ -80,6 +86,7 @@ analysis:
     batch-size: 6
     max-file-chars: 6000
     overview-max-chars: 24000
+    readme-max-chars: 4000
   # 실행 흐름 (docs/specs/F-07-execution-flow.md 5절): 입력 코드 합계·파일 수, 분석당 흐름 수, 저장 단계 수 상한
   flow:
     max-chars: 24000

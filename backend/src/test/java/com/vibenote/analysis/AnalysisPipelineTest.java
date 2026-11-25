@@ -2,12 +2,15 @@ package com.vibenote.analysis;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 
+import com.vibenote.analysis.domain.AnalysisFile;
 import com.vibenote.analysis.fetch.FakeRepositoryServer;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -56,9 +59,11 @@ class AnalysisPipelineTest extends AnalysisTestSupport {
         return id;
     }
 
+    /** 선별 파일 (F-26a 뒤로 analysis_files에는 인덱스 전체가 있고, 설명 대상은 selected = TRUE인 행이다). */
     private List<Map<String, Object>> files(long analysisId) {
         return jdbc.queryForList(
-                "SELECT path, layer, content FROM analysis_files WHERE analysis_id = ? ORDER BY id",
+                "SELECT path, layer, content FROM analysis_files"
+                        + " WHERE analysis_id = ? AND selected = TRUE ORDER BY id",
                 analysisId);
     }
 
@@ -168,7 +173,7 @@ class AnalysisPipelineTest extends AnalysisTestSupport {
     }
 
     @Test
-    void AC7_지원_파일이_201개면_FAILED_ANALYSIS_413() throws IOException {
+    void F26a_AC2_지원_파일이_201개여도_413이_아니고_DONE이다() throws IOException {
         Map<String, String> entries = new LinkedHashMap<>();
         for (int i = 0; i < 201; i++) {
             entries.put("p/F" + i + ".java", "class F" + i + " {}");
@@ -178,12 +183,8 @@ class AnalysisPipelineTest extends AnalysisTestSupport {
         pipeline.run(id);
 
         Map<String, Object> row = analysisRow(id);
-        assertThat(row.get("status")).isEqualTo("FAILED");
-        assertThat(row.get("error_code")).isEqualTo("ANALYSIS_413");
-        assertThat(row.get("error_message"))
-                .isEqualTo("지원하는 코드 파일이 201개입니다. 200개 이하로 줄여서 다시 올려 주세요.");
-        assertThat(row.get("progress")).isEqualTo(15);
-        assertThat(files(id)).isEmpty();
+        assertThat(row.get("status")).isEqualTo("DONE");
+        assertThat(row.get("error_code")).isNull();
     }
 
     @Test
@@ -193,7 +194,7 @@ class AnalysisPipelineTest extends AnalysisTestSupport {
             entries.put(String.format("p/u/Util%03d.java", i), "class U {}");
         }
         entries.put("p/web/HomeController.java", "class HomeController {}");
-        // 1MB 초과 파일도 지원 파일 수(200)에는 들어가고 읽지 않고 건너뛴다
+        // 1MB 초과 파일은 읽지 않고 건너뛴다
         entries.put("p/Huge.java", "x".repeat(1024 * 1024 + 1));
         long id = prepare(createUser("ac7select", "JUNIOR"), zip(entries));
 
@@ -207,19 +208,118 @@ class AnalysisPipelineTest extends AnalysisTestSupport {
     }
 
     @Test
-    void AC7_읽은_합계가_10MB를_넘으면_FAILED_ANALYSIS_413() throws IOException {
+    void F26a_AC2_읽은_합계가_10MB를_넘어도_413이_아니고_DONE이다() throws IOException {
         Map<String, String> entries = new LinkedHashMap<>();
         for (int i = 0; i < 11; i++) {
-            entries.put("p/F" + i + ".java", "x".repeat(1_000_000));
+            entries.put("p/F" + i + ".java", "class F" + i + " {}\n//" + "x".repeat(1_000_000));
         }
         long id = prepare(createUser("ac7size", "JUNIOR"), zip(entries));
 
         pipeline.run(id);
 
         Map<String, Object> row = analysisRow(id);
-        assertThat(row.get("status")).isEqualTo("FAILED");
-        assertThat(row.get("error_code")).isEqualTo("ANALYSIS_413");
-        assertThat(row.get("error_message")).isEqualTo("코드 파일 합계가 10MB를 넘습니다. 크기를 줄여서 다시 올려 주세요.");
+        assertThat(row.get("status")).isEqualTo("DONE");
+        assertThat(row.get("error_code")).isNull();
+    }
+
+    /** 코드 480 + controller 1 + test 10 + doc 9 = 인덱스 500개, 1MB 초과 1개는 버린다. */
+    private static Map<String, String> indexOf500() {
+        Map<String, String> entries = new LinkedHashMap<>();
+        for (int i = 0; i < 480; i++) {
+            entries.put(String.format("p/u/Util%03d.java", i), "class Util" + i + " {}");
+        }
+        // 선별되지 않을 파일에 키를 넣어 인덱스 전체가 가려지는지 본다
+        entries.put("p/u/Util479.java", "class Util479 { String k = \"" + GOOGLE_KEY + "\"; }");
+        entries.put("p/web/HomeController.java", "class HomeController {}");
+        for (int i = 0; i < 10; i++) {
+            entries.put("p/src/test/java/T" + i + "Test.java", "class T" + i + "Test {}");
+        }
+        for (int i = 0; i < 9; i++) {
+            entries.put("p/docs/d" + i + ".md", "# doc " + i);
+        }
+        entries.put("p/Huge.java", "x".repeat(1024 * 1024 + 1));
+        return entries;
+    }
+
+    @Test
+    void F26a_AC8_인덱스_전체를_가려_저장하고_30개만_selected다() throws IOException {
+        long id = prepare(createUser("f26ac8", "JUNIOR"), zip(indexOf500()));
+
+        pipeline.run(id);
+
+        Map<String, Object> row = analysisRow(id);
+        assertThat(row.get("status")).isEqualTo("DONE");
+        assertThat(row.get("indexed_files")).isEqualTo(500);
+        assertThat(row.get("dropped_files")).isEqualTo(1);
+
+        List<Map<String, Object>> all =
+                jdbc.queryForList(
+                        "SELECT id, path, layer, selected, importance, content, summary"
+                                + " FROM analysis_files WHERE analysis_id = ? ORDER BY id",
+                        id);
+        assertThat(all).hasSize(500);
+        assertThat(all).filteredOn(f -> Boolean.TRUE.equals(f.get("selected"))).hasSize(30);
+        assertThat(all)
+                .extracting(f -> (String) f.get("content"))
+                .noneMatch(c -> c.contains(GOOGLE_KEY));
+        assertThat(all)
+                .filteredOn(f -> f.get("path").equals("u/Util479.java"))
+                .singleElement()
+                .satisfies(f -> assertThat(f.get("selected")).isEqualTo(false));
+        // 선별 파일이 먼저 저장된다 (5.4절 7): 앞 30행이 선별, 뒤 470행은 선별되지 않음
+        assertThat(all.subList(0, 30)).allMatch(f -> Boolean.TRUE.equals(f.get("selected")));
+        assertThat(all.subList(30, 500)).allMatch(f -> Boolean.FALSE.equals(f.get("selected")));
+        // test·doc은 점수가 없고, 후보는 점수가 있다
+        assertThat(all)
+                .filteredOn(f -> List.of("test", "doc").contains(f.get("layer")))
+                .hasSize(19)
+                .allMatch(f -> f.get("importance") == null);
+        assertThat(all)
+                .filteredOn(f -> !List.of("test", "doc").contains(f.get("layer")))
+                .allMatch(f -> f.get("importance") != null);
+    }
+
+    @Test
+    void F26a_AC9_개요용_인덱스_조회는_루트_README만_내용을_읽는다() throws IOException {
+        Map<String, String> entries = new LinkedHashMap<>();
+        entries.put("p/Readme.md", "# 소개");
+        entries.put("p/web/HomeController.java", "class HomeController {}");
+        entries.put("p/docs/README.md", "# 하위 문서");
+        long id = prepare(createUser("f26ac9", "JUNIOR"), zip(entries));
+        pipeline.run(id);
+
+        List<AnalysisFile> index = analysisService.findIndexFiles(id);
+
+        assertThat(index)
+                .extracting(AnalysisFile::getPath, AnalysisFile::getContent)
+                .containsExactlyInAnyOrder(
+                        tuple("Readme.md", "# 소개"),
+                        tuple("web/HomeController.java", null),
+                        tuple("docs/README.md", null));
+    }
+
+    @Test
+    void F26a_AC8_설명과_개념_연결은_선별_파일만_본다() throws IOException {
+        long id = prepare(createUser("f26ac8b", "JUNIOR"), zip(indexOf500()));
+
+        pipeline.run(id);
+
+        assertThat(
+                        jdbc.queryForObject(
+                                "SELECT COUNT(*) FROM analysis_files WHERE analysis_id = ? AND"
+                                        + " selected = FALSE AND (summary IS NOT NULL OR role IS"
+                                        + " NOT NULL)",
+                                Integer.class,
+                                id))
+                .isZero();
+        assertThat(
+                        jdbc.queryForObject(
+                                "SELECT COUNT(*) FROM analysis_concepts ac JOIN analysis_files f"
+                                        + " ON f.id = ac.file_id WHERE ac.analysis_id = ? AND"
+                                        + " f.selected = FALSE",
+                                Integer.class,
+                                id))
+                .isZero();
     }
 
     @Test
@@ -292,7 +392,7 @@ class AnalysisPipelineTest extends AnalysisTestSupport {
         long id = prepare(createUser("ac10error", "JUNIOR"), zip(springProject()));
         doThrow(new IllegalStateException("db down"))
                 .when(analysisService)
-                .saveFiles(anyLong(), anyList());
+                .saveFiles(anyLong(), anyList(), anyInt());
 
         pipeline.run(id);
 
@@ -313,7 +413,9 @@ class AnalysisPipelineTest extends AnalysisTestSupport {
     @Test
     void AC10_Error가_나도_FAILED_ANALYSIS_500으로_바꾸고_다시_던진다() throws IOException {
         long id = prepare(createUser("ac10fatal", "JUNIOR"), zip(springProject()));
-        doThrow(new StackOverflowError()).when(analysisService).saveFiles(anyLong(), anyList());
+        doThrow(new StackOverflowError())
+                .when(analysisService)
+                .saveFiles(anyLong(), anyList(), anyInt());
 
         assertThatThrownBy(() -> pipeline.run(id)).isInstanceOf(StackOverflowError.class);
 
@@ -455,7 +557,7 @@ class AnalysisPipelineTest extends AnalysisTestSupport {
     }
 
     @Test
-    void F05b_AC11_받은_아카이브의_지원_파일이_200개를_넘으면_ANALYSIS_413() {
+    void F26a_AC2_받은_아카이브의_지원_파일이_200개를_넘어도_DONE이다() {
         long userId = createUser("b11many", "JUNIOR");
         long id = insertUrlAnalysis(userId, "https://github.com/octo/b11-many");
         Map<String, String> entries = new LinkedHashMap<>();
@@ -467,8 +569,8 @@ class AnalysisPipelineTest extends AnalysisTestSupport {
         pipeline.run(id);
 
         Map<String, Object> row = analysisRow(id);
-        assertThat(row.get("status")).isEqualTo("FAILED");
-        assertThat(row.get("error_code")).isEqualTo("ANALYSIS_413");
+        assertThat(row.get("status")).isEqualTo("DONE");
+        assertThat(row.get("error_code")).isNull();
         assertThat(tempZip(id)).doesNotExist();
     }
 }

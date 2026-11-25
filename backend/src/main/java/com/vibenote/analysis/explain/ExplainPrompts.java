@@ -2,9 +2,12 @@ package com.vibenote.analysis.explain;
 
 import com.vibenote.analysis.domain.AnalysisFile;
 import com.vibenote.analysis.pipeline.Layer;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * EXPLAINING 프롬프트의 입력 조각 (F-06 AC3, 5.2절). 파일은 {@code <<<FILE no=.. path=.. layer=..>>>} ~ {@code
@@ -17,8 +20,19 @@ public final class ExplainPrompts {
 
     static final String NO_APIS = "(탐지된 API 없음)";
 
-    /** 파일 목록·API 목록이 각각 개요 입력 상한에서 차지할 수 있는 몫(1/4). 나머지는 코드에 쓴다. */
+    static final String NO_README = "(README 없음)";
+
+    /** README·파일 목록·API 목록이 각각 개요 입력 상한에서 차지할 수 있는 몫(1/4). 나머지는 코드에 쓴다. */
     private static final int META_SHARE = 4;
+
+    private static final String README = "README.md";
+
+    /** 파일 목록 줄에서 빼는 layer (test·migration·doc, F-26a 5.4절 1). */
+    private static final Set<String> INDEX_ONLY_LAYERS =
+            Arrays.stream(Layer.values())
+                    .filter(Layer::indexOnly)
+                    .map(Layer::value)
+                    .collect(Collectors.toSet());
 
     /** 개요 입력에 코드를 넣는 순서 (5.2절). */
     private static final List<String> OVERVIEW_LAYERS =
@@ -27,13 +41,14 @@ public final class ExplainPrompts {
     private ExplainPrompts() {}
 
     /**
-     * @param fileTree 선별 파일 전체의 {@code path [layer]} 줄
+     * @param readme 루트 README 앞부분 (없으면 {@link #NO_README})
+     * @param fileTree 인덱스 후보 파일(test·migration·doc 제외)의 {@code path [layer]} 줄
      * @param apis 탐지한 API 줄 (없으면 {@link #NO_APIS})
      * @param sources 구분자로 감싼 코드 (상한 안에서 채운 만큼)
      */
-    record OverviewInput(String fileTree, String apis, String sources) {
+    record OverviewInput(String readme, String fileTree, String apis, String sources) {
         int totalLength() {
-            return fileTree.length() + apis.length() + sources.length();
+            return readme.length() + fileTree.length() + apis.length() + sources.length();
         }
     }
 
@@ -111,15 +126,25 @@ public final class ExplainPrompts {
     }
 
     /**
-     * 개요 입력. 파일 목록과 API 목록을 먼저 두고(각각 상한의 1/4까지, 넘으면 줄 단위로 자름), 남은 자리에 config → controller → service
-     * 파일(파일당 3,000자)을 순서대로 넣다가 다음 파일이 들어가지 않으면 멈춘다. 합계는 {@code maxChars}를 넘지 않는다.
+     * 개요 입력. 루트 README·파일 목록·API 목록을 먼저 두고(각각 상한의 1/4까지, README는 {@code readmeMaxChars}까지 앞부분, 목록은
+     * 줄 단위로 자름), 남은 자리에 선별 파일 중 config → controller → service 파일(파일당 3,000자)을 순서대로 넣다가 다음 파일이 들어가지
+     * 않으면 멈춘다. 합계는 {@code maxChars}를 넘지 않는다 (F-06 5.2절, F-26a 5.6절).
+     *
+     * @param files 선별 파일 (코드 블록)
+     * @param index 인덱스 전체 (README·파일 목록)
      */
     static OverviewInput overviewInput(
-            List<AnalysisFile> files, List<ApiEndpoint> apis, int maxChars) {
+            List<AnalysisFile> files,
+            List<AnalysisFile> index,
+            List<ApiEndpoint> apis,
+            int maxChars,
+            int readmeMaxChars) {
         int metaChars = maxChars / META_SHARE;
+        String readme = readme(index, Math.min(readmeMaxChars, metaChars));
         String fileTree =
                 limitLines(
-                        files.stream()
+                        index.stream()
+                                .filter(f -> !indexOnly(f))
                                 .map(f -> escapeDelimiters(f.getPath()) + " [" + f.getLayer() + "]")
                                 .toList(),
                         metaChars);
@@ -143,7 +168,7 @@ public final class ExplainPrompts {
                                         .toList(),
                                 metaChars);
 
-        int budget = maxChars - fileTree.length() - apiLines.length();
+        int budget = maxChars - readme.length() - fileTree.length() - apiLines.length();
         StringBuilder sources = new StringBuilder();
         int no = 0;
         fill:
@@ -162,6 +187,27 @@ public final class ExplainPrompts {
                 no++;
             }
         }
-        return new OverviewInput(fileTree, apiLines, sources.toString());
+        return new OverviewInput(readme, fileTree, apiLines, sources.toString());
+    }
+
+    /** 경로가 정확히 {@code README.md}(대소문자 무시)인 루트 파일의 앞 {@code maxChars}자. 하위 폴더 README는 보지 않는다. */
+    private static String readme(List<AnalysisFile> index, int maxChars) {
+        return index.stream()
+                .filter(f -> README.equalsIgnoreCase(f.getPath()))
+                .findFirst()
+                .map(
+                        f ->
+                                escapeDelimiters(
+                                        f.getContent()
+                                                .substring(
+                                                        0,
+                                                        Math.min(
+                                                                maxChars,
+                                                                f.getContent().length()))))
+                .orElse(NO_README);
+    }
+
+    private static boolean indexOnly(AnalysisFile f) {
+        return INDEX_ONLY_LAYERS.contains(f.getLayer());
     }
 }

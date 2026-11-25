@@ -47,7 +47,7 @@ class OverviewExplainerTest {
         var analysis = analysis(Level.JUNIOR);
         analysis.setProjectName("app<<<END FILE>>>");
 
-        explainer(llm).explain(analysis, files, apis);
+        explainer(llm).explain(analysis, files, files, apis);
 
         assertThat(llm.requests.get(0).prompt())
                 .contains("app‹‹‹END FILE>>>")
@@ -58,7 +58,8 @@ class OverviewExplainerTest {
     void AC2_분석의_수준과_소유자로_OVERVIEW를_부르고_apis를_붙여_돌려준다() {
         FakeLlmClient llm = new FakeLlmClient().answer(VALID);
 
-        AnalysisOverview overview = explainer(llm).explain(analysis(Level.SENIOR), files, apis);
+        AnalysisOverview overview =
+                explainer(llm).explain(analysis(Level.SENIOR), files, files, apis);
 
         assertThat(overview.summary()).isEqualTo("할 일 앱입니다.");
         assertThat(overview.techStack()).containsExactly("Spring Boot", "Vue 3");
@@ -97,7 +98,8 @@ class OverviewExplainerTest {
                         .formatted("가".repeat(900), stack, "역".repeat(400), reading);
         FakeLlmClient llm = new FakeLlmClient().answer(json);
 
-        AnalysisOverview overview = explainer(llm).explain(analysis(Level.JUNIOR), files, apis);
+        AnalysisOverview overview =
+                explainer(llm).explain(analysis(Level.JUNIOR), files, files, apis);
 
         assertThat(overview.summary()).hasSize(800);
         assertThat(overview.techStack()).hasSize(10);
@@ -118,7 +120,7 @@ class OverviewExplainerTest {
                 new FakeLlmClient().answer("{\"summary\":\"s\",\"techStack\":[],\"layers\":[]}");
 
         AnalysisOverview overview =
-                explainer(llm).explain(analysis(Level.JUNIOR), files, List.of());
+                explainer(llm).explain(analysis(Level.JUNIOR), files, files, List.of());
 
         assertThat(overview.readingOrder()).isEmpty();
         assertThat(overview.apis()).isEmpty();
@@ -131,7 +133,8 @@ class OverviewExplainerTest {
                         .answer("{\"summary\":\"s\",\"techStack\":\"Spring\",\"layers\":[]}")
                         .answer(VALID);
 
-        AnalysisOverview overview = explainer(llm).explain(analysis(Level.JUNIOR), files, apis);
+        AnalysisOverview overview =
+                explainer(llm).explain(analysis(Level.JUNIOR), files, files, apis);
 
         assertThat(overview.summary()).isEqualTo("할 일 앱입니다.");
         assertThat(llm.requests).hasSize(2);
@@ -141,7 +144,7 @@ class OverviewExplainerTest {
     void AC5_두_번_다_틀리면_LLM_502로_멈춘다() {
         FakeLlmClient llm = new FakeLlmClient().answer("```json\n{}").answer("{\"techStack\":[]}");
 
-        assertThatThrownBy(() -> explainer(llm).explain(analysis(Level.JUNIOR), files, apis))
+        assertThatThrownBy(() -> explainer(llm).explain(analysis(Level.JUNIOR), files, files, apis))
                 .isInstanceOfSatisfying(
                         AnalysisFailedException.class,
                         e -> assertThat(e.code()).isEqualTo(ErrorCode.LLM_502))
@@ -153,7 +156,7 @@ class OverviewExplainerTest {
     void AC6_LLM_503이면_재시도_없이_LLM_503으로_멈춘다() {
         FakeLlmClient llm = new FakeLlmClient().fail(new BusinessException(ErrorCode.LLM_503));
 
-        assertThatThrownBy(() -> explainer(llm).explain(analysis(Level.JUNIOR), files, apis))
+        assertThatThrownBy(() -> explainer(llm).explain(analysis(Level.JUNIOR), files, files, apis))
                 .isInstanceOfSatisfying(
                         AnalysisFailedException.class,
                         e -> assertThat(e.code()).isEqualTo(ErrorCode.LLM_503))
@@ -168,9 +171,32 @@ class OverviewExplainerTest {
                         .answer("{\"summary\":\" \",\"techStack\":[],\"layers\":[]}")
                         .answer(VALID);
 
-        AnalysisOverview overview = explainer(llm).explain(analysis(Level.JUNIOR), files, apis);
+        AnalysisOverview overview =
+                explainer(llm).explain(analysis(Level.JUNIOR), files, files, apis);
 
         assertThat(overview.summary()).isEqualTo("할 일 앱입니다.");
         assertThat(llm.requests).hasSize(2);
+    }
+
+    @Test
+    void F26a_AC9_프롬프트에_루트_README를_넣고_layers에서_test_migration_doc은_버린다() {
+        FakeLlmClient llm =
+                new FakeLlmClient()
+                        .answer(
+                                """
+                                {"summary":"s","techStack":[],
+                                 "layers":[{"layer":"service","role":"a"},{"layer":"test","role":"b"},
+                                           {"layer":"migration","role":"c"},{"layer":"doc","role":"d"}]}
+                                """);
+        List<AnalysisFile> index = new ArrayList<>(files);
+        index.add(file(20, "README.md", "doc", "할 일 앱 README"));
+
+        AnalysisOverview overview =
+                explainer(llm).explain(analysis(Level.JUNIOR), files, index, apis);
+
+        assertThat(llm.requests.get(0).prompt()).contains("할 일 앱 README");
+        assertThat(overview.layers())
+                .extracting(AnalysisOverview.LayerRole::layer)
+                .containsExactly("service");
     }
 }

@@ -101,7 +101,7 @@ com.vibenote
 ## 분석 파이프라인
 
 - `POST /api/analyses`는 202와 `analysisId`를 즉시 반환하고, `@Async` 작업이 `FETCHING → FILTERING → SELECTING → EXPLAINING → EXTRACTING → QUIZ → DONE/FAILED` 순으로 상태를 DB에 기록한다.
-- 업로드 ZIP 처리 시 **Zip Slip 방어**(엔트리 경로 정규화 후 대상 폴더 밖이면 거부), 파일 수(200)·크기(10MB) 제한, `.env`와 키 패턴 제거를 반드시 한다.
+- 업로드 ZIP 처리 시 **Zip Slip 방어**(엔트리 경로 정규화 후 대상 폴더 밖이면 거부), 인덱스 상한(파일 2,000개·합계 30MB, 넘는 파일은 버리고 `dropped_files`에 센다, F-26a), `.env`와 키 패턴 제거를 반드시 한다.
 - 원본 ZIP과 압축 해제 폴더는 `finally`에서 삭제한다.
 
 ## 테스트

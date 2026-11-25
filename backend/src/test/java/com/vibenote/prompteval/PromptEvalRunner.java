@@ -14,9 +14,11 @@ import com.vibenote.analysis.explain.FileExplanation;
 import com.vibenote.analysis.explain.OverviewExplainer;
 import com.vibenote.analysis.explain.PromptTemplates;
 import com.vibenote.analysis.pipeline.AnalysisFailedException;
-import com.vibenote.analysis.pipeline.FileSelector;
+import com.vibenote.analysis.pipeline.ImportanceRanker;
+import com.vibenote.analysis.pipeline.RankedFile;
 import com.vibenote.analysis.pipeline.SecretRedactor;
 import com.vibenote.analysis.pipeline.SelectedFile;
+import com.vibenote.analysis.pipeline.SelectionProperties;
 import com.vibenote.analysis.pipeline.SourceFile;
 import com.vibenote.analysis.pipeline.ZipArchiveReader;
 import com.vibenote.common.Level;
@@ -107,7 +109,10 @@ class PromptEvalRunner {
                 binder.bindOrCreate("analysis.explain", ExplainProperties.class);
 
         Fixture source = fixture(fixture);
-        List<AnalysisFile> files = select(source.zip(), analysisProps);
+        SelectionProperties selectionProps =
+                binder.bindOrCreate("analysis.selection", SelectionProperties.class);
+        List<AnalysisFile> index = select(source.zip(), analysisProps, selectionProps);
+        List<AnalysisFile> files = index.stream().filter(AnalysisFile::isSelected).toList();
         List<ApiEndpoint> apis = ApiDetector.detect(files);
 
         RecordingLlmClient llm = new RecordingLlmClient(LiveLlmClients.gemini(gemini), pauseMs);
@@ -122,7 +127,7 @@ class PromptEvalRunner {
             Map<String, Object> result = new LinkedHashMap<>();
             llm.startLevel(level);
             try {
-                AnalysisOverview overview = overviewExplainer.explain(analysis, files, apis);
+                AnalysisOverview overview = overviewExplainer.explain(analysis, files, index, apis);
                 result.put("overview", overview);
                 if (stage.equals("file")) {
                     List<Map<String, Object>> explained = new ArrayList<>();
@@ -182,19 +187,23 @@ class PromptEvalRunner {
         System.out.printf("[prompt-eval] result=%s%n", ROOT.relativize(out));
     }
 
-    /** 실제 파이프라인의 SELECTING 단계와 같다 (선별 → 비밀 가림). 파일 id는 선별 순서대로 1부터. */
-    private static List<AnalysisFile> select(Path zip, AnalysisProperties props) {
-        List<SourceFile> read = new ZipArchiveReader(props).read(zip);
-        List<SelectedFile> selected = FileSelector.select(read, props.maxSelectedFiles());
+    /** 실제 파이프라인의 SELECTING 단계와 같다 (인덱스 전체에 선별 표시 → 비밀 가림). 파일 id는 저장 순서(선별 파일 먼저)대로 1부터. */
+    private static List<AnalysisFile> select(
+            Path zip, AnalysisProperties props, SelectionProperties selectionProps) {
+        List<SourceFile> read = new ZipArchiveReader(props).read(zip).files();
+        List<RankedFile> ranked =
+                new ImportanceRanker(selectionProps).rank(read, props.maxSelectedFiles());
         List<AnalysisFile> files = new ArrayList<>();
-        for (SelectedFile f : selected) {
+        for (RankedFile f : ranked) {
             AnalysisFile row =
                     AnalysisFile.of(
                             0L,
                             new SelectedFile(
                                     f.path(),
                                     f.layer(),
-                                    SecretRedactor.redact(f.path(), f.content())));
+                                    SecretRedactor.redact(f.path(), f.content()),
+                                    f.selected(),
+                                    f.importance()));
             row.setId((long) files.size() + 1);
             files.add(row);
         }
