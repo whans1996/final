@@ -119,6 +119,10 @@
         WHERE id = #{id} AND user_id = #{userId} AND deleted_at IS NULL AND status IN ('DONE', 'FAILED')
     </update>
 
+    <select id="findUndeletedIds" resultType="long">
+        SELECT id FROM analyses WHERE user_id = #{userId} AND deleted_at IS NULL
+    </select>
+
     <delete id="deleteConceptLinks">
         DELETE FROM analysis_concepts WHERE analysis_id = #{analysisId}
     </delete>

@@ -108,6 +108,74 @@ class WithdrawalApiTest extends UserTestSupport {
         assertThat(count("SELECT COUNT(*) FROM users WHERE id = ?", me)).isEqualTo(1);
     }
 
+    private long analysis(long userId, String status) {
+        jdbc.update(
+                "INSERT INTO analyses (user_id, source_type, project_name, title, level, status)"
+                        + " VALUES (?, 'ZIP', 'todo-app', 'todo-app', 'BEGINNER', ?)",
+                userId,
+                status);
+        long id = count("SELECT MAX(id) FROM analyses WHERE user_id = ?", userId);
+        jdbc.update(
+                "INSERT INTO analysis_files (analysis_id, path, layer, content) VALUES (?,"
+                        + " 'A.java', 'controller', 'class A {}')",
+                id);
+        jdbc.update(
+                "INSERT INTO analysis_concepts (analysis_id, concept_id, file_id) VALUES (?,"
+                        + " (SELECT MIN(id) FROM concepts), (SELECT MAX(id) FROM analysis_files))",
+                id);
+        jdbc.update(
+                "INSERT INTO analysis_flows (analysis_id, endpoint, status, created_at) VALUES"
+                        + " (?, 'GET /api/todos', 'PENDING', NOW())",
+                id);
+        jdbc.update("INSERT INTO quizzes (analysis_id) VALUES (?)", id);
+        return id;
+    }
+
+    private int children(long analysisId) {
+        return count(
+                "SELECT (SELECT COUNT(*) FROM analysis_files WHERE analysis_id = ?)"
+                        + " + (SELECT COUNT(*) FROM analysis_flows WHERE analysis_id = ?)"
+                        + " + (SELECT COUNT(*) FROM analysis_concepts WHERE analysis_id = ?)",
+                analysisId,
+                analysisId,
+                analysisId);
+    }
+
+    @Test
+    void AC6_탈퇴하면_내_분석은_진행_중이어도_삭제되고_파일_흐름_개념_연결이_지워진다() throws Exception {
+        long me = createUser("user@example.com", "코딩초보");
+        long b = createUser("b@example.com", "회원비");
+        long done = analysis(me, "DONE");
+        long running = analysis(me, "EXPLAINING");
+        long others = analysis(b, "DONE");
+
+        withdraw(me, "{\"password\":\"" + PASSWORD + "\"}").andExpect(status().isNoContent());
+
+        for (long id : new long[] {done, running}) {
+            assertThat(
+                            count(
+                                    "SELECT COUNT(*) FROM analyses WHERE id = ? AND deleted_at IS"
+                                            + " NOT NULL",
+                                    id))
+                    .isEqualTo(1);
+            assertThat(children(id)).isZero();
+        }
+        // 진행 중이던 분석은 FAILED로 바뀌어 파이프라인이 다음 단계에서 멈춘다 (advance → false)
+        assertThat(
+                        count(
+                                "SELECT COUNT(*) FROM analyses WHERE id = ? AND status = 'FAILED'",
+                                running))
+                .isEqualTo(1);
+        // 퀴즈는 F-19 삭제처럼 남고, 다른 회원의 분석은 그대로다
+        assertThat(count("SELECT COUNT(*) FROM quizzes WHERE analysis_id = ?", done)).isEqualTo(1);
+        assertThat(
+                        count(
+                                "SELECT COUNT(*) FROM analyses WHERE id = ? AND deleted_at IS NULL",
+                                others))
+                .isEqualTo(1);
+        assertThat(children(others)).isEqualTo(3);
+    }
+
     @Test
     void AC7_비밀번호가_없으면_400_COMMON_400() throws Exception {
         long me = createUser("user@example.com", "코딩초보");

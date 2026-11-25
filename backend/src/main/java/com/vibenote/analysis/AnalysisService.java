@@ -43,6 +43,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class AnalysisService {
 
+    /** 탈퇴로 중단한 분석의 error_message. 주인이 탈퇴해 화면에 나오지 않는다. */
+    private static final String WITHDRAWN_MESSAGE = "회원 탈퇴로 분석을 중단했습니다.";
+
     /** analyses.title 길이. project_name(200)보다 짧으므로 둘 다 이 길이로 자른다. */
     static final int MAX_NAME_LENGTH = 100;
 
@@ -264,6 +267,24 @@ public class AnalysisService {
                     .orElseThrow(() -> new BusinessException(ErrorCode.ANALYSIS_404));
             throw new BusinessException(ErrorCode.ANALYSIS_005);
         }
+        deleteChildren(analysisId);
+    }
+
+    /**
+     * 회원 탈퇴 때 그 회원의 분석을 모두 지운다 (#91, 09-데이터셋 6절 "삭제"). 진행 중인 분석은 먼저 FAILED로 바꿔 파이프라인이 다음 {@link
+     * #advance}에서 멈추게 한 뒤, F-19 삭제와 같이 soft delete하고 파일·흐름·개념 연결을 지운다. 탈퇴 트랜잭션에 참여한다.
+     */
+    @Transactional
+    public void deleteAllOf(long userId) {
+        LocalDateTime now = now();
+        for (long id : analysisMapper.findUndeletedIds(userId)) {
+            analysisMapper.markFailed(id, ErrorCode.ANALYSIS_500.name(), WITHDRAWN_MESSAGE, now);
+            analysisMapper.softDelete(id, userId, now);
+            deleteChildren(id);
+        }
+    }
+
+    private void deleteChildren(long analysisId) {
         // analysis_concepts.file_id가 analysis_files를 참조하므로 개념 연결을 먼저 지운다
         analysisMapper.deleteConceptLinks(analysisId);
         analysisMapper.deleteFlows(analysisId);

@@ -83,6 +83,9 @@ public interface AnalysisMapper {
     int softDelete(
             @Param("id") long id, @Param("userId") long userId, @Param("now") LocalDateTime now);
 
+    /** 회원의 미삭제 분석 id 전체 (진행 중 포함). 회원 탈퇴 정리용 (#91). */
+    List<Long> findUndeletedIds(long userId);
+
     void deleteConceptLinks(long analysisId);
 
     void deleteFlows(long analysisId);
