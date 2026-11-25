@@ -25,7 +25,7 @@ import org.springframework.stereotype.Component;
  * PENDING 흐름 하나를 만든다: 입력 파일 추적 → 프롬프트 → LLM 1회(형식 오류 시 1회 재시도) → 검증·저장 (F-07 AC1·AC5). 실패하면 그 흐름만
  * FAILED로 둔다.
  *
- * <p>{@code @Transactional} 안에서 부르지 않는다 ({@link LlmClient} 주석). 실행기({@code analysisExecutor}) 스레드에서
+ * <p>{@code @Transactional} 안에서 부르지 않는다 ({@link LlmClient} 주석). 흐름 실행기({@code flowExecutor}) 스레드에서
  * 돈다.
  */
 @Component
