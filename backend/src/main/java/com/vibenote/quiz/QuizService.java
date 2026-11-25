@@ -33,6 +33,7 @@ import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 /** 퀴즈 조회(F-14 AC5)와 풀이 채점·오답 복습 추가(AC6~AC8). LLM을 부르지 않는다. */
@@ -94,8 +95,10 @@ public class QuizService {
     /**
      * 채점해 풀이·답을 저장하고, 틀린 문항의 공개 개념을 내일 복습 계획에 넣는다. 모두 한 트랜잭션이다. 문항마다 정확히 한 번씩 답하지 않으면 아무것도 저장하지 않고
      * QUIZ_400. 분석 주인이거나 그 분석을 공유받은 팀 멤버(F-20b AC5)만 낼 수 있고, 아니면 QUIZ_404다. 풀이·복습 계획은 요청자의 것이다.
+     *
+     * <p>READ_COMMITTED: 챌린지 집계가 참여 행 잠금을 기다리는 동안 커밋된 같은 회원의 다른 풀이도 센다 (F-25, #104).
      */
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public QuizAttemptResponse submit(long userId, long quizId, QuizAttemptRequest request) {
         Quiz quiz =
                 mapper.findActive(quizId)

@@ -11,6 +11,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.convention.TestBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 /**
  * F-25 통합 테스트 공통 (docs/specs/F-25-challenge-participation.md). 오늘은 2026-11-24 10:00(KST)이다.
@@ -24,6 +25,9 @@ abstract class ChallengeTestSupport extends IntegrationTestBase {
     static final String NOW_TEXT = "2026-11-24T10:00:00+09:00";
 
     @TestBean Clock clock;
+
+    /** 집계 실패를 흉내 낼 때만 stub한다. 하위 클래스가 같은 컨텍스트를 쓰도록 여기에 둔다. */
+    @MockitoSpyBean ChallengeProgressService progressService;
 
     static Clock clock() {
         return Clock.fixed(FIXED_NOW.atZone(KST).toInstant(), KST);
