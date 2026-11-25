@@ -1,30 +1,30 @@
 # NOW — 김준섭 현재 작업 스냅샷
 
 > 김준섭(B 영역: 카드·소셜) 전용. 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
-갱신: 2026-11-24 14:23 · 작업자: JoonseobKim · PC: js-home · 브랜치: feature/issue-44-sync-tests
+갱신: 2026-11-25 14:29 · 작업자: JoonseobKim · PC: js-home · 브랜치: feature/common-screens-landing
 
 ---
 
 ## 현재 기능
 
-**#44 하네스 자동 동기화 다듬기** (`feature/issue-44-sync-tests`, develop 합침). 이슈 브랜치, 이슈 "제안"이 수용 기준
+**SC-01 랜딩 화면 설계 초안 (WBS 1.8)** — `feature/common-screens-landing`. **PR #147** 열림: CI 초록, Codex ✅ b545e20. 머지 영향 점검 완료(develop·PR #148과 충돌 없음, `common-screens-challenge` 커밋은 전부 이 브랜치에 포함)
 
 ## 진행
 
-- ✅ #77 PR #119 머지 (11-24), #77 닫힘
-- ✅ #44 d3c96bf: `sync.test.mjs` 실제 저장소 테스트 7개(ff 실패·갈라짐·detached·병합 중·autoSync off/no/0·merge.ff only/false), `autoSyncEnabled` `--type=bool`, session-start "## 자동 동기화"를 Git 블록 뒤로. 하네스 테스트 93개 통과
-- ✅ reviewer 권장 반영: `mergeOne`에 `--ff` 명시(`merge.ff`·`branch.<name>.mergeOptions`보다 우선), detached 테스트 `deepEqual(lines, [])`. 불리언 아닌 값 경고는 하지 않음(사용자 결정)
-- PR 설명 `.harness/pr-issue-44.md` (A 영역 하네스 파일 3개 → @whans1996)
+- ✅ SC-01: `06-화면설계서.md` SC-01 절(현재 자리 표시 + 계획 구성 5절·와이어프레임·상태별 UI·결정 필요 3건) + `screens/SC-01-landing-{desktop,mobile}.png`
 
 ## 바로 다음 할 일
 
-1. #44 PR #120: Codex ✅ f1ade0d, Backend CI 진행 중(나머지 초록) → CI 초록 확인 후 사람이 GitHub에서 머지 (머지되면 #44는 close-issues가 닫음)
-2. #77·#44 뒤에는 멈춘다 (사용자 지시 11-24). 남은 후보: WBS 1.8 화면 설계서 챌린지 SC-12·13·21(기한 11/28), Phase 6은 나중에
+1. PR #147 GitHub에서 머지(사람, develop이 바뀌었으면 `git merge origin/develop` → push → CI 재확인). 머지 뒤 원격 `feature/common-screens-challenge`·`common-screens-landing` 삭제 확인. WBS 1.8·진행현황 "남음 SC-01"은 11/29 `/progress`가 고침
+2. 11/27 Figma 공동 세션 준비 (F-29: 방향·브랜드 색·토큰, 기반 Tailwind v4 + Reka UI)
+3. DS-03 평가 저장소 5개(Spring BE·Vue FE·풀스택·소규모·엉성한 AI 생성 코드 + **200개 초과·TS/React 포함**) + DS-04 라벨(꼭/나와도 됨/틀림) 12/03 마감. 블라인드(김동환 열람 금지), 저장 위치 미정(블라인드라 공용 저장소 불가 → 사람이 정해야 시작). V-2 세부(D·E 기준표 1~5점, v1/v2 블라인드 쌍 비교, 선택 규칙, 결과 형식)는 이때 `09-데이터셋.md`·평가 문서에 적는다
+4. V-1 MVP 감사(11/29~12/02, B 영역) → V-4 FE 늦은 응답 composable(12/03~10)
 
 ## 막힌 점 / 결정 필요
 
-- 없음
+- SC-01(랜딩 구현 때): 샘플 분석 데이터 출처, 로그인 회원 `/` → 대시보드, 비회원 랜딩 추천 대신 인기순 공개 카드 (F-16 spec 9절에서 미룸)
 
 ## 주의
 
-- 최종 ERD 이미지(`diagrams/erd.png`, Workbench Reverse Engineer)는 W5에 붙인다
+- B 일정(WBS 재계획): F-29 11/27~12/20, U-1 12/07~14, F-28 FE 12/10~14, V-4 FE 12/03~10, DS-03·04 12/03. 최종 ERD 이미지는 W5
+- 하네스 가드 의견(`xargs git reset --hard`, `python -c`/`node -e` .env 읽기 미차단)은 작업로그 11-25 14:23 메모로 옮김
