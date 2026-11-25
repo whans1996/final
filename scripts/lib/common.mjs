@@ -240,6 +240,25 @@ export function transcriptUsage(path) {
   return [...byId.values()];
 }
 
+/**
+ * 턴 usage 합계. weighted는 입력 환산치: 캐시 쓰기 1.25배, 캐시 읽기 0.1배, 출력 5배 (모델 간 단가 차이는 무시한 대략치).
+ * token-report(세션별)와 weekly(주간 지표)가 함께 쓴다
+ */
+export function usageSummary(turns) {
+  const s = { turns: turns.length, input: 0, cacheWrite: 0, cacheRead: 0, output: 0, maxCtx: 0, models: new Set() };
+  for (const t of turns) {
+    s.input += t.input;
+    s.cacheWrite += t.cacheWrite;
+    s.cacheRead += t.cacheRead;
+    s.output += t.output;
+    s.maxCtx = Math.max(s.maxCtx, t.ctx);
+    if (t.model) s.models.add(t.model.replace(/^claude-/, ''));
+  }
+  s.avgCtx = s.turns ? (s.input + s.cacheWrite + s.cacheRead) / s.turns : 0;
+  s.weighted = s.input + s.cacheWrite * 1.25 + s.cacheRead * 0.1 + s.output * 5;
+  return s;
+}
+
 /** 마지막 턴의 컨텍스트 크기(토큰). 큰 transcript도 빠르게 읽도록 끝부분만 본다. 모르면 0 */
 export function lastContextTokens(path, tailBytes = 512 * 1024) {
   try {
