@@ -155,8 +155,9 @@ GMS 요청 본문 예시:
 
 ## 9. 결정 필요
 
-- **기본 모델(`GMS_MODEL`)과 base URL**: 구현 중 최소 실호출(모델 목록 1회 + 구조화 출력 1~2회, 사용자 허용 11-25)로 확인해 확정한다. 후보 `gpt-4.1-mini`(구조화 출력 지원, 빠름). 확정 값은 이 절에서 지우고 6절·결정로그에 적는다
-- GMS의 키별 사용 한도(일·월)가 있는지: 실연결 때 응답 헤더·문서로 확인하고 F-28 한도 설계에 넘긴다
+- **기본 모델(`GMS_MODEL`)**: 구현 중 최소 실호출(모델 목록 1회 + 구조화 출력 1~2회, 사용자 허용 11-25)로 API 모델 ID를 확인해 확정한다. 후보 `gpt-4.1-mini`(4 크레딧, 구조화 출력 지원). 더 싼 후보: `gpt-4o-mini`(2), `gpt-5-nano`·`gpt-6-luna`(1). 표시 이름("gpt 6 luna")과 API ID가 다를 수 있다. 확정 값은 이 절에서 지우고 6절·결정로그에 적는다
+- ~~base URL~~ GMS 안내 문서(11-25 사용자 제공)로 확인: `https://gms.ssafy.io/gmsapi/` + 원래 엔드포인트. OpenAI는 `…/api.openai.com/v1`(Chat Completions·Responses 모두), 인증은 `Authorization: Bearer <GMS 키>`. 6절 기본값 그대로
+- ~~키별 사용 한도~~ 문서로 확인: 일·월 한도가 아니라 **팀 키 하나의 크레딧 총량과 만료일**이다. 모델마다 호출 비용(크레딧)이 다르다. 잔여량은 `GET https://gms.ssafy.io/gmsapi/key-info`(Bearer) → `{totalCredit, usedCredit, remainCredit, expiredDate}`. F-28 한도 설계에 넘긴다 (크레딧이 호출당인지 토큰당인지는 실호출 전후 `key-info`로 확인)
 
 ## 10. 구현 체크리스트
 

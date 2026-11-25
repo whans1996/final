@@ -23,7 +23,7 @@ class UsageLoggingLlmClientTest {
     @Test
     void AC6_성공하면_응답_모델과_토큰과_요청의_사용자_분석_id를_기록한다() {
         LlmResponse ok = new LlmResponse("{}", "qwen-test", 11, 22);
-        LlmClient client = new UsageLoggingLlmClient(req -> ok, "qwen-test", mapper);
+        LlmClient client = new UsageLoggingLlmClient(req -> ok, "ollama", "qwen-test", mapper);
 
         assertThat(client.complete(request)).isEqualTo(ok);
 
@@ -48,6 +48,7 @@ class UsageLoggingLlmClientTest {
                         req -> {
                             throw failure;
                         },
+                        "gemini",
                         "gemini-test",
                         mapper);
 
@@ -70,6 +71,7 @@ class UsageLoggingLlmClientTest {
                             throw new IllegalStateException("PROMPT-BODY-SECRET 포함 메시지");
                         },
                         "mock",
+                        "mock",
                         mapper);
 
         assertThatThrownBy(() -> client.complete(request))
@@ -85,6 +87,7 @@ class UsageLoggingLlmClientTest {
                         req -> {
                             throw new LlmUnavailableException("x".repeat(600));
                         },
+                        "gemini",
                         "gemini-test",
                         mapper);
 
@@ -100,11 +103,15 @@ class UsageLoggingLlmClientTest {
                         req -> {
                             throw new LlmUnavailableException("Gemini 500");
                         },
+                        "gemini",
                         "gemini-test",
                         mapper);
         LlmClient ollama =
                 new UsageLoggingLlmClient(
-                        req -> new LlmResponse("{}", "qwen-test", 1, 2), "qwen-test", mapper);
+                        req -> new LlmResponse("{}", "qwen-test", 1, 2),
+                        "ollama",
+                        "qwen-test",
+                        mapper);
 
         new FallbackLlmClient(List.of(gemini, ollama)).complete(request);
 
@@ -116,13 +123,56 @@ class UsageLoggingLlmClientTest {
     }
 
     @Test
+    void AC9_성공과_실패_모두_실제_공급자를_기록한다() {
+        LlmClient gms =
+                new UsageLoggingLlmClient(
+                        req -> {
+                            throw new LlmUnavailableException("GMS 429");
+                        },
+                        "gms",
+                        "gpt-test",
+                        mapper);
+        LlmClient ollama =
+                new UsageLoggingLlmClient(
+                        req -> new LlmResponse("{}", "qwen-test", 1, 2),
+                        "ollama",
+                        "qwen-test",
+                        mapper);
+
+        new FallbackLlmClient(List.of(gms, ollama)).complete(request);
+
+        assertThat(rows)
+                .extracting(LlmUsageLog::provider, LlmUsageLog::success)
+                .containsExactly(
+                        org.assertj.core.groups.Tuple.tuple("gms", false),
+                        org.assertj.core.groups.Tuple.tuple("ollama", true));
+    }
+
+    @Test
+    void AC4_실패_행의_모델은_그_단계에_보낼_모델이다() {
+        LlmClient client =
+                new UsageLoggingLlmClient(
+                        req -> {
+                            throw new LlmUnavailableException("GMS 500");
+                        },
+                        "gms",
+                        stage -> stage == LlmStage.QUIZ ? "model-b" : "model-a",
+                        mapper);
+
+        assertThatThrownBy(() -> client.complete(request));
+        assertThatThrownBy(() -> client.complete(new LlmRequest(LlmStage.FILE, Level.JUNIOR, "p")));
+
+        assertThat(rows).extracting(LlmUsageLog::model).containsExactly("model-b", "model-a");
+    }
+
+    @Test
     void AC7_기록이_실패해도_응답을_반환한다(CapturedOutput output) {
         LlmResponse ok = new LlmResponse("{}", "mock", 0, 0);
         LlmUsageLogMapper broken =
                 log -> {
                     throw new IllegalStateException("DB down");
                 };
-        LlmClient client = new UsageLoggingLlmClient(req -> ok, "mock", broken);
+        LlmClient client = new UsageLoggingLlmClient(req -> ok, "mock", "mock", broken);
 
         assertThat(client.complete(request)).isEqualTo(ok);
         assertThat(output).contains("WARN").contains("llm_usage_logs");
@@ -140,6 +190,7 @@ class UsageLoggingLlmClientTest {
                         req -> {
                             throw failure;
                         },
+                        "ollama",
                         "qwen-test",
                         broken);
 

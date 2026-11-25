@@ -6,6 +6,7 @@ import static org.springframework.test.web.client.ExpectedCount.once;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withException;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 import com.vibenote.common.Level;
 import com.vibenote.common.exception.BusinessException;
@@ -45,6 +46,9 @@ class FallbackLlmClientTest {
                             KEY, "gemini-test", "https://gemini.test", Duration.ofSeconds(5)));
 
     final LlmRequest request = new LlmRequest(LlmStage.CONCEPT, Level.SENIOR, PROMPT);
+    static final org.springframework.http.MediaType JSON =
+            org.springframework.http.MediaType.APPLICATION_JSON;
+
     final LlmResponse ollamaResponse = new LlmResponse("{\"ok\":true}", "qwen-test", 3, 4);
 
     static Stream<Arguments> geminiFailures() {
@@ -118,6 +122,71 @@ class FallbackLlmClientTest {
                 .isInstanceOfSatisfying(
                         BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(ErrorCode.LLM_503));
+    }
+
+    static final String GMS_URL = "https://gms.test/v1/chat/completions";
+
+    static Stream<Arguments> gmsFailures() {
+        String refusal =
+                "{\"choices\":[{\"message\":{\"content\":null,\"refusal\":\"no\"},\"finish_reason\":\"stop\"}]}";
+        String truncated =
+                "{\"choices\":[{\"message\":{\"content\":\"{\"},\"finish_reason\":\"length\"}]}";
+        return Stream.of(
+                Arguments.of("401", withStatus(HttpStatus.UNAUTHORIZED)),
+                Arguments.of("429", withStatus(HttpStatus.TOO_MANY_REQUESTS)),
+                Arguments.of("503", withStatus(HttpStatus.SERVICE_UNAVAILABLE)),
+                Arguments.of("타임아웃", withException(new SocketTimeoutException("Read timed out"))),
+                Arguments.of("choices 없음", withSuccess("{\"choices\":[]}", JSON)),
+                Arguments.of("거부", withSuccess(refusal, JSON)),
+                Arguments.of("잘림", withSuccess(truncated, JSON)));
+    }
+
+    GmsLlmClient gms() {
+        return new GmsLlmClient(
+                builder,
+                new LlmProperties.Gms(
+                        "test-gms-key-SECRET",
+                        "https://gms.test/v1",
+                        "gpt-test",
+                        java.util.Map.of(),
+                        Duration.ofSeconds(5)),
+                LlmSchemas.load());
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("gmsFailures")
+    void AC5_GMS가_실패하면_재시도_없이_Ollama가_답한다(String name, ResponseCreator failure) {
+        server.expect(once(), requestTo(GMS_URL)).andRespond(failure);
+        AtomicInteger ollamaCalls = new AtomicInteger();
+        LlmClient ollama =
+                req -> {
+                    ollamaCalls.incrementAndGet();
+                    return ollamaResponse;
+                };
+
+        LlmResponse response = new FallbackLlmClient(List.of(gms(), ollama)).complete(request);
+
+        server.verify(); // GMS는 정확히 한 번만 불렸다 (재시도 없음)
+        assertThat(ollamaCalls).hasValue(1);
+        assertThat(response).isEqualTo(ollamaResponse);
+    }
+
+    @Test
+    void AC5_GMS와_Ollama가_모두_실패하면_LLM_503이고_키와_프롬프트가_없다(CapturedOutput output) {
+        server.expect(once(), requestTo(GMS_URL)).andRespond(withStatus(HttpStatus.UNAUTHORIZED));
+        LlmClient ollama =
+                req -> {
+                    throw new LlmUnavailableException("Ollama ConnectException");
+                };
+
+        assertThatThrownBy(() -> new FallbackLlmClient(List.of(gms(), ollama)).complete(request))
+                .isInstanceOfSatisfying(
+                        BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(ErrorCode.LLM_503));
+        assertThat(output).contains("GMS 401").contains("Ollama ConnectException");
+        assertThat(output)
+                .doesNotContain("test-gms-key-SECRET")
+                .doesNotContain("PROMPT-BODY-SECRET");
     }
 
     @Test
