@@ -3,33 +3,29 @@
 > 김동환(A 영역: AI·분석·학습 루프) 전용. 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
-갱신: 2026-11-25 10:28 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/common-plan2-1125
+갱신: 2026-11-25 10:36 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/common-replan-1125
 
 ## 현재 기능
 
-**2차 기획 확정 (Phase 6)**: 11-25 인터뷰 결과를 기획서 6절 백로그(T0~T3, 12/14 동결)와 결정로그 11-25 행 11개에 기록했다. idea·follow-up 이슈 20개에 결정 댓글을 달았다. 김준섭의 합의를 받는 docs PR이다.
+**WBS·간트 2차 재계획** (docs PR): 2차 기획(PR #127 머지)을 WBS 4절(V-1~V-5·F-29로 재조정)과 새 6절(H-1·F-26~F-33 등 6.1~6.15), 간트, 진행현황, 기획서 4절 주석·6절 동결 문구, 결정로그 1행에 반영했다. M4 = 12/14 T0·T1 기능 동결, T2는 W5에 티어 순서대로 하다가 12/20에 멈춘다(사용자 결정).
 
 ## 진행
 
-- ✅ 기획서 6절 백로그 표·Phase 6, F-22·F-23 행 티어 / 결정로그 11행 / 이슈 댓글 (#107~#115, #24·#26·#121~#125 → F-26b, #104·#105 → V-4, #29 → H-1, #91 삭제)
-- 🟡 커밋·push → PR `docs: 2차 기획 확정 (Phase 6)`, @JoonseobKim 합의 요청 (역할 재분배·디자인 재시작·DS-03 범위)
+- ✅ 04-WBS·05-간트·진행현황·기획서·결정로그 편집
+- 🟡 커밋·push → PR `docs: WBS·간트 2차 재계획 (W2)` → CI 초록이면 내가 머지 (docs 예외)
 
 ## 바로 다음 할 일
 
-1. PR 리뷰를 반영하고 머지한다. 김준섭이 이의를 내면 이 PR에서 고친다. 머지 후 `/progress`로 WBS·간트를 재계획한다 (4.1·4.2·4.3 재조정, H-1·F-26~F-33 행 추가).
-2. **H-1 하네스 개편 (11/26~28)**, 브랜치 `feature/common-harness-revamp`
-   - `.githooks/commit-msg.mjs`: 빠른 검사만 하게 바꾸고 pre-push hook을 추가한다. Gradle은 잠금 파일로 직렬화한다.
-   - `.claude/hooks/guard-bash.mjs`: 셸 토큰 파서로 바꾼다.
-   - `scripts/stamp.mjs`: NOW·작업로그 자동 초안을 추가한다.
-   - `scripts/doctor.mjs`를 새로 만든다.
-   - 안전 명령 허용 목록은 fewer-permission-prompts 스킬로 정한다.
-3. **V-1 MVP 전체 감사**: 영역별 에이전트로 감사하고, 검증된 것만 follow-up으로 만든다. #73·#94·#91을 즉시 처리한다.
-4. 11/27(목) Figma 공동 세션 (방향·브랜드 색·토큰) → 이후 F-27 GMS 공급자 `/spec`
+1. 재계획 PR 머지 → `/clear` → 새 세션(Opus/high)
+2. **H-1 하네스 개편 (WBS 6.1, 11/26~28)**: `git switch -c feature/common-harness-revamp origin/develop`
+   - `.githooks/commit-msg.mjs`: 빠른 검사(포맷·린트·관련 단위 테스트)만 하고 pre-push hook을 추가한다. Gradle은 잠금 파일로 직렬화한다.
+   - `.claude/hooks/guard-bash.mjs`: 셸 토큰 파서로 바꾼다. `scripts/stamp.mjs`: NOW·작업로그 자동 초안. `scripts/doctor.mjs`를 새로 만든다. 허용 목록은 fewer-permission-prompts 스킬로 정한다. #29도 함께 처리한다.
+3. V-1 MVP 감사 (WBS 4.4, 11/29~12/02, A·B): #73·#94·#91 즉시 처리
+4. 11/27(목) Figma 공동 세션 → 12/01 F-27 GMS `/spec` (GMS 키가 필요하다)
 
 ## 막힌 점 / 결정 필요
 
-- 김준섭 합의 대기 (PR)
-- 사람: GMS 키 수령, 노션 팀원 초대, F-05b liveTest, 제출 zip 이름(지역·반)
+- 사람: GMS 키 수령(12/01 전), 노션 팀원 초대, F-05b liveTest, 제출 zip 이름(지역·반)
 
 ## 주의
 
