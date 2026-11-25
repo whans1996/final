@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 |---|---|
-| 상태 | APPROVED <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
+| 상태 | DONE (PR #157) <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
 | 기능 ID | F-26a (분석 커버리지 개편을 a 수집·선별 / b 계층 요약·분할·흐름으로 나눔, 11-25) |
 | 우선순위 | T0 (2차 백로그, 12/14 동결 대상) |
 | 영역 오너 | A 김동환 (AI·분석·학습 루프) |
@@ -198,5 +198,5 @@ ALTER TABLE analyses
 - [x] contract-checker 통과
 - [x] reviewer 지적 사항 반영
 - [x] 산출물 반영 (ERD `analysis_files`·`analyses` 열, 요구사항 정의서의 분석 요청 실패 조건)
-- [ ] PR CI 초록
-- [ ] 상태 DONE (PR 머지 후)
+- [x] PR CI 초록
+- [x] 상태 DONE (PR 머지 후)
