@@ -86,7 +86,10 @@ public interface AnalysisMapper {
     /** 진행 중이고 삭제되지 않은 분석이면 행을 잠그고 id를 돌려준다 (#91). */
     Optional<Long> lockInProgress(long id);
 
-    /** 회원의 미삭제 분석 id 전체 (진행 중 포함). 회원 탈퇴 정리용 (#91). */
+    /**
+     * 회원의 미삭제 분석 id 전체 (진행 중 포함)를 잠금 읽기로 얻는다. 회원 탈퇴 정리용 (#91). 탈퇴 트랜잭션의 스냅샷 뒤에 커밋된 분석도 보도록 일반
+     * SELECT가 아니라 최신 커밋을 읽는 FOR UPDATE를 쓴다.
+     */
     List<Long> findUndeletedIds(long userId);
 
     void deleteConceptLinks(long analysisId);

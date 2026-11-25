@@ -127,6 +127,7 @@
 
     <select id="findUndeletedIds" resultType="long">
         SELECT id FROM analyses WHERE user_id = #{userId} AND deleted_at IS NULL
+        FOR UPDATE
     </select>
 
     <delete id="deleteConceptLinks">
