@@ -25,7 +25,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /** 학습 챌린지 목록·상세(공개)와 참여·취소 (F-25). */
-@Tag(name = "챌린지", description = "학습 챌린지 목록·상세, 참여·취소, 참여한 챌린지와 달성도")
+@Tag(name = ChallengeApiDocs.TAG, description = ChallengeApiDocs.TAG_DESCRIPTION)
 @RestController
 @RequestMapping("/api/challenges")
 public class ChallengeController {

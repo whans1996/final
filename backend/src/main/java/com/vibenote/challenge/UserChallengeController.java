@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
 
 /** 참여한 챌린지 목록 (F-25 AC10·AC11). 회원 확인(404)을 조건 검증(400)보다 먼저 하려고 조건은 Service가 검증한다. */
-@Tag(name = "챌린지", description = "학습 챌린지 목록·상세, 참여·취소, 참여한 챌린지와 달성도")
+@Tag(name = ChallengeApiDocs.TAG, description = ChallengeApiDocs.TAG_DESCRIPTION)
 @RestController
 public class UserChallengeController {
 

@@ -44,7 +44,7 @@ import org.springframework.web.multipart.MultipartFile;
  * 분석 요청(ZIP F-05a·저장소 URL F-05b), 내 분석 목록, 진행 상태 (F-05a), 상세·파일 조회 (F-06), 개념 조회 (F-08), 수정·공개·삭제와
  * 공개 분석 열람 (F-19).
  */
-@Tag(name = "분석", description = "프로젝트 분석 요청, 내 분석 목록, 진행 상태, 분석 결과(개요·파일·개념) 조회, 수정·공개·삭제")
+@Tag(name = AnalysisApiDocs.TAG, description = AnalysisApiDocs.TAG_DESCRIPTION)
 @RestController
 @RequestMapping("/api/analyses")
 public class AnalysisController {

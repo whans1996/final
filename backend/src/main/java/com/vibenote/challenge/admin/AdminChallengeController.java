@@ -5,6 +5,7 @@ import com.vibenote.challenge.admin.dto.AdminChallengeRequest;
 import com.vibenote.challenge.admin.dto.AdminChallengeResponse;
 import com.vibenote.challenge.admin.dto.AdminChallengeSearchRequest;
 import com.vibenote.challenge.admin.dto.AdminChallengeSummaryResponse;
+import com.vibenote.common.AdminApiDocs;
 import com.vibenote.common.exception.ErrorResponse;
 import com.vibenote.common.page.PageQuery;
 import com.vibenote.common.page.PageResponse;
@@ -34,7 +35,7 @@ import org.springframework.web.bind.annotation.RestController;
  * 관리자 학습 챌린지 관리 (F-24): 목록·상세·등록·수정·삭제. ADMIN만 (SecurityConfig). 등록·수정은 대표 이미지 때문에
  * multipart/form-data로 받는다.
  */
-@Tag(name = "관리자", description = "관리자 전용 기능 (개념 카드 검수·관리, 학습 챌린지 관리)")
+@Tag(name = AdminApiDocs.TAG, description = AdminApiDocs.TAG_DESCRIPTION)
 @ApiResponse(
         responseCode = "401",
         description = "토큰 없음·만료 (AUTH_401)",
