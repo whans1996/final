@@ -1,33 +1,45 @@
 #!/usr/bin/env node
-// 검증 실행기: BE/FE의 포맷·린트·테스트·빌드를 돌리고 "실패한 부분만" 짧게 요약한다.
+// 검증 실행기: BE/FE/하네스의 포맷·린트·테스트·빌드를 돌리고 "실패한 부분만" 짧게 요약한다.
 // 전체 로그는 .harness/logs/ 에 저장한다. AI 컨텍스트(토큰)를 아끼기 위한 도구다.
 //
-// 사용법: node scripts/verify.mjs [be|fe|all] [--fix]
-//   be    backend: (spotlessCheck | --fix면 spotlessApply) → test
-//   fe    frontend: lint → test:unit/test (--run) → build
-//   all   둘 다 (기본값)
+// 사용법: node scripts/verify.mjs [be|fe|harness|all] [--fix] [--staged]
+//   be       backend: (spotlessCheck | --fix면 spotlessApply) → test
+//   fe       frontend: lint → test:unit/test (--run) → build
+//   harness  scripts/test 단위 테스트
+//   all      be·fe (기본값)
+//   --staged 커밋 hook용 빠른 검사 (H-1): 스테이징된 파일의 영역만, 포맷·린트와 관련 테스트만 돈다
+//            (scripts/lib/related.mjs). 빌드와 전체 테스트는 pre-push·CI가 한다
+// BE 단계는 .harness/gradle.lock으로 직렬화한다 (같은 PC에서 Gradle 동시 실행 방지).
+// --staged·--fix 없이 통과하고 그 영역에 커밋 안 된 변경이 없으면 .harness/verified.json에 HEAD를 남긴다 (pre-push가 같은 커밋을 다시 돌리지 않게).
 // 종료 코드: 0 = 모두 통과 또는 건너뜀, 1 = 실패
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
-import { ROOT, isWin } from './lib/common.mjs';
+import { ROOT, git, isWin } from './lib/common.mjs';
+import { acquireLock } from './lib/lock.mjs';
+import { areasOf, frontendCodeFiles, relatedBackendTests, relatedHarnessTests } from './lib/related.mjs';
 
 const args = process.argv.slice(2);
 const fix = args.includes('--fix');
+const staged = args.includes('--staged');
 let targets = args.filter((a) => !a.startsWith('--'));
-if (targets.length === 0 || targets.includes('all')) targets = ['be', 'fe'];
+const stagedFiles = staged ? git(['diff', '--cached', '--name-only', '--diff-filter=ACMR']).out.split('\n').filter(Boolean) : [];
+if (staged) targets = targets.length ? areasOf(stagedFiles).filter((a) => targets.includes(a)) : areasOf(stagedFiles);
+else if (targets.length === 0 || targets.includes('all')) targets = [...new Set([...targets.filter((t) => t !== 'all'), 'be', 'fe'])];
 
 const MAX_LINES_PER_STEP = 15;
-const logDir = join(ROOT, '.harness', 'logs');
+const harnessDir = join(ROOT, '.harness');
+const logDir = join(harnessDir, 'logs');
 mkdirSync(logDir, { recursive: true });
 const logFile = join(logDir, `verify-${new Date().toISOString().replace(/[:.]/g, '-')}.log`);
 let fullLog = '';
 const results = [];
 
 const stripAnsi = (s) => s.replace(/\x1b\[[0-9;]*[A-Za-z]/g, '');
+const quote = (a) => (/^[\w./:@=-]+$/.test(a) ? a : `"${a}"`);
 
 const FAIL_PATTERN =
-  /FAILED|FAIL\b|✗|×|Exception|Error\b|error:|AssertionError|expected|but was|Caused by|\.(java|vue|js|ts):\d+|BUILD FAILED|violations|✖/;
+  /FAILED|FAIL\b|✗|×|Exception|Error\b|error:|AssertionError|expected|but was|Caused by|\.(java|vue|js|ts|mjs):\d+|BUILD FAILED|violations|✖|not ok/;
 
 function summarize(out) {
   const lines = stripAnsi(out)
@@ -77,6 +89,15 @@ function skip(area, reason) {
   results.push({ area, step: '건너뜀', ok: true, skipped: true, reason });
 }
 
+function listFiles(dir, re) {
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+    const p = join(dir, e.name);
+    if (e.isDirectory()) return listFiles(p, re);
+    return re.test(e.name) ? [relative(ROOT, p).replace(/\\/g, '/')] : [];
+  });
+}
+
 function verifyBackend() {
   const dir = join(ROOT, 'backend');
   const buildFile = ['build.gradle', 'build.gradle.kts'].map((f) => join(dir, f)).find(existsSync);
@@ -84,13 +105,28 @@ function verifyBackend() {
   // 경로를 명시한다: NoDefaultCurrentDirectoryInExePath가 켜진 환경(Claude Code 등)에서는 cmd가 현재 폴더를 찾지 않는다
   const gradlew = isWin ? '.\\gradlew.bat' : './gradlew';
   const base = `${gradlew} --console=plain`;
-  const usesSpotless = /spotless/.test(readFileSync(buildFile, 'utf8'));
-  if (usesSpotless) {
-    if (!run('be', fix ? 'spotlessApply' : 'spotlessCheck', `${base} ${fix ? 'spotlessApply' : 'spotlessCheck'}`, dir)) {
-      if (!fix) return; // 포맷 실패면 테스트까지 갈 필요 없음
-    }
+  const release = acquireLock(join(harnessDir, 'gradle.lock'), {
+    label: `verify ${args.join(' ')}`.trim(),
+    onWait: (info) => console.log(`⏳ 다른 Gradle 실행이 끝나기를 기다립니다 (pid ${info?.pid}, ${info?.label || '?'})…`),
+  });
+  if (!release) {
+    results.push({ area: 'be', step: 'gradle 잠금', ok: false, secs: '0', summary: ['.harness/gradle.lock 대기 시간 초과. 멈춘 Gradle이 있는지 확인하세요'] });
+    return;
   }
-  run('be', 'test', `${base} test`, dir);
+  try {
+    const usesSpotless = /spotless/.test(readFileSync(buildFile, 'utf8'));
+    if (usesSpotless) {
+      if (!run('be', fix ? 'spotlessApply' : 'spotlessCheck', `${base} ${fix ? 'spotlessApply' : 'spotlessCheck'}`, dir)) {
+        if (!fix) return; // 포맷 실패면 테스트까지 갈 필요 없음
+      }
+    }
+    if (!staged) return void run('be', 'test', `${base} test`, dir);
+    const tests = relatedBackendTests(stagedFiles, listFiles(join(dir, 'src', 'test'), /\.java$/));
+    if (!tests.length) return void run('be', 'compileTestJava (관련 테스트 없음)', `${base} compileTestJava`, dir);
+    run('be', `관련 테스트 ${tests.length}개`, `${base} test ${tests.map((t) => `--tests ${t}`).join(' ')}`, dir);
+  } finally {
+    release();
+  }
 }
 
 function verifyFrontend() {
@@ -101,6 +137,7 @@ function verifyFrontend() {
     results.push({ area: 'fe', step: 'install', ok: false, secs: '0', summary: ['node_modules 없음 → cd frontend && npm install'] });
     return;
   }
+  if (staged) return verifyFrontendStaged(dir);
   const scripts = JSON.parse(readFileSync(pkgPath, 'utf8')).scripts || {};
   if (scripts.lint) {
     const lintCmd = fix ? 'npm run lint' : scripts['lint:check'] ? 'npm run lint:check' : 'npm run lint';
@@ -111,13 +148,69 @@ function verifyFrontend() {
   if (scripts.build) run('fe', 'build', 'npm run build', dir);
 }
 
+// 스테이징된 파일만 린트하고, 그 파일에 닿는 단위 테스트만 돈다 (vitest related)
+function verifyFrontendStaged(dir) {
+  const files = frontendCodeFiles(stagedFiles).filter((f) => existsSync(join(dir, f)));
+  if (!files.length) return skip('fe', '스테이징된 코드 파일 없음');
+  const scriptFiles = files.filter((f) => /\.(js|mjs|vue|ts)$/.test(f)).map(quote);
+  const srcFiles = files.filter((f) => f.startsWith('src/')).map(quote);
+  if (scriptFiles.length) {
+    run('fe', 'oxlint', `node scripts/run-oxlint.mjs ${scriptFiles.join(' ')}`, dir);
+    run('fe', 'eslint', `npx eslint --no-warn-ignored ${scriptFiles.join(' ')}`, dir);
+  }
+  if (srcFiles.length) run('fe', 'prettier', `npx prettier --check ${srcFiles.join(' ')}`, dir);
+  // 파일 없이 부르면 vitest related가 전체를 돈다
+  const testable = srcFiles.filter((f) => !/\.css"?$/.test(f));
+  if (testable.length) run('fe', '관련 테스트', `npx vitest related ${testable.join(' ')} --run --passWithNoTests`, dir);
+}
+
+function verifyHarness() {
+  const testFiles = listFiles(join(ROOT, 'scripts', 'test'), /\.test\.mjs$/);
+  if (!testFiles.length) return skip('harness', 'scripts/test 없음');
+  if (!staged) return void run('harness', 'test', `node --test "scripts/test/*.test.mjs"`, ROOT);
+  const picked = relatedHarnessTests(stagedFiles, testFiles, (p) => readFileSync(join(ROOT, p), 'utf8'));
+  if (!picked.length) return skip('harness', '관련 단위 테스트 없음 (전체는 pre-push)');
+  run('harness', `관련 테스트 ${picked.length}개`, `node --test ${picked.join(' ')}`, ROOT);
+}
+
+const AREA_PATHS = { be: ['backend'], fe: ['frontend'], harness: ['scripts', '.claude/hooks', '.githooks'] };
+
+// 전체 검증을 통과한 커밋을 남긴다. 그 영역에 커밋 안 된 변경이 있으면 HEAD와 검증한 내용이 달라 남기지 않는다
+function recordVerified(areas) {
+  const head = git(['rev-parse', 'HEAD']).out;
+  if (!head) return;
+  const path = join(harnessDir, 'verified.json');
+  let data = {};
+  try {
+    data = JSON.parse(readFileSync(path, 'utf8'));
+  } catch {
+    data = {};
+  }
+  for (const a of areas) {
+    const dirty = git(['status', '--porcelain', '--', ...AREA_PATHS[a]]).out;
+    if (!dirty) data[a] = head;
+  }
+  writeFileSync(path, JSON.stringify(data, null, 2));
+}
+
+if (staged && targets.length === 0) {
+  console.log('⏭  스테이징된 파일에 검증할 영역이 없습니다');
+  process.exit(0);
+}
 if (targets.includes('be')) verifyBackend();
 if (targets.includes('fe')) verifyFrontend();
+if (targets.includes('harness')) verifyHarness();
 
 writeFileSync(logFile, fullLog || '(실행된 단계 없음)\n', 'utf8');
 
 const failed = results.filter((r) => !r.ok);
+if (!staged && !fix) {
+  const ran = targets.filter((t) => results.some((r) => r.area === t && !r.skipped));
+  const passed = ran.filter((t) => !failed.some((r) => r.area === t));
+  if (passed.length) recordVerified(passed);
+}
 const lines = [];
+if (staged) lines.push(`⚡ 빠른 검사 (스테이징된 파일 ${stagedFiles.length}개, 전체는 pre-push·CI)`);
 for (const r of results) {
   if (r.skipped) lines.push(`⏭  [${r.area}] ${r.reason}`);
   else lines.push(`${r.ok ? '✅' : '❌'} [${r.area}] ${r.step} (${r.secs}s)`);

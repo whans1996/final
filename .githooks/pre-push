@@ -1,0 +1,4 @@
+#!/bin/sh
+# push 전 전체 검증 (커밋 hook은 빠른 검사만 한다, H-1). 로직은 pre-push.mjs에 있다.
+# 활성화: node scripts/setup.mjs (core.hooksPath = .githooks)
+exec node "$(git rev-parse --show-toplevel)/.githooks/pre-push.mjs" "$@"
