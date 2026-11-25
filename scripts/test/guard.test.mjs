@@ -109,6 +109,102 @@ test('보호 브랜치 커밋: cd·git -C로 바꾼 위치 기준', () => {
   ok('git status', { cwd: '/work/main-repo', commitBlocked, exists });
 });
 
+// PR 리뷰(reviewer)가 checkCommand로 직접 재현한 우회 사례. 옛 정규식 가드는 막았던 형태다
+test('셸 예약어·래퍼 뒤의 명령도 본다', () => {
+  no('if true; then git push --force origin x; fi');
+  no('if git diff --quiet; then :; else git reset --hard; fi');
+  no('for i in 1; do git reset --hard; done');
+  no('until git push -f; do :; done');
+  no('{ git push -f; }');
+  no('! git push -f');
+  no('true && { git clean -fdx; }');
+  no('timeout 60 git push --force');
+  no('timeout -s KILL 60 git push --force');
+  no('nice -n 10 git reset --hard');
+  no('echo x | xargs git push --force');
+  no('xargs -I {} git push --force origin {}');
+  no('env -u X git push -f');
+  no('sudo -u me git push -f');
+  ok('if git diff --quiet; then echo same; fi');
+  ok('timeout 60 git status');
+  ok('echo ${HOME} {a,b}');
+});
+
+test('PowerShell: \\는 글자 그대로, 백틱은 다음 글자 이스케이프, { }는 스크립트 블록', () => {
+  const ps = (cmd) => checkCommand(cmd, { cwd: 'C:/repo', shell: 'powershell' });
+  for (const cmd of [
+    'Get-Content .\\.env',
+    'type backend\\.env',
+    'gc C:\\Users\\me\\final\\.env',
+    'git commit -m "a`nb" --no-verify',
+    'git push origin `--force',
+    'if ($?) { git push --force }',
+    'try {git reset --hard} catch {}',
+    '1..2 | % { git push -f }',
+    'iex "git push -f"',
+    "Invoke-Expression 'git reset --hard'",
+  ])
+    assert.ok(ps(cmd), `차단되어야 함: ${cmd}`);
+  assert.equal(ps('git commit -m "줄`n바꿈"'), null);
+  assert.equal(ps('Get-Content .\\.env.example'), null);
+  assert.equal(ps('Get-ChildItem C:\\repo\\docs'), null);
+  // bash에서 부른 powershell -Command 안은 PowerShell 규칙으로 본다
+  no('powershell -Command "Get-Content .\\.env"');
+});
+
+test('heredoc: 셸이 받는 본문과 따옴표 없는 본문의 명령 치환', () => {
+  no('bash <<EOS\ngit push --force\nEOS');
+  no("bash <<'EOS'\ngit push --force\nEOS");
+  no("cat <<'EOS' | sh\ngit reset --hard\nEOS");
+  no('cat <<EOS\n$(git push --force)\nEOS');
+  no('cat <<EOS\n`git push --force`\nEOS');
+  no('echo "git push -f" | bash');
+  ok("cat <<'EOS'\n$(git push --force)\nEOS");
+  ok('cat <<EOS\n본문의 git push --force 글자\nEOS');
+  ok("git commit -F - <<'EOF'\nfix: git push --force 금지\nEOF");
+  ok('echo "git push -f" | cat');
+});
+
+test('git 긴 옵션 축약과 $\'…\' 따옴표', () => {
+  no('git commit --no-verif -m x');
+  no('git push --force-w');
+  no('git push --forc');
+  no('git reset --har');
+  no('git push --rep gitlab');
+  no("git push $'--force'");
+  no('git push $"--force"');
+  ok('git push --dry-run');
+  ok('git log --format=%s');
+  ok('git commit --amend --no-edit');
+});
+
+test('hook 경로를 바꾸는 다른 방법: GIT_CONFIG_*, --config-env, alias', () => {
+  no('GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=core.hooksPath GIT_CONFIG_VALUE_0=/tmp git commit -m x');
+  no('export GIT_CONFIG_PARAMETERS="\'core.hooksPath\'=\'/tmp\'"');
+  no('git --config-env core.hooksPath=X commit -m x');
+  no('git --config-env=core.hooksPath=X commit -m x');
+  no("git -c alias.ci='commit --no-verify' ci -m x");
+  no("git -c alias.p='!git push -f' p");
+  ok('git -c alias.st=status st');
+  ok('git config --get core.hooksPath');
+});
+
+test('push: GitLab --repo, main·develop으로 직접 push', () => {
+  no('git push --repo gitlab');
+  no('git push --repo=gitlab feature/x');
+  no('git push origin HEAD:develop');
+  no('git push origin feature/x:main');
+  no('git push origin feature/x:refs/heads/develop');
+  no('git push origin develop');
+  ok('git push origin feature/x:feature/x');
+  ok('git push -u origin feature/develop-notes');
+});
+
+test('.env를 출력할 수 있는 다른 읽기 명령', () => {
+  for (const cmd of ['sort .env', 'uniq .env', 'cut -c1-500 .env', 'diff .env .env.example', 'jq . .env', 'comm .env x', 'rev .env']) no(cmd);
+  ok('diff .env.example frontend/.env.example');
+});
+
 test('cd 경로: Windows에서 Git Bash 경로를 드라이브 경로로', () => {
   assert.equal(resolvePath('C:/repo', '/c/Users/SSAFY/final', 'win32'), 'C:/Users/SSAFY/final');
   assert.equal(resolvePath('C:/repo', '/d', 'win32'), 'D:/');

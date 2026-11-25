@@ -5,18 +5,25 @@
 //  - develop을 합쳐 들어온 상대 변경은 빼고, 이번 push에서 develop과 달라진 파일만 본다
 //  - 같은 커밋을 깨끗한 작업 트리에서 이미 통과한 영역은 다시 돌리지 않는다 (.harness/verified.json, verify.mjs가 남김)
 //  - 브랜치 삭제 push는 검사하지 않는다
+//  - main·develop으로 가는 push(삭제 포함)는 거부한다 (규칙 1. develop에는 PR로만 합친다)
 // stdin: <local ref> <local sha> <remote ref> <remote sha> (줄마다)
 import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { ROOT, git } from '../scripts/lib/common.mjs';
-import { prePushPlan } from '../scripts/lib/related.mjs';
+import { PROTECTED_BRANCHES, ROOT, git } from '../scripts/lib/common.mjs';
+import { prePushPlan, protectedPushes } from '../scripts/lib/related.mjs';
 
 const ZERO = /^0+$/;
-const updates = readFileSync(0, 'utf8')
+const all = readFileSync(0, 'utf8')
   .split('\n')
   .map((l) => l.trim().split(/\s+/))
-  .filter((p) => p.length === 4 && !ZERO.test(p[1]));
+  .filter((p) => p.length === 4);
+const blocked = protectedPushes(all, PROTECTED_BRANCHES);
+if (blocked.length) {
+  console.error(`\n❌ push가 거부되었습니다: ${blocked.join(', ')}에는 직접 push할 수 없습니다. feature 브랜치를 push하고 PR로 합치세요.\n`);
+  process.exit(1);
+}
+const updates = all.filter((p) => !ZERO.test(p[1]));
 if (!updates.length) process.exit(0);
 
 const develop = ['origin/develop', 'develop'].find((b) => git(['rev-parse', '--verify', '-q', b]).ok);

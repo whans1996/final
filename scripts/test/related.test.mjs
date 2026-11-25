@@ -1,7 +1,7 @@
 // 커밋 hook·pre-push의 검증 대상 선택 (H-1)
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { areasOf, frontendCodeFiles, prePushPlan, relatedBackendTests, relatedHarnessTests } from '../lib/related.mjs';
+import { areasOf, frontendCodeFiles, prePushPlan, protectedPushes, relatedBackendTests, relatedHarnessTests } from '../lib/related.mjs';
 
 const T = 'backend/src/test/java/com/vibenote/';
 const M = 'backend/src/main/java/com/vibenote/';
@@ -84,4 +84,13 @@ test('pre-push: wip는 건너뛰고, 같은 커밋을 이미 통과한 영역은
     targets: ['fe'],
     cached: ['be'],
   });
+});
+
+test('pre-push: main·develop으로 가는 push(삭제 포함)는 사람이든 Claude든 거부한다', () => {
+  const Z = '0'.repeat(40);
+  const line = (local, remote, sha = 'a'.repeat(40)) => [local, sha, remote, Z];
+  assert.deepEqual(protectedPushes([line('refs/heads/feature/x', 'refs/heads/feature/x')]), []);
+  assert.deepEqual(protectedPushes([line('HEAD', 'refs/heads/develop'), line('refs/heads/x', 'refs/heads/main')]), ['develop', 'main']);
+  assert.deepEqual(protectedPushes([line('(delete)', 'refs/heads/develop', Z)]), ['develop']);
+  assert.deepEqual(protectedPushes([line('refs/tags/v1', 'refs/tags/develop')]), []);
 });

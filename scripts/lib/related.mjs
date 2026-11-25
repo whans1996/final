@@ -98,3 +98,11 @@ export function prePushPlan({ tipSubject, files, verified = {}, sha }) {
   const cached = areas.filter((a) => sha && verified[a] === sha);
   return { skip: areas.length ? null : 'none', targets: areas.filter((a) => !cached.includes(a)), cached };
 }
+
+/**
+ * pre-push stdin 줄([local ref, local sha, remote ref, remote sha]) 중 main·develop으로 가는 것(삭제 포함)의 브랜치 이름.
+ * guard-bash는 Claude 명령만 보고 `git push`(HEAD)처럼 지금 브랜치로 가는 push는 모른다. 사람의 push도 여기서 막는다 (규칙 1).
+ */
+export function protectedPushes(updates, protectedBranches = ['main', 'develop']) {
+  return updates.map((u) => String(u[2] || '').replace(/^refs\/heads\//, '')).filter((b, k) => /^refs\/heads\//.test(updates[k][2]) && protectedBranches.includes(b));
+}

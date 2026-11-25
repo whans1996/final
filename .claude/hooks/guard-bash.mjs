@@ -14,6 +14,8 @@ if (!command) process.exit(0);
 
 const reason = checkCommand(command, {
   cwd: input.cwd || process.cwd(),
+  // PowerShell 도구는 \가 경로 구분자이고 백틱이 이스케이프다
+  shell: input.tool_name === 'PowerShell' ? 'powershell' : 'bash',
   exists: existsSync,
   // 보호 브랜치 직접 커밋 (첫 커밋, merge 진행 중은 예외)
   commitBlocked: (cwd) => {
