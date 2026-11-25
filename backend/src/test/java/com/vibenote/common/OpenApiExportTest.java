@@ -28,12 +28,7 @@ class OpenApiExportTest extends IntegrationTestBase {
 
     @Test
     void openapi_json을_추출한다() throws Exception {
-        String body =
-                mockMvc.perform(get("/v3/api-docs"))
-                        .andExpect(status().isOk())
-                        .andReturn()
-                        .getResponse()
-                        .getContentAsString(StandardCharsets.UTF_8);
+        String body = apiDocs();
 
         ObjectMapper sorted =
                 JsonMapper.builder().enable(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS).build();
@@ -57,17 +52,17 @@ class OpenApiExportTest extends IntegrationTestBase {
 
     @Test
     void 같은_이름의_태그는_하나로_합쳐진다() throws Exception {
-        String body =
-                mockMvc.perform(get("/v3/api-docs"))
-                        .andExpect(status().isOk())
-                        .andReturn()
-                        .getResponse()
-                        .getContentAsString(StandardCharsets.UTF_8);
-
         // Controller마다 description이 다르면 springdoc이 같은 이름의 태그를 따로 둔다 (#143).
-        List<?> tags =
-                (List<?>) JsonMapper.builder().build().readValue(body, Map.class).get("tags");
+        List<?> tags = (List<?>) objectMapper.readValue(apiDocs(), Map.class).get("tags");
         List<?> names = tags.stream().map(tag -> ((Map<?, ?>) tag).get("name")).toList();
         assertThat(names).doesNotHaveDuplicates();
+    }
+
+    private String apiDocs() throws Exception {
+        return mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString(StandardCharsets.UTF_8);
     }
 }

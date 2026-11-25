@@ -5,7 +5,7 @@ public final class AnalysisApiDocs {
 
     public static final String TAG = "분석";
     public static final String TAG_DESCRIPTION =
-            "프로젝트 분석 요청, 내 분석 목록, 진행 상태, 분석 결과(개요·파일·개념·구조 그래프·흐름) 조회, 수정·공개·삭제";
+            "프로젝트 분석 요청, 내 분석 목록, 진행 상태, 분석 결과(개요·파일·개념·구조 그래프) 조회, 실행 흐름 요청·조회, 수정·공개·삭제";
 
     private AnalysisApiDocs() {}
 }
