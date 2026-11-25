@@ -168,7 +168,7 @@ class AnalysisPipelineTest extends AnalysisTestSupport {
     }
 
     @Test
-    void AC7_지원_파일이_201개면_FAILED_ANALYSIS_413() throws IOException {
+    void F26a_AC2_지원_파일이_201개여도_413이_아니고_DONE이다() throws IOException {
         Map<String, String> entries = new LinkedHashMap<>();
         for (int i = 0; i < 201; i++) {
             entries.put("p/F" + i + ".java", "class F" + i + " {}");
@@ -178,12 +178,8 @@ class AnalysisPipelineTest extends AnalysisTestSupport {
         pipeline.run(id);
 
         Map<String, Object> row = analysisRow(id);
-        assertThat(row.get("status")).isEqualTo("FAILED");
-        assertThat(row.get("error_code")).isEqualTo("ANALYSIS_413");
-        assertThat(row.get("error_message"))
-                .isEqualTo("지원하는 코드 파일이 201개입니다. 200개 이하로 줄여서 다시 올려 주세요.");
-        assertThat(row.get("progress")).isEqualTo(15);
-        assertThat(files(id)).isEmpty();
+        assertThat(row.get("status")).isEqualTo("DONE");
+        assertThat(row.get("error_code")).isNull();
     }
 
     @Test
@@ -193,7 +189,7 @@ class AnalysisPipelineTest extends AnalysisTestSupport {
             entries.put(String.format("p/u/Util%03d.java", i), "class U {}");
         }
         entries.put("p/web/HomeController.java", "class HomeController {}");
-        // 1MB 초과 파일도 지원 파일 수(200)에는 들어가고 읽지 않고 건너뛴다
+        // 1MB 초과 파일은 읽지 않고 건너뛴다
         entries.put("p/Huge.java", "x".repeat(1024 * 1024 + 1));
         long id = prepare(createUser("ac7select", "JUNIOR"), zip(entries));
 
@@ -207,19 +203,18 @@ class AnalysisPipelineTest extends AnalysisTestSupport {
     }
 
     @Test
-    void AC7_읽은_합계가_10MB를_넘으면_FAILED_ANALYSIS_413() throws IOException {
+    void F26a_AC2_읽은_합계가_10MB를_넘어도_413이_아니고_DONE이다() throws IOException {
         Map<String, String> entries = new LinkedHashMap<>();
         for (int i = 0; i < 11; i++) {
-            entries.put("p/F" + i + ".java", "x".repeat(1_000_000));
+            entries.put("p/F" + i + ".java", "class F" + i + " {}\n//" + "x".repeat(1_000_000));
         }
         long id = prepare(createUser("ac7size", "JUNIOR"), zip(entries));
 
         pipeline.run(id);
 
         Map<String, Object> row = analysisRow(id);
-        assertThat(row.get("status")).isEqualTo("FAILED");
-        assertThat(row.get("error_code")).isEqualTo("ANALYSIS_413");
-        assertThat(row.get("error_message")).isEqualTo("코드 파일 합계가 10MB를 넘습니다. 크기를 줄여서 다시 올려 주세요.");
+        assertThat(row.get("status")).isEqualTo("DONE");
+        assertThat(row.get("error_code")).isNull();
     }
 
     @Test
@@ -455,7 +450,7 @@ class AnalysisPipelineTest extends AnalysisTestSupport {
     }
 
     @Test
-    void F05b_AC11_받은_아카이브의_지원_파일이_200개를_넘으면_ANALYSIS_413() {
+    void F26a_AC2_받은_아카이브의_지원_파일이_200개를_넘어도_DONE이다() {
         long userId = createUser("b11many", "JUNIOR");
         long id = insertUrlAnalysis(userId, "https://github.com/octo/b11-many");
         Map<String, String> entries = new LinkedHashMap<>();
@@ -467,8 +462,8 @@ class AnalysisPipelineTest extends AnalysisTestSupport {
         pipeline.run(id);
 
         Map<String, Object> row = analysisRow(id);
-        assertThat(row.get("status")).isEqualTo("FAILED");
-        assertThat(row.get("error_code")).isEqualTo("ANALYSIS_413");
+        assertThat(row.get("status")).isEqualTo("DONE");
+        assertThat(row.get("error_code")).isNull();
         assertThat(tempZip(id)).doesNotExist();
     }
 }

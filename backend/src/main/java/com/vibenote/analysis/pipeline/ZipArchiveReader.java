@@ -9,6 +9,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Deque;
 import java.util.Enumeration;
 import java.util.List;
@@ -22,16 +23,14 @@ import java.util.zip.ZipFile;
 import org.springframework.stereotype.Component;
 
 /**
- * 업로드 ZIP에서 지원 파일만 메모리로 읽는다 (F-05a 5절·5.2절).
+ * 업로드 ZIP에서 인덱스에 담을 파일을 메모리로 읽는다 (F-05a 5절·5.2절, F-26a 5.2절).
  *
  * <p>압축을 디스크에 풀지 않으므로 Zip Slip으로 파일이 생길 곳이 없다. 그래도 루트 밖·절대 경로 엔트리가 있으면 조작된 ZIP으로 보고 거부한다. 엔트리 크기
- * 헤더는 믿지 않고 실제로 읽은 바이트로 단일 파일·합계 한도를 센다 (zip bomb 방어).
+ * 헤더는 믿지 않고 실제로 읽은 바이트로 단일 파일·합계 상한을 센다. 상한에 걸리면 실패시키지 않고 거기서 읽기를 멈추므로, 읽는 양은 합계 상한 + 파일 하나를 넘지 않는다
+ * (zip bomb 방어).
  */
 @Component
 public class ZipArchiveReader {
-
-    static final String TOO_MANY_FILES = "지원하는 코드 파일이 %d개입니다. %d개 이하로 줄여서 다시 올려 주세요.";
-    static final String TOO_LARGE = "코드 파일 합계가 %dMB를 넘습니다. 크기를 줄여서 다시 올려 주세요.";
 
     /**
      * Windows 기본 압축 도구는 파일명을 UTF-8 표시 없이 MS949로 쓴다. UTF-8로 못 읽으면 이것으로 다시 읽는다. JDK는 UTF-8로 풀 수 없는
@@ -57,14 +56,36 @@ public class ZipArchiveReader {
                     ".idea",
                     ".vscode",
                     ".mvn",
-                    "coverage");
+                    "coverage",
+                    "generated",
+                    "__generated__",
+                    "vendor");
+
+    /** 생성물 (번들·압축본·타입 선언). 사람이 쓴 코드가 아니라 인덱스에 담지 않는다. */
+    private static final Pattern GENERATED_NAME =
+            Pattern.compile(".+(?:\\.min\\.m?js|\\.bundle\\.js|\\.d\\.ts)");
+
     private static final Set<String> SECRET_EXTENSIONS =
             Set.of("pem", "key", "p12", "pfx", "jks", "keystore");
     private static final Set<String> SUPPORTED_EXTENSIONS =
-            Set.of("java", "xml", "js", "mjs", "vue", "yml", "yaml", "properties", "sql");
+            Set.of(
+                    "java",
+                    "xml",
+                    "js",
+                    "mjs",
+                    "vue",
+                    "ts",
+                    "tsx",
+                    "jsx",
+                    "yml",
+                    "yaml",
+                    "properties",
+                    "sql",
+                    "md");
     private static final Set<String> SUPPORTED_NAMES =
             Set.of("build.gradle", "build.gradle.kts", "package.json");
-    private static final Set<String> CODE_EXTENSIONS = Set.of("java", "js", "mjs", "vue");
+    private static final Set<String> CODE_EXTENSIONS =
+            Set.of("java", "js", "mjs", "vue", "ts", "tsx", "jsx");
 
     private final AnalysisProperties properties;
 
@@ -73,12 +94,13 @@ public class ZipArchiveReader {
     }
 
     /**
-     * 필터를 통과한 지원 파일을 ZIP 안 순서대로 돌려준다. 단일 파일 한도를 넘는 파일은 건너뛴다.
+     * 필터를 통과한 파일을 (묶음, 경로) 순서로 상한까지 읽는다. 묶음은 코드·설정 → test·migration → doc 순이라, 상한에 걸려도 코드가 먼저 담긴다.
+     * 개수가 {@code max-index-files}에 이르거나 읽은 합계가 {@code max-index-bytes}를 처음 넘으면 그 파일과 뒤의 파일은 버린다. 단일
+     * 파일 상한을 넘는 파일은 건너뛴다. 버리거나 건너뛴 파일은 {@link IndexResult#dropped()}로 센다.
      *
-     * @throws AnalysisFailedException 깨진 ZIP·루트 밖 경로(ANALYSIS_400), 파일 수·합계 초과(ANALYSIS_413), 지원 스택
-     *     코드 없음(ANALYSIS_415)
+     * @throws AnalysisFailedException 깨진 ZIP·루트 밖 경로(ANALYSIS_400), 지원 스택 코드 없음(ANALYSIS_415)
      */
-    public List<SourceFile> read(Path zip) {
+    public IndexResult read(Path zip) {
         try {
             return read(zip, StandardCharsets.UTF_8);
         } catch (ZipException | IllegalArgumentException utf8Failed) {
@@ -93,30 +115,42 @@ public class ZipArchiveReader {
     }
 
     /** ZipException(손상·형식 오류·읽을 수 없는 이름)은 그대로 던진다. */
-    private List<SourceFile> read(Path zip, Charset charset) throws IOException {
+    private IndexResult read(Path zip, Charset charset) throws IOException {
         try (ZipFile zipFile = new ZipFile(zip.toFile(), charset)) {
             List<Candidate> candidates = supportedEntries(zipFile);
-            if (candidates.size() > properties.maxFiles()) {
-                throw new AnalysisFailedException(
-                        ErrorCode.ANALYSIS_413,
-                        TOO_MANY_FILES.formatted(candidates.size(), properties.maxFiles()));
-            }
+            candidates.sort(
+                    Comparator.comparingInt((Candidate c) -> bundle(c.path()))
+                            .thenComparing(Candidate::path));
 
             long maxFileBytes = properties.maxFileBytes().toBytes();
-            long maxTotalBytes = properties.maxTotalBytes().toBytes();
+            long maxIndexBytes = properties.maxIndexBytes().toBytes();
             long total = 0;
+            int dropped = 0;
             List<SourceFile> files = new ArrayList<>();
-            for (Candidate candidate : candidates) {
-                byte[] bytes = readAtMost(zipFile, candidate.entry(), maxFileBytes);
+            for (int i = 0; i < candidates.size(); i++) {
+                Candidate candidate = candidates.get(i);
+                if (files.size() >= properties.maxIndexFiles() || total > maxIndexBytes) {
+                    dropped += candidates.size() - i;
+                    break;
+                }
+                // 헤더가 이미 단일 파일 상한을 넘는다고 하면 읽지 않는다. 헤더가 작다고 속인 엔트리는 읽다가 걸리고,
+                // 그때 읽은 양은 합계에 넣어 읽는 양이 상한을 넘어 늘지 않게 한다
+                byte[] bytes =
+                        candidate.entry().getSize() > maxFileBytes
+                                ? null
+                                : readAtMost(zipFile, candidate.entry(), maxFileBytes);
                 if (bytes == null) {
+                    dropped++;
+                    if (candidate.entry().getSize() <= maxFileBytes) {
+                        total += maxFileBytes;
+                    }
                     continue;
                 }
-                total += bytes.length;
-                if (total > maxTotalBytes) {
-                    throw new AnalysisFailedException(
-                            ErrorCode.ANALYSIS_413,
-                            TOO_LARGE.formatted(properties.maxTotalBytes().toMegabytes()));
+                if (total + bytes.length > maxIndexBytes) {
+                    dropped += candidates.size() - i;
+                    break;
                 }
+                total += bytes.length;
                 files.add(
                         new SourceFile(
                                 candidate.path(), new String(bytes, StandardCharsets.UTF_8)));
@@ -125,8 +159,17 @@ public class ZipArchiveReader {
             if (files.stream().noneMatch(f -> CODE_EXTENSIONS.contains(extension(f.path())))) {
                 throw new AnalysisFailedException(ErrorCode.ANALYSIS_415);
             }
-            return files;
+            return new IndexResult(List.copyOf(files), dropped);
         }
+    }
+
+    /** 읽는 순서의 묶음. 경로만으로 정한다 (F-26a 5.2절 3): 0 코드·설정, 1 test·migration, 2 doc. */
+    private static int bundle(String path) {
+        return switch (FileSelector.layer(path, null)) {
+            case DOC -> 2;
+            case TEST, MIGRATION -> 1;
+            default -> 0;
+        };
     }
 
     /** 모든 엔트리 경로를 검사하고, 공통 최상위 폴더를 뗀 뒤 필터를 통과한 지원 파일만 고른다. */
@@ -212,7 +255,7 @@ public class ZipArchiveReader {
                         || SECRET_EXTENSIONS.contains(extension)
                         || name.startsWith("id_rsa")
                         || name.startsWith("id_ed25519");
-        if (secret) {
+        if (secret || GENERATED_NAME.matcher(name).matches()) {
             return false;
         }
         return SUPPORTED_EXTENSIONS.contains(extension) || SUPPORTED_NAMES.contains(name);

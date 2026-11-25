@@ -21,16 +21,21 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.util.unit.DataSize;
 
-/** ZIP 읽기·필터 규칙 (F-05a 5.2절, AC7·AC9). 테스트 ZIP은 코드로 만든다 (eval 데이터 금지). */
+/** ZIP 읽기·필터 규칙 (F-05a 5.2절 AC5·AC9, F-26a 5.2절 AC1~AC3). 테스트 ZIP은 코드로 만든다 (eval 데이터 금지). */
 class ZipArchiveReaderTest {
 
     @TempDir Path dir;
 
     private final ZipArchiveReader reader = new ZipArchiveReader(props(200, 10_000, 1_000));
 
-    private static AnalysisProperties props(int maxFiles, long maxTotalBytes, long maxFileBytes) {
+    private static AnalysisProperties props(
+            int maxIndexFiles, long maxIndexBytes, long maxFileBytes) {
         return new AnalysisProperties(
-                5, maxFiles, DataSize.ofBytes(maxTotalBytes), DataSize.ofBytes(maxFileBytes), 30);
+                5,
+                maxIndexFiles,
+                DataSize.ofBytes(maxIndexBytes),
+                DataSize.ofBytes(maxFileBytes),
+                30);
     }
 
     private Path zip(Map<String, String> entries) throws IOException {
@@ -61,6 +66,10 @@ class ZipArchiveReaderTest {
         return files.stream().map(SourceFile::path).toList();
     }
 
+    private static List<String> paths(IndexResult result) {
+        return paths(result.files());
+    }
+
     private void assertFails(Path zip, ErrorCode code, String messagePart) {
         assertThatThrownBy(() -> reader.read(zip))
                 .isInstanceOfSatisfying(
@@ -84,9 +93,12 @@ class ZipArchiveReaderTest {
                                 "todo/app.ts", "let a = 1",
                                 "__MACOSX/todo/._A.java", "junk"));
 
-        List<SourceFile> files = reader.read(zip);
+        List<SourceFile> files = reader.read(zip).files();
 
-        assertThat(paths(files)).containsExactlyInAnyOrder("src/main/java/A.java", "src/App.vue");
+        // F-26a AC1부터 README.md·app.ts도 인덱스에 들어간다
+        assertThat(paths(files))
+                .containsExactlyInAnyOrder(
+                        "src/main/java/A.java", "src/App.vue", "README.md", "app.ts");
         assertThat(files)
                 .filteredOn(f -> f.path().equals("src/main/java/A.java"))
                 .extracting(SourceFile::content)
@@ -157,6 +169,10 @@ class ZipArchiveReaderTest {
                                 "p/build.gradle", "x",
                                 "p/build.gradle.kts", "x",
                                 "p/package.json", "x",
+                                "p/c.ts", "x",
+                                "p/D.tsx", "x",
+                                "p/E.jsx", "x",
+                                "p/r.md", "x",
                                 "p/other.json", "x",
                                 "p/x.py", "x",
                                 "p/X.class", "x",
@@ -175,7 +191,11 @@ class ZipArchiveReaderTest {
                         "d.sql",
                         "build.gradle",
                         "build.gradle.kts",
-                        "package.json");
+                        "package.json",
+                        "c.ts",
+                        "D.tsx",
+                        "E.jsx",
+                        "r.md");
     }
 
     @Test
@@ -183,38 +203,6 @@ class ZipArchiveReaderTest {
         Path zip = zip(entries("p/Big.java", "x".repeat(1_001), "p/Ok.java", "x".repeat(1_000)));
 
         assertThat(paths(reader.read(zip))).containsExactly("Ok.java");
-    }
-
-    @Test
-    void AC7_지원_파일이_한도를_넘으면_ANALYSIS_413() throws IOException {
-        Map<String, String> map = new LinkedHashMap<>();
-        for (int i = 0; i < 201; i++) {
-            map.put("p/F" + i + ".java", "x");
-        }
-        map.put("p/readme.md", "x");
-
-        assertFails(zip(map), ErrorCode.ANALYSIS_413, "지원하는 코드 파일이 201개입니다");
-    }
-
-    @Test
-    void AC7_지원_파일이_한도와_같으면_통과한다() throws IOException {
-        Map<String, String> map = new LinkedHashMap<>();
-        for (int i = 0; i < 200; i++) {
-            map.put("p/F" + i + ".java", "x");
-        }
-
-        assertThat(reader.read(zip(map))).hasSize(200);
-    }
-
-    @Test
-    void AC7_읽은_합계가_한도를_넘으면_ANALYSIS_413() throws IOException {
-        Map<String, String> map = new LinkedHashMap<>();
-        for (int i = 0; i < 11; i++) {
-            map.put("p/F" + i + ".java", "x".repeat(1_000));
-        }
-
-        // 문구의 한도 표기(10MB)는 AnalysisPipelineTest가 기본 설정으로 검증한다
-        assertFails(zip(map), ErrorCode.ANALYSIS_413, "코드 파일 합계가");
     }
 
     @Test
@@ -301,7 +289,7 @@ class ZipArchiveReaderTest {
         Path zip = dir.resolve("ms949.zip");
         Files.write(zip, bytes.toByteArray());
 
-        List<SourceFile> files = reader.read(zip);
+        List<SourceFile> files = reader.read(zip).files();
 
         assertThat(paths(files)).containsExactly("소스/A.java");
         assertThat(files.get(0).content()).isEqualTo("class A {}");
@@ -313,5 +301,146 @@ class ZipArchiveReaderTest {
         Path zip = zip(entries("p/A.java", "a", longPath, "b"));
 
         assertThat(paths(reader.read(zip))).containsExactly("A.java");
+    }
+
+    /** tampered 엔트리는 CRC가 내용과 달라 읽으면 ANALYSIS_400이다. 읽지 않고 버렸는지 확인하는 데 쓴다. */
+    private Path zipWithTampered(Map<String, String> entries, String tampered) throws IOException {
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+        try (ZipOutputStream out = new ZipOutputStream(bytes)) {
+            for (Map.Entry<String, String> e : entries.entrySet()) {
+                byte[] content = e.getValue().getBytes(StandardCharsets.UTF_8);
+                ZipEntry entry = new ZipEntry(e.getKey());
+                if (e.getKey().equals(tampered)) {
+                    CRC32 crc = new CRC32();
+                    crc.update(content);
+                    entry.setMethod(ZipEntry.STORED);
+                    entry.setSize(content.length);
+                    entry.setCompressedSize(content.length);
+                    entry.setCrc(crc.getValue());
+                }
+                out.putNextEntry(entry);
+                out.write(content);
+                out.closeEntry();
+            }
+        }
+        byte[] raw = bytes.toByteArray();
+        raw[new String(raw, StandardCharsets.ISO_8859_1).indexOf("TAMPER-ME")] = (byte) 'X';
+        Path file = Files.createTempFile(dir, "t", ".zip");
+        Files.write(file, raw);
+        return file;
+    }
+
+    @Test
+    void AC1_ts_tsx_jsx는_js_md는_doc_테스트는_test_마이그레이션은_migration_layer로_인덱스에_들어간다()
+            throws IOException {
+        Path zip =
+                zip(
+                        entries(
+                                "p/src/a.ts", "x",
+                                "p/src/B.tsx", "x",
+                                "p/src/C.jsx", "x",
+                                "p/README.md", "x",
+                                "p/docs/x.md", "x",
+                                "p/src/test/java/FooTest.java", "x",
+                                "p/src/foo.spec.js", "x",
+                                "p/db/migration/V1__init.sql", "x",
+                                "p/app.min.js", "x",
+                                "p/lib.min.mjs", "x",
+                                "p/app.bundle.js", "x",
+                                "p/types.d.ts", "x",
+                                "p/generated/X.java", "x",
+                                "p/src/__generated__/Y.js", "x",
+                                "p/vendor/lib.js", "x",
+                                "p/node_modules/z/index.ts", "x",
+                                "p/build/Z.tsx", "x",
+                                "p/.cache/w.md", "x",
+                                "p/.env", "K=1",
+                                "p/server.pem", "x"));
+
+        Map<String, Layer> layers = new LinkedHashMap<>();
+        for (SourceFile f : reader.read(zip).files()) {
+            layers.put(f.path(), FileSelector.layer(f.path(), f.content()));
+        }
+
+        assertThat(layers)
+                .containsOnly(
+                        Map.entry("src/a.ts", Layer.JS),
+                        Map.entry("src/B.tsx", Layer.JS),
+                        Map.entry("src/C.jsx", Layer.JS),
+                        Map.entry("README.md", Layer.DOC),
+                        Map.entry("docs/x.md", Layer.DOC),
+                        Map.entry("src/test/java/FooTest.java", Layer.TEST),
+                        Map.entry("src/foo.spec.js", Layer.TEST),
+                        Map.entry("db/migration/V1__init.sql", Layer.MIGRATION));
+    }
+
+    @Test
+    void AC2_개수_상한에서_코드_test_migration_doc_순서로_담고_나머지는_버린_개수로_센다() throws IOException {
+        ZipArchiveReader small = new ZipArchiveReader(props(5, 1_000_000, 1_000));
+        Path zip =
+                zip(
+                        entries(
+                                "p/README.md", "x",
+                                "p/a/Z.java", "x",
+                                "p/src/test/java/ATest.java", "x",
+                                "p/docs/guide.md", "x",
+                                "p/db/migration/V1__a.sql", "x",
+                                "p/b/B.vue", "x",
+                                "p/a/A.java", "x"));
+
+        IndexResult result = small.read(zip);
+
+        assertThat(paths(result))
+                .containsExactly(
+                        "a/A.java",
+                        "a/Z.java",
+                        "b/B.vue",
+                        "db/migration/V1__a.sql",
+                        "src/test/java/ATest.java");
+        assertThat(result.dropped()).isEqualTo(2);
+    }
+
+    @Test
+    void AC2_파일이_2001개여도_413이_아니고_상한까지_담는다() throws IOException {
+        ZipArchiveReader reader2000 = new ZipArchiveReader(props(2_000, 1_000_000, 1_000));
+        Map<String, String> map = new LinkedHashMap<>();
+        for (int i = 0; i < 2_001; i++) {
+            map.put(String.format("p/F%04d.java", i), "x");
+        }
+
+        IndexResult result = reader2000.read(zip(map));
+
+        assertThat(result.files()).hasSize(2_000);
+        assertThat(result.files().get(1_999).path()).isEqualTo("F1999.java");
+        assertThat(result.dropped()).isEqualTo(1);
+    }
+
+    @Test
+    void AC2_바이트_상한에_처음_걸린_파일과_뒤의_파일은_읽지_않고_버린다() throws IOException {
+        Map<String, String> map =
+                entries(
+                        "p/D.md", "TAMPER-ME",
+                        "p/C.java", "c".repeat(1_000),
+                        "p/0Big.java", "x".repeat(1_001),
+                        "p/A.java", "a".repeat(1_000),
+                        "p/B.java", "b".repeat(1_000));
+        Path zip = zipWithTampered(map, "p/D.md");
+        // 내용이 바뀐 D.md를 읽으면 CRC 불일치로 실패한다
+        assertThatThrownBy(() -> new ZipArchiveReader(props(200, 1_000_000, 1_000)).read(zip))
+                .isInstanceOf(AnalysisFailedException.class);
+
+        IndexResult result = new ZipArchiveReader(props(200, 2_500, 1_000)).read(zip);
+
+        assertThat(paths(result)).containsExactly("A.java", "B.java");
+        // 0Big.java(단일 파일 상한 초과) + C.java(합계 초과) + D.md(읽지 않음)
+        assertThat(result.dropped()).isEqualTo(3);
+    }
+
+    @Test
+    void AC3_코드_파일_없이_md_yml만_있으면_ANALYSIS_415() throws IOException {
+        assertFails(
+                zip(entries("p/README.md", "# a", "p/application.yml", "a: b", "p/docs/x.md", "x")),
+                ErrorCode.ANALYSIS_415,
+                "분석할 수 있는 코드가 없습니다");
     }
 }

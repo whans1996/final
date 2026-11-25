@@ -26,7 +26,8 @@ class FileSelectorTest {
         assertThat(layer("frontend/src/router/index.js")).isEqualTo(Layer.JS);
         assertThat(layer("frontend/src/stores/auth.js")).isEqualTo(Layer.JS);
         assertThat(layer("frontend/src/api/http.mjs")).isEqualTo(Layer.JS);
-        assertThat(layer("frontend/vite.config.js")).isEqualTo(Layer.JS);
+        // F-26a AC4: *.config.js는 js보다 config가 먼저다
+        assertThat(layer("frontend/vite.config.js")).isEqualTo(Layer.CONFIG);
         assertThat(layer("src/main/java/a/SecurityConfig.java")).isEqualTo(Layer.CONFIG);
         assertThat(layer("src/main/resources/application.yml")).isEqualTo(Layer.CONFIG);
         assertThat(layer("src/main/resources/application-local.properties"))

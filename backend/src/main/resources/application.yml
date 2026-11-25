@@ -60,8 +60,9 @@ app:
 # 분석 요청·파이프라인 (docs/specs/F-05a-analysis-request-zip.md 5절). 업로드 ZIP은 {app.upload-dir}/analysis-tmp/에 잠시 둔다.
 analysis:
   daily-limit: 5
-  max-files: 200
-  max-total-bytes: 10MB
+  # 인덱스 상한 (docs/specs/F-26a-index-selection.md 5.1절). 넘으면 실패시키지 않고 뒤의 파일을 버린다
+  max-index-files: 2000
+  max-index-bytes: 30MB
   max-file-bytes: 1MB
   max-selected-files: 30
   # 공개 저장소 URL 수집 (docs/specs/F-05b-analysis-request-url.md 5.1절). 첫 요청은 아래 API 주소로만 하고,

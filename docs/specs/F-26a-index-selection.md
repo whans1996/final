@@ -189,9 +189,9 @@ ALTER TABLE analyses
 
 `/implement`가 진행하며 체크한다.
 
-- [ ] 브랜치 `feature/F-26a-index-selection`
+- [x] 브랜치 `feature/F-26a-index-selection`
 - [ ] Flyway 마이그레이션 `V12__analysis_index.sql`
-- [ ] AC별 실패 테스트 작성 (red 확인)
+- [ ] AC별 실패 테스트 작성 (red 확인) — AC1~AC3 ✅
 - [ ] BE 구현 (green)
 - [ ] 프롬프트 3종 `{{readme}}` 추가
 - [ ] Swagger 설명 문구 + `docs/api/openapi.json` 갱신

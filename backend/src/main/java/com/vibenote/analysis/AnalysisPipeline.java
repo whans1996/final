@@ -147,7 +147,7 @@ public class AnalysisPipeline {
     }
 
     private void filter(Context context) {
-        context.files = zipReader.read(context.archive);
+        context.files = zipReader.read(context.archive).files();
     }
 
     /** 선별한 파일만 키를 가려 저장한다. 이후 단계는 저장된 analysis_files를 입력으로 쓴다. */

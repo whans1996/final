@@ -184,7 +184,7 @@ class PromptEvalRunner {
 
     /** 실제 파이프라인의 SELECTING 단계와 같다 (선별 → 비밀 가림). 파일 id는 선별 순서대로 1부터. */
     private static List<AnalysisFile> select(Path zip, AnalysisProperties props) {
-        List<SourceFile> read = new ZipArchiveReader(props).read(zip);
+        List<SourceFile> read = new ZipArchiveReader(props).read(zip).files();
         List<SelectedFile> selected = FileSelector.select(read, props.maxSelectedFiles());
         List<AnalysisFile> files = new ArrayList<>();
         for (SelectedFile f : selected) {
