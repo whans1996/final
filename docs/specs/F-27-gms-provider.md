@@ -165,10 +165,10 @@ GMS 요청 본문 예시:
 
 - [x] 브랜치 `feature/F-27-gms-provider`
 - [x] Flyway `V13__llm_usage_logs_provider.sql`
-- [ ] AC별 실패 테스트 작성 (red 확인)
-- [ ] BE 구현 (green): `LlmSchemas`, `GmsLlmClient`, `LlmProperties.Gms`, `LlmConfig`, Ollama `format`, usage `provider`, 상세 `liteMode`, consent 문구, `PromptEvalRunner`
-- [ ] FE 구현 (green): SC-07 배너, SC-05 문구
-- [ ] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
+- [x] AC별 실패 테스트 작성 (red 확인)
+- [x] BE 구현 (green): `LlmSchemas`, `GmsLlmClient`, `LlmProperties.Gms`, `LlmConfig`, Ollama `format`, usage `provider`, 상세 `liteMode`, consent 문구, `PromptEvalRunner`
+- [x] FE 구현 (green): SC-07 배너, SC-05 문구
+- [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
 - [ ] `.env.example`·`backend/CLAUDE.md`(LLM 절)·`docs/환경설정.md`·`.claude/agents/prompt-evaluator.md` 공급자 설명 갱신
 - [ ] 실연결 확인 (`./gradlew liveTest`, GMS) → 9절 확정
 - [ ] contract-checker 통과
