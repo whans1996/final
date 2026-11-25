@@ -163,8 +163,8 @@ GMS 요청 본문 예시:
 
 `/implement`가 진행하며 체크한다.
 
-- [ ] 브랜치 `feature/F-27-gms-provider`
-- [ ] Flyway `V13__llm_usage_logs_provider.sql`
+- [x] 브랜치 `feature/F-27-gms-provider`
+- [x] Flyway `V13__llm_usage_logs_provider.sql`
 - [ ] AC별 실패 테스트 작성 (red 확인)
 - [ ] BE 구현 (green): `LlmSchemas`, `GmsLlmClient`, `LlmProperties.Gms`, `LlmConfig`, Ollama `format`, usage `provider`, 상세 `liteMode`, consent 문구, `PromptEvalRunner`
 - [ ] FE 구현 (green): SC-07 배너, SC-05 문구
