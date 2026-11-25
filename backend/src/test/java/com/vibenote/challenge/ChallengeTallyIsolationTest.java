@@ -6,11 +6,13 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.vibenote.analysis.AnalysisService;
+import java.time.LocalDate;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -19,7 +21,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.QueryTimeoutException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -36,7 +39,6 @@ class ChallengeTallyIsolationTest extends ChallengeTestSupport {
 
     @Autowired PlatformTransactionManager txManager;
     @Autowired AnalysisService analysisService;
-    @MockitoSpyBean ChallengeProgressService progressService;
 
     @Test
     void 분석_완료의_집계가_실패해도_분석은_DONE이고_활동이_남는다() {
@@ -49,6 +51,9 @@ class ChallengeTallyIsolationTest extends ChallengeTestSupport {
                 .refresh(anyLong(), eq(ChallengeGoalType.ANALYSIS_COUNT), any());
 
         assertThatCode(() -> analysisService.complete(a)).doesNotThrowAnyException();
+
+        verify(progressService)
+                .refresh(u, ChallengeGoalType.ANALYSIS_COUNT, LocalDate.of(2026, 11, 24));
 
         assertThat(count("analyses", "id = ? AND status = 'DONE'", a)).isEqualTo(1);
         assertThat(count("activities", "user_id = ? AND type = 'ANALYSIS'", u)).isEqualTo(1);
@@ -132,8 +137,8 @@ class ChallengeTallyIsolationTest extends ChallengeTestSupport {
     }
 
     /**
-     * T1이 참여 행을 잠그고 {@code otherActivity}를 넣은 채, T2({@code mine})가 시작해 잠금을 기다릴 때까지 커밋을 미룬다. T2는 T1이
-     * 잠근 뒤에 시작하므로 T2의 첫 읽기는 T1 커밋 전이다.
+     * T1이 참여 행을 잠그고 {@code otherActivity}를 넣은 채, T2({@code mine})가 잠금을 기다리는 것이 DB에 보일 때까지 커밋을 미룬다.
+     * T2의 읽기는 모두 T1 커밋 전에 일어난다. 고정 대기(500ms)로는 컨텍스트의 첫 요청이 잠금에 닿기 전에 T1이 커밋해 red가 보이지 않았다.
      */
     private void racing(Runnable otherActivity, long challengeId, long userId, Runnable mine)
             throws Exception {
@@ -154,9 +159,7 @@ class ChallengeTallyIsolationTest extends ChallengeTestSupport {
                                             otherActivity.run();
                                             t1Locked.countDown();
                                             await(t2Started);
-                                            // T2가 잠금을 기다리기 시작할 시간. 컨텍스트의 첫 요청은 느려 500ms면 T2가 읽기 전에
-                                            // 커밋되어 red가 안 보였다
-                                            sleep(2000);
+                                            awaitLockWait();
                                         }));
         CompletableFuture<Void> t2 =
                 CompletableFuture.runAsync(
@@ -166,8 +169,32 @@ class ChallengeTallyIsolationTest extends ChallengeTestSupport {
                             mine.run();
                         });
 
-        t1.get(30, TimeUnit.SECONDS);
-        t2.get(30, TimeUnit.SECONDS);
+        try {
+            t1.get(30, TimeUnit.SECONDS);
+        } finally {
+            // T1이 실패해도 T2가 끝난 뒤에 정리(@AfterEach)가 돌게 한다
+            t2.get(30, TimeUnit.SECONDS);
+        }
+    }
+
+    /**
+     * 다른 트랜잭션이 행 잠금을 기다리기 시작할 때까지 기다린다 (최대 10초). 앱 계정은 performance_schema를 읽을 수 없어 테스트 컨테이너의 root로
+     * 본다 (Testcontainers는 root 비밀번호를 앱 계정과 같게 둔다).
+     */
+    private void awaitLockWait() {
+        JdbcTemplate root =
+                new JdbcTemplate(
+                        new DriverManagerDataSource(
+                                MYSQL.getJdbcUrl(), "root", MYSQL.getPassword()));
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
+        while (root.queryForObject(
+                        "SELECT COUNT(*) FROM performance_schema.data_lock_waits", Integer.class)
+                == 0) {
+            if (System.nanoTime() > deadline) {
+                throw new IllegalStateException("T2가 잠금을 기다리지 않음");
+            }
+            sleep(50);
+        }
     }
 
     private void perform(
