@@ -144,7 +144,7 @@ erDiagram
     analysis_flows {
         bigint id PK
         bigint analysis_id FK
-        varchar endpoint "METHOD path, (analysis_id, endpoint) UK"
+        varchar endpoint "METHOD path, (analysis_id, endpoint) UK, 대소문자 구분 (V11)"
         varchar status "PENDING|DONE|FAILED (V5)"
         text summary
         json steps
@@ -337,6 +337,7 @@ erDiagram
 | V8 | `teams`, `team_members` | F-20a |
 | V9 | `team_analyses` | F-20b |
 | V10 | `team_challenges` | F-20c |
+| V11 | `analysis_flows.endpoint` collation `utf8mb4_0900_bin` (대소문자 구분) | F-07 (#26) |
 | R | `R__seed_concepts.sql` 시드 카드 (반복 적용, 내용만 덮어씀, DS-05) | F-09 |
 
 ## 정규화 메모

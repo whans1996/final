@@ -3,6 +3,7 @@ package com.vibenote.analysis.flow;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
@@ -17,12 +18,17 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.task.TaskRejectedException;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
-/** F-07 AC1(접수·실행기 제출)·AC6(캐시·재생성)·AC7(개수 상한·동시 요청)·AC11(큐 거부). 생성기는 가짜로 둔다. */
+/**
+ * F-07 AC1(접수·실행기 제출)·AC6(캐시·재생성)·AC7(개수 상한·동시 요청)·AC11(큐 거부), #24(흐름 전용 실행기)·#26(endpoint 대소문자).
+ * 생성기는 가짜로 둔다.
+ */
 class FlowServiceTest extends FlowTestSupport {
 
     static final List<String> APIS =
@@ -63,6 +69,45 @@ class FlowServiceTest extends FlowTestSupport {
         assertThat(flow.steps()).isNull();
         assertThat(flowRow(flow.id()).get("endpoint")).isEqualTo("POST /api/todos");
         verify(generator, timeout(2000)).generate(flow.id());
+    }
+
+    @Test
+    void AC1_흐름은_분석_실행기가_아닌_흐름_전용_실행기에서_생성한다() throws Exception {
+        // #24: 흐름 1개가 스레드를 최대 360초 잡으므로 분석 파이프라인과 실행기를 나눈다
+        long userId = createUser("svc6");
+        long analysisId = analysis(userId, "DONE", "JUNIOR", APIS);
+        AtomicReference<String> thread = new AtomicReference<>();
+        CountDownLatch ran = new CountDownLatch(1);
+        doAnswer(
+                        inv -> {
+                            thread.set(Thread.currentThread().getName());
+                            ran.countDown();
+                            return null;
+                        })
+                .when(generator)
+                .generate(anyLong());
+
+        flowService.request(userId, analysisId, endpoints("POST /api/todos"));
+
+        assertThat(ran.await(2, TimeUnit.SECONDS)).isTrue();
+        assertThat(thread.get()).startsWith("flow-");
+    }
+
+    @Test
+    void AC1_대소문자만_다른_endpoint도_각각_흐름을_만든다() {
+        // #26: endpoint UNIQUE가 대소문자를 구분하지 않으면 두 번째 INSERT가 중복 키 오류(500)가 된다
+        long userId = createUser("svc7");
+        long analysisId =
+                analysis(userId, "DONE", "JUNIOR", List.of("GET /api/users", "GET /api/Users"));
+
+        List<FlowResponse> flows =
+                flowService.request(
+                        userId, analysisId, endpoints("GET /api/users", "GET /api/Users"));
+
+        assertThat(flows)
+                .extracting(FlowResponse::path)
+                .containsExactly("/api/users", "/api/Users");
+        assertThat(flowRows(analysisId)).hasSize(2);
     }
 
     @Test
