@@ -206,8 +206,11 @@ public final class JsModule {
         if (decl.isEmpty()) {
             return importedAxiosNames.contains(name);
         }
+        List<JsToken> init = decl.get().init();
+        // require를 가린 지역 이름이 있으면 CommonJS 로더가 아니다
         return decl.get().kind() == JsDecl.Kind.CONST
-                && JsDeclarations.isRequireAxios(decl.get().init());
+                && JsDeclarations.isRequireAxios(init)
+                && lookup("require", init.get(0).start()).isEmpty();
     }
 
     /**

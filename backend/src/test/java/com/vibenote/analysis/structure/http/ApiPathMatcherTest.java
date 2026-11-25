@@ -218,7 +218,7 @@ class ApiPathMatcherTest {
     }
 
     @Test
-    void AC11_정규식_변수가_백트래킹을_오래_하면_맞지_않은_것으로_본다() {
+    void AC11_정규식_변수가_백트래킹을_오래_하면_확정하지_않는다() {
         FeRequest request = req("GET", "/x/" + "a".repeat(ApiPathMatcher.MAX_REGEX_INPUT));
 
         ApiMatch result =
@@ -226,7 +226,26 @@ class ApiPathMatcherTest {
                         Duration.ofSeconds(5),
                         () -> match(request, "", api("GET", "/x/{v:a*a*a*a*a*a*a*a*b}", 100)));
 
-        assertThat(result).isEqualTo(ApiMatch.NONE);
+        assertThat(result).isEqualTo(ApiMatch.AMBIGUOUS);
+    }
+
+    @Test
+    void AC11_정규식을_끝까지_보지_못한_후보가_있으면_덜_구체적인_후보를_확정하지_않는다() {
+        ApiMatch result =
+                match(
+                        req("GET", "/x/" + "a".repeat(20)),
+                        "",
+                        api("GET", "/x/{id:(?:(a+)+?b|a+)}", 100),
+                        api("GET", "/x/**", 101));
+
+        assertThat(result).isEqualTo(ApiMatch.AMBIGUOUS);
+        assertThat(
+                        match(
+                                req("GET", "/x/" + "a".repeat(201)),
+                                "",
+                                api("GET", "/x/{id:a+}", 100),
+                                api("GET", "/x/**", 101)))
+                .isEqualTo(ApiMatch.AMBIGUOUS);
     }
 
     @Test

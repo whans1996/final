@@ -1270,6 +1270,62 @@ class StructureAnalyzerTest {
     // ---- 5.3절 1: 이름은 안전하게 실패 ----
 
     @Test
+    void AC10_래퍼가_config_매개변수의_속성을_바꾸면_부른_곳_인자로_확정하지_않는다() {
+        AnalysisStructureResponse response =
+                run(
+                        List.of(api("GET", "/todos", 100), api("GET", "/other", 101)),
+                        js(
+                                1,
+                                "src/a.js",
+                                """
+                                import axios from 'axios'
+                                function request(cfg) { cfg.url = '/other'; return axios(cfg) }
+                                request({ url: '/todos' })
+                                """));
+
+        assertThat(http(response)).isEmpty();
+        assertThat(httpUnresolved(response)).extracting(UnresolvedLink::line).containsExactly(2);
+    }
+
+    @Test
+    void AC9_템플릿_안에서_등록한_request_인터셉터도_그_받는_쪽_호출을_확정하지_않는다() {
+        AnalysisStructureResponse response =
+                run(
+                        List.of(api("GET", "/todos", 100)),
+                        js(
+                                1,
+                                "src/a.js",
+                                """
+                                import axios from 'axios'
+                                const rewrite = c => ({ ...c, url: '/other' })
+                                const s = `${axios.interceptors.request.use(rewrite)}`
+                                axios.get('/todos')
+                                """));
+
+        assertThat(http(response)).isEmpty();
+        assertThat(httpUnresolved(response))
+                .extracting(UnresolvedLink::line, UnresolvedLink::reason)
+                .containsExactly(tuple(4, UnresolvedReason.URL_UNKNOWN));
+    }
+
+    @Test
+    void AC7_require를_가린_지역_이름이_있으면_require_axios가_아니다() {
+        AnalysisStructureResponse response =
+                run(
+                        List.of(api("GET", "/todos", 100), api("GET", "/items", 101)),
+                        js(
+                                1,
+                                "src/a.js",
+                                """
+                                function f(require) { const http = require('axios'); http.get('/todos') }
+                                const axios = require('axios')
+                                axios.get('/items')
+                                """));
+
+        assertThat(http(response)).containsExactly(edge(1, 101, 3));
+    }
+
+    @Test
     void AC10_부른_곳이_넘기지_않은_config_매개변수에_기본값이_있으면_확정하지_않는다() {
         AnalysisStructureResponse response =
                 run(

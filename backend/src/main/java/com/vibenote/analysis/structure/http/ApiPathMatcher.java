@@ -121,15 +121,27 @@ public final class ApiPathMatcher {
             if (!methodMatches(c.api().method(), request.method())) {
                 continue;
             }
-            if (matches(c.pattern(), c.fixed(), request.path(), false, budget)) {
+            boolean[] undecided = {false};
+            if (matches(c.pattern(), c.fixed(), request.path(), false, budget, undecided)) {
                 // 와일드카드가 변수·이중 별표와만 맞서도 맞으면 그 값이 무엇이든 이 후보와 맞는다
                 boolean certain =
-                        !wildcards || matches(c.pattern(), c.fixed(), request.path(), true, budget);
-                candidates.add(Candidate.of(c.api().fileId(), c.pattern(), certain));
+                        !wildcards
+                                || matches(
+                                        c.pattern(),
+                                        c.fixed(),
+                                        request.path(),
+                                        true,
+                                        budget,
+                                        undecided);
+                candidates.add(Candidate.of(c.api().fileId(), c.pattern(), certain, undecided[0]));
             }
         }
         if (candidates.isEmpty()) {
             return ApiMatch.NONE;
+        }
+        // 정규식을 끝까지 보지 못한 후보는 맞는지도, 더 구체적인 후보를 이기는지도 모른다
+        if (candidates.stream().anyMatch(Candidate::undecided)) {
+            return ApiMatch.AMBIGUOUS;
         }
         if (literalOnly) {
             candidates =
@@ -195,14 +207,16 @@ public final class ApiPathMatcher {
 
     /**
      * 패턴 세그먼트 i 이후가 경로 세그먼트 j 이후와 맞는지를 뒤에서부터 채운다 (O(패턴 × 경로) 시간, 행 두 개만 둬 O(경로) 메모리). 고정 세그먼트 수로
-     * 길이가 맞을 수 없으면 표를 채우지 않는다. strict면 FE 와일드카드는 정규식 없는 변수·이중 별표와만 맞는다.
+     * 길이가 맞을 수 없으면 표를 채우지 않는다. strict면 FE 와일드카드는 정규식 없는 변수·이중 별표와만 맞는다. 정규식을 끝까지 보지 못한 세그먼트는 맞는 것으로
+     * 채우고 undecided[0]을 켠다.
      */
     private static boolean matches(
             List<ApiSegment> pattern,
             int fixed,
             List<PathSegment> path,
             boolean strict,
-            WorkBudget budget) {
+            WorkBudget budget,
+            boolean[] undecided) {
         int p = pattern.size();
         int n = path.size();
         if (fixed > n || (fixed == p && p != n)) {
@@ -218,7 +232,8 @@ public final class ApiPathMatcher {
                 if (segment.type() == Type.MULTI) {
                     cur[j] = next[j] || (j < n && cur[j + 1]);
                 } else {
-                    cur[j] = j < n && next[j + 1] && segment.accepts(path.get(j), strict);
+                    cur[j] =
+                            j < n && next[j + 1] && segment.accepts(path.get(j), strict, undecided);
                 }
             }
             boolean[] swap = next;
@@ -334,27 +349,32 @@ public final class ApiPathMatcher {
             return -1;
         }
 
-        /** strict면 FE 와일드카드는 어떤 값이어도 맞는 세그먼트(정규식 없는 변수·이중 별표)와만 맞는다. */
-        boolean accepts(PathSegment fe, boolean strict) {
+        /**
+         * strict면 FE 와일드카드는 어떤 값이어도 맞는 세그먼트(정규식 없는 변수·이중 별표)와만 맞는다. 입력이 너무 길거나 읽기 예산을 넘어 정규식을 끝까지
+         * 보지 못하면 맞는 것으로 보고 undecided[0]을 켠다 (확정하지 않는다).
+         */
+        boolean accepts(PathSegment fe, boolean strict, boolean[] undecided) {
             if (fe.wildcard()) {
                 return !strict || type == Type.MULTI || (type == Type.VARIABLE && regex == null);
             }
             return switch (type) {
                 case LITERAL -> literal.equals(fe.literal());
-                case VARIABLE ->
-                        regex == null
-                                || (fe.literal().length() <= MAX_REGEX_INPUT
-                                        && regexMatches(fe.literal()));
+                case VARIABLE -> regex == null || regexMatches(fe.literal(), undecided);
                 case MULTI -> true;
             };
         }
 
-        private boolean regexMatches(String input) {
+        private boolean regexMatches(String input, boolean[] undecided) {
+            if (input.length() > MAX_REGEX_INPUT) {
+                undecided[0] = true;
+                return true;
+            }
             try {
                 return regex.matcher(new BudgetedChars(input, new int[] {MAX_REGEX_STEPS}))
                         .matches();
             } catch (RegexBudgetExceeded e) {
-                return false;
+                undecided[0] = true;
+                return true;
             }
         }
     }
@@ -395,11 +415,18 @@ public final class ApiPathMatcher {
     /**
      * @param variables 변수 무게의 합
      * @param certain FE 와일드카드가 어떤 값이어도 이 후보와 맞는다
+     * @param undecided 정규식을 끝까지 보지 못해 맞는지 모른다
      */
     private record Candidate(
-            long fileId, int literals, int variables, boolean multi, boolean certain) {
+            long fileId,
+            int literals,
+            int variables,
+            boolean multi,
+            boolean certain,
+            boolean undecided) {
 
-        static Candidate of(long fileId, List<ApiSegment> pattern, boolean certain) {
+        static Candidate of(
+                long fileId, List<ApiSegment> pattern, boolean certain, boolean undecided) {
             int literals = 0;
             int variables = 0;
             boolean multi = false;
@@ -410,7 +437,7 @@ public final class ApiPathMatcher {
                     case MULTI -> multi = true;
                 }
             }
-            return new Candidate(fileId, literals, variables, multi, certain);
+            return new Candidate(fileId, literals, variables, multi, certain, undecided);
         }
     }
 }

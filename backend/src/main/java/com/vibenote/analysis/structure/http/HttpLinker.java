@@ -577,61 +577,81 @@ public final class HttpLinker {
         return taints;
     }
 
+    /** 요청을 바꾸는 쓰기를 모으는 중간 값. */
+    private static final class TaintScan {
+        boolean axiosBase;
+        boolean axiosHooked;
+        boolean fetchReplaced;
+        final Set<Receiver> instanceBase = Collections.newSetFromMap(new IdentityHashMap<>());
+        final Set<Receiver> hooked = Collections.newSetFromMap(new IdentityHashMap<>());
+    }
+
     private Taints readTaints() {
-        boolean axiosBase = false;
-        boolean axiosHooked = false;
-        boolean fetchReplaced = false;
-        Set<Receiver> instanceBase = Collections.newSetFromMap(new IdentityHashMap<>());
-        Set<Receiver> hooked = Collections.newSetFromMap(new IdentityHashMap<>());
+        TaintScan scan = new TaintScan();
         for (JsModule m :
                 modules.values().stream()
                         .sorted((a, b) -> Long.compare(a.fileId(), b.fileId()))
                         .toList()) {
-            List<JsToken> t = m.tokens();
-            for (int i = 0; i < t.size(); i++) {
-                budget.spend();
-                JsToken name = t.get(i);
-                if (name.kind() != JsToken.Kind.IDENT
-                        || (i > 0 && (t.get(i - 1).is(".") || t.get(i - 1).is("?.")))) {
-                    continue;
+            readTaints(m.tokens(), m, scan);
+        }
+        return new Taints(
+                scan.axiosBase,
+                scan.instanceBase,
+                scan.axiosHooked,
+                scan.hooked,
+                scan.fetchReplaced);
+    }
+
+    /** 토큰 목록 하나를 훑는다. 템플릿 ${} 안의 식도 실행되므로 그 토큰 목록도 훑는다 (중첩은 토크나이저가 64단계로 막는다). */
+    private void readTaints(List<JsToken> t, JsModule m, TaintScan scan) {
+        for (int i = 0; i < t.size(); i++) {
+            budget.spend();
+            JsToken name = t.get(i);
+            if (name.kind() == JsToken.Kind.TEMPLATE) {
+                for (List<JsToken> part : name.parts()) {
+                    readTaints(part, m, scan);
                 }
-                fetchReplaced |= replacesFetch(t, i, m);
-                boolean defaults = is(t, i + 1, ".") && is(t, i + 2, "defaults");
-                boolean interceptor =
-                        is(t, i + 1, ".")
-                                && is(t, i + 2, "interceptors")
-                                && is(t, i + 3, ".")
-                                && is(t, i + 4, "request");
-                boolean assigned =
-                        is(t, i - 1, "(")
-                                && is(t, i - 2, "assign")
-                                && is(t, i - 3, ".")
-                                && is(t, i - 4, "Object")
-                                && defaults
-                                && is(t, i + 3, ",");
-                if (!interceptor && !(defaults && (assigned || writesBase(t, i)))) {
-                    continue;
-                }
-                Receiver receiver = receiver(name.text(), name.start(), m);
-                if (receiver == null || receiver == SHADOWED) {
-                    continue;
-                }
-                boolean axios = receiver.type() == ReceiverType.AXIOS;
-                if (interceptor) {
-                    if (axios) {
-                        axiosHooked = true;
-                    } else {
-                        hooked.add(receiver);
-                    }
-                } else if (axios) {
-                    // 단순한 axios.defaults.baseURL = 식은 defaultsBaseUrls가 모은다
-                    axiosBase |= assigned || !plainBaseWrite(t, i);
+                continue;
+            }
+            if (name.kind() != JsToken.Kind.IDENT
+                    || (i > 0 && (t.get(i - 1).is(".") || t.get(i - 1).is("?.")))) {
+                continue;
+            }
+            scan.fetchReplaced |= replacesFetch(t, i, m);
+            boolean defaults = is(t, i + 1, ".") && is(t, i + 2, "defaults");
+            boolean interceptor =
+                    is(t, i + 1, ".")
+                            && is(t, i + 2, "interceptors")
+                            && is(t, i + 3, ".")
+                            && is(t, i + 4, "request");
+            boolean assigned =
+                    is(t, i - 1, "(")
+                            && is(t, i - 2, "assign")
+                            && is(t, i - 3, ".")
+                            && is(t, i - 4, "Object")
+                            && defaults
+                            && is(t, i + 3, ",");
+            if (!interceptor && !(defaults && (assigned || writesBase(t, i)))) {
+                continue;
+            }
+            Receiver receiver = receiver(name.text(), name.start(), m);
+            if (receiver == null || receiver == SHADOWED) {
+                continue;
+            }
+            boolean axios = receiver.type() == ReceiverType.AXIOS;
+            if (interceptor) {
+                if (axios) {
+                    scan.axiosHooked = true;
                 } else {
-                    instanceBase.add(receiver);
+                    scan.hooked.add(receiver);
                 }
+            } else if (axios) {
+                // 단순한 axios.defaults.baseURL = 식은 defaultsBaseUrls가 모은다
+                scan.axiosBase |= assigned || !plainBaseWrite(t, i);
+            } else {
+                scan.instanceBase.add(receiver);
             }
         }
-        return new Taints(axiosBase, instanceBase, axiosHooked, hooked, fetchReplaced);
     }
 
     /**
@@ -719,7 +739,8 @@ public final class HttpLinker {
             }
             JsDecl d = decl.get();
             if (d.kind() == JsDecl.Kind.PARAM) {
-                if (module.reassigned(d)) {
+                // 본문에서 다시 대입하거나 url·method·baseURL 속성을 바꾸면 부른 곳의 인자가 그 값이 아니다
+                if (module.reassigned(d) || mutatedConfigs(module).contains(d)) {
                     return Config.unresolved(null);
                 }
                 if (d.function().equals(bindings.function())) {
