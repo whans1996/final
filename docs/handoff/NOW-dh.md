@@ -3,7 +3,7 @@
 > 김동환(A 영역: AI·분석·학습 루프) 전용. 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
-갱신: 2026-11-25 22:59 · 작업자: whans1996@naver.com · PC: dh-home · 브랜치: feature/F-27-gms-provider
+갱신: 2026-11-25 23:02 · 작업자: whans1996@naver.com · PC: dh-home · 브랜치: feature/F-27-gms-provider
 
 ## 현재 기능
 
