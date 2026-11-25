@@ -3,11 +3,11 @@
 > 김동환(A 영역: AI·분석·학습 루프) 전용. 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
-갱신: 2026-11-25 11:36 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/common-harness-revamp
+갱신: 2026-11-25 11:39 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/common-harness-revamp
 
 ## 현재 기능
 
-**H-1 하네스 개편** (WBS 6.1, 기획서 6절 H-1) — `/pr-review` 중. reviewer 반드시 수정 반영 완료, PR 생성 대기. spec 없음(하네스), `Closes #29 #129` → 머지 후 하네스 재동결.
+**H-1 하네스 개편** (WBS 6.1, 기획서 6절 H-1) — **PR #138** 열림 (head 42f6559), CI·Codex 대기. spec 없음(하네스), `Closes #29 #129` → 머지 후 하네스 재동결.
 
 ## 진행
 
@@ -20,7 +20,7 @@
 
 ## 바로 다음 할 일
 
-1. push(`timeout` 600000) → `gh pr create --base develop --title "feat(harness): H-1 하네스 개편" --body-file .harness/pr-H-1.md` → `gh pr checks` → Codex 루프(`node scripts/codex-review.mjs <PR> --request --wait --status`, run_in_background)
+1. PR #138 Codex 루프: `node scripts/codex-review.mjs 138 --request --wait --status` (run_in_background) → FINDINGS면 판단·수정, COMPLETE면 `gh pr checks 138` 초록 확인 후 GitHub에서 머지
 2. 머지 후 하네스 재동결 → V-1 MVP 감사(11/29~) · 11/27 Figma 세션
 
 ## 막힌 점 / 결정 필요
