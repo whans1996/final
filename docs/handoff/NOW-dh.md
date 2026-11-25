@@ -3,30 +3,30 @@
 > 김동환(A 영역: AI·분석·학습 루프) 전용. 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
-갱신: 2026-11-25 17:23 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/F-26a-index-selection
+갱신: 2026-11-25 17:46 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/F-26a-index-selection
 
 ## 현재 기능
 
-**F-26a 수집·선별 개편** `/implement` 중. spec `docs/specs/F-26a-index-selection.md` APPROVED. AC1~AC11 구현·커밋 끝, BE 1233개 통과. 다음은 contract-checker → /pr-review
+**F-26a 수집·선별 개편** `/pr-review` 8단계 (Codex 루프). **PR #157** (develop 대상) 열림, head `b5cabc6`. spec APPROVED, AC1~AC11 ✅
 
 ## 진행
 
-- ✅ AC1~AC3 `a00e0ee` · AC4 `ffb6150` · AC5~7·11 `e85491b` (ImportanceRanker), push됨
-- AC8·AC10: V12 마이그레이션, `saveFiles(id, files, dropped)` 100행 청크 + `updateIndexCounts`, 조회 3종·file_count에 `selected = TRUE`, 파이프라인이 인덱스 전체 저장. AC8·AC10 상태로 BE 1228개 통과
-- AC9: `findIndexFiles`, `ExplainPrompts.overviewInput(files, index, apis, max, readmeMax)`, `OverviewExplainer.explain(analysis, files, index, apis)`·LAYERS에서 test·migration·doc 제외, 프롬프트 3종 `{{readme}}`, `readme-max-chars: 4000`. 테스트 `ExplainPromptsTest#F26a_AC9_*` 4개, `OverviewExplainerTest#F26a_AC9_*`. 시그니처 변경으로 `MainFixturesTest:74`·`FileExplainerTest.PROPS`·`PromptEvalRunner.select`도 고침 (testCompile 통과)
-- 문서: ERD(V12 열·이력), 요구사항 정의서·유스케이스·데이터셋 문구, backend/CLAUDE.md 104줄, spec 체크리스트
+- ✅ AC1~AC11 구현 (`a00e0ee`~`68e7dea`), 로컬 verify all 통과 (BE 1233 + FE 717), pre-push 통과
+- ✅ PR 전 점검 반영: `05ac577` status errorCode Swagger 설명 + openapi.json (contract-checker) · `e7fcd80` ZipArchiveReader `Candidate.bundle` 한 번만 판정·루트 README 묶음 0 우선, `findIndexFiles`는 README만 content(CASE WHEN), `AnalysisService.chunks` 100행/400만 자, ErrorCode 413 주석 · `b5cabc6` spec 5.2·5.5·AC11, UC14, 결정로그 11-25 행
+- 새 테스트: `ZipArchiveReaderTest#AC2_루트_README는_doc이어도_개수_상한보다_먼저_담는다`, `AnalysisPipelineTest#F26a_AC9_개요용_인덱스_조회는_루트_README만_내용을_읽는다`, `AnalysisServiceChunkTest` 3개
+- 후속 이슈: #155 FE·화면설계서·F-05a의 "200개 · 10MB" 문구, #156 readingOrder 미선별 경로 버려짐
 
 ## 바로 다음 할 일
 
-1. contract-checker (API 형식 변화 없음 확인, openapi.json 그대로인지) → `/pr-review` (새 세션 권장)
+1. `node scripts/codex-review.mjs 157 --request --wait --status`(백그라운드) 결과 확인 → FINDINGS면 spec·보안 위반만 고치고 P2는 follow-up 이관 (`/pr-review` 8단계)
+2. `gh pr checks 157` CI 초록 확인 → Codex COMPLETE면 `docs(F-26a): 완료 표시 (spec DONE)` (spec 헤더 `DONE (PR #157)`, 체크리스트 "PR CI 초록"·"상태 DONE") → 사람이 GitHub에서 머지
 
 ## 막힌 점 / 결정 필요
 
 - 사람: GMS 키 수령(12/01 전), 노션 팀원 초대, F-05b liveTest, 제출 zip 이름
-- PR 후속에 적기: 화면 설계서·FE 분석 요청 화면의 "코드 파일 200개 · 10MB 이하" 안내 문구(FE, spec 범위 밖) · 개요 파일 목록에 미선별 파일이 생겨 readingOrder가 미선별 경로를 고르면 버려짐(파싱이 선별 id만 받음)
 
 ## 주의
 
 - 커밋 범위는 F-xx|common|harness만 · Git Bash에서 `/pr-review` 같은 인자는 MSYS 경로 변환됨 (`MSYS_NO_PATHCONV=1`)
-- 공통 파일 변경(ErrorCode 문구, V12, WithdrawalApiTest 시그니처) → PR 본문에서 김준섭 @멘션 · 진행현황·WBS·간트는 `/progress` docs PR에서만
+- PR #157이 공통 파일(ErrorCode·V12·application.yml·WithdrawalApiTest·openapi.json)을 바꿈 → 본문에 @JoonseobKim 멘션함. 상대가 먼저 머지하면 머지 전 `git merge origin/develop` 후 push
 - node 스크립트로 Java 편집 시 백슬래시가 깨짐 → Edit 도구 사용 · 이 PC에 python 없음
