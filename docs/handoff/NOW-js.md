@@ -1,7 +1,7 @@
 # NOW — 김준섭 현재 작업 스냅샷
 
 > 김준섭(B 영역: 카드·소셜) 전용. 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
-갱신: 2026-11-25 23:07 · 작업자: JoonseobKim · PC: js-home · 브랜치: feature/common-v2-eval-progress
+갱신: 2026-11-25 23:10 · 작업자: JoonseobKim · PC: js-home · 브랜치: feature/common-v2-eval-progress
 
 ---
 
@@ -17,7 +17,7 @@
 
 ## 바로 다음 할 일
 
-1. 이 브랜치 docs PR → develop (Codex 루프), 머지 뒤 원격 `feature/common-ds03-labels` 삭제 확인
+1. **PR #162** (head `10d0d6c`) Codex 루프 대기 중 → COMPLETE·CI 초록이면 GitHub에서 머지. 원격 `feature/common-ds03-labels`는 삭제함(로컬에만 남음)
 2. 김동환에게 이전 원격 브랜치를 열람하지 않았는지 확인 요청 (라벨 내용은 말하지 않는다)
 3. 12/03에 eval `sets.json`에 `frozenAt` 기록·push (V-2 고정)
 4. 11/27 Figma 공동 세션(F-29) → `/spec F-29`. V-1 MVP 감사(11/29~12/02)
