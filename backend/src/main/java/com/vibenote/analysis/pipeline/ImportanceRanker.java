@@ -114,31 +114,38 @@ public class ImportanceRanker {
         return ranked;
     }
 
-    /** config는 전체에서 상위 {@code max-config}개만 후보로 두고, FE·BE 몫 안에서 (importance 내림차순, 경로) 순으로 고른다. */
+    /**
+     * (importance 내림차순, 경로) 순으로 FE·BE 몫 안에서 고르고, 한쪽이 몫을 다 못 채우면 남은 자리를 다른 쪽이 같은 순서로 채운다. config는
+     * 실제로 고른 것만 세어 FE·BE 합쳐 {@code max-config}개까지 둔다 (#159: 몫이 찬 쪽의 config가 상한 자리를 먼저 차지하지 않게).
+     */
     private Set<String> choose(List<Scored> scored, int limit) {
-        Set<String> allowedConfig = new HashSet<>();
-        scored.stream()
-                .filter(s -> s.layer() == Layer.CONFIG)
-                .sorted(BY_SCORE)
-                .limit(properties.maxConfig())
-                .forEach(s -> allowedConfig.add(s.path()));
-
-        List<Scored> eligible =
-                scored.stream()
-                        .filter(s -> s.layer() != Layer.CONFIG || allowedConfig.contains(s.path()))
-                        .sorted(BY_SCORE)
-                        .toList();
-        List<Scored> fe = eligible.stream().filter(ImportanceRanker::isFrontend).toList();
-        List<Scored> be = eligible.stream().filter(s -> !isFrontend(s)).toList();
-
+        List<Scored> ordered = scored.stream().sorted(BY_SCORE).toList();
         long feCandidates = scored.stream().filter(ImportanceRanker::isFrontend).count();
-        int feTake = Math.min(fe.size(), frontendShare(limit, feCandidates, scored.size()));
-        int beTake = Math.min(be.size(), limit - feTake);
-        feTake = Math.min(fe.size(), limit - beTake);
+        int feShare = frontendShare(limit, feCandidates, scored.size());
 
         Set<String> chosen = new HashSet<>();
-        fe.subList(0, feTake).forEach(s -> chosen.add(s.path()));
-        be.subList(0, beTake).forEach(s -> chosen.add(s.path()));
+        int[] taken = new int[2]; // [FE, BE]
+        int configs = 0;
+        for (boolean withinShare : new boolean[] {true, false}) {
+            for (Scored s : ordered) {
+                if (chosen.size() >= limit) {
+                    return chosen;
+                }
+                boolean config = s.layer() == Layer.CONFIG;
+                if (chosen.contains(s.path()) || (config && configs >= properties.maxConfig())) {
+                    continue;
+                }
+                int side = isFrontend(s) ? 0 : 1;
+                if (withinShare && taken[side] >= (side == 0 ? feShare : limit - feShare)) {
+                    continue;
+                }
+                chosen.add(s.path());
+                taken[side]++;
+                if (config) {
+                    configs++;
+                }
+            }
+        }
         return chosen;
     }
 

@@ -86,7 +86,7 @@ ALTER TABLE analyses
 ### 5.2 수집 (`pipeline/ZipArchiveReader`)
 
 1. 경로 검사·공통 최상위 폴더 떼기·비밀 파일 제외·기존 제외 폴더는 그대로다.
-2. 지원 확장자에 `ts`·`tsx`·`jsx`·`md`를 추가한다. 생성물 제외: 파일 `*.min.js`·`*.min.mjs`·`*.bundle.js`·`*.d.ts`, 폴더 `generated`·`__generated__`·`vendor`.
+2. 지원 확장자에 `ts`·`tsx`·`jsx`·`md`를 추가한다. `.cjs`는 확장자로 받지 않고 config로 판정되는 파일명 `*.config.cjs`만 받는다 (#158, JS 구조 파서가 읽지 못하는 코드를 늘리지 않게). 생성물 제외: 파일 `*.min.js`·`*.min.mjs`·`*.bundle.js`·`*.d.ts`, 폴더 `generated`·`__generated__`·`vendor`.
 3. 후보를 경로만으로 **묶음**으로 나눈다: ⓪ 루트 `README.md`(대소문자 무시, 개요 입력용이라 상한에 먼저 버려지지 않게) ① 코드·설정 ② test·migration ③ doc. 묶음은 후보마다 한 번만 구해 둔다 (정렬 비교마다 다시 판정하지 않음). 판정 규칙은 5.3절과 같고, 경로만으로 정할 수 있는 것만 여기서 쓴다.
 4. (묶음, 경로) 순서로 읽는다. 개수가 `max-index-files`에 이르거나 합계가 `max-index-bytes`를 처음 넘으면, 그 파일과 뒤의 파일은 **읽지 않고** 버린 개수로 센다 (zip bomb 방어: 읽는 양이 상한 + 파일 하나를 넘지 않는다). CRC 검사는 그대로다.
 5. 결과는 `IndexResult(List<SourceFile> files, int dropped)`. 코드 확장자가 없으면 `ANALYSIS_415`.

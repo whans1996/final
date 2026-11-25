@@ -174,6 +174,8 @@ class ZipArchiveReaderTest {
                                 "p/D.tsx", "x",
                                 "p/E.jsx", "x",
                                 "p/r.md", "x",
+                                "p/eslint.config.cjs", "x",
+                                "p/lib.cjs", "x",
                                 "p/other.json", "x",
                                 "p/x.py", "x",
                                 "p/X.class", "x",
@@ -196,7 +198,8 @@ class ZipArchiveReaderTest {
                         "c.ts",
                         "D.tsx",
                         "E.jsx",
-                        "r.md");
+                        "r.md",
+                        "eslint.config.cjs");
     }
 
     @Test
