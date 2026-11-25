@@ -1,6 +1,5 @@
 package com.vibenote.analysis.flow;
 
-import com.vibenote.analysis.AnalysisExecutorConfig;
 import com.vibenote.common.exception.ErrorCode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,8 +11,8 @@ import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 /**
- * 요청 트랜잭션이 커밋된 뒤 흐름 생성을 분석 실행기에 흐름별로 넘긴다 (F-05a AnalysisPipelineLauncher와 같은 패턴). 큐가 차서 거절되면 그 흐름만
- * FAILED·ANALYSIS_500 (AC11).
+ * 요청 트랜잭션이 커밋된 뒤 흐름 생성을 흐름 전용 실행기({@link FlowExecutorConfig}, #24)에 흐름별로 넘긴다 (F-05a
+ * AnalysisPipelineLauncher와 같은 패턴). 큐가 차서 거절되면 그 흐름만 FAILED·ANALYSIS_500 (AC11).
  */
 @Component
 class FlowLauncher {
@@ -27,7 +26,7 @@ class FlowLauncher {
     FlowLauncher(
             FlowGenerator generator,
             FlowService flowService,
-            @Qualifier(AnalysisExecutorConfig.EXECUTOR) TaskExecutor executor) {
+            @Qualifier(FlowExecutorConfig.EXECUTOR) TaskExecutor executor) {
         this.generator = generator;
         this.flowService = flowService;
         this.executor = executor;
@@ -39,7 +38,7 @@ class FlowLauncher {
             try {
                 executor.execute(() -> generator.generate(id));
             } catch (TaskRejectedException e) {
-                log.warn("분석 실행기가 가득 차 흐름 {}을 시작하지 못함", id);
+                log.warn("흐름 실행기가 가득 차 흐름 {}을 시작하지 못함", id);
                 flowService.markFailed(id, ErrorCode.ANALYSIS_500);
             }
         }
