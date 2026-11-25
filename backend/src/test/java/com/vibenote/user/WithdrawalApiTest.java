@@ -198,7 +198,7 @@ class WithdrawalApiTest extends UserTestSupport {
         withdraw(me, "{\"password\":\"" + PASSWORD + "\"}").andExpect(status().isNoContent());
         // 실행기가 advance(SELECTING) 뒤 탈퇴 커밋을 기다렸다가 저장 단계로 들어온 경우를 순서대로 흉내 낸다
         analysisService.saveFiles(
-                id, List.of(new SelectedFile("A.java", Layer.CONTROLLER, "class A {}")));
+                id, List.of(new SelectedFile("A.java", Layer.CONTROLLER, "class A {}")), 0);
         long conceptId = count("SELECT MIN(id) FROM concepts");
         conceptLinkService.save(
                 id, List.of(new ExtractedConcept(conceptId, null, null, null, null)));

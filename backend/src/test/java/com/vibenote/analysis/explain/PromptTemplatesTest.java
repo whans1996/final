@@ -18,6 +18,7 @@ class PromptTemplatesTest {
     private static Map<String, String> overviewValues() {
         return Map.of(
                 "projectName", "todo-app",
+                "readme", "(README 없음)",
                 "fileTree", "src/A.java [controller]",
                 "apis", "GET /api/todos",
                 "sources",

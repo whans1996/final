@@ -14,7 +14,7 @@ import com.vibenote.analysis.fetch.RepositoryArchiveFetcher;
 import com.vibenote.analysis.fetch.RepositoryUrl;
 import com.vibenote.analysis.pipeline.AnalysisFailedException;
 import com.vibenote.analysis.pipeline.ImportanceRanker;
-import com.vibenote.analysis.pipeline.RankedFile;
+import com.vibenote.analysis.pipeline.IndexResult;
 import com.vibenote.analysis.pipeline.SecretRedactor;
 import com.vibenote.analysis.pipeline.SelectedFile;
 import com.vibenote.analysis.pipeline.SourceFile;
@@ -151,22 +151,25 @@ public class AnalysisPipeline {
     }
 
     private void filter(Context context) {
-        context.files = zipReader.read(context.archive).files();
+        IndexResult index = zipReader.read(context.archive);
+        context.files = index.files();
+        context.dropped = index.dropped();
     }
 
-    /** 선별한 파일만 키를 가려 저장한다. 이후 단계는 저장된 analysis_files를 입력으로 쓴다. */
+    /** 인덱스 전체를 키를 가려 선별 여부·점수와 함께 저장한다 (F-26a 5.5절). 이후 단계는 저장된 analysis_files 중 선별 파일을 입력으로 쓴다. */
     private void select(Context context) {
-        List<SelectedFile> selected =
+        List<SelectedFile> index =
                 importanceRanker.rank(context.files, properties.maxSelectedFiles()).stream()
-                        .filter(RankedFile::selected)
                         .map(
                                 f ->
                                         new SelectedFile(
                                                 f.path(),
                                                 f.layer(),
-                                                SecretRedactor.redact(f.path(), f.content())))
+                                                SecretRedactor.redact(f.path(), f.content()),
+                                                f.selected(),
+                                                f.importance()))
                         .toList();
-        analysisService.saveFiles(context.analysisId, selected);
+        analysisService.saveFiles(context.analysisId, index, context.dropped);
     }
 
     /**
@@ -178,7 +181,11 @@ public class AnalysisPipeline {
         Analysis analysis = analysisService.findForPipeline(id);
         List<AnalysisFile> files = analysisService.findFiles(id);
         AnalysisOverview overview =
-                overviewExplainer.explain(analysis, files, ApiDetector.detect(files));
+                overviewExplainer.explain(
+                        analysis,
+                        files,
+                        analysisService.findIndexFiles(id),
+                        ApiDetector.detect(files));
         analysisService.saveOverview(id, overview);
         if (!analysisService.advance(id, AnalysisStatus.EXPLAINING, EXPLAIN_OVERVIEW_DONE)) {
             return;
@@ -234,6 +241,7 @@ public class AnalysisPipeline {
         private final long analysisId;
         private Path archive;
         private List<SourceFile> files;
+        private int dropped;
 
         private Context(long analysisId) {
             this.analysisId = analysisId;

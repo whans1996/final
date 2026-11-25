@@ -41,8 +41,12 @@ public class OverviewExplainer {
     static final int MAX_READING = 5;
     static final int MAX_REASON = 200;
 
+    /** LLM 응답에서 받는 layer. 인덱스에만 있는 test·migration·doc은 뺀다 (F-26a 5.3절). */
     private static final Set<String> LAYERS =
-            Arrays.stream(Layer.values()).map(Layer::value).collect(Collectors.toSet());
+            Arrays.stream(Layer.values())
+                    .filter(l -> !l.indexOnly())
+                    .map(Layer::value)
+                    .collect(Collectors.toSet());
 
     private final LlmClient llm;
     private final PromptTemplates templates;
@@ -56,13 +60,23 @@ public class OverviewExplainer {
     }
 
     /**
+     * @param files 선별 파일 (코드 블록·readingOrder 파일 id)
+     * @param index 인덱스 전체 (README·파일 목록, F-26a 5.6절)
      * @return 검증·정리한 개요 + {@code apis}
      * @throws AnalysisFailedException LLM이 응답하지 못하면 LLM_503, 두 번 다 형식이 틀리면 LLM_502
      */
     public AnalysisOverview explain(
-            Analysis analysis, List<AnalysisFile> files, List<ApiEndpoint> apis) {
+            Analysis analysis,
+            List<AnalysisFile> files,
+            List<AnalysisFile> index,
+            List<ApiEndpoint> apis) {
         ExplainPrompts.OverviewInput input =
-                ExplainPrompts.overviewInput(files, apis, properties.overviewMaxChars());
+                ExplainPrompts.overviewInput(
+                        files,
+                        index,
+                        apis,
+                        properties.overviewMaxChars(),
+                        properties.readmeMaxChars());
         String prompt =
                 templates.render(
                         LlmStage.OVERVIEW,
@@ -70,6 +84,7 @@ public class OverviewExplainer {
                         Map.of(
                                 "projectName",
                                         ExplainPrompts.escapeDelimiters(analysis.getProjectName()),
+                                "readme", input.readme(),
                                 "fileTree", input.fileTree(),
                                 "apis", input.apis(),
                                 "sources", input.sources()));

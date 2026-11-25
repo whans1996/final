@@ -201,4 +201,36 @@ class AnalysisResultApiTest extends AnalysisTestSupport {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("ANALYSIS_001"));
     }
+
+    /** 인덱스에만 있고 설명 대상으로 선별되지 않은 파일 (F-26a). */
+    private long insertIndexOnlyFile(long analysisId, String path, String layer) {
+        long id = insertFile(analysisId, path, layer, null, null);
+        jdbc.update("UPDATE analysis_files SET selected = FALSE WHERE id = ?", id);
+        return id;
+    }
+
+    @Test
+    void F26a_AC8_선별되지_않은_파일_상세는_404() throws Exception {
+        long userId = createUser("f26ac8api", "JUNIOR");
+        long id = doneAnalysis(userId);
+        long selected = insertFile(id, "web/TodoController.java", "controller", "API", "설명");
+        long indexOnly = insertIndexOnlyFile(id, "src/test/java/TodoTest.java", "test");
+
+        mockMvc.perform(
+                        get("/api/analyses/{id}/files/{fileId}", id, indexOnly)
+                                .header(HttpHeaders.AUTHORIZATION, bearer(userId)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("ANALYSIS_001"));
+        mockMvc.perform(
+                        get("/api/analyses/{id}/files", id)
+                                .header(HttpHeaders.AUTHORIZATION, bearer(userId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].id").value(selected));
+        mockMvc.perform(
+                        get("/api/analyses/{id}", id)
+                                .header(HttpHeaders.AUTHORIZATION, bearer(userId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.fileCount").value(1));
+    }
 }

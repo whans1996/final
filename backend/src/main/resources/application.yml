@@ -86,6 +86,7 @@ analysis:
     batch-size: 6
     max-file-chars: 6000
     overview-max-chars: 24000
+    readme-max-chars: 4000
   # 실행 흐름 (docs/specs/F-07-execution-flow.md 5절): 입력 코드 합계·파일 수, 분석당 흐름 수, 저장 단계 수 상한
   flow:
     max-chars: 24000

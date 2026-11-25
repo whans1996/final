@@ -59,25 +59,37 @@
     </update>
 
     <insert id="insertFiles">
-        INSERT INTO analysis_files (analysis_id, path, layer, content) VALUES
+        INSERT INTO analysis_files (analysis_id, path, layer, selected, importance, content) VALUES
         <foreach collection="files" item="f" separator=",">
-            (#{f.analysisId}, #{f.path}, #{f.layer}, #{f.content})
+            (#{f.analysisId}, #{f.path}, #{f.layer}, #{f.selected}, #{f.importance}, #{f.content})
         </foreach>
     </insert>
 
+    <update id="updateIndexCounts">
+        UPDATE analyses SET indexed_files = #{indexedFiles}, dropped_files = #{droppedFiles}
+        WHERE id = #{id}
+    </update>
+
+    <!-- F-26a: analysis_files에는 인덱스 전체가 있다. 설명·개념·퀴즈·흐름·구조·파일 API는 선별 파일만 본다 (AC8) -->
     <select id="findFiles" resultType="com.vibenote.analysis.domain.AnalysisFile">
         SELECT id, analysis_id, path, layer, role, content, summary
+        FROM analysis_files WHERE analysis_id = #{analysisId} AND selected = TRUE ORDER BY id
+    </select>
+
+    <!-- F-26a 5.5절: 인덱스 전체 (선별 여부와 상관없음). 개요 입력의 README·파일 목록용 -->
+    <select id="findIndexFiles" resultType="com.vibenote.analysis.domain.AnalysisFile">
+        SELECT id, analysis_id, path, layer, selected, importance, role, content, summary
         FROM analysis_files WHERE analysis_id = #{analysisId} ORDER BY id
     </select>
 
     <select id="findFileSummaries" resultType="com.vibenote.analysis.domain.AnalysisFile">
         SELECT id, analysis_id, path, layer, role, summary
-        FROM analysis_files WHERE analysis_id = #{analysisId} ORDER BY id
+        FROM analysis_files WHERE analysis_id = #{analysisId} AND selected = TRUE ORDER BY id
     </select>
 
     <select id="findFile" resultType="com.vibenote.analysis.domain.AnalysisFile">
         SELECT id, analysis_id, path, layer, role, content, summary
-        FROM analysis_files WHERE id = #{fileId} AND analysis_id = #{analysisId}
+        FROM analysis_files WHERE id = #{fileId} AND analysis_id = #{analysisId} AND selected = TRUE
     </select>
 
     <resultMap id="analysisDetail" type="com.vibenote.analysis.domain.AnalysisDetail" autoMapping="true">
@@ -94,8 +106,9 @@
     <!-- F-06 AC9, F-19 AC9. explained_file_count는 설명(summary)이 채워진 파일 수 -->
     <select id="findViewableDetail" resultMap="analysisDetail">
         SELECT <include refid="columns"/>, overview,
-               (SELECT COUNT(*) FROM analysis_files f WHERE f.analysis_id = a.id) AS file_count,
-               (SELECT COUNT(*) FROM analysis_files f WHERE f.analysis_id = a.id AND f.summary IS NOT NULL) AS explained_file_count,
+               (SELECT COUNT(*) FROM analysis_files f WHERE f.analysis_id = a.id AND f.selected = TRUE) AS file_count,
+               (SELECT COUNT(*) FROM analysis_files f
+                WHERE f.analysis_id = a.id AND f.selected = TRUE AND f.summary IS NOT NULL) AS explained_file_count,
                (SELECT u.nickname FROM users u WHERE u.id = a.user_id) AS owner_nickname
         FROM analyses a
         WHERE <include refid="viewable"/>

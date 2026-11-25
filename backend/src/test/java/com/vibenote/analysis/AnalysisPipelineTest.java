@@ -2,6 +2,7 @@ package com.vibenote.analysis;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
@@ -56,9 +57,11 @@ class AnalysisPipelineTest extends AnalysisTestSupport {
         return id;
     }
 
+    /** 선별 파일 (F-26a 뒤로 analysis_files에는 인덱스 전체가 있고, 설명 대상은 selected = TRUE인 행이다). */
     private List<Map<String, Object>> files(long analysisId) {
         return jdbc.queryForList(
-                "SELECT path, layer, content FROM analysis_files WHERE analysis_id = ? ORDER BY id",
+                "SELECT path, layer, content FROM analysis_files"
+                        + " WHERE analysis_id = ? AND selected = TRUE ORDER BY id",
                 analysisId);
     }
 
@@ -217,6 +220,87 @@ class AnalysisPipelineTest extends AnalysisTestSupport {
         assertThat(row.get("error_code")).isNull();
     }
 
+    /** 코드 480 + controller 1 + test 10 + doc 9 = 인덱스 500개, 1MB 초과 1개는 버린다. */
+    private static Map<String, String> indexOf500() {
+        Map<String, String> entries = new LinkedHashMap<>();
+        for (int i = 0; i < 480; i++) {
+            entries.put(String.format("p/u/Util%03d.java", i), "class Util" + i + " {}");
+        }
+        // 선별되지 않을 파일에 키를 넣어 인덱스 전체가 가려지는지 본다
+        entries.put("p/u/Util479.java", "class Util479 { String k = \"" + GOOGLE_KEY + "\"; }");
+        entries.put("p/web/HomeController.java", "class HomeController {}");
+        for (int i = 0; i < 10; i++) {
+            entries.put("p/src/test/java/T" + i + "Test.java", "class T" + i + "Test {}");
+        }
+        for (int i = 0; i < 9; i++) {
+            entries.put("p/docs/d" + i + ".md", "# doc " + i);
+        }
+        entries.put("p/Huge.java", "x".repeat(1024 * 1024 + 1));
+        return entries;
+    }
+
+    @Test
+    void F26a_AC8_인덱스_전체를_가려_저장하고_30개만_selected다() throws IOException {
+        long id = prepare(createUser("f26ac8", "JUNIOR"), zip(indexOf500()));
+
+        pipeline.run(id);
+
+        Map<String, Object> row = analysisRow(id);
+        assertThat(row.get("status")).isEqualTo("DONE");
+        assertThat(row.get("indexed_files")).isEqualTo(500);
+        assertThat(row.get("dropped_files")).isEqualTo(1);
+
+        List<Map<String, Object>> all =
+                jdbc.queryForList(
+                        "SELECT id, path, layer, selected, importance, content, summary"
+                                + " FROM analysis_files WHERE analysis_id = ? ORDER BY id",
+                        id);
+        assertThat(all).hasSize(500);
+        assertThat(all).filteredOn(f -> Boolean.TRUE.equals(f.get("selected"))).hasSize(30);
+        assertThat(all)
+                .extracting(f -> (String) f.get("content"))
+                .noneMatch(c -> c.contains(GOOGLE_KEY));
+        assertThat(all)
+                .filteredOn(f -> f.get("path").equals("u/Util479.java"))
+                .singleElement()
+                .satisfies(f -> assertThat(f.get("selected")).isEqualTo(false));
+        // 선별 파일이 먼저 저장된다 (5.4절 7): 앞 30행이 선별, 뒤 470행은 선별되지 않음
+        assertThat(all.subList(0, 30)).allMatch(f -> Boolean.TRUE.equals(f.get("selected")));
+        assertThat(all.subList(30, 500)).allMatch(f -> Boolean.FALSE.equals(f.get("selected")));
+        // test·doc은 점수가 없고, 후보는 점수가 있다
+        assertThat(all)
+                .filteredOn(f -> List.of("test", "doc").contains(f.get("layer")))
+                .hasSize(19)
+                .allMatch(f -> f.get("importance") == null);
+        assertThat(all)
+                .filteredOn(f -> !List.of("test", "doc").contains(f.get("layer")))
+                .allMatch(f -> f.get("importance") != null);
+    }
+
+    @Test
+    void F26a_AC8_설명과_개념_연결은_선별_파일만_본다() throws IOException {
+        long id = prepare(createUser("f26ac8b", "JUNIOR"), zip(indexOf500()));
+
+        pipeline.run(id);
+
+        assertThat(
+                        jdbc.queryForObject(
+                                "SELECT COUNT(*) FROM analysis_files WHERE analysis_id = ? AND"
+                                        + " selected = FALSE AND (summary IS NOT NULL OR role IS"
+                                        + " NOT NULL)",
+                                Integer.class,
+                                id))
+                .isZero();
+        assertThat(
+                        jdbc.queryForObject(
+                                "SELECT COUNT(*) FROM analysis_concepts ac JOIN analysis_files f"
+                                        + " ON f.id = ac.file_id WHERE ac.analysis_id = ? AND"
+                                        + " f.selected = FALSE",
+                                Integer.class,
+                                id))
+                .isZero();
+    }
+
     @Test
     void AC8_지원_스택_코드가_없으면_FAILED_ANALYSIS_415() throws IOException {
         long id =
@@ -287,7 +371,7 @@ class AnalysisPipelineTest extends AnalysisTestSupport {
         long id = prepare(createUser("ac10error", "JUNIOR"), zip(springProject()));
         doThrow(new IllegalStateException("db down"))
                 .when(analysisService)
-                .saveFiles(anyLong(), anyList());
+                .saveFiles(anyLong(), anyList(), anyInt());
 
         pipeline.run(id);
 
@@ -308,7 +392,9 @@ class AnalysisPipelineTest extends AnalysisTestSupport {
     @Test
     void AC10_Error가_나도_FAILED_ANALYSIS_500으로_바꾸고_다시_던진다() throws IOException {
         long id = prepare(createUser("ac10fatal", "JUNIOR"), zip(springProject()));
-        doThrow(new StackOverflowError()).when(analysisService).saveFiles(anyLong(), anyList());
+        doThrow(new StackOverflowError())
+                .when(analysisService)
+                .saveFiles(anyLong(), anyList(), anyInt());
 
         assertThatThrownBy(() -> pipeline.run(id)).isInstanceOf(StackOverflowError.class);
 

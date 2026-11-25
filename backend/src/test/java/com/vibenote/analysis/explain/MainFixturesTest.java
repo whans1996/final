@@ -71,7 +71,7 @@ class MainFixturesTest {
 
         AnalysisOverview overview =
                 new OverviewExplainer(llm, new PromptTemplates(), PROPS)
-                        .explain(analysis(Level.JUNIOR), files, List.of());
+                        .explain(analysis(Level.JUNIOR), files, files, List.of());
 
         assertThat(llm.requests).hasSize(1);
         assertThat(overview.summary()).isNotBlank();

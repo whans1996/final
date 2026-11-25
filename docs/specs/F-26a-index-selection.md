@@ -190,13 +190,13 @@ ALTER TABLE analyses
 `/implement`가 진행하며 체크한다.
 
 - [x] 브랜치 `feature/F-26a-index-selection`
-- [ ] Flyway 마이그레이션 `V12__analysis_index.sql`
-- [ ] AC별 실패 테스트 작성 (red 확인) — AC1~AC3 ✅
-- [ ] BE 구현 (green)
-- [ ] 프롬프트 3종 `{{readme}}` 추가
+- [x] Flyway 마이그레이션 `V12__analysis_index.sql`
+- [x] AC별 실패 테스트 작성 (red 확인)
+- [x] BE 구현 (green)
+- [x] 프롬프트 3종 `{{readme}}` 추가
 - [ ] Swagger 설명 문구 + `docs/api/openapi.json` 갱신
 - [ ] contract-checker 통과
 - [ ] reviewer 지적 사항 반영
-- [ ] 산출물 반영 (ERD `analysis_files`·`analyses` 열, 요구사항 정의서의 분석 요청 실패 조건)
+- [x] 산출물 반영 (ERD `analysis_files`·`analyses` 열, 요구사항 정의서의 분석 요청 실패 조건)
 - [ ] PR CI 초록
 - [ ] 상태 DONE (PR 머지 후)

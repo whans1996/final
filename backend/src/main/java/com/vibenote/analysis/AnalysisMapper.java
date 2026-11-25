@@ -48,13 +48,22 @@ public interface AnalysisMapper {
 
     void insertFiles(@Param("files") List<AnalysisFile> files);
 
-    /** 분석의 파일 전체(content 포함), id 오름차순 = 선별 우선순위. 파이프라인 내부용. */
+    /** 인덱스에 담은 파일 수와 상한으로 버린 파일 수 (F-26a AC2). */
+    void updateIndexCounts(
+            @Param("id") long id,
+            @Param("indexedFiles") int indexedFiles,
+            @Param("droppedFiles") int droppedFiles);
+
+    /** 분석의 선별 파일 전체(content 포함), id 오름차순 = 선별 우선순위. 파이프라인 내부용. */
     List<AnalysisFile> findFiles(long analysisId);
 
-    /** 분석의 파일 목록(content 제외), id 오름차순 (F-06 AC10). */
+    /** 분석의 인덱스 전체(content 포함, 선별 여부와 상관없음), id 오름차순 (F-26a 5.5절). */
+    List<AnalysisFile> findIndexFiles(long analysisId);
+
+    /** 분석의 선별 파일 목록(content 제외), id 오름차순 (F-06 AC10, F-26a AC8). */
     List<AnalysisFile> findFileSummaries(long analysisId);
 
-    /** 그 분석의 파일 하나(content 포함). 다른 분석의 파일이면 empty (F-06 AC11). */
+    /** 그 분석의 선별 파일 하나(content 포함). 다른 분석의 파일이거나 선별되지 않았으면 empty (F-06 AC11, F-26a AC8). */
     Optional<AnalysisFile> findFile(
             @Param("analysisId") long analysisId, @Param("fileId") long fileId);
 

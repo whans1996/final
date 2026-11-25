@@ -111,7 +111,8 @@ class PromptEvalRunner {
         Fixture source = fixture(fixture);
         SelectionProperties selectionProps =
                 binder.bindOrCreate("analysis.selection", SelectionProperties.class);
-        List<AnalysisFile> files = select(source.zip(), analysisProps, selectionProps);
+        List<AnalysisFile> index = select(source.zip(), analysisProps, selectionProps);
+        List<AnalysisFile> files = index.stream().filter(AnalysisFile::isSelected).toList();
         List<ApiEndpoint> apis = ApiDetector.detect(files);
 
         RecordingLlmClient llm = new RecordingLlmClient(LiveLlmClients.gemini(gemini), pauseMs);
@@ -126,7 +127,7 @@ class PromptEvalRunner {
             Map<String, Object> result = new LinkedHashMap<>();
             llm.startLevel(level);
             try {
-                AnalysisOverview overview = overviewExplainer.explain(analysis, files, apis);
+                AnalysisOverview overview = overviewExplainer.explain(analysis, files, index, apis);
                 result.put("overview", overview);
                 if (stage.equals("file")) {
                     List<Map<String, Object>> explained = new ArrayList<>();
@@ -186,24 +187,23 @@ class PromptEvalRunner {
         System.out.printf("[prompt-eval] result=%s%n", ROOT.relativize(out));
     }
 
-    /** 실제 파이프라인의 SELECTING 단계와 같다 (선별 → 비밀 가림). 파일 id는 선별 순서대로 1부터. */
+    /** 실제 파이프라인의 SELECTING 단계와 같다 (인덱스 전체에 선별 표시 → 비밀 가림). 파일 id는 저장 순서(선별 파일 먼저)대로 1부터. */
     private static List<AnalysisFile> select(
             Path zip, AnalysisProperties props, SelectionProperties selectionProps) {
         List<SourceFile> read = new ZipArchiveReader(props).read(zip).files();
-        List<RankedFile> selected =
-                new ImportanceRanker(selectionProps)
-                        .rank(read, props.maxSelectedFiles()).stream()
-                                .filter(RankedFile::selected)
-                                .toList();
+        List<RankedFile> ranked =
+                new ImportanceRanker(selectionProps).rank(read, props.maxSelectedFiles());
         List<AnalysisFile> files = new ArrayList<>();
-        for (RankedFile f : selected) {
+        for (RankedFile f : ranked) {
             AnalysisFile row =
                     AnalysisFile.of(
                             0L,
                             new SelectedFile(
                                     f.path(),
                                     f.layer(),
-                                    SecretRedactor.redact(f.path(), f.content())));
+                                    SecretRedactor.redact(f.path(), f.content()),
+                                    f.selected(),
+                                    f.importance()));
             row.setId((long) files.size() + 1);
             files.add(row);
         }
