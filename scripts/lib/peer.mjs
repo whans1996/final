@@ -17,14 +17,25 @@ export function nowStampMs(text) {
   return m ? new Date(`${m[1]}T${m[2]}:00`).getTime() : null;
 }
 
-/** 후보 [{ source, text, at }] 중 갱신 시각(없으면 at)이 가장 늦은 것. 같으면 앞의 후보 */
+/**
+ * 같은 NOW가 여러 곳에 있을 때 출처로 보일 순위. develop을 합친 내 브랜치·작업 트리에도 상대 NOW가 들어오므로
+ * 갱신 줄의 브랜치(상대가 실제로 쓴 곳) > develop·main(그 브랜치가 머지되어 지워졌을 때 거쳐 온 곳) > 그 밖의 원격 브랜치 > 작업 트리 (#29)
+ */
+function sourceRank(c) {
+  const branch = /^갱신:.*?브랜치: (\S+)/m.exec(c.text)?.[1];
+  if (branch && c.source === `origin/${branch}`) return 3;
+  if (/^origin\/(develop|main)$/.test(c.source)) return 2;
+  return c.source.startsWith('origin/') ? 1 : 0;
+}
+
+/** 후보 [{ source, text, at }] 중 갱신 시각(없으면 at)이 가장 늦은 것. 같으면 sourceRank가 높은 것, 그래도 같으면 앞의 후보 */
 export function pickLatestNow(cands) {
   let best = null;
   let bestAt = -Infinity;
   for (const c of cands) {
     if (!c?.text) continue;
     const at = nowStampMs(c.text) ?? c.at ?? 0;
-    if (at > bestAt) {
+    if (at > bestAt || (at === bestAt && sourceRank(c) > sourceRank(best))) {
       best = c;
       bestAt = at;
     }

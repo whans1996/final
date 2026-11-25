@@ -29,7 +29,10 @@ export function patternToRegex(pattern) {
     else if (c === '?') re += '[^/]';
     else re += c.replace(/[.+^${}()|[\]\\]/g, '\\$&');
   }
-  return new RegExp(`${anchored ? '^' : '(?:^|/)'}${re}${dirOnly ? '/' : '(?:$|/)'}`);
+  // 끝 세그먼트에 *가 있으면(`docs/*`, `Analysis*`) GitHub처럼 그 디렉터리 바로 아래 파일만 맞춘다 (`**`는 제외, #29)
+  const last = p.split('/').pop();
+  const fileGlob = !dirOnly && last.includes('*') && !last.includes('**');
+  return new RegExp(`${anchored ? '^' : '(?:^|/)'}${re}${dirOnly ? '/' : fileGlob ? '$' : '(?:$|/)'}`);
 }
 
 /** CODEOWNERS 본문 → [{ pattern, re, owners: ['whans1996', ...] }] (주석·빈 줄 제외) */

@@ -25,6 +25,7 @@ import {
   recordStamp,
 } from './lib/common.mjs';
 import { currentPc } from './lib/env-check.mjs';
+import { touchNowHeader } from './lib/records.mjs';
 
 const args = process.argv.slice(2);
 const noPush = args.includes('--no-push');
@@ -108,7 +109,7 @@ console.log(`📝 작업로그에 항목을 추가했습니다.`);
 
 if (nowFile && nowMd) {
   const head = `갱신: ${nowStamp()} · 작업자: ${author} · PC: ${pcId} · 브랜치: ${branch} (자동 handoff, 본문 미갱신)`;
-  const updated = /^갱신:.*$/m.test(nowMd) ? nowMd.replace(/^갱신:.*$/m, head) : `${head}\n\n${nowMd}`;
+  const updated = touchNowHeader(nowMd, head);
   writeFileSync(nowFile, updated, 'utf8');
   console.log(`📝 ${nowName}의 갱신 줄을 바꿨습니다.`);
 } else if (!key) {

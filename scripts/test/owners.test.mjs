@@ -25,6 +25,12 @@ test('패턴: 루트 고정, 어느 깊이든, 디렉터리 아래 전부', () =
   assert.ok(!patternToRegex('**/vibenote/quiz/').test('backend/src/main/java/com/vibenote/quizzes/A.java'));
   assert.ok(patternToRegex('/frontend/src/views/Analysis*').test('frontend/src/views/AnalysisListView.vue'));
   assert.ok(!patternToRegex('/frontend/src/views/Analysis*').test('frontend/src/views/HomeView.vue'));
+  // GitHub CODEOWNERS: 끝 세그먼트의 *는 그 디렉터리 바로 아래만 (docs/*는 docs/a/b.md에 안 맞음, #29)
+  assert.ok(!patternToRegex('/frontend/src/views/Analysis*').test('frontend/src/views/AnalysisX/a.vue'));
+  assert.ok(patternToRegex('/a/*').test('a/b'));
+  assert.ok(!patternToRegex('/a/*').test('a/b/c'));
+  assert.ok(patternToRegex('*.md').test('docs/x/y.md'));
+  assert.ok(patternToRegex('/a/**').test('a/b/c'));
   assert.ok(patternToRegex('CODEOWNERS').test('.github/CODEOWNERS'));
 });
 
