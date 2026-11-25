@@ -131,6 +131,14 @@ describe('MySettingsView (F-03 AC10)', () => {
     expect(button().attributes('disabled')).toBeUndefined()
   })
 
+  it('AC10 탈퇴 안내에 내 분석이 삭제된다는 것을 알린다 (#91)', async () => {
+    const { wrapper } = await mountSettings()
+
+    expect(wrapper.find('form[data-form="withdraw"] .hint').text()).toContain(
+      '내 분석(업로드한 코드와 결과)은 모두 삭제됩니다',
+    )
+  })
+
   it('AC10 탈퇴에 성공하면 logout 호출 없이 세션만 비우고 홈으로 이동한다', async () => {
     const { wrapper, router } = await mountSettings()
     usersApi.withdraw.mockResolvedValue()
