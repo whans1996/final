@@ -1890,4 +1890,23 @@ class StructureAnalyzerTest {
         assertThat(http(response)).containsExactly(edge(1, 100, 10), edge(1, 101, 11));
         assertThat(httpUnresolved(response)).isEmpty();
     }
+
+    @Test
+    void AC10_클래스_본문의_샵이름_대입은_같은_이름_매개변수를_다시_대입하지_않는다() {
+        // #125 리뷰: #cfg = … 를 매개변수 cfg의 재대입으로 보면 래퍼 인라인을 하지 않아 URL_UNKNOWN이 된다
+        AnalysisStructureResponse response =
+                run(
+                        List.of(api("GET", "/api/todos", 100)),
+                        js(
+                                1,
+                                "src/a.js",
+                                """
+                                import axios from 'axios'
+                                function get(cfg) { class C { #cfg = 1 } return axios.request(cfg) }
+                                get({ url: '/api/todos' })
+                                """));
+
+        assertThat(http(response)).containsExactly(edge(1, 100, 3));
+        assertThat(httpUnresolved(response)).isEmpty();
+    }
 }

@@ -9,7 +9,9 @@ import com.vibenote.analysis.explain.ApiEndpoint;
 import com.vibenote.analysis.structure.StructureCache.Computed;
 import com.vibenote.analysis.structure.http.ContextPathReader;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import org.springframework.stereotype.Service;
 
 /**
@@ -60,8 +62,14 @@ public class StructureService {
             ApiDetector.Detection detection = ApiDetector.scan(files);
             incomplete = detection.incomplete();
             if (apis != null && !detection.duplicates().isEmpty()) {
-                apis = new ArrayList<>(apis);
-                apis.addAll(detection.duplicates());
+                // 저장된 개요에 같은 method+path가 있을 때만 덧붙인다. 없으면 중복만 유일한 후보가 되어 틀린 간선을 확정한다
+                Set<String> keys = new HashSet<>();
+                apis.forEach(api -> keys.add(api.method() + " " + api.path()));
+                List<ApiEndpoint> merged = new ArrayList<>(apis);
+                detection.duplicates().stream()
+                        .filter(d -> keys.contains(d.method() + " " + d.path()))
+                        .forEach(merged::add);
+                apis = merged;
             }
         }
         WorkBudget budget = analyzer.newBudget();
