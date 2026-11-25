@@ -7,7 +7,7 @@
 
 ## 현재 기능
 
-**F-27 GMS 공급자** — spec `docs/specs/F-27-gms-provider.md` APPROVED, **PR #161** (develop 대상, head 6f90df2)
+**F-27 GMS 공급자** — spec `docs/specs/F-27-gms-provider.md` DONE 표시, **PR #161 머지 대기** (CI 초록·Codex ✅ 6f90df2, 이후 docs만)
 
 ## 진행
 
