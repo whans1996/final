@@ -3,21 +3,23 @@
 > 김동환(A 영역: AI·분석·학습 루프) 전용. 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
-갱신: 2026-11-25 22:10 · 작업자: whans1996@naver.com · PC: dh-home · 브랜치: feature/F-27-gms-provider
+갱신: 2026-11-25 22:55 · 작업자: whans1996@naver.com · PC: dh-home · 브랜치: feature/F-27-gms-provider
 
 ## 현재 기능
 
-**F-27 GMS 공급자** — spec `docs/specs/F-27-gms-provider.md` APPROVED, 브랜치 `feature/F-27-gms-provider` (push됨, BE·FE 전체 통과)
+**F-27 GMS 공급자** — spec `docs/specs/F-27-gms-provider.md` APPROVED, **PR #161** (develop 대상, head 6f90df2)
 
 ## 진행
 
-- ✅ AC1~AC13 구현·테스트 green, openapi.json 갱신, 산출물(ERD·화면 설계서·08)·LLM 규칙·prompt-evaluator 문서 반영, contract-checker 불일치 0
-- ✅ ui-verifier 문제 0건 (SC-05 문구, SC-07 배너 liteMode true·false, 1280·375, 스크린샷 `.harness/screens/f27_*`)
-- ✅ GMS 실호출로 기본 모델 `gpt-4.1-mini` 확정(4o-mini·5-nano 비교, 크레딧 5/30000 사용), spec 9절·결정로그·산출물 08 반영
+- ✅ AC1~AC13 구현·테스트 green, 산출물(ERD·화면 설계서·08) 반영, GMS 기본 모델 `gpt-4.1-mini` 확정
+- ✅ /pr-review: verifier 전체 통과, contract-checker 불일치 0, reviewer 반드시 수정 0 · 권장 5건 모두 반영(0ada431: GMS_MODEL·stage-models 빈 값 기동 실패 + LlmConfigTest 2개, 폴백 주석, Ollama 0.5+, prompt-evaluator Git Bash 예시, 결정로그 대안 칸)
+- ✅ 스크린샷 `docs/산출물/screens/SC-05-request-gms-*`·`SC-07-lite-mode-*` 커밋(6f90df2), PR 본문에 첨부
+- ⏳ CI·Codex 리뷰 대기 (`node scripts/codex-review.mjs 161 --request --wait --status`)
 
 ## 바로 다음 할 일
 
-1. `/clear` 후 `/pr-review` (PR 본문: 공통 파일 application.yml·build.gradle → @JoonseobKim 멘션, AC8은 회귀 고정 테스트, GMS 키 12-09 만료 알림)
+1. Codex 루프: `node scripts/codex-review.mjs 161 --request --wait --status` 결과가 FINDINGS면 지적별 판단(spec·보안 위반만 수정, 나머지 P2는 follow-up 이관 후 `--resolve`), COMPLETE면 2로
+2. `gh pr checks 161` 초록 확인 → 완료 표시 커밋 `docs(F-27): 완료 표시 (spec DONE)` (spec 헤더 `DONE (PR #161)`, 구현 체크리스트 마지막 칸) → GitHub에서 직접 머지
 
 ## 막힌 점 / 결정 필요
 
@@ -26,6 +28,6 @@
 
 ## 주의
 
-- 공통 파일 변경: `application.yml`(llm.gms 블록)·`build.gradle`(promptEval 주석) → PR "공통 코드 변경"에 적고 @JoonseobKim 멘션
-- AC8 파서 테스트는 처음부터 green(기존 파서가 null 처리) — 회귀 고정용임을 PR에 적기
+- 머지 전 상대 PR이 develop에 먼저 들어가면 `git merge origin/develop` → push로 CI 재확인 (V13·openapi.json)
+- ui-verifier가 로컬 DB에 테스트 계정 `f27shot@example.com`을 만들어 둠 (로컬 전용)
 - node 스크립트로 Java 편집 시 백슬래시가 깨짐 → Edit 도구 사용 · 이 PC에 python 없음
