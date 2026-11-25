@@ -1,0 +1,38 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["concepts"],
+  "properties": {
+    "concepts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["conceptId", "new", "fileNo", "lineHint", "contextNote"],
+        "properties": {
+          "conceptId": { "type": ["integer", "null"] },
+          "new": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["name", "category", "difficulty", "summary", "body"],
+                "properties": {
+                  "name": { "type": "string" },
+                  "category": { "type": "string" },
+                  "difficulty": { "type": "string" },
+                  "summary": { "type": "string" },
+                  "body": { "type": "string" }
+                }
+              },
+              { "type": "null" }
+            ]
+          },
+          "fileNo": { "type": ["integer", "null"] },
+          "lineHint": { "type": ["string", "null"] },
+          "contextNote": { "type": "string" }
+        }
+      }
+    }
+  }
+}
