@@ -154,8 +154,8 @@ async function onWithdraw() {
       <form class="card danger" data-form="withdraw" novalidate @submit.prevent="onWithdraw">
         <h2>회원 탈퇴</h2>
         <p class="hint">
-          탈퇴하면 이메일·닉네임·소개가 지워지고 모든 기기에서 로그아웃됩니다. 작성한 글과 댓글은
-          "탈퇴한 사용자"로 남습니다.
+          탈퇴하면 이메일·닉네임·소개가 지워지고 모든 기기에서 로그아웃됩니다. 내 분석(업로드한
+          코드와 결과)은 모두 삭제됩니다. 작성한 글과 댓글은 "탈퇴한 사용자"로 남습니다.
         </p>
         <p v-if="leaveError" class="form-error" role="alert">{{ leaveError }}</p>
 

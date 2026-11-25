@@ -1,5 +1,6 @@
 package com.vibenote.analysis.concept;
 
+import com.vibenote.analysis.AnalysisService;
 import com.vibenote.analysis.concept.AnalysisConceptMapper.LinkRow;
 import com.vibenote.analysis.concept.ExtractedConcept.NewConcept;
 import com.vibenote.concept.ConceptDraftService;
@@ -25,10 +26,15 @@ public class ConceptLinkService {
 
     private final ConceptDraftService draftService;
     private final AnalysisConceptMapper mapper;
+    private final AnalysisService analysisService;
 
-    public ConceptLinkService(ConceptDraftService draftService, AnalysisConceptMapper mapper) {
+    public ConceptLinkService(
+            ConceptDraftService draftService,
+            AnalysisConceptMapper mapper,
+            AnalysisService analysisService) {
         this.draftService = draftService;
         this.mapper = mapper;
+        this.analysisService = analysisService;
     }
 
     /**
@@ -36,6 +42,10 @@ public class ConceptLinkService {
      */
     @Transactional
     public void save(long analysisId, List<ExtractedConcept> items) {
+        // LLM을 기다리는 동안 탈퇴로 중단·삭제됐으면 초안도 연결도 남기지 않는다 (#91)
+        if (!analysisService.lockInProgress(analysisId)) {
+            return;
+        }
         // 동시에 도는 분석끼리 같은 이름들을 반대 순서로 INSERT하면 데드락이 나므로 초안은 이름 순으로 먼저 만든다
         Map<NewConcept, Long> created = new HashMap<>();
         items.stream()

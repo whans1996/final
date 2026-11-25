@@ -43,6 +43,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class AnalysisService {
 
+    /** 탈퇴로 중단한 분석의 error_message. 주인이 탈퇴해 화면에 나오지 않는다. */
+    private static final String WITHDRAWN_MESSAGE = "회원 탈퇴로 분석을 중단했습니다.";
+
     /** analyses.title 길이. project_name(200)보다 짧으므로 둘 다 이 길이로 자른다. */
     static final int MAX_NAME_LENGTH = 100;
 
@@ -155,10 +158,19 @@ public class AnalysisService {
         return analysisMapper.updateStage(analysisId, status, progress, now()) == 1;
     }
 
-    /** 선별·마스킹이 끝난 파일을 저장한다 (SELECTING). */
+    /**
+     * 분석이 아직 진행 중이고 삭제되지 않았으면 행을 잠그고 true. 파이프라인이 자식 행을 넣기 직전에 호출자 트랜잭션 안에서 부른다. 탈퇴(#91)가 분석을
+     * FAILED·삭제로 바꾸는 중이면 그 커밋을 기다린 뒤 false가 되어, 삭제된 분석에 코드·연결이 다시 남지 않는다.
+     */
+    @Transactional
+    public boolean lockInProgress(long analysisId) {
+        return analysisMapper.lockInProgress(analysisId).isPresent();
+    }
+
+    /** 선별·마스킹이 끝난 파일을 저장한다 (SELECTING). 그사이 중단·삭제됐으면 저장하지 않는다. */
     @Transactional
     public void saveFiles(long analysisId, List<SelectedFile> files) {
-        if (!files.isEmpty()) {
+        if (!files.isEmpty() && lockInProgress(analysisId)) {
             analysisMapper.insertFiles(
                     files.stream().map(f -> AnalysisFile.of(analysisId, f)).toList());
         }
@@ -264,6 +276,24 @@ public class AnalysisService {
                     .orElseThrow(() -> new BusinessException(ErrorCode.ANALYSIS_404));
             throw new BusinessException(ErrorCode.ANALYSIS_005);
         }
+        deleteChildren(analysisId);
+    }
+
+    /**
+     * 회원 탈퇴 때 그 회원의 분석을 모두 지운다 (#91, 09-데이터셋 6절 "삭제"). 진행 중인 분석은 먼저 FAILED로 바꿔 파이프라인이 다음 {@link
+     * #advance}에서 멈추게 한 뒤, F-19 삭제와 같이 soft delete하고 파일·흐름·개념 연결을 지운다. 탈퇴 트랜잭션에 참여한다.
+     */
+    @Transactional
+    public void deleteAllOf(long userId) {
+        LocalDateTime now = now();
+        for (long id : analysisMapper.findUndeletedIds(userId)) {
+            analysisMapper.markFailed(id, ErrorCode.ANALYSIS_500.name(), WITHDRAWN_MESSAGE, now);
+            analysisMapper.softDelete(id, userId, now);
+            deleteChildren(id);
+        }
+    }
+
+    private void deleteChildren(long analysisId) {
         // analysis_concepts.file_id가 analysis_files를 참조하므로 개념 연결을 먼저 지운다
         analysisMapper.deleteConceptLinks(analysisId);
         analysisMapper.deleteFlows(analysisId);
@@ -274,17 +304,25 @@ public class AnalysisService {
     /**
      * DONE으로 바꾸고 피드 활동(ANALYSIS)을 남긴 뒤, 요청 날짜의 분석 챌린지 달성도를 다시 센다 (F-25 AC7). 그 사이에 이미 끝난 분석이면 아무것도
      * 하지 않는다.
+     *
+     * <p>회원 행을 먼저 잠가 탈퇴(users → analyses)와 잠금 순서를 맞춘다. 반대 순서면 activities INSERT의 users FK 잠금과 엇갈려
+     * 데드락이 난다 (#91). 그사이 탈퇴했으면 분석도 중단·삭제되었으므로 끝낸다.
      */
     @Transactional
     public void complete(long analysisId) {
-        if (analysisMapper.updateStage(analysisId, AnalysisStatus.DONE, DONE_PROGRESS, now())
-                != 1) {
-            return;
-        }
         Analysis analysis =
                 analysisMapper
                         .findById(analysisId)
                         .orElseThrow(() -> new IllegalStateException("분석 없음: " + analysisId));
+        try {
+            userService.lockActiveMember(analysis.getUserId());
+        } catch (BusinessException withdrawn) {
+            return;
+        }
+        if (analysisMapper.updateStage(analysisId, AnalysisStatus.DONE, DONE_PROGRESS, now())
+                != 1) {
+            return;
+        }
         activityService.record(analysis.getUserId(), ActivityType.ANALYSIS, analysisId);
         challengeProgressService.refresh(
                 analysis.getUserId(),
