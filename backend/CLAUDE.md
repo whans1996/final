@@ -21,7 +21,7 @@ com.vibenote
 ├─ recommendation  맞춤 추천 (F-16)
 ├─ post            게시글(게시판 3종), 댓글 (F-17, F-18)
 ├─ challenge       학습 챌린지 관리, 참여·달성도 집계 (F-24, F-25)
-├─ llm             LlmClient와 구현체(Mock, Gemini, Ollama), 프롬프트 로더, 사용량 로그
+├─ llm             LlmClient와 구현체(Mock, GMS, Ollama, Gemini), 단계 출력 스키마, 프롬프트 로더, 사용량 로그
 └─ common          예외, GlobalExceptionHandler, 페이지, JsonTypeHandler, 보안 설정, 유틸
 ```
 
@@ -36,7 +36,7 @@ com.vibenote
 | `common.page` | `PageQuery`(page·size 기본값·검증, `offset()`), `PageResponse` |
 | `common.mybatis` | `JsonTypeHandler` |
 | `common.Level` | BEGINNER · JUNIOR · SENIOR |
-| `llm` | `LlmClient`, `LlmRequest`·`LlmResponse`·`LlmStage`, `MockLlmClient` (PR #2). `LlmConfig`(provider별 빈 1개 조립), `Gemini`·`OllamaLlmClient`, `FallbackLlmClient`, `UsageLoggingLlmClient`·`LlmUsageLogMapper` (F-00 2.4) |
+| `llm` | `LlmClient`, `LlmRequest`·`LlmResponse`·`LlmStage`, `MockLlmClient` (PR #2). `LlmConfig`(provider별 빈 1개 조립), `Gms`·`Gemini`·`OllamaLlmClient`, `LlmSchemas`, `FallbackLlmClient`, `UsageLoggingLlmClient`·`LlmUsageLogMapper` (F-00 2.4) |
 
 도메인 내부: `XxxController` → `XxxService` → `XxxMapper` (+ `dto/`).
 
@@ -89,14 +89,15 @@ com.vibenote
 
 ## LLM
 
-- 모든 호출은 `llm.LlmClient` 인터페이스로 한다. 구현체는 `MockLlmClient`, `GeminiLlmClient`, `OllamaLlmClient`이다.
-- `llm.provider=mock|gemini|ollama`. **기본값과 테스트는 `mock`**이다. Gemini 실패나 한도 초과 시 Ollama로 폴백한다.
+- 모든 호출은 `llm.LlmClient` 인터페이스로 한다. 구현체는 `MockLlmClient`, `GmsLlmClient`(SSAFY GMS, OpenAI 호환), `OllamaLlmClient`, `GeminiLlmClient`이다.
+- `llm.provider=mock|gms|ollama|gemini`. **기본값과 테스트는 `mock`**이다. 서비스는 `gms`: GMS가 실패(4xx·5xx·타임아웃·거부·잘림)하면 재시도 없이 Ollama(간이 모드)로 폴백하고, 분석 상세의 `liteMode`가 이를 알린다 (F-27). `gemini`는 평가 비교용으로 폴백하지 않는다.
+- 출력 형식: `src/main/resources/llm-schemas/<stage>.json`(OpenAI strict 규칙)을 GMS `response_format.json_schema`·Ollama `format`으로 보낸다. 선택 필드는 null로 오므로 파서는 null과 생략을 같게 다룬다. 프롬프트의 "출력 형식"을 바꾸면 스키마도 함께 바꾼다 (`LlmSchemasTest`). 단계별 GMS 모델은 `llm.gms.stage-models`.
 - 프롬프트: `src/main/resources/prompts/<stage>/<level>.md` (stage = overview, file, flow, concept, quiz, recommend / level = beginner, junior, senior)
 - Mock 응답: `src/main/resources/llm-fixtures/<stage>.json`. 결정적이어야 하므로 랜덤을 쓰지 않는다.
 - LLM 출력은 **JSON으로 받고 파싱 실패를 항상 처리**한다 (재시도 1회 → 실패 시 단계 FAILED).
 - 모든 호출은 `llm_usage_logs`에 기록한다.
 - **`LlmClient`는 트랜잭션 밖에서 부른다.** 사용량 기록이 호출자의 `@Transactional`에 참여하므로 롤백되면 기록이 사라지고, LLM 응답을 기다리는 동안(최대 180초) DB 커넥션을 잡는다. LLM 호출 → 결과 저장만 짧은 트랜잭션으로 나눈다.
-- API 키는 환경변수 `GEMINI_API_KEY`로만 받는다.
+- API 키는 환경변수 `GMS_API_KEY`(·평가용 `GEMINI_API_KEY`)로만 받는다. GMS는 팀 키의 크레딧 총량제다 (잔여: `GET https://gms.ssafy.io/gmsapi/key-info`).
 
 ## 분석 파이프라인
 
@@ -113,7 +114,7 @@ com.vibenote
 - Mapper: 실제 DB로 SQL을 검증한다. H2를 쓰지 않는다.
 - Service 단위 테스트는 로직이 복잡할 때만 Mockito로 쓴다 (예: 추천 점수 계산).
 - **테스트 메서드 이름에 spec의 AC 번호를 넣는다**: `AC1_파일이_200개를_넘으면_413을_반환한다()`. `@DisplayName`은 쓰지 않아도 된다.
-- **실제 외부 서비스(Gemini·Ollama 등)를 부르는 테스트는 `@Tag("live")`를 단다.** `test`(CI·git hook·verify)는 이 태그를 제외하고, 사람만 `./gradlew liveTest`로 돌린다. 개발 PC의 `.env`에 키가 있으므로, 태그 없이 쓰면 red 확인만으로도 무료 한도를 쓴다 (11-18 실제 발생). HTTP 동작 검증은 `MockRestServiceServer`로 한다 (`GeminiLlmClientTest` 참고).
+- **실제 외부 서비스(GMS·Gemini·Ollama 등)를 부르는 테스트는 `@Tag("live")`를 단다.** `test`(CI·git hook·verify)는 이 태그를 제외하고, 사람만 `./gradlew liveTest`로 돌린다. 개발 PC의 `.env`에 키가 있으므로, 태그 없이 쓰면 red 확인만으로도 무료 한도를 쓴다 (11-18 실제 발생). HTTP 동작 검증은 `MockRestServiceServer`로 한다 (`GeminiLlmClientTest` 참고).
 - 테스트끼리 데이터가 섞이지 않게 `@Transactional` 롤백 또는 `@Sql` 정리 스크립트를 쓴다.
 
 ## 명령어 (backend 폴더에서)

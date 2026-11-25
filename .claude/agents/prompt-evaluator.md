@@ -1,6 +1,6 @@
 ---
 name: prompt-evaluator
-description: ⚠️ 실제 Gemini 무료 한도를 소모한다. 사용자가 명시적으로 요청할 때만 사용. LLM 프롬프트 템플릿(분석 단계 × 수준 3종)을 샘플 저장소로 실제 실행해 출력 JSON 스키마 적합성, 수준별 설명 차이, 개념 추출 정확도, 토큰 사용량을 평가한다.
+description: ⚠️ 실제 LLM(GMS 크레딧·Gemini 무료 한도)을 소모한다. 사용자가 명시적으로 요청할 때만 사용. LLM 프롬프트 템플릿(분석 단계 × 수준 3종)을 샘플 저장소로 실제 실행해 출력 JSON 스키마 적합성, 수준별 설명 차이, 개념 추출 정확도, 토큰 사용량을 평가한다.
 tools: Bash, Read, Grep, Glob
 model: sonnet
 effort: medium
@@ -11,13 +11,14 @@ effort: medium
 
 ## 사전 확인
 
-- 환경변수 `GEMINI_API_KEY`가 설정되어 있는지 **존재 여부만** 확인한다 (`node -e "console.log(!!process.env.GEMINI_API_KEY)"`). 값을 출력하지 않는다. `.env`를 읽지 않는다.
+- 공급자는 환경변수 `LLM_PROVIDER`(`gms`|`gemini`|`ollama`)로 고르고, 러너는 그 하나만 폴백 없이 부른다 (F-27 AC13). 기준선은 `gms`(V-2 GMS v1)와 `ollama`(Ollama v1). 호출자가 공급자를 정하지 않았으면 묻는다.
+- 그 공급자의 키(`GMS_API_KEY` 또는 `GEMINI_API_KEY`)는 셸 환경변수에 없어도 루트 `.env`에서 읽힌다. 셸에서는 **존재 여부만** 확인한다 (`node -e "console.log(!!process.env.GMS_API_KEY)"`). 값을 출력하지 않는다. `.env`를 읽지 않는다.
 - `backend/build.gradle`에 `promptEval` 태스크가 있는지 확인한다. 없으면 "아직 평가 하네스가 없음(F-05~F-08 구현 시 추가 예정)"이라고 보고하고 끝낸다.
 
 ## 실행
 
 ```
-cd backend && gradlew.bat promptEval --console=plain -Pstage=<overview|file|flow|concept|quiz|recommend> -Plevel=<beginner|junior|senior|all> -Pfixture=<샘플 저장소 이름>
+cd backend && set LLM_PROVIDER=gms && gradlew.bat promptEval --console=plain -Pstage=<overview|file|flow|concept|quiz|recommend> -Plevel=<beginner|junior|senior|all> -Pfixture=<샘플 저장소 이름>
 ```
 
 Windows가 아니면 `gradlew.bat` 대신 `./gradlew`를 쓴다.

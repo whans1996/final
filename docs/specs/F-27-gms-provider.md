@@ -95,7 +95,7 @@ SC-05 고지 문구 (AC12):
 | 파이프라인 단계 | 6단계 전부 (`OVERVIEW`·`FILE`·`FLOW`·`CONCEPT`·`QUIZ`·`RECOMMEND`). 호출 순서·재시도 정책은 그대로 |
 | 프롬프트 파일 | 바꾸지 않는다 (수준 기준표·예시는 F-27b) |
 | 입력 | 기존과 같음 |
-| 출력 JSON 스키마 | **새 파일** `backend/src/main/resources/llm-schemas/<stage>.json` 6개. 기존 mock fixture의 모양을 그대로 옮기고 선택 필드는 `["<type>","null"]`로 둔다. `LlmSchemas`가 기동 때 한 번 읽어 GMS·Ollama 클라이언트에 넘긴다 |
+| 출력 JSON 스키마 | **새 파일** `backend/src/main/resources/llm-schemas/<stage>.json` 6개. 프롬프트 "출력 형식"(= Mock이 파서에 넘기는 모양. fixture의 `conceptName`은 Mock 전용 표기라 쓰지 않는다)을 옮기고 선택 필드는 `["<type>","null"]`로 둔다. `LlmSchemas`가 기동 때 한 번 읽어 GMS·Ollama 클라이언트에 넘긴다 |
 | Mock fixture | 바꾸지 않는다. AC7이 스키마와 어긋나지 않는지 검사한다 |
 | 캐시·재사용 | 기존과 같음 |
 
@@ -120,7 +120,7 @@ GMS 요청 본문 예시:
   "messages": [{ "role": "user", "content": "<채운 프롬프트>" }],
   "response_format": {
     "type": "json_schema",
-    "json_schema": { "name": "concept", "strict": true, "schema": { "type": "object", "additionalProperties": false, "required": ["concepts"], "properties": { "concepts": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["conceptName", "fileNo", "lineHint", "contextNote"], "properties": { "conceptName": { "type": "string" }, "fileNo": { "type": "integer" }, "lineHint": { "type": ["string", "null"] }, "contextNote": { "type": "string" } } } } } }
+    "json_schema": { "name": "concept", "strict": true, "schema": { "type": "object", "additionalProperties": false, "required": ["concepts"], "properties": { "concepts": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["conceptId", "new", "fileNo", "lineHint", "contextNote"], "properties": { "conceptId": { "type": ["integer", "null"] }, "new": { "anyOf": [{ "type": "object", "…": "name·category·difficulty·summary·body" }, { "type": "null" }] }, "fileNo": { "type": ["integer", "null"] }, "lineHint": { "type": ["string", "null"] }, "contextNote": { "type": "string" } } } } } }
   }
 }
 ```
@@ -169,11 +169,11 @@ GMS 요청 본문 예시:
 - [x] BE 구현 (green): `LlmSchemas`, `GmsLlmClient`, `LlmProperties.Gms`, `LlmConfig`, Ollama `format`, usage `provider`, 상세 `liteMode`, consent 문구, `PromptEvalRunner`
 - [x] FE 구현 (green): SC-07 배너, SC-05 문구
 - [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
-- [ ] `.env.example`·`backend/CLAUDE.md`(LLM 절)·`docs/환경설정.md`·`.claude/agents/prompt-evaluator.md` 공급자 설명 갱신
+- [x] `.env.example`·`backend/CLAUDE.md`(LLM 절)·`.claude/agents/prompt-evaluator.md` 공급자 설명 갱신 (`docs/환경설정.md`에는 LLM 설명이 없어 변경 없음)
 - [ ] 실연결 확인 (`./gradlew liveTest`, GMS) → 9절 확정
 - [ ] contract-checker 통과
 - [ ] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일)
 - [ ] reviewer 지적 사항 반영
-- [ ] 산출물 반영: ERD(`llm_usage_logs.provider`), 화면 설계서 SC-05·SC-07, 산출물 08(AI 공급자)
+- [x] 산출물 반영: ERD(`llm_usage_logs.provider`), 화면 설계서 SC-05·SC-07, 산출물 08(AI 공급자)
 - [ ] PR CI 초록
 - [ ] 상태 DONE (PR 머지 후)
