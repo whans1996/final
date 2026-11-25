@@ -5,11 +5,11 @@
 // 사용법: node scripts/token-report.mjs [latest|<세션 ID 앞부분>] [--list]
 //   latest   이 프로젝트에서 가장 최근 세션 (기본값)
 //   --list   최근 세션 10개의 요약만
-// 입력 환산 비중: 캐시 쓰기 1.25배, 캐시 읽기 0.1배, 출력 5배로 가중한다 (모델 간 단가 차이는 무시한 대략치).
+// 입력 환산 비중은 scripts/lib/common.mjs usageSummary (캐시 쓰기 1.25배, 캐시 읽기 0.1배, 출력 5배).
 import { existsSync, readdirSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { ROOT, nowStamp, readText, transcriptUsage } from './lib/common.mjs';
+import { ROOT, nowStamp, readText, transcriptUsage, usageSummary } from './lib/common.mjs';
 
 // Claude Code는 프로젝트 경로의 영문·숫자 외 문자를 '-'로 바꾼 폴더에 transcript를 둔다
 const projectDir = join(homedir(), '.claude', 'projects', ROOT.replace(/[^A-Za-z0-9]/g, '-'));
@@ -25,25 +25,10 @@ const sessions = readdirSync(projectDir)
 
 const k = (n) => `${Math.round(n / 1000).toLocaleString()}k`;
 
-function summarize(turns) {
-  const s = { turns: turns.length, input: 0, cacheWrite: 0, cacheRead: 0, output: 0, maxCtx: 0, models: new Set() };
-  for (const t of turns) {
-    s.input += t.input;
-    s.cacheWrite += t.cacheWrite;
-    s.cacheRead += t.cacheRead;
-    s.output += t.output;
-    s.maxCtx = Math.max(s.maxCtx, t.ctx);
-    if (t.model) s.models.add(t.model.replace(/^claude-/, ''));
-  }
-  s.avgCtx = s.turns ? (s.input + s.cacheWrite + s.cacheRead) / s.turns : 0;
-  s.weighted = s.input + s.cacheWrite * 1.25 + s.cacheRead * 0.1 + s.output * 5;
-  return s;
-}
-
 const args = process.argv.slice(2);
 if (args.includes('--list')) {
   for (const s of sessions.slice(0, 10)) {
-    const m = summarize(transcriptUsage(s.path));
+    const m = usageSummary(transcriptUsage(s.path));
     const date = nowStamp(new Date(s.mtime)).slice(5);
     console.log(`${s.id.slice(0, 8)}  ${date}  턴 ${String(m.turns).padStart(3)}  평균 ${k(m.avgCtx).padStart(5)}  최대 ${k(m.maxCtx).padStart(5)}`);
   }
@@ -57,7 +42,7 @@ if (!session) {
   process.exit(1);
 }
 
-const rows = [['메인', summarize(transcriptUsage(session.path))]];
+const rows = [['메인', usageSummary(transcriptUsage(session.path))]];
 const subDir = join(projectDir, session.id, 'subagents');
 if (existsSync(subDir)) {
   const groups = new Map();
@@ -73,7 +58,7 @@ if (existsSync(subDir)) {
     g.turns.push(...transcriptUsage(join(subDir, f)));
     groups.set(type, g);
   }
-  for (const [type, g] of groups) rows.push([`${type} ×${g.runs}`, summarize(g.turns)]);
+  for (const [type, g] of groups) rows.push([`${type} ×${g.runs}`, usageSummary(g.turns)]);
 }
 
 const total = rows.reduce((sum, [, s]) => sum + s.weighted, 0) || 1;

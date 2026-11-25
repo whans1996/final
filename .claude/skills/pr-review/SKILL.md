@@ -27,7 +27,7 @@ description: develop에 합치기 전 현재 feature 브랜치를 verifier·revi
    - 리뷰어(Codex·reviewer 에이전트)가 특히 볼 곳, 산출물 영향
    - 영역 오너(머지) 칸에 내 GitHub 계정. `node scripts/owners.mjs --diff origin/develop`이 `.github/CODEOWNERS` 기준으로 상대 영역·공통 파일을 뽑아 주면, "공통 코드 변경"에 그 파일과 이유를 적고 상대 계정을 @멘션한다 (A `@whans1996`, B `@JoonseobKim`). CODEOWNERS 때문에 GitHub이 상대에게 리뷰를 자동 요청하지만 승인은 기다리지 않는다
 6. **PR 생성 (사용자 확인 후)**
-   - `git push -u origin <브랜치>`
+   - `git push -u origin <브랜치>` (pre-push 전체 검증이 돌므로 Bash `timeout` 600000. 2단계 verifier가 같은 커밋을 통과했으면 `.harness/verified.json` 덕에 다시 돌지 않는다)
    - 사용자가 확인하면: `gh pr create --base develop --title "<타입(F-xx): 요약>" --body-file .harness/pr-F-xx.md`
      (사람 리뷰어는 지정하지 않는다. 리뷰는 reviewer 에이전트(2단계)와 Codex 봇(8단계)이 한다 — 11-18 결정)
    - 이미 PR이 있으면 `gh pr edit --body-file ...`로 설명만 갱신한다.

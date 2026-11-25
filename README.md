@@ -77,7 +77,7 @@ npm run dev   # http://localhost:5173 (/api는 8080으로 프록시)
 |---|---|
 | 컨텍스트 | [CLAUDE.md](CLAUDE.md), [docs/conventions.md](docs/conventions.md), 기능별 spec, 사람별 현재 상태 `docs/handoff/NOW-dh.md`·`NOW-js.md`, 결정 기록 `docs/결정로그.md` |
 | 워크플로 | `/pickup` → `/spec` → `/implement`(TDD) → `/pr-review` → `/handoff` |
-| 가드레일 | Claude Code hooks + git hook (보호 브랜치, 비밀 정보, 마이그레이션, 커밋 규칙, 테스트 게이트) |
+| 가드레일 | Claude Code hooks(셸 토큰 파서 가드) + git hook (보호 브랜치, 비밀 정보, 마이그레이션, 커밋 규칙, 커밋 빠른 검사·pre-push 전체 검증) |
 | 피드백 | 검증 스크립트, 화면 점검, Testcontainers, GitHub Actions CI, Swagger 계약 검사 |
 | 서브에이전트 | verifier, reviewer, contract-checker, ui-verifier, prompt-evaluator |
 

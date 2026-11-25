@@ -93,7 +93,8 @@
 - 타입: `feat` `fix` `refactor` `test` `wip` (범위 필수) / `docs` `chore` (범위 생략 가능)
 - 범위: `F-xx` (기능 ID. 분할 spec은 `F-05a`·`F-05b`처럼 소문자 접미사), `common` (여러 기능에 걸친 공통 코드), `harness` (하네스·도구)
 - 예: `feat(F-05): 분석 요청 API 추가`, `wip(F-05): 교대 체크포인트`, `chore(common): Spotless 설정`
-- `wip`가 아닌 커밋은 변경된 영역(backend/frontend)의 테스트가 통과해야 커밋된다.
+- `wip`가 아닌 커밋은 스테이징된 영역(backend/frontend/하네스)의 **빠른 검사**(포맷·린트·관련 테스트, `verify.mjs --staged`)가 통과해야 커밋된다. 관련 테스트는 바뀐 클래스 이름으로 시작하는 테스트(없으면 같은 패키지), `vitest related`, 바뀐 모듈을 import하는 하네스 테스트다 (`scripts/lib/related.mjs`).
+- push 전에는 `pre-push` hook이 이번 push에서 develop과 달라진 영역의 **전체 검증**(`verify.mjs be|fe|harness`)을 돌린다. tip 커밋이 `wip`면 건너뛰고(교대 push), 같은 커밋을 깨끗한 작업 트리에서 이미 통과한 영역은 다시 돌리지 않는다 (`.harness/verified.json`). 같은 PC에서 Gradle이 겹치면 `.harness/gradle.lock`으로 차례를 기다린다. `main`·`develop`으로 가는 push(삭제 포함)는 사람의 push도 pre-push가 거부한다. 검증은 작업 트리에서 돌므로, 검증할 커밋이 HEAD가 아니거나(다른 브랜치를 push) 그 영역에 커밋 안 된 변경이 있으면 거부한다. Claude가 push할 때는 전체 검증(BE 약 3분)이 Bash 기본 제한 2분을 넘을 수 있으니 `timeout` 600000으로 실행하거나 직전에 `verify.mjs`를 돌려 둔다(통과 기록이 있으면 다시 돌지 않는다).
 
 ## 7. Pull Request (GitHub)
 

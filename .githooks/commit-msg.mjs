@@ -2,11 +2,11 @@
 // git commit-msg hook (사람과 Claude 모두에게 적용)
 //  1) 형식: 타입(범위): 요약   — docs/conventions.md 6절
 //  2) main·develop 직접 커밋 금지 (첫 커밋, merge 커밋은 예외)
-//  3) wip가 아니면 스테이징된 영역(backend/frontend)의 verify를 돌려 실패 시 거부
+//  3) wip가 아니면 스테이징된 영역(backend/frontend/하네스)의 빠른 검사(verify --staged)를 돌려 실패 시 거부
 import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { PROTECTED_BRANCHES, ROOT, currentBranch, git, hasCommits, isMerging } from '../scripts/lib/common.mjs';
+import { PROTECTED_BRANCHES, ROOT, currentBranch, hasCommits, isMerging } from '../scripts/lib/common.mjs';
 
 const msgFile = process.argv[2];
 const raw = readFileSync(msgFile, 'utf8');
@@ -46,22 +46,8 @@ if (!scoped.test(subject) && !optional.test(subject)) {
 const type = subject.split(/[(:]/)[0];
 if (type === 'wip') process.exit(0); // 교대용 커밋은 테스트 게이트 예외
 
-// 3) 테스트 게이트
-const staged = git(['diff', '--cached', '--name-only']).out.split('\n').filter(Boolean);
-const targets = [];
-if (staged.some((f) => f.startsWith('backend/') && !f.endsWith('.md'))) targets.push('be');
-if (staged.some((f) => f.startsWith('frontend/') && !f.endsWith('.md'))) targets.push('fe');
-
-// 하네스(hook·스크립트) 변경은 단위 테스트만 돈다 (몇 초)
-if (staged.some((f) => /^(scripts|\.claude\/hooks|\.githooks)\/.*\.mjs$/.test(f))) {
-  console.log('🧪 하네스 단위 테스트 (scripts/test) 실행 중…');
-  const h = spawnSync(process.execPath, ['--test', 'scripts/test/*.test.mjs'], { cwd: ROOT, stdio: 'inherit', windowsHide: true });
-  if (h.status !== 0) fail(['하네스 단위 테스트가 실패했습니다. `node --test "scripts/test/*.test.mjs"`로 확인하세요.']);
-}
-if (targets.length === 0) process.exit(0);
-
-console.log(`🧪 테스트 게이트: verify ${targets.join(' ')} 실행 중… (wip 커밋은 건너뜀)`);
-const r = spawnSync(process.execPath, [join(ROOT, 'scripts', 'verify.mjs'), ...targets], {
+// 3) 빠른 검사: 스테이징된 영역의 포맷·린트·관련 테스트만 (H-1). 빌드·전체 테스트는 pre-push hook과 CI가 한다
+const r = spawnSync(process.execPath, [join(ROOT, 'scripts', 'verify.mjs'), '--staged'], {
   cwd: ROOT,
   stdio: 'inherit',
   windowsHide: true,

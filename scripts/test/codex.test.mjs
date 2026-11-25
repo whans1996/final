@@ -7,6 +7,7 @@ import {
   isRetryLine,
   judgeReview,
   loopAction,
+  loopSkipReason,
   onlyDocsChanged,
   requestCount,
   setupNotice,
@@ -28,6 +29,18 @@ test('develop 합치기로 들어온 코드 파일은 재리뷰 대상이 아니
   // PR 자신의 코드 변경이 하나라도 있으면 재리뷰
   assert.ok(!onlyDocsChanged([...files, 'backend/src/A.java'], (f) => f !== 'backend/src/A.java' && !f.startsWith('docs/')));
   assert.ok(!onlyDocsChanged([]));
+});
+
+test('codex-loop는 draft·닫힌 PR과 docs만 바꾼 PR을 보지 않는다 (#129)', () => {
+  const files = (...paths) => paths.map((path) => ({ path }));
+  assert.equal(loopSkipReason({ state: 'OPEN', isDraft: true, files: files('backend/A.java') }), 'DRAFT');
+  assert.equal(loopSkipReason({ state: 'MERGED', isDraft: false, files: files('backend/A.java') }), 'CLOSED');
+  assert.equal(loopSkipReason({ state: 'OPEN', isDraft: false, files: files('docs/진행현황.md', 'docs/산출물/04-WBS.md') }), 'DOCS');
+  // openapi.json은 API 계약이라 문서가 아니다
+  assert.equal(loopSkipReason({ state: 'OPEN', isDraft: false, files: files('docs/진행현황.md', 'docs/api/openapi.json') }), null);
+  assert.equal(loopSkipReason({ state: 'OPEN', isDraft: false, files: files('docs/a.md', '.claude/hooks/x.mjs') }), null);
+  // 파일 목록을 못 받으면 루프를 건너뛰지 않는다
+  assert.equal(loopSkipReason({ state: 'OPEN', isDraft: false }), null);
 });
 
 test('이관 마커보다 이른 지적은 해결된 것으로 본다', () => {

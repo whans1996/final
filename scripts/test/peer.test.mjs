@@ -19,9 +19,24 @@ test('원격과 작업 트리 중 갱신 시각이 늦은 NOW를 고른다', () 
   const remote = { source: 'origin/feature/F-09-cards', text: NOW('2026-11-20 14:05'), at: 1 };
   assert.equal(pickLatestNow([tree, remote]).source, 'origin/feature/F-09-cards');
   assert.equal(pickLatestNow([{ ...tree, text: NOW('2026-11-21 09:00') }, remote]).source, '작업 트리');
-  // 같으면 앞(작업 트리)
-  assert.equal(pickLatestNow([tree, { ...remote, text: NOW('2026-11-19 10:26') }]).source, '작업 트리');
+  // 같으면 상대가 쓴 브랜치 (아래 #29 테스트)
+  assert.equal(pickLatestNow([tree, { ...remote, text: NOW('2026-11-19 10:26') }]).source, 'origin/feature/F-09-cards');
   assert.equal(pickLatestNow([{ source: 'x', text: null }]), null);
+});
+
+test('갱신 시각이 같으면 갱신 줄의 브랜치(상대가 쓴 곳)를 출처로 고른다 (#29)', () => {
+  const text = NOW('2026-11-20 14:05'); // 브랜치: feature/F-09-cards
+  const cands = [
+    { source: '작업 트리', text, at: 0 },
+    // develop을 합친 내 브랜치가 커밋 시각은 더 늦다
+    { source: 'origin/feature/F-08-concepts', text, at: 3 },
+    { source: 'origin/develop', text, at: 2 },
+    { source: 'origin/feature/F-09-cards', text, at: 1 },
+  ];
+  assert.equal(pickLatestNow(cands).source, 'origin/feature/F-09-cards');
+  // 그 브랜치가 지워졌으면 develop·main이 아닌 원격 브랜치보다 develop을, 작업 트리보다 원격을
+  assert.equal(pickLatestNow(cands.slice(0, 3)).source, 'origin/develop');
+  assert.equal(pickLatestNow(cands.slice(0, 2)).source, 'origin/feature/F-08-concepts');
 });
 
 test('NOW 요약은 갱신 줄, 현재 기능 첫 줄, 다음 할 일 1번', () => {

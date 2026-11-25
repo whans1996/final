@@ -7,14 +7,14 @@
 //   FINDINGS 재리뷰 5회 미만 → 막고 8-3 처리 지시, 5회 이상 → 사람 판단 안내(systemMessage)
 //   ERROR    Codex 환경·계정 미설정, 재시도 뒤에도 실패·정체, gh 실패 → 안내(systemMessage)
 // (PR, head, 판정)마다 한 번만 반응한다: 지적을 반박하거나 사람에게 넘기고 멈춘 경우 매 턴 다시 막지 않게.
-// draft PR은 보지 않는다. 판정 규칙은 scripts/lib/codex.mjs(loopAction·skipRecheck·waitingInTranscript, 테스트 있음)에 있고,
+// draft PR과 docs만 바꾼 PR(conventions 7절 예외, #129)은 보지 않는다. 판정 규칙은 scripts/lib/codex.mjs(loopAction·skipRecheck·waitingInTranscript, 테스트 있음)에 있고,
 // 판정 자체는 scripts/codex-review.mjs(대기 없음, 읽기 전용)의 첫 줄을 쓴다.
 // 네트워크 비용: 판정한 PR head가 로컬 HEAD이고 COMPLETE면 건너뛰고, 그 밖에는 3분에 한 번만 확인한다.
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { NON_INTERACTIVE_GIT_ENV, ROOT, currentBranch, git, isGitRepo, readStdinJson, readText } from '../../scripts/lib/common.mjs';
-import { MAX_REVIEW_ROUNDS, isRetryLine, loopAction, skipRecheck, waitingInTranscript } from '../../scripts/lib/codex.mjs';
+import { MAX_REVIEW_ROUNDS, isRetryLine, loopAction, loopSkipReason, skipRecheck, waitingInTranscript } from '../../scripts/lib/codex.mjs';
 
 const STATE_FILE = join(ROOT, '.harness', 'codex-loop.json');
 const RECHECK_MS = 3 * 60_000;
@@ -49,14 +49,15 @@ function save(entry) {
 const env = { ...process.env, ...NON_INTERACTIVE_GIT_ENV };
 const run = (cmd, args, timeout) => spawnSync(cmd, args, { cwd: ROOT, encoding: 'utf8', windowsHide: true, timeout, env });
 
-const view = run('gh', ['pr', 'view', '--json', 'number,state,isDraft'], 8_000);
+const view = run('gh', ['pr', 'view', '--json', 'number,state,isDraft,files'], 8_000);
 if (view.error || view.status !== 0) {
   save({ verdict: 'NOPR' }); // PR이 아직 없거나 gh가 없다. PR을 만들면 3분 뒤 다시 본다
   process.exit(0);
 }
 const pr = JSON.parse(view.stdout);
-if (pr.state !== 'OPEN' || pr.isDraft) {
-  save({ verdict: pr.isDraft ? 'DRAFT' : 'CLOSED' });
+const skip = loopSkipReason(pr);
+if (skip) {
+  save({ verdict: skip }); // docs만 바꾼 PR은 코드 커밋이 더해지면 3분 뒤 다시 본다
   process.exit(0);
 }
 

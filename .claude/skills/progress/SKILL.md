@@ -12,6 +12,7 @@ description: 기능 spec 상태, 관통 필수 요구사항 13개와 명세서 �
 0. **브랜치**: 기능 브랜치에서 하지 않는다. `git fetch && git switch -c feature/common-progress-MMDD origin/develop`(MMDD = 오늘). 판정은 develop 기준이다.
 
 1. **수집**
+   - **먼저 `node scripts/weekly.mjs`** (1~2분): spec 상태·체크 비율, follow-up 이슈 영역별 열림·닫힘·7일 넘음, 기간 안 머지 PR과 PR별 Codex 재리뷰·지적, 하네스 지표(가드 차단·토큰, 이 PC 기준)를 한 번에 낸다. 아래 항목 중 이 출력에 있는 것은 다시 조회하지 않는다
    - `docs/기획서.md`: 기능 목록 표(F-01~F-25, 우선순위, 필수 요구사항 매핑), "명세서 구조 매핑", 4절 마일스톤, 일정 판단 기준
    - `docs/specs/*.md`: 각 파일 헤더의 상태(DRAFT/APPROVED/DONE)와 구현 체크리스트 체크 비율
    - git·GitHub: `git branch -a`, `git log origin/develop --oneline`(없으면 `develop`), `gh pr list --state all --limit 50 --json number,title,state,headRefName,mergedAt` (gh가 없거나 원격이 없으면 생략). 실적 날짜는 PR의 `mergedAt`을 쓴다
@@ -66,6 +67,10 @@ description: 기능 spec 상태, 관통 필수 요구사항 13개와 명세서 �
 | B 김준섭 | | | |
 | 공통 | | | |
 | 분류 필요 (area 라벨 없음) | | | |
+
+## 하네스 지표 (weekly.mjs)
+- Codex: PR당 재리뷰 평균 n회 · 지적 P1 n · P2 n (재리뷰 3회 넘은 PR: #n)
+- 가드 차단 n회 (사유별) · 토큰: 세션 n개, 입력 환산 nM, 메인 평균 150k 넘은 세션 n개 (실행한 PC 기준)
 
 ## 이번 주 남은 일 / 리스크
 ```
