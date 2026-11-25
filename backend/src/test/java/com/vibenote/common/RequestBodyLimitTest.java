@@ -61,6 +61,17 @@ class RequestBodyLimitTest extends IntegrationTestBase {
                 .andExpect(jsonPath("$.code").value("COMMON_413"));
     }
 
+    @Test
+    void plus_json_타입_본문도_1MB를_넘으면_413() throws Exception {
+        // Spring Jackson 변환기는 application/*+json도 읽으므로 필터도 같은 한도를 건다
+        mockMvc.perform(
+                        post("/api/auth/login")
+                                .contentType("application/merge-patch+json")
+                                .content(loginBody(LIMIT + 1024)))
+                .andExpect(status().isContentTooLarge())
+                .andExpect(jsonPath("$.code").value("COMMON_413"));
+    }
+
     /** 전체 길이가 대략 {@code length} 바이트인 로그인 본문 (비밀번호를 늘린다). */
     private static String loginBody(int length) {
         return "{\"email\":\"limit@vibenote.dev\",\"password\":\"" + "a".repeat(length) + "\"}";

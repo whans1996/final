@@ -128,6 +128,16 @@ public class JsonBodyLimitFilter extends OncePerRequestFilter {
         }
 
         @Override
+        public int available() throws IOException {
+            return delegate.available();
+        }
+
+        @Override
+        public void close() throws IOException {
+            delegate.close();
+        }
+
+        @Override
         public boolean isFinished() {
             return delegate.isFinished();
         }
