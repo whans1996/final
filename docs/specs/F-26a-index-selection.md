@@ -25,7 +25,7 @@ F-26a는 (1) 큰 저장소도 거부하지 않고 **넓은 인덱스**(코드·�
 | ID | Given | When | Then |
 |---|---|---|---|
 | AC1 | ZIP에 `a.ts`·`B.tsx`·`C.jsx`·`README.md`·`docs/x.md`·`src/test/java/FooTest.java`·`src/foo.spec.js`·`db/migration/V1__init.sql`·`app.min.js`·`types.d.ts`·`generated/X.java`가 있으면 | FILTERING 단계가 읽으면 | ts·tsx·jsx는 `js`, md는 `doc`, 테스트는 `test`, 마이그레이션은 `migration` layer로 인덱스에 들어간다. `*.min.js`·`*.d.ts`·`generated/` 아래 파일은 인덱스에 없다. 기존 제외(`node_modules/`·`build/`·점 폴더·`.env`·키 파일)는 그대로다 |
-| AC2 | 인덱스 대상이 2,001개이거나(상한 `analysis.max-index-files` 2000) 읽은 합계가 30MB를 넘는(`analysis.max-index-bytes`) ZIP이면 | 파이프라인이 실행되면 | 413으로 실패하지 않는다. 코드 → test·migration → doc 순서(같은 묶음 안에서는 경로 오름차순)로 상한까지 담고, 바이트 상한에 처음 걸린 뒤의 파일은 읽지 않고 버린다. `analyses.indexed_files`와 `analyses.dropped_files`에 개수가 남는다 |
+| AC2 | 인덱스 대상이 2,001개이거나(상한 `analysis.max-index-files` 2000) 읽은 합계가 30MB를 넘는(`analysis.max-index-bytes`) ZIP이면 | 파이프라인이 실행되면 | 413으로 실패하지 않는다. 루트 `README.md` → 코드 → test·migration → doc 순서(같은 묶음 안에서는 경로 오름차순, 루트 README는 리뷰 반영으로 맨 앞)로 상한까지 담고, 바이트 상한에 처음 걸린 뒤의 파일은 읽지 않고 버린다. `analyses.indexed_files`와 `analyses.dropped_files`에 개수가 남는다 |
 | AC3 | 인덱스에 코드 파일(java·js·mjs·vue·ts·tsx·jsx)이 하나도 없는(md·yml만 있는) ZIP이면 | 파이프라인이 실행되면 | 지금처럼 `ANALYSIS_415`로 FAILED가 된다. 아카이브 자체가 상한을 넘는 경우(업로드 multipart, URL `max-archive-bytes`)의 `ANALYSIS_413`은 그대로다 |
 | AC4 | 파일명이 규칙에 맞지 않는 Spring·FE 파일이 있으면 (`AnalysisPipeline.java`에 `@Service`, `UserStore.java`에 `@Repository`, `TodoRepository.java`, `@Mapper`가 붙은 `TodoQueries.java`, `WebSetup.java`에 `@Configuration`, `models/` 밖의 `@Entity`, `vite.config.js`·`eslint.config.mjs`, `src/test/java/FooControllerTest.java`) | layer를 판정하면 | 각각 `service`·`mapper`·`mapper`·`mapper`·`config`·`domain`·`config`·`config`·`test`가 된다. 주석 안의 어노테이션은 보지 않는다 (기존 `JavaComments.strip`). 기존 F-05a·F-07 AC12 판정 결과는 바뀌지 않는다 |
 | AC5 | 같은 layer의 service 두 개 중 하나는 controller 3개가 import·호출하고 다른 하나는 아무도 쓰지 않으면 | 선별하면 | 쓰이는 쪽의 `importance`가 더 높고 먼저 선별된다. 점수가 같으면 경로 오름차순이다. 같은 입력이면 결과가 항상 같다 |
@@ -34,7 +34,7 @@ F-26a는 (1) 큰 저장소도 거부하지 않고 **넓은 인덱스**(코드·�
 | AC8 | 인덱스 파일 500개 중 30개가 선별되면 | 분석이 DONE이 되면 | 500개가 모두 `analysis_files`에 키를 가린 내용으로 저장되고 30개만 `selected = TRUE`다. 설명·개념 추출·퀴즈·흐름·구조 탭·파일 목록(`GET /api/analyses/{id}/files`)은 선별 30개만 본다. 선별되지 않은 파일의 상세(`GET /api/analyses/{id}/files/{fileId}`)는 `ANALYSIS_001`(404)이다 |
 | AC9 | 루트에 `README.md`(8,000자)가 있고 하위 폴더에도 `frontend/README.md`가 있으면 | 개요를 만들면 | 개요 입력에 루트 README 앞부분 4,000자가 들어가고, 하위 README는 넣지 않는다. 파일 목록 줄은 선별 파일이 아니라 인덱스의 후보 파일(test·migration·doc 제외) 기준이다. 합계는 지금처럼 `explain.overview-max-chars`를 넘지 않는다. README가 없으면 README 칸은 "(README 없음)"이다 |
 | AC10 | V12 적용 전에 만든 분석이 있으면 | V12가 적용되면 | 기존 행은 모두 `selected = TRUE`가 되어 상세·파일·구조·흐름 화면이 전과 같다. `indexed_files`·`dropped_files`는 NULL이다 |
-| AC11 | 그래프 계산 예산(`analysis.selection.max-work-steps`·`max-work-time`)을 다 쓰는 저장소이면 | 선별하면 | 분석은 실패하지 않는다. 그때까지 만든 간선으로 연결 수를 세고 나머지 파일은 연결 수 0으로 보고 선별을 끝낸다. 경고 로그를 남긴다 |
+| AC11 | 그래프 계산 예산(`analysis.selection.max-work-steps`·`max-work-time`)을 다 쓰는 저장소이면 | 선별하면 | 분석은 실패하지 않는다. 그때까지 만든 간선으로 연결 수를 세고 나머지 파일은 연결 수 0으로 보고 선별을 끝낸다. 경고 로그를 남긴다. 시간 예산에 걸린 경우에는 AC5의 "같은 입력이면 같은 결과"가 보장되지 않는다 (단계 예산은 결정적) |
 
 ## 3. API 계약
 
@@ -87,7 +87,7 @@ ALTER TABLE analyses
 
 1. 경로 검사·공통 최상위 폴더 떼기·비밀 파일 제외·기존 제외 폴더는 그대로다.
 2. 지원 확장자에 `ts`·`tsx`·`jsx`·`md`를 추가한다. 생성물 제외: 파일 `*.min.js`·`*.min.mjs`·`*.bundle.js`·`*.d.ts`, 폴더 `generated`·`__generated__`·`vendor`.
-3. 후보를 경로만으로 **묶음**으로 나눈다: ① 코드·설정 ② test·migration ③ doc. 판정 규칙은 5.3절과 같고, 경로만으로 정할 수 있는 것만 여기서 쓴다.
+3. 후보를 경로만으로 **묶음**으로 나눈다: ⓪ 루트 `README.md`(대소문자 무시, 개요 입력용이라 상한에 먼저 버려지지 않게) ① 코드·설정 ② test·migration ③ doc. 묶음은 후보마다 한 번만 구해 둔다 (정렬 비교마다 다시 판정하지 않음). 판정 규칙은 5.3절과 같고, 경로만으로 정할 수 있는 것만 여기서 쓴다.
 4. (묶음, 경로) 순서로 읽는다. 개수가 `max-index-files`에 이르거나 합계가 `max-index-bytes`를 처음 넘으면, 그 파일과 뒤의 파일은 **읽지 않고** 버린 개수로 센다 (zip bomb 방어: 읽는 양이 상한 + 파일 하나를 넘지 않는다). CRC 검사는 그대로다.
 5. 결과는 `IndexResult(List<SourceFile> files, int dropped)`. 코드 확장자가 없으면 `ANALYSIS_415`.
 6. 413 메시지 상수 `TOO_MANY_FILES`·`TOO_LARGE`를 지운다. `ErrorCode.ANALYSIS_413` 문구는 아카이브 기준으로 맞춘다 ("저장소 압축 파일이 너무 큽니다…").
@@ -136,9 +136,9 @@ ALTER TABLE analyses
 
 ### 5.5 저장·조회 (`AnalysisService`, `AnalysisMapper.xml`)
 
-- `select` 단계: 인덱스 전체에 `SecretRedactor.redact`를 적용해 저장한다. `insertFiles`는 100행씩 나눠 INSERT한다 (MySQL `max_allowed_packet` 대비). `analyses.indexed_files`·`dropped_files`를 같은 트랜잭션에서 적는다.
+- `select` 단계: 인덱스 전체에 `SecretRedactor.redact`를 적용해 저장한다. `insertFiles`는 100행 또는 content 400만 자 중 먼저 닿는 쪽에서 나눠 INSERT한다 (MySQL `max_allowed_packet` 대비). `analyses.indexed_files`·`dropped_files`를 같은 트랜잭션에서 적는다.
 - `findFiles`·`findFileSummaries`·`findFile`에 `AND selected = TRUE`를 붙인다. 하위 단계(설명·개념·퀴즈·흐름·구조)는 코드를 바꾸지 않아도 선별만 본다 (AC8).
-- 새 `findIndexFiles(analysisId)`(content 포함, 전체)는 개요 입력(README·파일 목록)에서만 쓴다. F-28·F-33이 이어서 쓴다.
+- 새 `findIndexFiles(analysisId)`(인덱스 전체, content는 루트 README만)는 개요 입력(README·파일 목록)에서만 쓴다. F-28·F-33은 내용이 필요하면 별도 조회를 둔다.
 
 ### 5.6 개요 입력 (`explain/ExplainPrompts.overviewInput`, `OverviewExplainer`)
 
@@ -194,9 +194,9 @@ ALTER TABLE analyses
 - [x] AC별 실패 테스트 작성 (red 확인)
 - [x] BE 구현 (green)
 - [x] 프롬프트 3종 `{{readme}}` 추가
-- [ ] Swagger 설명 문구 + `docs/api/openapi.json` 갱신
-- [ ] contract-checker 통과
-- [ ] reviewer 지적 사항 반영
+- [x] Swagger 설명 문구 + `docs/api/openapi.json` 갱신
+- [x] contract-checker 통과
+- [x] reviewer 지적 사항 반영
 - [x] 산출물 반영 (ERD `analysis_files`·`analyses` 열, 요구사항 정의서의 분석 요청 실패 조건)
 - [ ] PR CI 초록
 - [ ] 상태 DONE (PR 머지 후)
