@@ -3,11 +3,11 @@
 > 김동환(A 영역: AI·분석·학습 루프) 전용. 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
-갱신: 2026-11-25 11:16 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/common-harness-revamp
+갱신: 2026-11-25 11:36 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/common-harness-revamp
 
 ## 현재 기능
 
-**H-1 하네스 개편** (WBS 6.1, 기획서 6절 H-1) — ①~⑨ 모두 완료, 다음은 `/pr-review`. spec 없음(하네스), PR 1개(`Closes #29 #129`) → 머지 후 하네스 재동결.
+**H-1 하네스 개편** (WBS 6.1, 기획서 6절 H-1) — `/pr-review` 중. reviewer 반드시 수정 반영 완료, PR 생성 대기. spec 없음(하네스), `Closes #29 #129` → 머지 후 하네스 재동결.
 
 ## 진행
 
@@ -16,10 +16,11 @@
 - ✅ ③ guard-bash 셸 토큰 파서 `scripts/lib/guard.mjs` (2a407c7, 지난 명령 6,939개 재생 오탐 0)
 - ✅ ④ `stamp.mjs --draft/--touch-now/--append-log` (511fb94) ⑦ `scripts/weekly.mjs` (a3ab1d0) ⑤ `scripts/doctor.mjs` (c4564c0) ⑧ #29 (91f38e2) ⑨ 문서·결정로그 (701083a)
 - ✅ ⑥ 허용 목록: 읽기 전용 44개 추가 (지난 Bash 7,384회 분석, 사용자 승인)
+- ✅ /pr-review: verify all·하네스 127+ 통과. reviewer 반드시 수정 4건 반영 — 가드 퇴행(예약어·래퍼·PowerShell·heredoc 등) + main·develop push 거부 (9f48806), 허용 목록 6개 제외·문서 (7081f3d). 지난 명령 10,988개 재생 오탐 0. 권장 나머지 → #130~#137
 
 ## 바로 다음 할 일
 
-1. `/pr-review` (reviewer + verifier harness) → PR `feat(harness): H-1 하네스 개편` 본문에 `Closes #29`·`Closes #129`, 상대 @JoonseobKim 멘션(공통 하네스)
+1. push(`timeout` 600000) → `gh pr create --base develop --title "feat(harness): H-1 하네스 개편" --body-file .harness/pr-H-1.md` → `gh pr checks` → Codex 루프(`node scripts/codex-review.mjs <PR> --request --wait --status`, run_in_background)
 2. 머지 후 하네스 재동결 → V-1 MVP 감사(11/29~) · 11/27 Figma 세션
 
 ## 막힌 점 / 결정 필요
