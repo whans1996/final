@@ -114,32 +114,46 @@ public class ImportanceRanker {
         return ranked;
     }
 
-    /** config는 전체에서 상위 {@code max-config}개만 후보로 두고, FE·BE 몫 안에서 (importance 내림차순, 경로) 순으로 고른다. */
+    /**
+     * (importance 내림차순, 경로) 순으로 FE·BE 몫 안에서 고르고, 한쪽이 몫을 다 못 채우면 남은 자리를 다른 쪽이 같은 순서로 채운다. config는
+     * 실제로 고른 것만 세어 FE·BE 합쳐 {@code max-config}개까지 둔다 (#159: 몫이 찬 쪽의 config가 상한 자리를 먼저 차지하지 않게).
+     */
     private Set<String> choose(List<Scored> scored, int limit) {
-        Set<String> allowedConfig = new HashSet<>();
-        scored.stream()
-                .filter(s -> s.layer() == Layer.CONFIG)
-                .sorted(BY_SCORE)
-                .limit(properties.maxConfig())
-                .forEach(s -> allowedConfig.add(s.path()));
-
-        List<Scored> eligible =
-                scored.stream()
-                        .filter(s -> s.layer() != Layer.CONFIG || allowedConfig.contains(s.path()))
-                        .sorted(BY_SCORE)
-                        .toList();
-        List<Scored> fe = eligible.stream().filter(ImportanceRanker::isFrontend).toList();
-        List<Scored> be = eligible.stream().filter(s -> !isFrontend(s)).toList();
-
+        List<Scored> ordered = scored.stream().sorted(BY_SCORE).toList();
         long feCandidates = scored.stream().filter(ImportanceRanker::isFrontend).count();
-        int feTake = Math.min(fe.size(), frontendShare(limit, feCandidates, scored.size()));
-        int beTake = Math.min(be.size(), limit - feTake);
-        feTake = Math.min(fe.size(), limit - beTake);
+        int feShare = frontendShare(limit, feCandidates, scored.size());
 
         Set<String> chosen = new HashSet<>();
-        fe.subList(0, feTake).forEach(s -> chosen.add(s.path()));
-        be.subList(0, beTake).forEach(s -> chosen.add(s.path()));
+        int[] taken = new int[3]; // [FE, BE, config]
+        // 1차: 쪽별 몫 안에서. 2차: 몫이 남은 쪽이 있으면 그 자리를 다른 쪽이 채운다
+        fill(ordered, limit, new int[] {feShare, limit - feShare}, chosen, taken);
+        fill(ordered, limit, new int[] {limit, limit}, chosen, taken);
         return chosen;
+    }
+
+    /**
+     * {@code ordered} 순서로 쪽별 {@code quota}와 config 상한 안에서 {@code chosen}이 {@code limit}개가 될 때까지 더하고
+     * {@code taken}을 늘린다.
+     */
+    private void fill(
+            List<Scored> ordered, int limit, int[] quota, Set<String> chosen, int[] taken) {
+        for (Scored s : ordered) {
+            if (chosen.size() >= limit) {
+                return;
+            }
+            boolean config = s.layer() == Layer.CONFIG;
+            int side = isFrontend(s) ? 0 : 1;
+            if (chosen.contains(s.path())
+                    || taken[side] >= quota[side]
+                    || (config && taken[2] >= properties.maxConfig())) {
+                continue;
+            }
+            chosen.add(s.path());
+            taken[side]++;
+            if (config) {
+                taken[2]++;
+            }
+        }
     }
 
     /** FE 몫 = round(N × FE / 전체)를 [⌈N/3⌉, N − ⌈N/3⌉]로 자른다. 한쪽만 있으면 그쪽이 다 쓴다 (AC6). */

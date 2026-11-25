@@ -87,6 +87,13 @@ public class ZipArchiveReader {
                     "md");
     private static final Set<String> SUPPORTED_NAMES =
             Set.of("build.gradle", "build.gradle.kts", "package.json");
+
+    /**
+     * {@code .cjs}는 JS 구조 파서(js·mjs·vue)가 읽지 못해 코드로 받지 않고, {@code FileSelector}가 config로 보는 {@code
+     * *.config.cjs}만 받는다 (#158).
+     */
+    private static final Pattern CJS_CONFIG_NAME = Pattern.compile(".+\\.config\\.cjs");
+
     private static final Set<String> CODE_EXTENSIONS =
             Set.of("java", "js", "mjs", "vue", "ts", "tsx", "jsx");
 
@@ -269,7 +276,9 @@ public class ZipArchiveReader {
         if (secret || GENERATED_NAME.matcher(name).matches()) {
             return false;
         }
-        return SUPPORTED_EXTENSIONS.contains(extension) || SUPPORTED_NAMES.contains(name);
+        return SUPPORTED_EXTENSIONS.contains(extension)
+                || SUPPORTED_NAMES.contains(name)
+                || CJS_CONFIG_NAME.matcher(name).matches();
     }
 
     private static String extension(String path) {

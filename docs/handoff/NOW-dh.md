@@ -3,22 +3,23 @@
 > 김동환(A 영역: AI·분석·학습 루프) 전용. 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
-갱신: 2026-11-25 19:18 · 작업자: whans1996@naver.com · PC: dh-home · 브랜치: feature/F-26a-index-selection
+갱신: 2026-11-25 20:20 · 작업자: whans1996@naver.com · PC: dh-home · 브랜치: feature/issue-158-config-collect
 
 ## 현재 기능
 
-**F-26a 수집·선별 개편** PR #157 — CI ✅ · Codex COMPLETE · spec DONE 표시 완료 → **사람 머지 대기**. spec `docs/specs/F-26a-index-selection.md`
+**#158·#159 F-26a 후속** PR #160 (base develop) — CI ✅ · Codex ✅ `da4ced5` (지적 없음) → **사람 머지 대기**. F-26a PR #157은 11/25 머지됨
 
 ## 진행
 
-- ✅ AC1~AC11 구현, PR 전 리뷰 반영, Codex 1차 P2 수정 `12dead8`, 2차 P2 3건 이관(#156·#158·#159)
-- ✅ spec 헤더 `DONE (PR #157)`, 10절 "PR CI 초록"·"상태 DONE" 체크 (docs만이라 Codex 재리뷰 없음)
-- 후속 이슈: #155 FE·화면설계서·F-05a "200개 · 10MB" 문구 · #156 readingOrder · #158 cjs 설정 · #159 config 상한 위치
+- ✅ #158 `ZipArchiveReader.isSupported`: `.cjs` 확장자 대신 `*.config.cjs` 파일명만 받음 (`ZipArchiveReaderTest#AC5_지원_확장자와_파일명`에 eslint.config.cjs·lib.cjs 추가). spec 5.2절 2·결정로그 한 줄
+- ✅ #159 `ImportanceRanker.choose`: 전체 정렬 순서로 FE·BE 몫 안에서 고르고(1차) 남는 자리는 몫 무시하고 채움(2차), config는 실제 고른 것만 세어 `max-config`. 테스트 `AC7_config_상한은_FE_BE_몫_안에서_실제로_고를_때_센다`(Codex 재현, red→green)·`AC7_config_상한은_FE_BE를_합쳐_센다`
+- 리뷰 반영 `da4ced5`: `choose`를 `fill()` 두 번(몫·남는 자리)으로 분리, #159 테스트에 red 조건 주석·FE 10개 단언·js/mjs/cjs config, `FileSelectorTest`에 postcss.config.cjs. develop 옛 구현으로 돌려 의도한 2개만 red 확인
+- PR 본문 `.harness/pr-issue-158.md`에 `Closes #158`·`Closes #159`
 
 ## 바로 다음 할 일
 
-1. `gh pr checks 157` 초록 재확인 → 사람이 GitHub에서 PR #157 머지 (상대가 먼저 develop에 머지했으면 `git merge origin/develop` → push → CI 재확인 후)
-2. 머지 뒤 `git switch develop && git pull` → 새 세션에서 #158·#159를 `feature/issue-158-config-collect` 하나로 묶어 처리 (수집 필터에 `*.config.cjs` 추가, config 상한을 후보 단계가 아니라 실제 선별에 적용). #155는 F-28 화면 때 흡수, #156은 F-26b에서
+1. 사람이 GitHub에서 PR #160 머지 (상대가 먼저 develop에 머지했으면 `git merge origin/develop` → push → CI 재확인 후). 머지 뒤 #158·#159가 닫혔는지 확인 → `git switch develop && git pull`
+2. 머지 뒤 develop 정리 → #155는 F-28 화면 때, #156은 F-26b에서
 3. 11/27 Figma 세션 → 11/29~ V-1 MVP 감사
 
 ## 막힌 점 / 결정 필요
@@ -27,6 +28,7 @@
 
 ## 주의
 
-- PR #157이 공통 파일(ErrorCode·V12·application.yml·WithdrawalApiTest·openapi.json)을 바꿈 → 본문에 @JoonseobKim 멘션함. 다음 마이그레이션은 V13
+- 다음 마이그레이션은 V13 · 이 PR은 A 영역 파일만 바꿈(공통 파일 없음)
+- dh-home: develop에 mermaid 의존성이 들어와 `cd frontend && npm ci` 필요했음 (11/25 설치함)
 - 커밋 범위는 F-xx|common|harness만 · Git Bash에서 `/pr-review` 같은 인자는 MSYS 경로 변환됨 (`MSYS_NO_PATHCONV=1`)
 - node 스크립트로 Java 편집 시 백슬래시가 깨짐 → Edit 도구 사용 · 이 PC에 python 없음
