@@ -158,6 +158,31 @@ class ApiDetectorTest {
     }
 
     @Test
+    void F21a_잘렸거나_건너뛴_매핑이_있으면_목록이_불완전하다고_알린다() {
+        String literal =
+                "@RequestMapping(\"/api\")\nclass A {\n  @GetMapping(\"/a\") void a() {}\n}\n";
+        assertThat(ApiDetector.scan(List.of(controller(1, literal))).incomplete()).isFalse();
+
+        StringBuilder many = new StringBuilder("class A {\n");
+        for (int i = 0; i < 51; i++) {
+            many.append(String.format("  @GetMapping(\"/r%02d\") void m%d() {}%n", i, i));
+        }
+        many.append("}\n");
+        ApiDetector.Detection truncated = ApiDetector.scan(List.of(controller(1, many.toString())));
+        assertThat(truncated.apis()).hasSize(50);
+        assertThat(truncated.incomplete()).isTrue();
+
+        String constantMethod = "class A {\n  @GetMapping(Paths.X) void a() {}\n}\n";
+        String constantClass = "@RequestMapping(BASE)\nclass B {\n  @GetMapping void b() {}\n}\n";
+        String longPath = "class C {\n  @GetMapping(\"/" + "x".repeat(200) + "\") void c() {}\n}\n";
+        for (String code : List.of(constantMethod, constantClass, longPath)) {
+            assertThat(ApiDetector.scan(List.of(controller(1, code))).incomplete())
+                    .as(code)
+                    .isTrue();
+        }
+    }
+
+    @Test
     void AC7_클래스_경로를_알_수_없으면_그_파일의_API는_건너뛴다() {
         String constant =
                 """

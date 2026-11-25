@@ -1,0 +1,289 @@
+package com.vibenote.analysis.structure.js;
+
+import com.vibenote.analysis.domain.AnalysisFile;
+import com.vibenote.analysis.structure.EdgeType;
+import com.vibenote.analysis.structure.StructureLinks;
+import com.vibenote.analysis.structure.UnresolvedKind;
+import com.vibenote.analysis.structure.UnresolvedReason;
+import com.vibenote.analysis.structure.WorkBudget;
+import com.vibenote.analysis.structure.js.JsToken.Kind;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.TreeMap;
+
+/**
+ * JS·Vue 모듈 import (F-21a AC6).
+ *
+ * <p>{@code import … from 'm'}, {@code import 'm'}, {@code export … from 'm'}, {@code import('m')},
+ * {@code require('m')}에서 m이 문자열 리터럴이면 경로를 푼다. {@code ./}·{@code ../}는 그 파일 폴더, {@code @/}는 가장 가까운
+ * 상위 {@code src/} 기준이고 후보는 그대로 → .js → .mjs → .vue → /index.js 순이다. 패키지 이름은 무시한다. 풀리지 않은
+ * 상대·{@code @/} 경로는 NOT_SELECTED로 남기되, .css·이미지처럼 코드가 아닌 확장자는 선별 대상이 될 수 없어 남기지 않는다.
+ */
+public final class JsModuleReader {
+
+    private static final List<String> SUFFIXES = List.of("", ".js", ".mjs", ".vue", "/index.js");
+    private static final Set<String> CODE_EXTENSIONS = Set.of("js", "mjs", "vue");
+
+    /** 파일 하나의 토큰 수 상한. 넘으면 그 파일은 PARSE_ERROR (토큰은 HTTP 판정까지 메모리에 둔다, 5.3절 3). */
+    static final int MAX_FILE_TOKENS = 500_000;
+
+    /** 분석 하나에서 메모리에 두는 토큰 수 합계 상한. 넘게 하는 파일은 PARSE_ERROR. */
+    static final int MAX_TOTAL_TOKENS = 2_000_000;
+
+    private JsModuleReader() {}
+
+    /**
+     * 파일마다 토큰과 import를 읽고 import 간선을 남긴다. 토큰으로 나눌 수 없는 파일은 PARSE_ERROR이고 결과에서 빠진다. 예산을 다 썼거나 예상하지
+     * 못한 예외가 나면 그 파일(예산이면 남은 파일 모두)도 PARSE_ERROR다.
+     */
+    public static Map<Long, JsModule> read(
+            List<AnalysisFile> files, StructureLinks out, WorkBudget budget) {
+        return read(files, out, budget, MAX_FILE_TOKENS, MAX_TOTAL_TOKENS);
+    }
+
+    static Map<Long, JsModule> read(
+            List<AnalysisFile> files,
+            StructureLinks out,
+            WorkBudget budget,
+            int maxFileTokens,
+            int maxTotalTokens) {
+        int kept = 0;
+        Map<String, Long> paths = new HashMap<>();
+        files.forEach(f -> paths.putIfAbsent(f.getPath(), f.getId()));
+
+        Map<Long, JsModule> modules = new LinkedHashMap<>();
+        for (AnalysisFile file :
+                files.stream().sorted(Comparator.comparing(AnalysisFile::getId)).toList()) {
+            if (budget.exhausted()) {
+                out.parseFailure(file.getId(), budget);
+                continue;
+            }
+            try {
+                String content = file.getContent() == null ? "" : file.getContent();
+                List<JsToken> tokens =
+                        JsTokenizer.tokenizeFile(
+                                file.getPath(),
+                                content,
+                                budget,
+                                Math.min(maxFileTokens, maxTotalTokens - kept));
+                JsModule module =
+                        new JsModule(file.getId(), file.getPath(), content, tokens, budget);
+                readImports(module);
+                JsDeclarations.read(module);
+                linkImports(module, paths, out);
+                modules.put(file.getId(), module);
+                kept += tokens.size();
+            } catch (JsSyntaxException e) {
+                out.parseError(file.getId(), e.getLine(), e.getMessage());
+            } catch (RuntimeException | StackOverflowError e) {
+                out.parseFailure(file.getId(), budget);
+            }
+        }
+        return modules;
+    }
+
+    private static void linkImports(JsModule module, Map<String, Long> paths, StructureLinks out) {
+        Map<Long, Integer> edgeLines = new TreeMap<>();
+        Map<String, Integer> missing = new LinkedHashMap<>();
+        for (JsImport imp : module.imports()) {
+            Optional<String> base = resolve(module.path(), imp.specifier());
+            if (base.isEmpty()) {
+                continue;
+            }
+            Optional<Long> target =
+                    SUFFIXES.stream()
+                            .map(suffix -> paths.get(base.get() + suffix))
+                            .filter(id -> id != null)
+                            .findFirst();
+            if (target.isPresent()) {
+                imp.setTarget(target.get());
+                edgeLines.merge(target.get(), imp.line(), Math::min);
+            } else if (isCodePath(base.get())) {
+                missing.merge(base.get(), imp.line(), Math::min);
+            }
+        }
+        edgeLines.forEach((to, line) -> out.edge(module.fileId(), to, EdgeType.IMPORT, line));
+        missing.entrySet().stream()
+                .sorted(Map.Entry.comparingByValue())
+                .forEach(
+                        e ->
+                                out.unresolved(
+                                        module.fileId(),
+                                        e.getValue(),
+                                        UnresolvedKind.IMPORT,
+                                        UnresolvedReason.NOT_SELECTED,
+                                        e.getKey()));
+    }
+
+    private static boolean isCodePath(String path) {
+        String name = path.substring(path.lastIndexOf('/') + 1);
+        int dot = name.lastIndexOf('.');
+        return dot < 0
+                || CODE_EXTENSIONS.contains(name.substring(dot + 1).toLowerCase(Locale.ROOT));
+    }
+
+    /** 모듈 지정자를 저장소 기준 경로(확장자 후보 붙이기 전)로 푼다. 패키지 이름이거나 풀 수 없으면 empty. */
+    static Optional<String> resolve(String fromPath, String specifier) {
+        List<String> base;
+        String rest;
+        List<String> dir = new ArrayList<>(List.of(fromPath.split("/")));
+        dir.remove(dir.size() - 1);
+        if (specifier.startsWith("./") || specifier.startsWith("../")) {
+            base = dir;
+            rest = specifier;
+        } else if (specifier.startsWith("@/")) {
+            int src = dir.lastIndexOf("src");
+            if (src < 0) {
+                return Optional.empty();
+            }
+            base = new ArrayList<>(dir.subList(0, src + 1));
+            rest = specifier.substring(2);
+        } else {
+            return Optional.empty();
+        }
+        Deque<String> parts = new ArrayDeque<>(base);
+        for (String part : rest.split("/")) {
+            if (part.isEmpty() || part.equals(".")) {
+                continue;
+            }
+            if (part.equals("..")) {
+                if (parts.isEmpty()) {
+                    return Optional.empty();
+                }
+                parts.removeLast();
+            } else {
+                parts.addLast(part);
+            }
+        }
+        return parts.isEmpty() ? Optional.empty() : Optional.of(String.join("/", parts));
+    }
+
+    /** import·export from·import()·require() 문을 찾는다. */
+    static void readImports(JsModule module) {
+        List<JsToken> t = module.tokens();
+        for (int i = 0; i < t.size(); i++) {
+            module.budget().spend();
+            JsToken token = t.get(i);
+            if (token.kind() != Kind.IDENT || JsTokens.isMemberName(t, i)) {
+                continue;
+            }
+            switch (token.text()) {
+                case "import" -> i = readImport(module, t, i);
+                case "export" -> i = readExportFrom(module, t, i);
+                case "require" -> {
+                    if (JsTokens.is(t, i + 1, "(")
+                            && JsTokens.kind(t, i + 2) == Kind.STRING
+                            && JsTokens.is(t, i + 3, ")")) {
+                        module.imports()
+                                .add(new JsImport(t.get(i + 2).value(), token.line(), Map.of()));
+                    }
+                }
+                default -> {}
+            }
+        }
+    }
+
+    private static int readImport(JsModule module, List<JsToken> t, int i) {
+        int line = t.get(i).line();
+        if (JsTokens.is(t, i + 1, "(")) {
+            if (JsTokens.kind(t, i + 2) == Kind.STRING && JsTokens.is(t, i + 3, ")")) {
+                module.imports().add(new JsImport(t.get(i + 2).value(), line, Map.of()));
+            }
+            return i;
+        }
+        if (JsTokens.is(t, i + 1, ".")) {
+            return i;
+        }
+        if (JsTokens.kind(t, i + 1) == Kind.STRING) {
+            module.imports().add(new JsImport(t.get(i + 1).value(), line, Map.of()));
+            return i + 1;
+        }
+        Map<String, String> bindings = new LinkedHashMap<>();
+        int j = i + 1;
+        while (j < t.size()
+                && !t.get(j).is("from")
+                && !t.get(j).is(";")
+                && !statementStart(t.get(j))) {
+            JsToken b = t.get(j);
+            if (b.is("*") && JsTokens.is(t, j + 1, "as") && JsTokens.kind(t, j + 2) == Kind.IDENT) {
+                bindings.put(t.get(j + 2).text(), "*");
+                j += 3;
+            } else if (b.is("{")) {
+                j = readSpecifiers(t, j + 1, bindings);
+            } else {
+                if (b.kind() == Kind.IDENT) {
+                    bindings.put(b.text(), "default");
+                }
+                j++;
+            }
+        }
+        if (JsTokens.is(t, j, "from") && JsTokens.kind(t, j + 1) == Kind.STRING) {
+            module.imports().add(new JsImport(t.get(j + 1).value(), line, bindings));
+            return j + 1;
+        }
+        return i;
+    }
+
+    /**
+     * {@code export * from}, {@code export {…} from}, {@code export {…}}(다시 내보내지 않는 목록은 exports로).
+     */
+    private static int readExportFrom(JsModule module, List<JsToken> t, int i) {
+        int line = t.get(i).line();
+        Map<String, String> names = new LinkedHashMap<>();
+        int j;
+        if (JsTokens.is(t, i + 1, "*")) {
+            j = i + 2;
+            if (JsTokens.is(t, j, "as")) {
+                j += 2;
+            }
+        } else if (JsTokens.is(t, i + 1, "{")) {
+            j = readSpecifiers(t, i + 2, names);
+        } else {
+            return i;
+        }
+        if (JsTokens.is(t, j, "from") && JsTokens.kind(t, j + 1) == Kind.STRING) {
+            module.imports().add(new JsImport(t.get(j + 1).value(), line, Map.of()));
+            return j + 1;
+        }
+        return i;
+    }
+
+    /**
+     * {@code {a, b as c, default as d}} 안을 읽어 names에 넣는다. import면 지역 이름 → 가져온 이름, export면 내보낸 이름 →
+     * 지역 이름. 닫는 중괄호 다음 위치를 돌려준다. 중괄호가 닫히기 전에 다음 {@code import}·{@code export}가 나오면 거기서 멈추고 그 위치를
+     * 돌려준다 (닫히지 않은 목록이 이어질 때마다 파일 끝까지 다시 읽지 않게).
+     */
+    static int readSpecifiers(List<JsToken> t, int j, Map<String, String> names) {
+        while (j < t.size() && !t.get(j).is("}")) {
+            if (statementStart(t.get(j))) {
+                return j;
+            }
+            JsToken name = t.get(j);
+            if (name.kind() == Kind.IDENT || name.kind() == Kind.STRING) {
+                String original = name.value();
+                String alias = original;
+                if (JsTokens.is(t, j + 1, "as") && j + 2 < t.size()) {
+                    alias = t.get(j + 2).value();
+                    j += 2;
+                }
+                names.put(alias, original);
+            }
+            j++;
+        }
+        return j + 1;
+    }
+
+    /** import 문의 이름 목록에는 나오지 않는 다음 문의 시작. */
+    private static boolean statementStart(JsToken token) {
+        return token.is("import") || token.is("export");
+    }
+}
