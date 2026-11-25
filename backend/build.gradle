@@ -71,7 +71,7 @@ tasks.named('test') {
     }
 }
 
-// 사람이 키를 넣고 수동으로만 실행한다: ./gradlew liveTest (Gemini 무료 한도를 쓴다)
+// 사람이 키를 넣고 수동으로만 실행한다: ./gradlew liveTest (GMS 크레딧·Gemini 무료 한도를 쓴다)
 tasks.register('liveTest', Test) {
     description = '실제 LLM 연결 확인 (@Tag("live")). 키·서버가 없으면 건너뛴다.'
     group = 'verification'
@@ -88,11 +88,12 @@ tasks.register('liveTest', Test) {
     }
 }
 
-// 프롬프트 평가 하네스 (prompt-evaluator 에이전트가 사용). 사람이 요청할 때만 실행한다 (Gemini 무료 한도를 쓴다).
+// 프롬프트 평가 하네스 (prompt-evaluator 에이전트가 사용). 사람이 요청할 때만 실행한다 (GMS 크레딧·Gemini 무료 한도를 쓴다).
+// 공급자는 LLM_PROVIDER=gms|gemini|ollama 하나만 폴백 없이 부른다 (F-27 AC13). 예: LLM_PROVIDER=gms ./gradlew promptEval ...
 // ./gradlew promptEval -Pstage=overview|file -Plevel=beginner|junior|senior|all -Pfixture=DS-02-01 [-Pbatches=1] [-PpauseMs=4000]
 // 결과: ../.harness/prompt-eval/<시각>-<fixture>-<stage>.json
 tasks.register('promptEval', Test) {
-    description = '프롬프트를 실제 Gemini로 실행해 결과를 .harness/prompt-eval/에 저장한다 (@Tag("prompt-eval")).'
+    description = '프롬프트를 실제 LLM(LLM_PROVIDER)으로 실행해 결과를 .harness/prompt-eval/에 저장한다 (@Tag("prompt-eval")).'
     group = 'verification'
     testClassesDirs = sourceSets.test.output.classesDirs
     classpath = sourceSets.test.runtimeClasspath
