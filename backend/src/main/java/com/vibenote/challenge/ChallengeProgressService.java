@@ -50,6 +50,17 @@ public class ChallengeProgressService {
         }
     }
 
+    /**
+     * 아직 달성하지 않은 참여 하나를 잠그고 다시 센다 (#146, {@link ChallengeRecountJob}). 그 사이 달성했거나 취소했으면 하지 않는다.
+     * 호출자의 트랜잭션에 참여한다.
+     */
+    @Transactional
+    public void recountOpen(long challengeId, long userId) {
+        participantMapper
+                .findOpenOneForUpdate(challengeId, userId)
+                .ifPresent(challenge -> recount(challenge, userId));
+    }
+
     /** 참여 직후 그 챌린지 하나를 센다 (AC4). 호출자가 챌린지를 잠그고 미달성 참여 행을 넣은 뒤 부른다. */
     @Transactional
     public void recount(Challenge challenge, long userId) {

@@ -22,7 +22,9 @@ import tools.jackson.databind.ObjectMapper;
         properties = {
             "llm.provider=mock",
             "app.jwt.secret=test-only-jwt-secret-for-integration-tests-0123456789",
-            "app.upload-dir=build/test-uploads"
+            "app.upload-dir=build/test-uploads",
+            // 고정 시각 테스트와 겹치지 않게 일괄 작업은 끄고 테스트가 직접 부른다 (#146)
+            "challenge.recount-cron=-"
         })
 @AutoConfigureMockMvc
 public abstract class IntegrationTestBase {

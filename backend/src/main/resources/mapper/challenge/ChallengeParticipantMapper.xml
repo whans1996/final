@@ -70,6 +70,25 @@
         FOR UPDATE OF p
     </select>
 
+    <!-- 끝난 챌린지 다시 세기 대상 (#146) -->
+    <select id="findOpenEnded" resultType="com.vibenote.challenge.domain.ChallengeParticipant">
+        SELECT p.challenge_id, p.user_id, p.progress, p.completed_at, p.joined_at
+        FROM challenge_participants p
+        JOIN challenges c ON c.id = p.challenge_id
+        WHERE p.completed_at IS NULL
+          AND c.end_date &gt;= #{from} AND c.end_date &lt; #{until}
+        ORDER BY p.challenge_id, p.user_id
+    </select>
+
+    <select id="findOpenOneForUpdate" resultType="com.vibenote.challenge.domain.Challenge">
+        SELECT c.id, c.start_date, c.end_date, c.goal_type, c.goal_value
+        FROM challenge_participants p
+        JOIN challenges c ON c.id = p.challenge_id
+        WHERE p.challenge_id = #{challengeId} AND p.user_id = #{userId}
+          AND p.completed_at IS NULL
+        FOR UPDATE OF p
+    </select>
+
     <select id="countDoneReviews" resultType="int">
         SELECT COUNT(*) FROM review_plans
         WHERE user_id = #{userId} AND status = 'DONE'
