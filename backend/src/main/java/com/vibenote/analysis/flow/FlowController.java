@@ -1,5 +1,6 @@
 package com.vibenote.analysis.flow;
 
+import com.vibenote.analysis.AnalysisApiDocs;
 import com.vibenote.common.exception.ErrorResponse;
 import com.vibenote.common.security.AuthUser;
 import io.swagger.v3.oas.annotations.Operation;
@@ -20,7 +21,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 /** 실행 흐름 요청·조회 (F-07). 경로와 Tag는 AnalysisController와 같다. */
-@Tag(name = "분석", description = "프로젝트 분석 요청, 내 분석 목록, 진행 상태, 분석 결과(개요·파일) 조회")
+@Tag(name = AnalysisApiDocs.TAG, description = AnalysisApiDocs.TAG_DESCRIPTION)
 @RestController
 @RequestMapping("/api/analyses/{id:\\d+}/flows")
 public class FlowController {
