@@ -13,6 +13,17 @@ export function onlyDocsChanged(changedFiles, fromDevelop = () => false) {
   return changedFiles.every((f) => isDocPath(f) || fromDevelop(f));
 }
 
+/**
+ * codex-loop가 이 PR을 보지 않는 이유 (gh pr view --json state,isDraft,files). 볼 PR이면 null.
+ * docs만 바꾼 PR은 CI 초록이면 Codex를 기다리지 않고 머지한다 (docs/conventions.md 7절 예외, #129)
+ */
+export function loopSkipReason(pr) {
+  if (pr.state !== 'OPEN') return 'CLOSED';
+  if (pr.isDraft) return 'DRAFT';
+  if (onlyDocsChanged((pr.files || []).map((f) => f.path))) return 'DOCS';
+  return null;
+}
+
 /** 아직 해결되지 않은 마지막 인라인 지적 시각(ISO). 그보다 늦은 이관 마커가 있으면 '' (모두 이슈로 이관됨) */
 export function unresolvedFindingAt(findingTimes, resolvedTimes) {
   const last = [...findingTimes].sort().at(-1) ?? '';
