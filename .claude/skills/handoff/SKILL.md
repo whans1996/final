@@ -40,7 +40,7 @@ node scripts/stamp.mjs --append-log --did "한 일 (무엇을, 왜)" --next "다
      - 통과: 남은 변경을 의미 단위 커밋 (`feat(F-xx): ...` 등).
      - 실패 또는 작업 중간: `wip(F-xx): <어디까지 했는지 한 줄>` 로 커밋. wip는 커밋 hook의 빠른 검사와 pre-push 전체 검증의 예외다.
    - `git add`는 경로를 지정한다. `.env`·키 파일이 섞이지 않았는지 `git status`로 확인.
-   - `git push -u origin <브랜치>` (`origin` = GitHub. `gitlab` 원격은 제출 전용이라 push하지 않는다). 원격이 없거나 실패하면 그 사실을 보고한다 (커밋은 로컬에 남는다).
+   - `git push -u origin <브랜치>` (`origin` = GitHub. `gitlab` 원격은 제출 전용이라 push하지 않는다). wip가 아닌 tip은 pre-push 전체 검증이 돌므로 Bash `timeout` 600000으로 실행한다. 원격이 없거나 실패하면 그 사실을 보고한다 (커밋은 로컬에 남는다).
    - 이 브랜치에 열린 PR이 있으면 `gh pr view --json url,statusCheckRollup`으로 CI 상태를 확인해 NOW 파일 주의 섹션에 적는다.
 5. **보고**: 커밋 해시, push 여부, 다음 PC에서 할 첫 행동(`git switch <브랜치> && git pull` → `/pickup`)을 3줄로.
 
