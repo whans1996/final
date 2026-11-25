@@ -1,13 +1,12 @@
 package com.vibenote.analysis.pipeline;
 
-import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
- * layer 판정과 선별 (F-05a 5.2절, F-26a 5.3절). 이후 단계(F-06 설명 등)는 여기서 고른 파일만 쓴다.
+ * layer 판정 (F-05a 5.2절, F-26a 5.3절). 선별은 {@link ImportanceRanker}가 한다.
  *
  * <p>판정 규칙 중 경로만 보는 것(doc·test·migration)은 ZIP을 읽기 전에 인덱스 묶음을 나누는 데도 쓴다 ({@link #layer}에 content
  * null).
@@ -122,15 +121,5 @@ public final class FileSelector {
             }
         }
         return false;
-    }
-
-    /** layer 우선순위, 같은 layer 안에서는 경로 오름차순으로 상위 limit개. test·migration·doc은 고르지 않는다. */
-    public static List<SelectedFile> select(List<SourceFile> files, int limit) {
-        return files.stream()
-                .map(f -> new SelectedFile(f.path(), layer(f.path(), f.content()), f.content()))
-                .filter(f -> !f.layer().indexOnly())
-                .sorted(Comparator.comparing(SelectedFile::layer).thenComparing(SelectedFile::path))
-                .limit(limit)
-                .toList();
     }
 }

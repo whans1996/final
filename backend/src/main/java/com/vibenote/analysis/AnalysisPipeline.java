@@ -13,7 +13,8 @@ import com.vibenote.analysis.explain.OverviewExplainer;
 import com.vibenote.analysis.fetch.RepositoryArchiveFetcher;
 import com.vibenote.analysis.fetch.RepositoryUrl;
 import com.vibenote.analysis.pipeline.AnalysisFailedException;
-import com.vibenote.analysis.pipeline.FileSelector;
+import com.vibenote.analysis.pipeline.ImportanceRanker;
+import com.vibenote.analysis.pipeline.RankedFile;
 import com.vibenote.analysis.pipeline.SecretRedactor;
 import com.vibenote.analysis.pipeline.SelectedFile;
 import com.vibenote.analysis.pipeline.SourceFile;
@@ -45,6 +46,7 @@ public class AnalysisPipeline {
     private final AnalysisService analysisService;
     private final AnalysisTempFiles tempFiles;
     private final ZipArchiveReader zipReader;
+    private final ImportanceRanker importanceRanker;
     private final RepositoryArchiveFetcher archiveFetcher;
     private final AnalysisProperties properties;
     private final List<Stage> stages;
@@ -67,6 +69,7 @@ public class AnalysisPipeline {
             AnalysisService analysisService,
             AnalysisTempFiles tempFiles,
             ZipArchiveReader zipReader,
+            ImportanceRanker importanceRanker,
             RepositoryArchiveFetcher archiveFetcher,
             AnalysisProperties properties,
             OverviewExplainer overviewExplainer,
@@ -81,6 +84,7 @@ public class AnalysisPipeline {
         this.analysisService = analysisService;
         this.tempFiles = tempFiles;
         this.zipReader = zipReader;
+        this.importanceRanker = importanceRanker;
         this.archiveFetcher = archiveFetcher;
         this.properties = properties;
         this.overviewExplainer = overviewExplainer;
@@ -153,7 +157,8 @@ public class AnalysisPipeline {
     /** 선별한 파일만 키를 가려 저장한다. 이후 단계는 저장된 analysis_files를 입력으로 쓴다. */
     private void select(Context context) {
         List<SelectedFile> selected =
-                FileSelector.select(context.files, properties.maxSelectedFiles()).stream()
+                importanceRanker.rank(context.files, properties.maxSelectedFiles()).stream()
+                        .filter(RankedFile::selected)
                         .map(
                                 f ->
                                         new SelectedFile(
