@@ -236,6 +236,10 @@ watch(
           </button>
         </div>
         <template v-else-if="analysis">
+          <!-- F-27 AC11: GMS 대신 Ollama로 만든 결과가 있으면 알린다 -->
+          <p v-if="analysis.liteMode" class="lite-mode" role="status" data-message="lite-mode">
+            일부 결과는 간이 모드(서버의 로컬 AI)로 만들어 설명이 짧거나 덜 정확할 수 있어요.
+          </p>
           <div ref="tabsEl" class="tabs" role="tablist" aria-label="분석 결과">
             <button
               v-for="tab in tabs"
@@ -331,6 +335,14 @@ watch(
   flex-direction: column;
   gap: var(--space-4);
   margin-top: var(--space-4);
+}
+
+.lite-mode {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius);
+  background: var(--color-background);
+  font-size: 0.9em;
 }
 
 .meta {

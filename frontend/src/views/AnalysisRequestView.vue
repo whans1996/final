@@ -1,5 +1,5 @@
 <script setup>
-// SC-05 분석 요청 (F-05a AC14, F-05b AC13). ZIP 또는 공개 저장소 주소와 Gemini 전송 동의를 받아 접수하고,
+// SC-05 분석 요청 (F-05a AC14, F-05b AC13). ZIP 또는 공개 저장소 주소와 GMS 전송 동의를 받아 접수하고,
 // 202면 진행 상태 화면으로 간다.
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
@@ -159,9 +159,9 @@ async function onSubmit() {
 
       <div class="notice">
         <p>
-          분석을 위해 주요 파일이 Google Gemini(무료 등급)로 전송되며, 무료 등급 입력은 모델 개선에
-          쓰일 수 있습니다. 비공개·민감한 코드는 올리지 마세요. <code>.env</code>와 키 패턴은 전송
-          전에 지웁니다.
+          분석을 위해 주요 파일이 SSAFY GMS(교육용 AI 게이트웨이)를 거쳐 외부 AI 모델로 전송됩니다.
+          GMS를 쓸 수 없을 때는 서버의 로컬 AI로 간이 분석하며, 이때는 외부로 전송되지 않습니다.
+          비공개·민감한 코드는 올리지 마세요. <code>.env</code>와 키 패턴은 전송 전에 지웁니다.
         </p>
         <label class="confirm">
           <input v-model="consent" type="checkbox" name="consent" />

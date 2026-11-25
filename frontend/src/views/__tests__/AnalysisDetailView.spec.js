@@ -189,6 +189,7 @@ function detail(partial) {
     createdAt: '2026-11-24T14:20:00+09:00',
     fileCount: 2,
     explainedFileCount: 2,
+    liteMode: false,
     overview: {
       summary: '할 일을 등록하는 Todo 서비스입니다.',
       techStack: ['Spring Boot'],
@@ -240,6 +241,26 @@ describe('AnalysisDetailView 결과 탭 (F-06 AC13~AC15)', () => {
     expect(tabs[0].attributes('aria-selected')).toBe('true')
     expect(wrapper.find('[data-section="summary"]').text()).toContain('Todo 서비스')
     expect(analysesApi.fetchAnalysisFiles).not.toHaveBeenCalled()
+  })
+
+  it('F-27 AC11 liteMode면 탭 위에 간이 모드 배너를, 아니면 배너를 보여 주지 않는다', async () => {
+    analysesApi.fetchAnalysisStatus.mockResolvedValue(status({ status: 'DONE', progress: 100 }))
+    analysesApi.fetchAnalysis.mockResolvedValue(detail({ liteMode: true }))
+
+    const { wrapper } = await mountDetail()
+
+    const banner = wrapper.find('[data-message="lite-mode"]')
+    expect(banner.exists()).toBe(true)
+    expect(banner.attributes('role')).toBe('status')
+    expect(banner.text()).toBe(
+      '일부 결과는 간이 모드(서버의 로컬 AI)로 만들어 설명이 짧거나 덜 정확할 수 있어요.',
+    )
+    const html = wrapper.find('.result').html()
+    expect(html.indexOf('data-message="lite-mode"')).toBeLessThan(html.indexOf('role="tablist"'))
+
+    analysesApi.fetchAnalysis.mockResolvedValue(detail({ liteMode: false }))
+    const second = await mountDetail()
+    expect(second.wrapper.find('[data-message="lite-mode"]').exists()).toBe(false)
   })
 
   it('AC13 폴링 중 DONE으로 바뀌면 그때 상세를 다시 불러와 결과 탭을 보여 준다', async () => {

@@ -37,7 +37,7 @@ describe('api/recommendations (F-16)', () => {
     expect(calls[0].params).toEqual({ size: 3 })
   })
 
-  it('AC6 LLM 폴백·재시도 예산(2회 × (Gemini 60초 + Ollama 120초))보다 길게 기다려 RULE 응답을 받는다', async () => {
+  it('AC6 LLM 폴백·재시도 예산(2회 × (GMS 60초 + Ollama 120초))보다 길게 기다려 RULE 응답을 받는다', async () => {
     const calls = capture({ items: [] })
 
     await fetchRecommendations()

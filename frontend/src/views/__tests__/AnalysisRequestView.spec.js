@@ -59,11 +59,13 @@ describe('AnalysisRequestView (F-05a AC14)', () => {
     })
   })
 
-  it('AC14 수준 라디오는 내 수준으로 선택되어 있고 고지·제한 안내를 보여 준다', async () => {
+  it('AC14 수준 라디오는 내 수준으로 선택되어 있고 고지·제한 안내를 보여 준다 (F-27 AC12 GMS 고지)', async () => {
     const { wrapper } = await mountRequest('SENIOR')
 
     expect(wrapper.find('input[name="level"][value="SENIOR"]').element.checked).toBe(true)
-    expect(wrapper.text()).toContain('Google Gemini(무료 등급)로 전송')
+    expect(wrapper.text()).toContain('SSAFY GMS(교육용 AI 게이트웨이)를 거쳐 외부 AI 모델로 전송')
+    expect(wrapper.text()).toContain('서버의 로컬 AI로 간이 분석')
+    expect(wrapper.text()).not.toContain('Gemini')
     expect(wrapper.text()).toContain('하루 5회')
   })
 
