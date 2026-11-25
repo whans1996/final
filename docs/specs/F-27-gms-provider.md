@@ -107,7 +107,7 @@ llm:
   gms:
     api-key: ${GMS_API_KEY:}
     base-url: ${GMS_BASE_URL:https://gms.ssafy.io/gmsapi/api.openai.com/v1}
-    model: ${GMS_MODEL:gpt-4.1-mini}  # 구현 중 실연결로 확정 (9절)
+    model: ${GMS_MODEL:gpt-4.1-mini}  # 11-25 실호출로 확정 (9절)
     stage-models: {}                  # 예: quiz: gpt-4.1 (F-27b가 eval로 채운다)
     timeout: 60s
 ```
@@ -155,7 +155,8 @@ GMS 요청 본문 예시:
 
 ## 9. 결정 필요
 
-- **기본 모델(`GMS_MODEL`)**: 구현 중 최소 실호출(모델 목록 1회 + 구조화 출력 1~2회, 사용자 허용 11-25)로 API 모델 ID를 확인해 확정한다. 후보 `gpt-4.1-mini`(4 크레딧, 구조화 출력 지원). 더 싼 후보: `gpt-4o-mini`(2), `gpt-5-nano`·`gpt-6-luna`(1). 표시 이름("gpt 6 luna")과 API ID가 다를 수 있다. 확정 값은 이 절에서 지우고 6절·결정로그에 적는다
+- ~~기본 모델~~ **`gpt-4.1-mini`로 확정** (11-25 실호출, 사용자 위임). `LlmLiveTest#gms_구조화_출력`으로 같은 프롬프트를 strict 스키마로 3개 모델에 보냈다. 모두 스키마를 지켰고 크레딧은 키 30,000 중 5를 썼다: `gpt-4.1-mini`(응답 `gpt-4.1-mini-2025-04-14`, 2.5초, 입력 162·출력 95, 2크레딧), `gpt-4o-mini`(2.7초, 162·42, 1크레딧), `gpt-5-nano`(4.6초, 158·624 추론 토큰 포함, 2크레딧. 추론 토큰 때문에 느리고 출력이 부풀어 제외). 크레딧은 호출 수가 아니라 토큰 비용에 비례한다. 단계별로 더 싼 모델을 쓸지는 F-27b가 eval로 정한다. 모델 목록 API(`/models`)는 GMS에서 500이라 쓸 수 없고, 모델 ID는 OpenAI 이름 그대로다
+- **키 만료 2026-12-09 18:00 KST** (`key-info`). 발표(12-24)보다 먼저 끝나므로 재발급·연장이 필요하다 (사람 확인). F-28 한도 설계는 남은 크레딧과 만료일을 함께 본다
 - ~~base URL~~ GMS 안내 문서(11-25 사용자 제공)로 확인: `https://gms.ssafy.io/gmsapi/` + 원래 엔드포인트. OpenAI는 `…/api.openai.com/v1`(Chat Completions·Responses 모두), 인증은 `Authorization: Bearer <GMS 키>`. 6절 기본값 그대로
 - ~~키별 사용 한도~~ 문서로 확인: 일·월 한도가 아니라 **팀 키 하나의 크레딧 총량과 만료일**이다. 모델마다 호출 비용(크레딧)이 다르다. 잔여량은 `GET https://gms.ssafy.io/gmsapi/key-info`(Bearer) → `{totalCredit, usedCredit, remainCredit, expiredDate}`. F-28 한도 설계에 넘긴다 (크레딧이 호출당인지 토큰당인지는 실호출 전후 `key-info`로 확인)
 
@@ -170,7 +171,7 @@ GMS 요청 본문 예시:
 - [x] FE 구현 (green): SC-07 배너, SC-05 문구
 - [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
 - [x] `.env.example`·`backend/CLAUDE.md`(LLM 절)·`.claude/agents/prompt-evaluator.md` 공급자 설명 갱신 (`docs/환경설정.md`에는 LLM 설명이 없어 변경 없음)
-- [ ] 실연결 확인 (`./gradlew liveTest`, GMS) → 9절 확정
+- [x] 실연결 확인 (`./gradlew liveTest`, GMS) → 9절 확정
 - [x] contract-checker 통과
 - [x] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일)
 - [ ] reviewer 지적 사항 반영
