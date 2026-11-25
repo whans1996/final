@@ -18,10 +18,10 @@ effort: medium
 ## 실행
 
 ```
-cd backend && set LLM_PROVIDER=gms && gradlew.bat promptEval --console=plain -Pstage=<overview|file|flow|concept|quiz|recommend> -Plevel=<beginner|junior|senior|all> -Pfixture=<샘플 저장소 이름>
+cd backend && LLM_PROVIDER=gms ./gradlew promptEval --console=plain -Pstage=<overview|file|flow|concept|quiz|recommend> -Plevel=<beginner|junior|senior|all> -Pfixture=<샘플 저장소 이름>
 ```
 
-Windows가 아니면 `gradlew.bat` 대신 `./gradlew`를 쓴다.
+Bash 도구는 Git Bash이므로 위처럼 `변수=값 명령` 형식으로 공급자를 넘긴다 (`set LLM_PROVIDER=gms &&`는 Git Bash에서 환경변수를 바꾸지 않아 `.env`의 `mock`이 읽히고 러너가 바로 실패한다). 사람이 PowerShell에서 돌릴 때는 `$env:LLM_PROVIDER="gms"; .\gradlew.bat promptEval ...`.
 
 - 하네스: `backend/src/test/java/com/vibenote/prompteval/PromptEvalRunner.java` (`@Tag("prompt-eval")`, `test`에서 제외). 실제 파이프라인과 같은 경로(ZIP 읽기 → 선별 → 비밀 가림 → API 탐지 → 개요 → 파일 묶음)로 돈다. 키는 앱과 같이 application.yml이 import하는 루트 `.env`에서 읽으므로 셸 환경변수가 없어도 된다(없으면 skip).
 - `-Pfixture`는 `data/datasets.json`의 저장소 id(예: `DS-02-01`. 고정 커밋을 codeload에서 받아 `.harness/prompt-eval/repos/`에 캐시) 또는 ZIP 경로. `-Pstage=file`은 수준마다 개요 1회 + 파일 묶음 `-Pbatches`(기본 1)회. `-PpauseMs`(기본 4000)는 호출 사이 대기.

@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
@@ -79,7 +80,12 @@ public class LlmConfig {
         };
     }
 
-    /** 키 없음·없는 단계 키는 기동 실패 (AC2·AC4). 메시지에 키 값을 넣지 않는다. */
+    /**
+     * 키 없음·빈 모델·없는 단계 키·빈 단계 모델은 기동 실패 (AC2·AC4). 메시지에 키 값을 넣지 않는다.
+     *
+     * <p>{@code .env}의 {@code GMS_MODEL=}은 기본값이 아니라 빈 문자열이 된다. 그대로 두면 GMS가 매번 400으로 거절해 모든 분석이 조용히
+     * 간이 모드(Ollama)로 넘어가므로 기동 때 막는다.
+     */
     static LlmClient gms(
             LlmProperties.Gms props,
             LlmSchemas schemas,
@@ -89,6 +95,10 @@ public class LlmConfig {
             throw new IllegalStateException(
                     "llm.provider=gms인데 GMS_API_KEY가 비어 있습니다. .env에 GMS 키를 넣거나 LLM_PROVIDER를"
                             + " mock으로 바꾸세요.");
+        }
+        if (props.model() == null || props.model().isBlank()) {
+            throw new IllegalStateException(
+                    "llm.gms.model이 비어 있습니다. .env의 GMS_MODEL= 줄을 지우거나 모델 이름을 넣으세요.");
         }
         Set<String> stages =
                 Arrays.stream(LlmStage.values()).map(LlmStage::key).collect(Collectors.toSet());
@@ -100,6 +110,17 @@ public class LlmConfig {
                             + unknown
                             + ". 쓸 수 있는 단계: "
                             + new TreeSet<>(stages));
+        }
+        Set<String> blank =
+                props.stageModels().entrySet().stream()
+                        .filter(e -> e.getValue() == null || e.getValue().isBlank())
+                        .map(Map.Entry::getKey)
+                        .collect(Collectors.toCollection(TreeSet::new));
+        if (!blank.isEmpty()) {
+            throw new IllegalStateException(
+                    "llm.gms.stage-models에 모델 이름이 빈 단계가 있습니다: "
+                            + blank
+                            + ". 값을 넣거나 그 줄을 지우세요(기본 모델을 씁니다).");
         }
         GmsLlmClient client =
                 new GmsLlmClient(withTimeout(builder, props.timeout()), props, schemas);

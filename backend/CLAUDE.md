@@ -91,7 +91,7 @@ com.vibenote
 
 - 모든 호출은 `llm.LlmClient` 인터페이스로 한다. 구현체는 `MockLlmClient`, `GmsLlmClient`(SSAFY GMS, OpenAI 호환), `OllamaLlmClient`, `GeminiLlmClient`이다.
 - `llm.provider=mock|gms|ollama|gemini`. **기본값과 테스트는 `mock`**이다. 서비스는 `gms`: GMS가 실패(4xx·5xx·타임아웃·거부·잘림)하면 재시도 없이 Ollama(간이 모드)로 폴백하고, 분석 상세의 `liteMode`가 이를 알린다 (F-27). `gemini`는 평가 비교용으로 폴백하지 않는다.
-- 출력 형식: `src/main/resources/llm-schemas/<stage>.json`(OpenAI strict 규칙)을 GMS `response_format.json_schema`·Ollama `format`으로 보낸다. 선택 필드는 null로 오므로 파서는 null과 생략을 같게 다룬다. 프롬프트의 "출력 형식"을 바꾸면 스키마도 함께 바꾼다 (`LlmSchemasTest`). 단계별 GMS 모델은 `llm.gms.stage-models`.
+- 출력 형식: `src/main/resources/llm-schemas/<stage>.json`(OpenAI strict 규칙)을 GMS `response_format.json_schema`·Ollama `format`으로 보낸다. 선택 필드는 null로 오므로 파서는 null과 생략을 같게 다룬다. 프롬프트의 "출력 형식"을 바꾸면 스키마도 함께 바꾼다 (`LlmSchemasTest`). 단계별 GMS 모델은 `llm.gms.stage-models`. `format`에 스키마 객체를 넘기므로 **Ollama 0.5 이상**(구조화 출력)이 필요하다 (그 전 버전은 400으로 거절해 폴백까지 `LLM_503`이 된다).
 - 프롬프트: `src/main/resources/prompts/<stage>/<level>.md` (stage = overview, file, flow, concept, quiz, recommend / level = beginner, junior, senior)
 - Mock 응답: `src/main/resources/llm-fixtures/<stage>.json`. 결정적이어야 하므로 랜덤을 쓰지 않는다.
 - LLM 출력은 **JSON으로 받고 파싱 실패를 항상 처리**한다 (재시도 1회 → 실패 시 단계 FAILED).

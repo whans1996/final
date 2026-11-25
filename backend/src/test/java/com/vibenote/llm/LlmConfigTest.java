@@ -94,6 +94,36 @@ class LlmConfigTest {
     }
 
     @Test
+    void AC2_gms인데_모델이_비어_있으면_기동_실패() {
+        // .env의 GMS_MODEL= 은 기본값이 아니라 ""로 바뀐다. 그대로 두면 GMS가 매번 400이고 조용히 간이 모드가 된다.
+        runner.withPropertyValues("llm.provider=gms", "llm.gms.api-key=test-key", "llm.gms.model=")
+                .run(
+                        context -> {
+                            assertThat(context).hasFailed();
+                            assertThat(context.getStartupFailure())
+                                    .rootCause()
+                                    .isInstanceOf(IllegalStateException.class)
+                                    .hasMessageContaining("GMS_MODEL");
+                        });
+    }
+
+    @Test
+    void AC4_stage_models_값이_비어_있으면_기동_실패() {
+        runner.withPropertyValues(
+                        "llm.provider=gms",
+                        "llm.gms.api-key=test-key",
+                        "llm.gms.stage-models.quiz= ")
+                .run(
+                        context -> {
+                            assertThat(context).hasFailed();
+                            assertThat(context.getStartupFailure())
+                                    .rootCause()
+                                    .hasMessageContaining("quiz")
+                                    .hasMessageContaining("stage-models");
+                        });
+    }
+
+    @Test
     void AC4_stage_models가_바인딩된다() {
         runner.withPropertyValues(
                         "llm.provider=gms",
