@@ -128,6 +128,10 @@ test('셸 예약어·래퍼 뒤의 명령도 본다', () => {
   ok('if git diff --quiet; then echo same; fi');
   ok('timeout 60 git status');
   ok('echo ${HOME} {a,b}');
+  // case 분기 패턴의 ) 뒤도 명령이다 (Codex P2)
+  no('case "$x" in *) git reset --hard ;; esac');
+  no('case $x in a|b) echo; ;; (c) git push -f;; esac');
+  ok('case $x in *) git status ;; esac');
 });
 
 test('PowerShell: \\는 글자 그대로, 백틱은 다음 글자 이스케이프, { }는 스크립트 블록', () => {

@@ -1,7 +1,7 @@
 // 커밋 hook·pre-push의 검증 대상 선택 (H-1)
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { areasOf, frontendCodeFiles, prePushPlan, protectedPushes, relatedBackendTests, relatedHarnessTests } from '../lib/related.mjs';
+import { areasOf, frontendCodeFiles, prePushPlan, protectedPushes, relatedBackendTests, workTreeMismatch, relatedHarnessTests } from '../lib/related.mjs';
 
 const T = 'backend/src/test/java/com/vibenote/';
 const M = 'backend/src/main/java/com/vibenote/';
@@ -93,4 +93,14 @@ test('pre-push: main·develop으로 가는 push(삭제 포함)는 사람이든 C
   assert.deepEqual(protectedPushes([line('HEAD', 'refs/heads/develop'), line('refs/heads/x', 'refs/heads/main')]), ['develop', 'main']);
   assert.deepEqual(protectedPushes([line('(delete)', 'refs/heads/develop', Z)]), ['develop']);
   assert.deepEqual(protectedPushes([line('refs/tags/v1', 'refs/tags/develop')]), []);
+});
+
+test('pre-push: 검증할 커밋이 HEAD가 아니거나 그 영역에 커밋 안 된 변경이 있으면 작업 트리로 검증할 수 없다 (Codex P1)', () => {
+  const head = 'h'.repeat(40);
+  assert.equal(workTreeMismatch({ head, dirtyFiles: [], pushes: [{ sha: head, targets: ['be'] }] }), null);
+  assert.match(workTreeMismatch({ head, dirtyFiles: [], pushes: [{ sha: 'o'.repeat(40), targets: ['be'] }] }), /HEAD/);
+  assert.match(workTreeMismatch({ head, dirtyFiles: ['backend/src/main/java/A.java'], pushes: [{ sha: head, targets: ['be'] }] }), /backend\/src\/main\/java\/A\.java/);
+  // 다른 영역·문서의 미커밋 변경, 검증할 것이 없는 push는 상관없다
+  assert.equal(workTreeMismatch({ head, dirtyFiles: ['frontend/src/A.vue', 'docs/handoff/NOW-dh.md'], pushes: [{ sha: head, targets: ['be'] }] }), null);
+  assert.equal(workTreeMismatch({ head, dirtyFiles: ['backend/A.java'], pushes: [{ sha: 'o'.repeat(40), targets: [] }] }), null);
 });

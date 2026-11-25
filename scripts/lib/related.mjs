@@ -106,3 +106,18 @@ export function prePushPlan({ tipSubject, files, verified = {}, sha }) {
 export function protectedPushes(updates, protectedBranches = ['main', 'develop']) {
   return updates.map((u) => String(u[2] || '').replace(/^refs\/heads\//, '')).filter((b, k) => /^refs\/heads\//.test(updates[k][2]) && protectedBranches.includes(b));
 }
+
+/**
+ * pre-push는 작업 트리에서 verify를 돈다. 검증할 커밋이 HEAD가 아니거나 그 영역에 커밋 안 된 변경이 있으면
+ * 작업 트리의 결과가 push하는 커밋의 결과가 아니므로 거부 사유를 돌려준다 (PR #138 Codex P1). 문제없으면 null.
+ * pushes: [{ sha, targets }] (prePushPlan의 targets), dirtyFiles: `git status --porcelain`의 경로
+ */
+export function workTreeMismatch({ head, dirtyFiles, pushes }) {
+  const need = pushes.filter((p) => p.targets.length);
+  const other = need.find((p) => p.sha !== head);
+  if (other) return `push하려는 커밋 ${other.sha.slice(0, 7)}이 지금 체크아웃(HEAD ${head.slice(0, 7)})과 달라 검증할 수 없습니다. 그 브랜치로 switch한 뒤 push하세요.`;
+  const targets = new Set(need.flatMap((p) => p.targets));
+  const dirty = dirtyFiles.filter((f) => areasOf([f]).some((a) => targets.has(a)));
+  if (dirty.length) return `검증할 영역에 커밋 안 된 변경이 있어 push하는 커밋을 검증할 수 없습니다: ${dirty.slice(0, 5).join(', ')}${dirty.length > 5 ? ' 외' : ''}. 커밋하거나 되돌린 뒤 push하세요.`;
+  return null;
+}

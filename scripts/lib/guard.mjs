@@ -99,6 +99,12 @@ function parseList(src, start, nested, out, shell) {
       endSegment();
       return i + 1;
     }
+    if (bash && c === ')') {
+      // 서브셸 밖의 )는 case 분기 패턴의 끝이다: case $x in *) git reset --hard ;; esac
+      endSegment();
+      i++;
+      continue;
+    }
     if (c === ' ' || c === '\t' || c === '\r') {
       endWord();
       i++;
