@@ -8,6 +8,7 @@ import com.vibenote.analysis.explain.ApiDetector;
 import com.vibenote.analysis.explain.ApiEndpoint;
 import com.vibenote.analysis.structure.StructureCache.Computed;
 import com.vibenote.analysis.structure.http.ContextPathReader;
+import java.util.ArrayList;
 import java.util.List;
 import org.springframework.stereotype.Service;
 
@@ -52,8 +53,17 @@ public class StructureService {
     private Computed compute(long analysisId, AnalysisOverview overview) {
         var files = analysisService.findFiles(analysisId);
         List<ApiEndpoint> apis = overview == null ? null : overview.apis();
-        // 개요의 API 목록은 같은 선별 파일로 탐지한 것이다. 잘렸거나 건너뛴 매핑이 있었는지는 다시 훑어 안다
-        boolean incomplete = overview != null && ApiDetector.scan(files).incomplete();
+        // 개요의 API 목록은 같은 선별 파일로 탐지한 것이다. 잘렸거나 건너뛴 매핑이 있었는지, 다른 파일의 같은 method+path를
+        // 목록에서 뺐는지(#122)는 다시 훑어 안다
+        boolean incomplete = false;
+        if (overview != null) {
+            ApiDetector.Detection detection = ApiDetector.scan(files);
+            incomplete = detection.incomplete();
+            if (apis != null && !detection.duplicates().isEmpty()) {
+                apis = new ArrayList<>(apis);
+                apis.addAll(detection.duplicates());
+            }
+        }
         WorkBudget budget = analyzer.newBudget();
         AnalysisStructureResponse response =
                 analyzer.analyze(files, apis, ContextPathReader.read(files), incomplete, budget);
