@@ -158,10 +158,19 @@ public class AnalysisService {
         return analysisMapper.updateStage(analysisId, status, progress, now()) == 1;
     }
 
-    /** 선별·마스킹이 끝난 파일을 저장한다 (SELECTING). */
+    /**
+     * 분석이 아직 진행 중이고 삭제되지 않았으면 행을 잠그고 true. 파이프라인이 자식 행을 넣기 직전에 호출자 트랜잭션 안에서 부른다. 탈퇴(#91)가 분석을
+     * FAILED·삭제로 바꾸는 중이면 그 커밋을 기다린 뒤 false가 되어, 삭제된 분석에 코드·연결이 다시 남지 않는다.
+     */
+    @Transactional
+    public boolean lockInProgress(long analysisId) {
+        return analysisMapper.lockInProgress(analysisId).isPresent();
+    }
+
+    /** 선별·마스킹이 끝난 파일을 저장한다 (SELECTING). 그사이 중단·삭제됐으면 저장하지 않는다. */
     @Transactional
     public void saveFiles(long analysisId, List<SelectedFile> files) {
-        if (!files.isEmpty()) {
+        if (!files.isEmpty() && lockInProgress(analysisId)) {
             analysisMapper.insertFiles(
                     files.stream().map(f -> AnalysisFile.of(analysisId, f)).toList());
         }

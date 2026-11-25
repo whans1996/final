@@ -10,8 +10,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.vibenote.analysis.AnalysisService;
+import com.vibenote.analysis.concept.ConceptLinkService;
+import com.vibenote.analysis.concept.ExtractedConcept;
+import com.vibenote.analysis.pipeline.Layer;
+import com.vibenote.analysis.pipeline.SelectedFile;
 import com.vibenote.auth.RefreshTokenMapper;
 import jakarta.servlet.http.Cookie;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,6 +30,8 @@ class WithdrawalApiTest extends UserTestSupport {
     private static final String COOKIE = "refresh_token";
 
     @Autowired RefreshTokenMapper refreshTokenMapper;
+    @Autowired AnalysisService analysisService;
+    @Autowired ConceptLinkService conceptLinkService;
 
     private ResultActions withdraw(long userId, String json) throws Exception {
         return withdraw(bearer(userId), json);
@@ -174,6 +182,26 @@ class WithdrawalApiTest extends UserTestSupport {
                                 others))
                 .isEqualTo(1);
         assertThat(children(others)).isEqualTo(3);
+    }
+
+    @Test
+    void AC6_탈퇴_뒤에_실행기가_저장하려는_파일과_개념_연결은_들어가지_않는다() throws Exception {
+        long me = createUser("user@example.com", "코딩초보");
+        jdbc.update(
+                "INSERT INTO analyses (user_id, source_type, project_name, title, level, status)"
+                        + " VALUES (?, 'ZIP', 'todo-app', 'todo-app', 'BEGINNER', 'SELECTING')",
+                me);
+        long id = count("SELECT MAX(id) FROM analyses WHERE user_id = ?", me);
+
+        withdraw(me, "{\"password\":\"" + PASSWORD + "\"}").andExpect(status().isNoContent());
+        // 실행기가 advance(SELECTING) 뒤 탈퇴 커밋을 기다렸다가 저장 단계로 들어온 경우를 순서대로 흉내 낸다
+        analysisService.saveFiles(
+                id, List.of(new SelectedFile("A.java", Layer.CONTROLLER, "class A {}")));
+        long conceptId = count("SELECT MIN(id) FROM concepts");
+        conceptLinkService.save(
+                id, List.of(new ExtractedConcept(conceptId, null, null, null, null)));
+
+        assertThat(children(id)).isZero();
     }
 
     @Test

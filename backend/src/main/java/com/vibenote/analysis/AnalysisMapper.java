@@ -83,6 +83,9 @@ public interface AnalysisMapper {
     int softDelete(
             @Param("id") long id, @Param("userId") long userId, @Param("now") LocalDateTime now);
 
+    /** 진행 중이고 삭제되지 않은 분석이면 행을 잠그고 id를 돌려준다 (#91). */
+    Optional<Long> lockInProgress(long id);
+
     /** 회원의 미삭제 분석 id 전체 (진행 중 포함). 회원 탈퇴 정리용 (#91). */
     List<Long> findUndeletedIds(long userId);
 
