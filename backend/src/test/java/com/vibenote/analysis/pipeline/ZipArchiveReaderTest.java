@@ -2,6 +2,7 @@ package com.vibenote.analysis.pipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 
 import com.vibenote.analysis.AnalysisProperties;
 import com.vibenote.common.exception.ErrorCode;
@@ -398,6 +399,21 @@ class ZipArchiveReaderTest {
                         "db/migration/V1__a.sql",
                         "src/test/java/ATest.java");
         assertThat(result.dropped()).isEqualTo(2);
+    }
+
+    @Test
+    void AC8_정규화하면_같은_경로인_엔트리는_처음_것만_담는다() throws IOException {
+        Map<String, String> map = new LinkedHashMap<>();
+        map.put("p/src/foo.js", "first");
+        map.put("p/src/./foo.js", "second");
+        map.put("p/src/x/../foo.js", "third");
+        map.put("p/A.java", "x");
+
+        IndexResult result = reader.read(zip(map));
+
+        assertThat(result.files())
+                .extracting(SourceFile::path, SourceFile::content)
+                .containsExactly(tuple("A.java", "x"), tuple("src/foo.js", "first"));
     }
 
     @Test

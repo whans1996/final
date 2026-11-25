@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Deque;
 import java.util.Enumeration;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -199,9 +200,11 @@ public class ZipArchiveReader {
 
         String prefix = commonTopFolder(all);
         List<Candidate> supported = new ArrayList<>();
+        // 정규화하면 같은 경로(src/./a.js 등)는 ZIP 순서로 처음 것만 둔다. 선별이 경로로 표시하므로 겹치면 30개 상한을 넘는다
+        Set<String> seen = new HashSet<>();
         for (Candidate candidate : all) {
             String path = candidate.path().substring(prefix.length());
-            if (path.length() <= MAX_PATH_LENGTH && isSupported(path)) {
+            if (path.length() <= MAX_PATH_LENGTH && isSupported(path) && seen.add(path)) {
                 supported.add(new Candidate(candidate.entry(), path, bundle(path)));
             }
         }
