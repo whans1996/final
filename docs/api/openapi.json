@@ -775,7 +775,7 @@
             "type" : "integer"
           },
           "errorCode" : {
-            "description" : "실패 사유 코드. FAILED가 아니면 null",
+            "description" : "실패 사유 코드. FAILED가 아니면 null. ANALYSIS_413은 저장소 아카이브 크기 초과(URL 분석)에서만 나오고, 코드 파일 수·합계로는 실패하지 않는다",
             "enum" : [ "ANALYSIS_004", "ANALYSIS_400", "ANALYSIS_413", "ANALYSIS_415", "ANALYSIS_500", "ANALYSIS_502", "ANALYSIS_503", "LLM_502", "LLM_503" ],
             "example" : "ANALYSIS_413",
             "type" : [ "string", "null" ]

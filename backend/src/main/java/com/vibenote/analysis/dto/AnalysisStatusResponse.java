@@ -22,7 +22,9 @@ public record AnalysisStatusResponse(
                         example = "15")
                 int progress,
         @Schema(
-                        description = "실패 사유 코드. FAILED가 아니면 null",
+                        description =
+                                "실패 사유 코드. FAILED가 아니면 null. ANALYSIS_413은 저장소 아카이브 크기 초과(URL"
+                                        + " 분석)에서만 나오고, 코드 파일 수·합계로는 실패하지 않는다",
                         example = "ANALYSIS_413",
                         nullable = true,
                         allowableValues = {
