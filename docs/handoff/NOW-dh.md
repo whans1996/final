@@ -3,26 +3,21 @@
 > 김동환(A 영역: AI·분석·학습 루프) 전용. 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
-갱신: 2026-11-25 11:50 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/common-harness-revamp
+갱신: 2026-11-25 13:50 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/issue-73-json-body-bytes
 
 ## 현재 기능
 
-**H-1 하네스 개편** (WBS 6.1, 기획서 6절 H-1) — **PR #138** CI 초록 + **Codex ✅ 55c485a** (P2 2건 → #139 #140). 사람이 GitHub에서 머지만 남음. spec 없음(하네스), `Closes #29 #129` → 머지 후 하네스 재동결.
+**V-1 전 이슈 당겨 처리** (#94·#73·#91). #91 PR #142·#94 PR #144 머지(이슈 닫힘). #73 **PR #145** 열림. 김준섭 합의 3건은 답하지 않고 정한 대로 진행 (사용자 결정 11-25).
 
 ## 진행
 
-- ✅ ① #129 codex-loop docs 전용 PR 건너뜀 (3d57f6b)
-- ✅ ② 커밋 hook `verify --staged` + pre-push 전체 검증 + Gradle 잠금 + verified.json (d78a032)
-- ✅ ③ guard-bash 셸 토큰 파서 `scripts/lib/guard.mjs` (2a407c7, 지난 명령 6,939개 재생 오탐 0)
-- ✅ ④ `stamp.mjs --draft/--touch-now/--append-log` (511fb94) ⑦ `scripts/weekly.mjs` (a3ab1d0) ⑤ `scripts/doctor.mjs` (c4564c0) ⑧ #29 (91f38e2) ⑨ 문서·결정로그 (701083a)
-- ✅ ⑥ 허용 목록: 읽기 전용 44개 추가 (지난 Bash 7,384회 분석, 사용자 승인)
-- ✅ /pr-review: verify all·하네스 127+ 통과. reviewer 반드시 수정 4건 반영 — 가드 퇴행(예약어·래퍼·PowerShell·heredoc 등) + main·develop push 거부 (9f48806), 허용 목록 6개 제외·문서 (7081f3d). 지난 명령 10,988개 재생 오탐 0. 권장 나머지 → #130~#137
-- ✅ Codex: 1차 P1(pre-push 작업 트리 검증, #132 흡수)·P2(case 분기) 수정 55c485a, 2차 P2 2건 이관 → --resolve
+- 🟡 #73 **PR #145** (head 00f7791, develop 합침, verify all ✅, reviewer 반드시 수정 0·권장 3 반영): `common/web/JsonBodyLimitFilter`(JSON 스트림 바이트 계수) + `GlobalExceptionHandler.handleNotReadable` 413 + `RequestBodyLimitTest` 5건 + `JsonBodyLimitFilterTest` 4건. @JoonseobKim 멘션. **Codex ✅ 00f7791** (지적 없음), BE CI 대기
+- ✅ #94 PR #144, #91 PR #142 develop 머지 (11-25)
 
 ## 바로 다음 할 일
 
-1. 사람: PR #138 GitHub에서 머지 (상대 PR이 먼저 머지됐으면 `git merge origin/develop` → push → CI 재확인). `Closes #29 #129 #132`는 close-issues 워크플로가 닫음
-2. 머지 후 하네스 재동결 → V-1 MVP 감사(11/29~) · 11/27 Figma 세션
+1. PR #145: `gh pr checks 145`로 Backend CI 초록 확인 → GitHub에서 머지(사람). 그 전에 develop이 바뀌었으면 `git merge origin/develop` → push → CI 재확인
+2. 11/27 Figma 세션 → 11/29~ V-1 MVP 감사
 
 ## 막힌 점 / 결정 필요
 
@@ -30,6 +25,5 @@
 
 ## 주의
 
-- 작업로그 형식 변경: `메모` 줄 → 자동 `커밋` 줄 (`stamp.mjs --append-log`). 김준섭에게 PR에서 알릴 것
-- 커밋 hook이 이제 관련 테스트만 돈다. 전체는 pre-push(wip tip이면 건너뜀)와 CI
-- Codex: 3회차부터 P2는 follow-up 이관 (11-25 결정) · 진행현황·WBS·간트는 `/progress` docs PR에서만
+- 커밋 범위는 F-xx|common|harness만 (`admin` 거부됨)
+- Codex: 3회차부터 P2는 follow-up 이관 · 진행현황·WBS·간트는 `/progress` docs PR에서만

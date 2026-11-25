@@ -298,7 +298,7 @@ erDiagram
 
 | 테이블 | 설명 | 주요 관계 | 기능 |
 |---|---|---|---|
-| users | 회원 (이메일·닉네임 UNIQUE, 수준 `level`, 역할 `USER`·`ADMIN`, 상태 `ACTIVE`·`WITHDRAWN`, 탈퇴 시각). 탈퇴는 행을 지우지 않고 `status=WITHDRAWN`으로 바꾸며 이메일·닉네임·소개를 즉시 마스킹한다(F-03). 같은 트랜잭션에서 그 회원의 Refresh 토큰 전부와 팔로우(양방향)를 지우고, 팀은 팀장이면 팀 삭제·멤버면 탈퇴 처리한다(F-20a). 게시글·댓글·리뷰·풀이·찜은 남기고, 화면은 `status`를 보고 작성자를 "탈퇴한 사용자"로 보여 준다 | - | F-01~03 |
+| users | 회원 (이메일·닉네임 UNIQUE, 수준 `level`, 역할 `USER`·`ADMIN`, 상태 `ACTIVE`·`WITHDRAWN`, 탈퇴 시각). 탈퇴는 행을 지우지 않고 `status=WITHDRAWN`으로 바꾸며 이메일·닉네임·소개를 즉시 마스킹한다(F-03). 같은 트랜잭션에서 그 회원의 Refresh 토큰 전부와 팔로우(양방향)를 지우고, 팀은 팀장이면 팀 삭제·멤버면 탈퇴 처리한다(F-20a). 그 회원의 분석은 진행 중이면 중단하고 F-19 삭제처럼 soft delete하며 파일·흐름·개념 연결을 지운다(#91). 게시글·댓글·리뷰·풀이·찜은 남기고, 화면은 `status`를 보고 작성자를 "탈퇴한 사용자"로 보여 준다 | - | F-01~03 |
 | refresh_tokens | Refresh 토큰. 원문 대신 SHA-256 해시(`token_hash` UNIQUE)와 만료 시각을 저장한다 | users 1:N | F-02 |
 | follows | 팔로우 PK `(follower_id, following_id)`, 역방향 조회용 `idx_follows_following`. 팔로우 수는 반정규화 없이 `COUNT(*)`로 센다. 팔로우 자체는 활동을 남기지 않는다 | users N:M users | F-04 |
 | activities | 공개 활동 기록(팔로우 피드의 원천). `type`은 `ANALYSIS`·`REVIEW`·`WISH`·`POST`·`CHALLENGE_JOIN`·`CHALLENGE_COMPLETE`(V2에서 챌린지를 참여·달성으로 나눔). `target_id`는 type에 따라 분석·리뷰·카드·게시글·챌린지 id를 가리키는 **다형 참조라 FK가 없다**. 대상이 지워지거나 비공개가 돼도 행은 남기고, 피드 쿼리가 대상 테이블과 `LEFT JOIN`해 보일 것만 고른다. 예외로 챌린지 참여를 취소하면 그 `CHALLENGE_JOIN` 행은 지운다(F-25) | users 1:N | F-04, F-05a, F-11, F-12, F-17, F-25 |

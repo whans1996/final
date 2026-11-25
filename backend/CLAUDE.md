@@ -32,6 +32,7 @@ com.vibenote
 | `common.exception` | `ErrorCode`(코드·상태·메시지), `BusinessException`, `ErrorResponse`, `GlobalExceptionHandler` |
 | `common.security` | `JwtTokenProvider`(Access 발급·검증), `JwtAuthenticationFilter`, `AuthUser`(`@AuthenticationPrincipal`), 401·403 JSON 응답 |
 | `common.config` | `SecurityConfig`(`PUBLIC_PATHS`, `/api/admin/**`은 ADMIN), `OpenApiConfig`(`bearerAuth`) |
+| `common.web` | `JsonBodyLimitFilter`(JSON 요청 본문 바이트 상한, 넘으면 413 `COMMON_413`, #73) |
 | `common.page` | `PageQuery`(page·size 기본값·검증, `offset()`), `PageResponse` |
 | `common.mybatis` | `JsonTypeHandler` |
 | `common.Level` | BEGINNER · JUNIOR · SENIOR |

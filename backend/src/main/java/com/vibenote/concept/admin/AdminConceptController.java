@@ -29,7 +29,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 /** 관리자 개념 카드 관리 (F-13): 목록·상태별 개수·상세·생성·수정·초안 삭제. ADMIN만 (SecurityConfig). */
-@Tag(name = "관리자", description = "관리자 전용 기능 (개념 카드 검수·관리)")
+@Tag(name = "관리자", description = "관리자 전용 기능 (개념 카드 검수·관리, 학습 챌린지 관리)")
 @ApiResponse(
         responseCode = "401",
         description = "토큰 없음·만료 (AUTH_401)",
