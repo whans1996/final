@@ -10,8 +10,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.vibenote.analysis.AnalysisService;
+import com.vibenote.analysis.concept.ConceptLinkService;
+import com.vibenote.analysis.concept.ExtractedConcept;
+import com.vibenote.analysis.pipeline.Layer;
+import com.vibenote.analysis.pipeline.SelectedFile;
 import com.vibenote.auth.RefreshTokenMapper;
 import jakarta.servlet.http.Cookie;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,6 +30,8 @@ class WithdrawalApiTest extends UserTestSupport {
     private static final String COOKIE = "refresh_token";
 
     @Autowired RefreshTokenMapper refreshTokenMapper;
+    @Autowired AnalysisService analysisService;
+    @Autowired ConceptLinkService conceptLinkService;
 
     private ResultActions withdraw(long userId, String json) throws Exception {
         return withdraw(bearer(userId), json);
@@ -106,6 +114,114 @@ class WithdrawalApiTest extends UserTestSupport {
         // 작성물은 남는다 (users 행도 남는다)
         assertThat(count("SELECT COUNT(*) FROM posts WHERE user_id = ?", me)).isEqualTo(1);
         assertThat(count("SELECT COUNT(*) FROM users WHERE id = ?", me)).isEqualTo(1);
+    }
+
+    private long analysis(long userId, String status) {
+        jdbc.update(
+                "INSERT INTO analyses (user_id, source_type, project_name, title, level, status)"
+                        + " VALUES (?, 'ZIP', 'todo-app', 'todo-app', 'BEGINNER', ?)",
+                userId,
+                status);
+        long id = count("SELECT MAX(id) FROM analyses WHERE user_id = ?", userId);
+        jdbc.update(
+                "INSERT INTO analysis_files (analysis_id, path, layer, content) VALUES (?,"
+                        + " 'A.java', 'controller', 'class A {}')",
+                id);
+        jdbc.update(
+                "INSERT INTO analysis_concepts (analysis_id, concept_id, file_id) VALUES (?,"
+                        + " (SELECT MIN(id) FROM concepts), (SELECT MAX(id) FROM analysis_files))",
+                id);
+        jdbc.update(
+                "INSERT INTO analysis_flows (analysis_id, endpoint, status, created_at) VALUES"
+                        + " (?, 'GET /api/todos', 'PENDING', NOW())",
+                id);
+        jdbc.update("INSERT INTO quizzes (analysis_id) VALUES (?)", id);
+        return id;
+    }
+
+    private int children(long analysisId) {
+        return count(
+                "SELECT (SELECT COUNT(*) FROM analysis_files WHERE analysis_id = ?)"
+                        + " + (SELECT COUNT(*) FROM analysis_flows WHERE analysis_id = ?)"
+                        + " + (SELECT COUNT(*) FROM analysis_concepts WHERE analysis_id = ?)",
+                analysisId,
+                analysisId,
+                analysisId);
+    }
+
+    @Test
+    void AC6_탈퇴하면_내_분석은_진행_중이어도_삭제되고_파일_흐름_개념_연결이_지워진다() throws Exception {
+        long me = createUser("user@example.com", "코딩초보");
+        long b = createUser("b@example.com", "회원비");
+        long done = analysis(me, "DONE");
+        long running = analysis(me, "EXPLAINING");
+        long failed = analysis(me, "FAILED");
+        long others = analysis(b, "DONE");
+
+        withdraw(me, "{\"password\":\"" + PASSWORD + "\"}").andExpect(status().isNoContent());
+
+        for (long id : new long[] {done, running, failed}) {
+            assertThat(
+                            count(
+                                    "SELECT COUNT(*) FROM analyses WHERE id = ? AND deleted_at IS"
+                                            + " NOT NULL",
+                                    id))
+                    .isEqualTo(1);
+            assertThat(children(id)).isZero();
+        }
+        // 진행 중이던 분석은 FAILED로 바뀌어 파이프라인이 다음 단계에서 멈춘다 (advance → false)
+        assertThat(
+                        count(
+                                "SELECT COUNT(*) FROM analyses WHERE id = ? AND status = 'FAILED'"
+                                        + " AND error_code = 'ANALYSIS_500'",
+                                running))
+                .isEqualTo(1);
+        // 퀴즈는 F-19 삭제처럼 남고, 다른 회원의 분석은 그대로다
+        assertThat(count("SELECT COUNT(*) FROM quizzes WHERE analysis_id = ?", done)).isEqualTo(1);
+        assertThat(
+                        count(
+                                "SELECT COUNT(*) FROM analyses WHERE id = ? AND deleted_at IS NULL",
+                                others))
+                .isEqualTo(1);
+        assertThat(children(others)).isEqualTo(3);
+    }
+
+    @Test
+    void AC6_탈퇴_뒤에_실행기가_저장하려는_파일과_개념_연결은_들어가지_않는다() throws Exception {
+        long me = createUser("user@example.com", "코딩초보");
+        jdbc.update(
+                "INSERT INTO analyses (user_id, source_type, project_name, title, level, status)"
+                        + " VALUES (?, 'ZIP', 'todo-app', 'todo-app', 'BEGINNER', 'SELECTING')",
+                me);
+        long id = count("SELECT MAX(id) FROM analyses WHERE user_id = ?", me);
+
+        withdraw(me, "{\"password\":\"" + PASSWORD + "\"}").andExpect(status().isNoContent());
+        // 실행기가 advance(SELECTING) 뒤 탈퇴 커밋을 기다렸다가 저장 단계로 들어온 경우를 순서대로 흉내 낸다
+        analysisService.saveFiles(
+                id, List.of(new SelectedFile("A.java", Layer.CONTROLLER, "class A {}")));
+        long conceptId = count("SELECT MIN(id) FROM concepts");
+        conceptLinkService.save(
+                id, List.of(new ExtractedConcept(conceptId, null, null, null, null)));
+
+        assertThat(children(id)).isZero();
+    }
+
+    @Test
+    void AC6_탈퇴한_회원의_분석은_실행기가_완료하려_해도_DONE이_되지_않고_활동도_남지_않는다() throws Exception {
+        long me = createUser("user@example.com", "코딩초보");
+        jdbc.update(
+                "INSERT INTO analyses (user_id, source_type, project_name, title, level, status)"
+                        + " VALUES (?, 'ZIP', 'todo-app', 'todo-app', 'BEGINNER', 'QUIZ')",
+                me);
+        long id = count("SELECT MAX(id) FROM analyses WHERE user_id = ?", me);
+        // complete()가 users 행 잠금을 기다리는 동안 탈퇴가 커밋된 경우: users는 WITHDRAWN인데 분석은 아직 진행 중으로 보인다
+        jdbc.update("UPDATE users SET status = 'WITHDRAWN' WHERE id = ?", me);
+
+        analysisService.complete(id);
+
+        assertThat(count("SELECT COUNT(*) FROM analyses WHERE id = ? AND status = 'DONE'", id))
+                .isZero();
+        assertThat(count("SELECT COUNT(*) FROM activities WHERE user_id = ?", me)).isZero();
     }
 
     @Test
