@@ -6,9 +6,12 @@ import com.vibenote.analysis.pipeline.Layer;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -49,8 +52,11 @@ public final class ApiDetector {
      *
      * @param incomplete {@link #MAX_APIS}에서 잘렸거나, 경로를 알 수 없거나 너무 길어 건너뛴 매핑이 있다. 이때 목록에 없는 API가 요청을
      *     받을 수 있다 (F-21a 5.3절 5)
+     * @param duplicates apis에 남긴 API와 method+path가 같지만 다른 파일에 있어 목록에서 뺀 매핑. params·headers 등 매핑 조건만
+     *     다르면 Spring은 요청마다 다른 파일로 보내므로 구조 그래프는 이것도 후보로 본다 (#122)
      */
-    public record Detection(List<ApiEndpoint> apis, boolean incomplete) {}
+    public record Detection(
+            List<ApiEndpoint> apis, boolean incomplete, List<ApiEndpoint> duplicates) {}
 
     public static Detection scan(List<AnalysisFile> files) {
         List<ApiEndpoint> found = new ArrayList<>();
@@ -62,6 +68,7 @@ public final class ApiDetector {
             }
         }
         Map<String, ApiEndpoint> unique = new LinkedHashMap<>();
+        Map<String, Set<Long>> otherFiles = new LinkedHashMap<>();
         found.stream()
                 .sorted(
                         Comparator.comparing(ApiEndpoint::path)
@@ -69,10 +76,24 @@ public final class ApiDetector {
                                 .thenComparing(
                                         ApiEndpoint::fileId,
                                         Comparator.nullsLast(Comparator.naturalOrder())))
-                .forEach(api -> unique.putIfAbsent(api.method() + " " + api.path(), api));
-        return new Detection(
-                unique.values().stream().limit(MAX_APIS).toList(),
-                skipped[0] || unique.size() > MAX_APIS);
+                .forEach(
+                        api -> {
+                            String key = api.method() + " " + api.path();
+                            ApiEndpoint kept = unique.putIfAbsent(key, api);
+                            if (kept != null && !Objects.equals(kept.fileId(), api.fileId())) {
+                                otherFiles
+                                        .computeIfAbsent(key, k -> new LinkedHashSet<>())
+                                        .add(api.fileId());
+                            }
+                        });
+        List<ApiEndpoint> apis = unique.values().stream().limit(MAX_APIS).toList();
+        List<ApiEndpoint> duplicates = new ArrayList<>();
+        for (ApiEndpoint api : apis) {
+            for (Long fileId : otherFiles.getOrDefault(api.method() + " " + api.path(), Set.of())) {
+                duplicates.add(new ApiEndpoint(api.method(), api.path(), fileId));
+            }
+        }
+        return new Detection(apis, skipped[0] || unique.size() > MAX_APIS, duplicates);
     }
 
     /** skipped[0]은 건너뛴 매핑이 있으면 true가 된다. */

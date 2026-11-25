@@ -191,7 +191,7 @@ final class JsDeclarations {
             budget.spend();
             JsToken token = t.get(i);
             if (token.kind() == JsToken.Kind.IDENT
-                    && !JsTokens.isMemberName(t, i)
+                    && !JsTokens.isPropertyName(t, i)
                     && !KEYWORDS.contains(token.text())
                     && names.add(token.text())) {
                 module.decls()
@@ -711,7 +711,7 @@ final class JsDeclarations {
                 defaultDepth = depth;
             } else if (token.kind() == JsToken.Kind.IDENT
                     && !(k + 1 < param.size() && param.get(k + 1).is(":"))
-                    && !(k > 0 && (param.get(k - 1).is(".") || param.get(k - 1).is("?.")))) {
+                    && !JsTokens.isPropertyName(param, k)) {
                 names.add(token);
             }
         }
@@ -840,6 +840,13 @@ final class JsDeclarations {
     // ---- 호출 ----
 
     private void callOrMethod(int i) {
+        if (JsTokens.is(t, i - 1, "#")) {
+            // 클래스 본문의 #비공개 멤버 선언. 메서드면 읽고, 호출·받는 쪽으로는 보지 않는다 (#125)
+            if (JsTokens.is(t, i + 1, "(")) {
+                method(i);
+            }
+            return;
+        }
         if (JsTokens.is(t, i + 1, "(") && !JsTokens.is(t, i - 1, "function")) {
             if (method(i)) {
                 return;

@@ -1806,4 +1806,107 @@ class StructureAnalyzerTest {
                                 UnresolvedReason.NO_MATCHING_API,
                                 "POST cdn.example/api/todos"));
     }
+
+    @Test
+    void AC8_인스턴스_create_config의_method를_요청_method로_쓰고_계산하지_못하면_모른다() {
+        // #123: 호출 config에 method가 없으면 axios.create config의 method가 기본값이다
+        AnalysisStructureResponse response =
+                run(
+                        List.of(
+                                api("GET", "/api/todos", 100),
+                                api("POST", "/api/todos", 101),
+                                api("GET", "/api/items", 102),
+                                api("POST", "/api/items", 103),
+                                api("GET", "/api/notes", 104),
+                                api("POST", "/api/notes", 105),
+                                api("GET", "/api/users", 106),
+                                api("POST", "/api/users", 107)),
+                        js(
+                                1,
+                                "src/a.js",
+                                """
+                                import axios from 'axios'
+                                const api = axios.create({ method: 'POST' })
+                                api.request({ url: '/api/todos' })
+                                api.get('/api/items')
+                                api.request({ url: '/api/notes', method: 'GET' })
+                                const odd = axios.create({ method: getMethod() })
+                                odd.request({ url: '/api/users' })
+                                """));
+
+        assertThat(http(response))
+                .containsExactly(edge(1, 101, 3), edge(1, 102, 4), edge(1, 104, 5));
+        assertThat(httpUnresolved(response))
+                .extracting(UnresolvedLink::line, UnresolvedLink::reason)
+                .containsExactly(tuple(7, UnresolvedReason.AMBIGUOUS));
+    }
+
+    @Test
+    void AC8_템플릿_안에서_config_속성을_바꾸면_const_config를_따라가지_않는다() {
+        // #124: 템플릿 ${} 안의 식도 실행되므로 그 안의 cfg.url = … 도 config를 바꾼다
+        AnalysisStructureResponse response =
+                run(
+                        List.of(api("GET", "/api/todos", 100), api("GET", "/api/other", 101)),
+                        js(
+                                1,
+                                "src/a.js",
+                                """
+                                import axios from 'axios'
+                                const cfg = { url: '/api/todos' }
+                                const label = `${cfg.url = '/api/other'}`
+                                axios(cfg)
+                                """));
+
+        assertThat(http(response)).isEmpty();
+        assertThat(httpUnresolved(response))
+                .extracting(UnresolvedLink::line, UnresolvedLink::reason)
+                .containsExactly(tuple(4, UnresolvedReason.URL_UNKNOWN));
+    }
+
+    @Test
+    void AC7_비공개_멤버_샵fetch_샵axios는_전역_fetch나_import한_axios가_아니다() {
+        // #125: this.#fetch(…)·this.#axios.get(…)의 이름은 멤버라 HTTP 받는 쪽으로 풀지 않는다
+        AnalysisStructureResponse response =
+                run(
+                        List.of(api("GET", "/api/todos", 100), api("GET", "/api/items", 101)),
+                        js(
+                                1,
+                                "src/a.js",
+                                """
+                                import axios from 'axios'
+                                class Client {
+                                    #fetch = (u) => u
+                                    #axios = { get: (u) => u }
+                                    load() {
+                                        this.#fetch('/api/todos')
+                                        this.#axios.get('/api/todos')
+                                    }
+                                }
+                                axios.get('/api/todos')
+                                fetch('/api/items')
+                                """));
+
+        // 간선은 (파일, 대상)마다 첫 줄 하나다. 비공개 멤버 호출(6·7행)이 간선이면 6행이 먼저 나온다
+        assertThat(http(response)).containsExactly(edge(1, 100, 10), edge(1, 101, 11));
+        assertThat(httpUnresolved(response)).isEmpty();
+    }
+
+    @Test
+    void AC10_클래스_본문의_샵이름_대입은_같은_이름_매개변수를_다시_대입하지_않는다() {
+        // #125 리뷰: #cfg = … 를 매개변수 cfg의 재대입으로 보면 래퍼 인라인을 하지 않아 URL_UNKNOWN이 된다
+        AnalysisStructureResponse response =
+                run(
+                        List.of(api("GET", "/api/todos", 100)),
+                        js(
+                                1,
+                                "src/a.js",
+                                """
+                                import axios from 'axios'
+                                function get(cfg) { class C { #cfg = 1 } return axios.request(cfg) }
+                                get({ url: '/api/todos' })
+                                """));
+
+        assertThat(http(response)).containsExactly(edge(1, 100, 3));
+        assertThat(httpUnresolved(response)).isEmpty();
+    }
 }

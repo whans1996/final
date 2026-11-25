@@ -260,7 +260,7 @@ public final class JsModule {
             JsToken token = tokens.get(i);
             if (token.kind() != JsToken.Kind.IDENT
                     || notWrites.contains(token.start())
-                    || (i > 0 && (tokens.get(i - 1).is(".") || tokens.get(i - 1).is("?.")))) {
+                    || JsTokens.isPropertyName(tokens, i)) {
                 continue;
             }
             boolean write =
