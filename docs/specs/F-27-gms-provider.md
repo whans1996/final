@@ -171,7 +171,7 @@ GMS 요청 본문 예시:
 - [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
 - [x] `.env.example`·`backend/CLAUDE.md`(LLM 절)·`.claude/agents/prompt-evaluator.md` 공급자 설명 갱신 (`docs/환경설정.md`에는 LLM 설명이 없어 변경 없음)
 - [ ] 실연결 확인 (`./gradlew liveTest`, GMS) → 9절 확정
-- [ ] contract-checker 통과
+- [x] contract-checker 통과
 - [ ] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일)
 - [ ] reviewer 지적 사항 반영
 - [x] 산출물 반영: ERD(`llm_usage_logs.provider`), 화면 설계서 SC-05·SC-07, 산출물 08(AI 공급자)

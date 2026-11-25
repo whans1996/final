@@ -3,7 +3,7 @@
 > 김동환(A 영역: AI·분석·학습 루프) 전용. 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
-갱신: 2026-11-25 21:40 · 작업자: whans1996@naver.com · PC: dh-home · 브랜치: feature/F-27-gms-provider
+갱신: 2026-11-25 21:43 · 작업자: whans1996@naver.com · PC: dh-home · 브랜치: feature/F-27-gms-provider
 
 ## 현재 기능
 
@@ -11,14 +11,15 @@
 
 ## 진행
 
-- ✅ AC1~AC13 전부 구현·테스트 green (BE: 스키마·GmsLlmClient·체인·Ollama format·provider·liteMode·consent·PromptEvalRunner / FE: SC-07 배너·SC-05 문구), openapi.json 갱신
-- ✅ spec 9절: GMS 문서로 base URL·크레딧(`/gmsapi/key-info`) 확인. 남은 것: 기본 모델 ID
+- ✅ AC1~AC13 구현·테스트 green, openapi.json 갱신, 산출물(ERD·화면 설계서·08)·LLM 규칙·prompt-evaluator 문서 반영, contract-checker 불일치 0
+- 🔄 ui-verifier 실행 중 (BE local mock :8080·FE dev :5173를 이 세션이 띄움)
+- ✅ spec 9절: base URL·크레딧(`/gmsapi/key-info`) 확인. 남은 것: 기본 모델 ID
 
 ## 바로 다음 할 일
 
-1. 문서: `backend/CLAUDE.md` LLM 절(gms 체인·GMS_API_KEY·llm-schemas), `docs/환경설정.md`(GMS 키), `.claude/agents/prompt-evaluator.md`(LLM_PROVIDER), ERD(`llm_usage_logs.provider`·인덱스), 화면 설계서 SC-05·SC-07, 산출물 08(주 공급자 GMS), spec 6절 concept 예시를 conceptId·new로 정리
-2. contract-checker → ui-verifier(BE local + FE dev, SC-05·SC-07 데스크톱·모바일)
-3. 사람: `cd backend && ./gradlew liveTest --tests "*LlmLiveTest.gms*"`로 모델 목록·크레딧 확인 → `GMS_MODEL` 기본값 확정 → `/pr-review`
+1. ui-verifier 결과 반영(SC-05 문구, SC-07 배너 데스크톱·모바일) → spec 체크리스트 ui-verifier 체크
+2. 사람: `cd backend && ./gradlew liveTest --tests "*LlmLiveTest.gms*"`로 모델 목록·크레딧 확인 → `GMS_MODEL` 기본값 확정(application.yml·.env.example·spec 6절·결정로그)
+3. `/pr-review` (PR 본문: 공통 파일 application.yml·build.gradle → @JoonseobKim 멘션, AC8은 회귀 고정 테스트)
 
 ## 막힌 점 / 결정 필요
 
