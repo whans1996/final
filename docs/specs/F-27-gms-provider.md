@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 |---|---|
-| 상태 | APPROVED <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
+| 상태 | DONE (PR #161) <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
 | 기능 ID | F-27 |
 | 우선순위 | T0 (2차 백로그, 12/14 동결 대상) |
 | 영역 오너 | A 김동환 (AI·분석·학습 루프) |
@@ -174,7 +174,7 @@ GMS 요청 본문 예시:
 - [x] 실연결 확인 (`./gradlew liveTest`, GMS) → 9절 확정
 - [x] contract-checker 통과
 - [x] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일)
-- [ ] reviewer 지적 사항 반영
+- [x] reviewer 지적 사항 반영 (반드시 수정 0, 권장 5건 반영 0ada431)
 - [x] 산출물 반영: ERD(`llm_usage_logs.provider`), 화면 설계서 SC-05·SC-07, 산출물 08(AI 공급자)
-- [ ] PR CI 초록
-- [ ] 상태 DONE (PR 머지 후)
+- [x] PR CI 초록 (#161, Codex ✅ 6f90df2)
+- [x] 상태 DONE (PR #161)
