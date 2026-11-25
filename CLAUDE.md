@@ -91,7 +91,9 @@ SSAFY 관통 프로젝트(2026-11-17 시작, 12-24 발표). Spring Boot 4 + MyBa
 | 목적 | 명령 |
 |---|---|
 | 최초 1회 세팅·PC 등록 (PC마다) | `node scripts/setup.mjs --pc <dh-ssafy\|dh-home\|js-ssafy\|js-home>` |
-| 검증 (실패만 요약) | `node scripts/verify.mjs [be\|fe\|all] [--fix]` |
+| 검증 (실패만 요약) | `node scripts/verify.mjs [be\|fe\|harness\|all] [--fix] [--staged]` (`--staged`는 커밋 hook의 빠른 검사) |
+| 하네스·환경 점검 (읽기 전용) | `node scripts/doctor.mjs` (hook 권한, 남은 Gradle 잠금, CRLF, FE 의존성, NOW 파일 등) |
+| 주간 초안·지표 (`/progress` 전) | `node scripts/weekly.mjs [--days 7]` |
 | 화면 점검 | `node scripts/ui-check.mjs / /concepts` (FE dev 서버 실행 중일 때) |
 | AI 없이 교대 | `node scripts/handoff.mjs [-m "메모"] [--no-push]` |
 | 기록 머리 줄·내 NOW 파일·내 이슈 영역 라벨 | `node scripts/stamp.mjs [--now\|--log\|--file\|--area]` |
