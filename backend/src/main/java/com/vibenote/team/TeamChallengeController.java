@@ -26,7 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
  * 팀 기간 목표 (F-20c). 모든 엔드포인트는 로그인 필요. 판단 순서는 401 → 404 TEAM_404 → 403 TEAM_403 → 400 검증 → 대상(404
  * TEAM_006·TEAM_013) → 409다. 본문 검증은 팀장 확인 뒤 Service가 한다.
  */
-@Tag(name = "팀", description = "팀 생성, 초대 코드 가입, 멤버 관리 (F-20a), 분석 공유·팀 이해도 (F-20b), 팀 목표 (F-20c)")
+@Tag(name = TeamApiDocs.TAG, description = TeamApiDocs.TAG_DESCRIPTION)
 @RestController
 public class TeamChallengeController {
 

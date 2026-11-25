@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import tools.jackson.core.util.DefaultIndenter;
@@ -52,5 +53,21 @@ class OpenApiExportTest extends IntegrationTestBase {
         if (!Files.exists(OUTPUT) || !Files.readString(OUTPUT).equals(json)) {
             Files.writeString(OUTPUT, json, StandardCharsets.UTF_8);
         }
+    }
+
+    @Test
+    void 같은_이름의_태그는_하나로_합쳐진다() throws Exception {
+        String body =
+                mockMvc.perform(get("/v3/api-docs"))
+                        .andExpect(status().isOk())
+                        .andReturn()
+                        .getResponse()
+                        .getContentAsString(StandardCharsets.UTF_8);
+
+        // Controller마다 description이 다르면 springdoc이 같은 이름의 태그를 따로 둔다 (#143).
+        List<?> tags =
+                (List<?>) JsonMapper.builder().build().readValue(body, Map.class).get("tags");
+        List<?> names = tags.stream().map(tag -> ((Map<?, ?>) tag).get("name")).toList();
+        assertThat(names).doesNotHaveDuplicates();
     }
 }
