@@ -283,4 +283,33 @@ class ApiDetectorTest {
         assertThat(ApiDetector.detect(List.of(controller(1, code))))
                 .containsExactly(new ApiEndpoint("GET", fits, 1L));
     }
+
+    @Test
+    void AC7_다른_파일의_같은_method_path는_목록에_하나만_두고_중복으로_따로_돌려준다() {
+        // #122: 매핑 조건(params 등)만 다른 같은 method+path가 여러 파일에 있으면 구조 그래프가 한 파일로 확정하지 않게 알린다
+        String a =
+                """
+                @RestController class A {
+                    @GetMapping(value = "/todos", params = "kind=a") void a() {}
+                    @GetMapping(value = "/todos", params = "kind=c") void c() {}
+                }
+                """;
+        String b =
+                """
+                @RestController class B {
+                    @GetMapping(value = "/todos", params = "kind=b") void b() {}
+                    @PostMapping("/todos") void create() {}
+                }
+                """;
+
+        ApiDetector.Detection detection =
+                ApiDetector.scan(List.of(controller(2, a), controller(3, b)));
+
+        assertThat(detection.apis())
+                .containsExactly(
+                        new ApiEndpoint("GET", "/todos", 2L),
+                        new ApiEndpoint("POST", "/todos", 3L));
+        assertThat(detection.duplicates()).containsExactly(new ApiEndpoint("GET", "/todos", 3L));
+        assertThat(detection.incomplete()).isFalse();
+    }
 }

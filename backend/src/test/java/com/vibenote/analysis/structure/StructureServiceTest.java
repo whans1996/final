@@ -13,6 +13,7 @@ import com.vibenote.analysis.AnalysisStatus;
 import com.vibenote.analysis.domain.AnalysisDetail;
 import com.vibenote.analysis.domain.AnalysisFile;
 import com.vibenote.analysis.explain.AnalysisOverview;
+import com.vibenote.analysis.explain.ApiDetector;
 import com.vibenote.common.exception.BusinessException;
 import com.vibenote.common.exception.ErrorCode;
 import java.time.Duration;
@@ -214,5 +215,74 @@ class StructureServiceTest {
         release.countDown();
         assertThat(busy.get(5, TimeUnit.SECONDS).edges()).hasSize(1);
         assertThat(waiting.get(5, TimeUnit.SECONDS).edges()).hasSize(1);
+    }
+
+    @Test
+    void AC11_매핑_조건만_다른_같은_API가_여러_파일에_있으면_간선을_확정하지_않는다() {
+        // #122: 개요 API 목록은 method+path로 중복을 뺀다. 빠진 다른 파일 매핑도 후보로 넘겨 AMBIGUOUS로 둔다
+        List<AnalysisFile> files =
+                List.of(
+                        StructureFiles.file(
+                                2,
+                                "src/main/java/web/A.java",
+                                "controller",
+                                "@RestController class A { @GetMapping(value = \"/todos\","
+                                        + " params = \"kind=a\") void a() {} }"),
+                        StructureFiles.file(
+                                3,
+                                "src/main/java/web/B.java",
+                                "controller",
+                                "@RestController class B { @GetMapping(value = \"/todos\","
+                                        + " params = \"kind=b\") void b() {} }"),
+                        StructureFiles.file(
+                                10, "src/api/todo.js", "js", "fetch('/todos?kind=b')\n"));
+        AnalysisDetail detail = new AnalysisDetail();
+        detail.setId(9L);
+        detail.setStatus(AnalysisStatus.DONE);
+        detail.setOverview(
+                new AnalysisOverview(
+                        "요약", List.of(), List.of(), List.of(), ApiDetector.detect(files)));
+        when(analysisService.checkViewableDetail(USER, 9)).thenReturn(detail);
+        when(analysisService.findFiles(9)).thenReturn(files);
+
+        AnalysisStructureResponse response = service().get(USER, 9);
+
+        assertThat(response.edges()).noneMatch(e -> e.type() == EdgeType.HTTP);
+        assertThat(response.unresolved())
+                .filteredOn(u -> u.kind() == UnresolvedKind.HTTP_CALL)
+                .extracting(UnresolvedLink::reason)
+                .containsExactly(UnresolvedReason.AMBIGUOUS);
+    }
+
+    @Test
+    void AC11_저장된_개요_목록에_없는_API의_중복은_후보로_넣지_않는다() {
+        // #122 리뷰: 다시 훑은 탐지가 남긴 쪽(파일 2)이 저장된 개요에 없으면 중복(파일 3)만 후보가 되어 틀린 간선을 확정할 수 있다
+        List<AnalysisFile> files =
+                List.of(
+                        StructureFiles.file(
+                                2,
+                                "src/main/java/web/A.java",
+                                "controller",
+                                "@RestController class A { @GetMapping(\"/todos\") void a() {} }"),
+                        StructureFiles.file(
+                                3,
+                                "src/main/java/web/B.java",
+                                "controller",
+                                "@RestController class B { @GetMapping(\"/todos\") void b() {} }"),
+                        StructureFiles.file(10, "src/api/todo.js", "js", "fetch('/todos')\n"));
+        AnalysisDetail detail = new AnalysisDetail();
+        detail.setId(8L);
+        detail.setStatus(AnalysisStatus.DONE);
+        detail.setOverview(new AnalysisOverview("요약", List.of(), List.of(), List.of(), List.of()));
+        when(analysisService.checkViewableDetail(USER, 8)).thenReturn(detail);
+        when(analysisService.findFiles(8)).thenReturn(files);
+
+        AnalysisStructureResponse response = service().get(USER, 8);
+
+        assertThat(response.edges()).noneMatch(e -> e.type() == EdgeType.HTTP);
+        assertThat(response.unresolved())
+                .filteredOn(u -> u.kind() == UnresolvedKind.HTTP_CALL)
+                .extracting(UnresolvedLink::reason)
+                .containsExactly(UnresolvedReason.NO_MATCHING_API);
     }
 }

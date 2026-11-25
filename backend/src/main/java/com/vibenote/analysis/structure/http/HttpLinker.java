@@ -15,6 +15,7 @@ import com.vibenote.analysis.structure.js.JsFunction;
 import com.vibenote.analysis.structure.js.JsImport;
 import com.vibenote.analysis.structure.js.JsModule;
 import com.vibenote.analysis.structure.js.JsToken;
+import com.vibenote.analysis.structure.js.JsTokens;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -355,7 +356,7 @@ public final class HttpLinker {
                     return Outcome.failed(UnresolvedReason.URL_UNKNOWN, config.paramOf());
                 }
                 url = config.prop("url");
-                method = method(config.prop("method"));
+                method = method(config.prop("method"), http.receiver());
             }
             default -> {
                 url = expr(call.arg(0), module, bindings);
@@ -613,8 +614,7 @@ public final class HttpLinker {
                 }
                 continue;
             }
-            if (name.kind() != JsToken.Kind.IDENT
-                    || (i > 0 && (t.get(i - 1).is(".") || t.get(i - 1).is("?.")))) {
+            if (name.kind() != JsToken.Kind.IDENT || JsTokens.isPropertyName(t, i)) {
                 continue;
             }
             scan.fetchReplaced |= replacesFetch(t, i, m);
@@ -704,6 +704,19 @@ public final class HttpLinker {
     /** i 위치 토큰이 text인지 (text가 null이면 있는지만). */
     private static boolean is(List<JsToken> t, int i, String text) {
         return i >= 0 && i < t.size() && (text == null || t.get(i).is(text));
+    }
+
+    /**
+     * config에 method가 없으면 인스턴스는 {@code create} config의 method를 쓴다 (#123). 그 config를 계산하지 못하면
+     * method를 모른다(null).
+     */
+    private String method(Expr method, Receiver receiver) {
+        if (method == null && receiver.type() == ReceiverType.INSTANCE) {
+            method =
+                    config(receiver.createArgs(), receiver.module(), Bindings.NONE, 0)
+                            .prop("method");
+        }
+        return method(method);
     }
 
     /** 메서드 식이 문자열로 계산되면 대문자, 속성이 없으면 axios·fetch 기본값 GET, 계산하지 못하면 null. */
@@ -820,20 +833,29 @@ public final class HttpLinker {
                 module,
                 m -> {
                     Set<JsDecl> out = Collections.newSetFromMap(new IdentityHashMap<>());
-                    List<JsToken> t = m.tokens();
-                    for (int i = 0; i < t.size(); i++) {
-                        budget.spend();
-                        JsToken name = t.get(i);
-                        if (name.kind() != JsToken.Kind.IDENT
-                                || (i > 0 && (t.get(i - 1).is(".") || t.get(i - 1).is("?.")))) {
-                            continue;
-                        }
-                        if (writesConfig(t, i)) {
-                            m.lookup(name.text(), name.start()).ifPresent(out::add);
-                        }
-                    }
+                    readConfigWrites(m.tokens(), m, out);
                     return out;
                 });
+    }
+
+    /** 템플릿 ${} 안의 식도 실행되므로 그 토큰 목록도 훑는다 (#124, 요청을 바꾸는 쓰기를 모으는 readTaints와 같음). */
+    private void readConfigWrites(List<JsToken> t, JsModule m, Set<JsDecl> out) {
+        for (int i = 0; i < t.size(); i++) {
+            budget.spend();
+            JsToken name = t.get(i);
+            if (name.kind() == JsToken.Kind.TEMPLATE) {
+                for (List<JsToken> part : name.parts()) {
+                    readConfigWrites(part, m, out);
+                }
+                continue;
+            }
+            if (name.kind() != JsToken.Kind.IDENT || JsTokens.isPropertyName(t, i)) {
+                continue;
+            }
+            if (writesConfig(t, i)) {
+                m.lookup(name.text(), name.start()).ifPresent(out::add);
+            }
+        }
     }
 
     private static boolean writesConfig(List<JsToken> t, int i) {
