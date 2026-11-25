@@ -48,11 +48,12 @@ class LlmUsageLogMapperTest extends IntegrationTestBase {
 
     @Test
     void AC9_provider를_저장한다() {
-        mapper.insert(new LlmUsageLog(null, 43L, "quiz", "gms", "gpt-test", 1, 2, 3, true, null));
+        mapper.insert(
+                new LlmUsageLog(null, 43L, "quiz", "gms", "gpt-ac9-only", 1, 2, 3, true, null));
 
         assertThat(
                         jdbc.queryForObject(
-                                "SELECT provider FROM llm_usage_logs WHERE analysis_id = 43",
+                                "SELECT provider FROM llm_usage_logs WHERE model = 'gpt-ac9-only'",
                                 String.class))
                 .isEqualTo("gms");
     }
