@@ -162,4 +162,124 @@ class FileSelectorTest {
         assertThat(selected.get(0).path()).isEqualTo("web/ArticlesApi.java");
         assertThat(selected.get(0).layer()).isEqualTo(Layer.CONTROLLER);
     }
+
+    @Test
+    void AC4_Service_어노테이션이면_파일명과_상관없이_service() {
+        assertThat(
+                        FileSelector.layer(
+                                "src/main/java/a/AnalysisPipeline.java",
+                                "@Service\npublic class AnalysisPipeline {}"))
+                .isEqualTo(Layer.SERVICE);
+        assertThat(
+                        FileSelector.layer(
+                                "src/main/java/a/Pipe.java",
+                                "@org.springframework.stereotype.Service class Pipe {}"))
+                .isEqualTo(Layer.SERVICE);
+        assertThat(FileSelector.layer("src/main/java/a/Flow.java", "@ServiceActivator class F {}"))
+                .isEqualTo(Layer.OTHER);
+    }
+
+    @Test
+    void AC4_Repository_어노테이션과_Repository_파일명과_Mapper_어노테이션은_mapper() {
+        assertThat(
+                        FileSelector.layer(
+                                "src/main/java/a/UserStore.java",
+                                "@Repository\npublic class UserStore {}"))
+                .isEqualTo(Layer.MAPPER);
+        assertThat(layer("src/main/java/a/TodoRepository.java")).isEqualTo(Layer.MAPPER);
+        assertThat(
+                        FileSelector.layer(
+                                "src/main/java/a/TodoQueries.java",
+                                "@Mapper\npublic interface TodoQueries {}"))
+                .isEqualTo(Layer.MAPPER);
+    }
+
+    @Test
+    void AC4_Configuration_어노테이션이면_config이고_ConfigurationProperties는_아니다() {
+        assertThat(
+                        FileSelector.layer(
+                                "src/main/java/a/WebSetup.java",
+                                "@Configuration\npublic class WebSetup {}"))
+                .isEqualTo(Layer.CONFIG);
+        assertThat(
+                        FileSelector.layer(
+                                "src/main/java/a/AppProps.java",
+                                "@ConfigurationProperties(\"app\")\npublic record AppProps() {}"))
+                .isEqualTo(Layer.OTHER);
+    }
+
+    @Test
+    void AC4_models_밖의_Entity는_domain() {
+        assertThat(
+                        FileSelector.layer(
+                                "src/main/java/a/models/Todo.java",
+                                "@Entity\npublic class Todo {}"))
+                .isEqualTo(Layer.DOMAIN);
+        assertThat(
+                        FileSelector.layer(
+                                "src/main/java/a/Todo.java",
+                                "@Table(name = \"todos\")\npublic class Todo {}"))
+                .isEqualTo(Layer.DOMAIN);
+    }
+
+    @Test
+    void AC4_JS_설정_파일은_js가_아니라_config() {
+        assertThat(layer("frontend/vite.config.js")).isEqualTo(Layer.CONFIG);
+        assertThat(layer("eslint.config.mjs")).isEqualTo(Layer.CONFIG);
+        assertThat(layer("frontend/vitest.config.ts")).isEqualTo(Layer.CONFIG);
+        assertThat(layer("frontend/src/config.js")).isEqualTo(Layer.JS);
+    }
+
+    @Test
+    void AC4_테스트_폴더와_테스트_파일명은_test() {
+        assertThat(
+                        FileSelector.layer(
+                                "src/test/java/FooControllerTest.java",
+                                "@RestController class FooControllerTest {}"))
+                .isEqualTo(Layer.TEST);
+        assertThat(layer("src/main/java/a/FooIT.java")).isEqualTo(Layer.TEST);
+        assertThat(layer("frontend/src/views/__tests__/Home.spec.js")).isEqualTo(Layer.TEST);
+        assertThat(layer("frontend/src/a.test.ts")).isEqualTo(Layer.TEST);
+        assertThat(layer("e2e/login.js")).isEqualTo(Layer.TEST);
+        assertThat(layer("src/main/java/a/Contest.java")).isEqualTo(Layer.OTHER);
+    }
+
+    @Test
+    void AC4_마이그레이션_폴더와_Flyway_파일명은_migration이고_md는_doc() {
+        assertThat(layer("src/main/resources/db/migration/V1__init.sql"))
+                .isEqualTo(Layer.MIGRATION);
+        assertThat(layer("db/changelog/master.yaml")).isEqualTo(Layer.MIGRATION);
+        assertThat(layer("migrations/001.sql")).isEqualTo(Layer.MIGRATION);
+        assertThat(layer("sql/V2__add.sql")).isEqualTo(Layer.MIGRATION);
+        assertThat(layer("src/main/resources/schema.sql")).isEqualTo(Layer.OTHER);
+        assertThat(layer("README.md")).isEqualTo(Layer.DOC);
+        assertThat(layer("docs/test/guide.md")).isEqualTo(Layer.DOC);
+    }
+
+    @Test
+    void AC4_주석_속_어노테이션은_보지_않는다() {
+        String commented =
+                """
+                // @Service
+                /* @Repository @Configuration @Entity */
+                public class Plain {}
+                """;
+
+        assertThat(FileSelector.layer("src/main/java/a/Plain.java", commented))
+                .isEqualTo(Layer.OTHER);
+    }
+
+    @Test
+    void AC7_test_migration_doc은_자리가_남아도_고르지_않는다() {
+        List<SelectedFile> selected =
+                FileSelector.select(
+                        List.of(
+                                new SourceFile("a/A.java", "class A {}"),
+                                new SourceFile("src/test/java/ATest.java", "class ATest {}"),
+                                new SourceFile("db/migration/V1__a.sql", "create table a();"),
+                                new SourceFile("README.md", "# a")),
+                        30);
+
+        assertThat(selected).extracting(SelectedFile::path).containsExactly("a/A.java");
+    }
 }
