@@ -26,6 +26,7 @@ spring:
         read:
           # JSON 요청 본문 상한 1MB (#55). 다 읽은 뒤 검사하는 @Size와 달리 읽는 도중에 멈춘다 → 413 COMMON_413.
           # Spring 매퍼를 쓰는 곳(요청 본문, LLM RestClient 응답)에만 적용되고 multipart 업로드는 위 multipart 한도를 따른다.
+          # 이 값은 입력 단위(UTF-16 본문은 문자)를 세므로 JSON 요청은 common.web.JsonBodyLimitFilter가 같은 값을 바이트로 다시 센다 (#73).
           max-document-length: 1048576
   servlet:
     multipart:

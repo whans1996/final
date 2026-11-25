@@ -1,5 +1,6 @@
 package com.vibenote.common.exception;
 
+import com.vibenote.common.web.JsonBodyLimitFilter;
 import jakarta.validation.ConstraintViolationException;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -73,11 +74,15 @@ public class GlobalExceptionHandler {
         return respond(ErrorCode.COMMON_400, details.isEmpty() ? null : details);
     }
 
-    /** 본문을 읽지 못한 경우. Jackson 읽기 한도(본문 1MB 등, application.yml)를 넘었으면 413, 나머지는 400. */
+    /**
+     * 본문을 읽지 못한 경우. JSON 본문 바이트 한도({@link JsonBodyLimitFilter}, #73)나 Jackson 읽기 한도(본문 1MB 등,
+     * application.yml)를 넘었으면 413, 나머지는 400.
+     */
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ErrorResponse> handleNotReadable(HttpMessageNotReadableException e) {
         for (Throwable t = e.getCause(); t != null; t = t.getCause()) {
-            if (t instanceof StreamConstraintsException) {
+            if (t instanceof StreamConstraintsException
+                    || t instanceof JsonBodyLimitFilter.BodyTooLargeException) {
                 return respond(ErrorCode.COMMON_413, null);
             }
         }
