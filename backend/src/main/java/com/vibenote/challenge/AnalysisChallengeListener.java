@@ -12,7 +12,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * 분석 완료가 커밋된 뒤 분석 챌린지 달성도를 별도 트랜잭션에서 다시 센다 (F-25 AC7, #105). 집계가 실패해도 분석은 DONE으로 남고 로그만 남긴다. 놓친 집계는
- * 같은 챌린지 기간 안의 다음 분석 완료(또는 재참여) 때 바로잡히고, 기간이 끝나면 남는다 (#146).
+ * 같은 챌린지 기간 안의 다음 분석 완료(또는 재참여) 때, 늦어도 챌린지가 끝난 다음 날 {@link ChallengeRecountJob}이 바로잡는다 (#146).
  *
  * <p>READ_COMMITTED라 참여 행 잠금을 기다리는 동안 커밋된 다른 분석까지 센다 (#104).
  */
@@ -46,7 +46,7 @@ class AnalysisChallengeListener {
                                     ChallengeGoalType.ANALYSIS_COUNT,
                                     event.requestDate()));
         } catch (RuntimeException e) {
-            log.warn("분석 {} 완료 뒤 챌린지 집계 실패 (같은 기간의 다음 분석 완료 때 다시 센다)", event.analysisId(), e);
+            log.warn("분석 {} 완료 뒤 챌린지 집계 실패 (다음 분석 완료나 챌린지가 끝난 다음 날 다시 센다)", event.analysisId(), e);
         }
     }
 }

@@ -194,7 +194,7 @@
 | 회원 API | `ChallengeController`(`/api/challenges`, Tag `챌린지`), `UserChallengeController`(`/api/users/me/challenges`, `/api/users/{id}/challenges`), `ChallengeService`. 선택 인증은 `ConceptController.detail`처럼 `@AuthenticationPrincipal AuthUser user`(null 허용) |
 | 공개 경로 | `SecurityConfig.PUBLIC_GET_PATHS`의 `CHALLENGE (A F-25)` 블록에 `/api/challenges`, `/api/challenges/{id:\\d+}`, `/api/users/{id:\\d+}/challenges` |
 | 집계 | `ChallengeProgressService.refresh(userId, goalType, activityDate)`: `activityDate`가 기간 안이고 **미달성**인 그 유형의 참여 행을 `FOR UPDATE`로 잡고, 유형별 COUNT로 `progress = min(count, goal)`을 쓴다. `UPDATE … SET completed_at = ? WHERE … AND completed_at IS NULL AND progress >= goal_value`가 1행이면 `CHALLENGE_COMPLETE` 기록. 참여 직후에는 그 챌린지 한 건만 같은 방식으로 센다 |
-| 집계 호출 | 같은 트랜잭션에서: `ReviewPlanService.changeStatus`(DONE이면 오늘, TODO로 되돌리면 이전 `done_at` 날짜) · `delete`(DONE 계획이면 그 `done_at` 날짜) · `QuizService.submit`(오늘). 응답 직후 화면의 달성도가 맞아야 해서 같은 트랜잭션이다. 분석은 `AnalysisService.complete`가 커밋된 뒤 `AnalysisCompletedEvent`를 받은 `AnalysisChallengeListener`가 별도 트랜잭션(`REQUIRES_NEW`)에서 센다(분석 `created_at` 날짜). 집계가 실패해도 분석은 DONE이고 로그만 남긴다 (#105). 놓친 집계는 같은 챌린지 기간 안의 다음 분석 완료(또는 재참여) 때 바로잡힌다. 기간 마지막 날의 집계가 실패하면 그대로 남는 것은 한계로 둔다 (#146). 셋 다 A 영역 |
+| 집계 호출 | 같은 트랜잭션에서: `ReviewPlanService.changeStatus`(DONE이면 오늘, TODO로 되돌리면 이전 `done_at` 날짜) · `delete`(DONE 계획이면 그 `done_at` 날짜) · `QuizService.submit`(오늘). 응답 직후 화면의 달성도가 맞아야 해서 같은 트랜잭션이다. 분석은 `AnalysisService.complete`가 커밋된 뒤 `AnalysisCompletedEvent`를 받은 `AnalysisChallengeListener`가 별도 트랜잭션(`REQUIRES_NEW`)에서 센다(분석 `created_at` 날짜). 집계가 실패해도 분석은 DONE이고 로그만 남긴다 (#105). 놓친 집계는 같은 챌린지 기간 안의 다음 분석 완료(또는 재참여) 때 바로잡히고, 그렇지 않으면 `ChallengeRecountJob`이 매일 00:10(Asia/Seoul, `challenge.recount-cron`) 종료일이 최근 7일 안인 챌린지의 미달성 참여를 참여마다 READ_COMMITTED 트랜잭션으로 다시 센다. 늦게 달성하면 completed_at·CHALLENGE_COMPLETE는 그 작업 시각이다 (#146). 셋 다 A 영역 |
 | Mapper | `ChallengeParticipantMapper`(+ `mapper/challenge/ChallengeParticipantMapper.xml`): insert(`INSERT IGNORE`, 영향 행 수로 첫 참여 판단), delete, find, 목록·COUNT, 유형별 집계 COUNT 3개, progress·completed 갱신. 공개 목록·상세는 기존 `ChallengeMapper`에 회원용 쿼리를 더한다. 집계 SQL이 `review_plans` 등 다른 테이블을 읽지만 다른 도메인 Mapper를 부르지는 않는다 (FeedMapper와 같은 방식) |
 | 동시성 | 참여·취소는 챌린지 행 `FOR UPDATE`로 직렬화한다. 같은 사람의 두 활동이 동시에 달성을 만들어도 `completed_at IS NULL` 조건부 UPDATE라 COMPLETE는 1건이다. 집계를 부르는 트랜잭션(위 세 메서드와 분석 집계 트랜잭션)은 READ_COMMITTED다. REPEATABLE READ면 참여 행 잠금 전에 잡힌 스냅샷으로 세어, 잠금을 기다리는 동안 커밋된 같은 회원의 활동이 빠진다 (#104). COUNT에 `FOR SHARE`는 쓰지 않는다 (서로의 미커밋 활동 행을 기다려 교착) |
 | 활동 삭제 | `feed.ActivityService`에 `delete(userId, type, targetId)` 추가 (공통 feed 패키지. PR 때 `node scripts/owners.mjs --diff origin/develop`로 @멘션 여부 확인) |
@@ -225,6 +225,7 @@
 | AC3·AC4·AC9 | `challenge/ChallengeParticipationApiTest` | MockMvc 통합 |
 | AC5~AC8 | `challenge/ChallengeProgressTest` (실제 `PATCH /api/review-plans`·`POST /api/quizzes/{id}/attempts`·`AnalysisService.complete` 경로로 활동을 만든다) | 통합 |
 | AC10·AC11 | `challenge/UserChallengeApiTest` | MockMvc 통합 |
+| #146 끝난 챌린지 다시 세기 | `challenge/ChallengeRecountJobTest` (`ChallengeRecountJob.recountEnded`를 직접 부른다) | 통합 |
 | 공개 경로 | `common/config/SecurityConfigTest`(비로그인 GET 3개 200, POST·DELETE·`/users/me/challenges` 401) | MockMvc 통합 |
 | AC12 | `views/challenge/__tests__/ChallengeListView.spec.js`, `components/challenge/__tests__/ChallengeCard.spec.js`, `utils/__tests__/navItems.spec.js` | Vitest |
 | AC13 | `views/challenge/__tests__/ChallengeDetailView.spec.js`, `components/challenge/__tests__/ChallengeJoinPanel.spec.js` | Vitest |
@@ -237,7 +238,7 @@
 ## 8. 범위 밖
 
 - 랭킹·배지·포인트, 알림, 챌린지 댓글·공유, 참여자 목록 화면, 관리자 화면의 참여자별 달성도
-- 서버 배치(스케줄러)로 달성도 재계산, 지난 활동 소급 재집계 도구
+- 지난 활동 소급 재집계 도구, 진행 중 챌린지의 주기적 재계산 (끝난 챌린지의 미달성 참여 다시 세기는 #146에서 추가, 결정로그 11-25)
 - 시연용 챌린지 시드 데이터 (로컬 DB에 관리자 화면으로 만든다)
 - 팀 기간 목표(`team_challenges`) → F-20c(B)
 

@@ -60,6 +60,17 @@ public interface ChallengeParticipantMapper {
             @Param("goalType") ChallengeGoalType goalType,
             @Param("date") LocalDate date);
 
+    /**
+     * 종료일이 {@code from} 이상 {@code until} 미만인 챌린지의 미달성 참여 (challenge_id, user_id 순). 잠그지 않는다 (#146
+     * 다시 세기 대상).
+     */
+    List<ChallengeParticipant> findOpenEnded(
+            @Param("from") LocalDate from, @Param("until") LocalDate until);
+
+    /** 아직 달성하지 않은 그 참여의 챌린지. 참여 행을 잠근다 ({@link #findOpenForUpdate}와 같은 FOR UPDATE OF p). */
+    Optional<Challenge> findOpenOneForUpdate(
+            @Param("challengeId") long challengeId, @Param("userId") long userId);
+
     /** DONE이고 done_at이 기간 안인 복습 계획 수. */
     int countDoneReviews(
             @Param("userId") long userId,
