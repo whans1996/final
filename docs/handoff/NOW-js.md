@@ -1,7 +1,7 @@
 # NOW — 김준섭 현재 작업 스냅샷
 
 > 김준섭(B 영역: 카드·소셜) 전용. 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
-갱신: 2026-11-25 15:07 · 작업자: JoonseobKim · PC: js-home · 브랜치: feature/common-ds03-eval-set
+갱신: 2026-11-25 15:13 · 작업자: JoonseobKim · PC: js-home · 브랜치: feature/common-ds03-eval-set
 
 ---
 
@@ -13,11 +13,11 @@
 
 - ✅ 저장 위치·구성 확정(사용자 결정): 팀 생성 3개(DS-03-01 풀스택 게시판·엉성한 AI 코드 80~120파일, 02 소규모 Spring BE 25~40, 03 Vue FE 40~60) + 공개 DS-02-09(ecommerce-store 500파일 TS)·10(Project-Keystone 272파일 Spring+React TS)
 - ✅ eval 저장소: README(규칙), `LABEL_SCHEMA.md`(files·apis·concepts must/ok/wrong·forbidden), `sets.json`, `concepts.tsv`(시드 85개)
-- ✅ 메인(이 브랜치, push됨): `datasets.json` DS-02-09·10·DS-03·04, `09-데이터셋.md` DS-03·04·표·변경 이력, 결정로그 → docs PR
+- ✅ 메인 docs **PR #152** (head c9cf3b5): datasets.json DS-02-09·10·DS-03·04, 09-데이터셋(DS-02 표 10건·DS-03·04·5절 기록 경유 누수·수집 단계 거부), 기획서 V-2, 결정로그 2행. verifier ✅, reviewer 반드시 2건(SHA 오기·표 8건)·권장 5건 반영
 
 ## 바로 다음 할 일
 
-1. docs PR(`/pr-review`) CI·Codex 확인 → 머지(사람)
+1. PR #152: CI ✅ · Codex ✅ c9cf3b5 → GitHub에서 머지(사람). 머지 후 develop 최신화
 2. DS-03-01 생성: `data/raw/eval/repos/DS-03-01-board-fullstack/`에 주니어 페르소나로 AI 생성(Spring Boot+MyBatis XML+Vue 3), 일부러 남긴 결함은 `generation/DS-03-01.md`에 기록 → eval 저장소 커밋. 이어서 02·03
 3. 라벨: `labels/<id>.json`을 LABEL_SCHEMA대로 (DS-03-01~03, DS-02-05~10 총 9개), 12/03까지 커밋 후 `sets.json` `frozenAt` 기록
 4. 11/27 Figma 공동 세션(F-29) → `/spec F-29`. V-1 MVP 감사(11/29~12/02)
