@@ -15,8 +15,6 @@ import com.vibenote.analysis.dto.VisibilityResponse;
 import com.vibenote.analysis.explain.AnalysisOverview;
 import com.vibenote.analysis.explain.FileExplanation;
 import com.vibenote.analysis.pipeline.SelectedFile;
-import com.vibenote.challenge.ChallengeGoalType;
-import com.vibenote.challenge.ChallengeProgressService;
 import com.vibenote.common.Level;
 import com.vibenote.common.exception.BusinessException;
 import com.vibenote.common.exception.ErrorCode;
@@ -59,7 +57,6 @@ public class AnalysisService {
     private final AnalysisProperties properties;
     private final ApplicationEventPublisher events;
     private final ActivityService activityService;
-    private final ChallengeProgressService challengeProgressService;
     private final Clock clock;
 
     public AnalysisService(
@@ -69,7 +66,6 @@ public class AnalysisService {
             AnalysisProperties properties,
             ApplicationEventPublisher events,
             ActivityService activityService,
-            ChallengeProgressService challengeProgressService,
             Clock clock) {
         this.analysisMapper = analysisMapper;
         this.userService = userService;
@@ -77,7 +73,6 @@ public class AnalysisService {
         this.properties = properties;
         this.events = events;
         this.activityService = activityService;
-        this.challengeProgressService = challengeProgressService;
         this.clock = clock;
     }
 
@@ -302,8 +297,8 @@ public class AnalysisService {
     }
 
     /**
-     * DONE으로 바꾸고 피드 활동(ANALYSIS)을 남긴 뒤, 요청 날짜의 분석 챌린지 달성도를 다시 센다 (F-25 AC7). 그 사이에 이미 끝난 분석이면 아무것도
-     * 하지 않는다.
+     * DONE으로 바꾸고 피드 활동(ANALYSIS)을 남긴다. 그 사이에 이미 끝난 분석이면 아무것도 하지 않는다. 분석 챌린지 달성도는 커밋 뒤 {@link
+     * AnalysisCompletedEvent}로 별도 트랜잭션에서 센다 (F-25 AC7). 집계 실패가 분석을 롤백하지 않게 하려는 것이다 (#105).
      *
      * <p>회원 행을 먼저 잠가 탈퇴(users → analyses)와 잠금 순서를 맞춘다. 반대 순서면 activities INSERT의 users FK 잠금과 엇갈려
      * 데드락이 난다 (#91). 그사이 탈퇴했으면 분석도 중단·삭제되었으므로 끝낸다.
@@ -324,10 +319,9 @@ public class AnalysisService {
             return;
         }
         activityService.record(analysis.getUserId(), ActivityType.ANALYSIS, analysisId);
-        challengeProgressService.refresh(
-                analysis.getUserId(),
-                ChallengeGoalType.ANALYSIS_COUNT,
-                analysis.getCreatedAt().toLocalDate());
+        events.publishEvent(
+                new AnalysisCompletedEvent(
+                        analysisId, analysis.getUserId(), analysis.getCreatedAt().toLocalDate()));
     }
 
     /** 진행 중이던 미삭제 분석을 모두 FAILED·ANALYSIS_500으로 바꾼다 (서버 재시작, AC11). 바꾼 수를 돌려준다. */

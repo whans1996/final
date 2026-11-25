@@ -25,11 +25,15 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 복습 계획 (F-14 오답 자동 추가, F-15 목록·직접 추가·완료·삭제, F-12 찜 자동 추가). 한 회원의 한 카드에 대한 TODO는 날짜와 상관없이 하나만 둔다.
  * 카드가 PUBLISHED인 계획만 존재하는 것으로 본다.
+ *
+ * <p>챌린지 집계를 부르는 완료·되돌림·삭제는 READ_COMMITTED다. 집계가 참여 행 잠금을 기다리는 동안 커밋된 같은 회원의 다른 복습도 세야 한다 (F-25,
+ * #104).
  */
 @Service
 public class ReviewPlanService {
@@ -158,7 +162,7 @@ public class ReviewPlanService {
      * @throws BusinessException REVIEW_PLAN_404 없는·남의·비공개 카드의 계획, REVIEW_PLAN_409 되돌릴 때 그 카드의 다른
      *     TODO가 있음
      */
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public ReviewPlanItemResponse changeStatus(long userId, long planId, ReviewPlanStatus status) {
         Visible visible = findVisible(userId, planId);
         ReviewPlan plan = visible.plan();
@@ -183,7 +187,7 @@ public class ReviewPlanService {
      *
      * @throws BusinessException REVIEW_PLAN_404 없는·남의·비공개 카드의 계획
      */
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public void delete(long userId, long planId) {
         ReviewPlan plan = findVisible(userId, planId).plan();
         mapper.deleteOwned(userId, planId);

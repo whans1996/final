@@ -11,10 +11,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 챌린지 달성도 집계 (F-25). 활동이 생기거나 사라진 트랜잭션 안에서 불려 그 회원의 참여 행을 다시 센다. 조회 API는 저장된 값만 읽는다.
+ * 챌린지 달성도 집계 (F-25). 활동이 생기거나 사라진 트랜잭션 안에서(분석 완료는 커밋 뒤 별도 트랜잭션에서, {@link
+ * AnalysisChallengeListener}) 불려 그 회원의 참여 행을 다시 센다. 조회 API는 저장된 값만 읽는다.
  *
  * <p>달성(completed_at)한 참여는 다시 세지 않는다. {@code progress = min(센 수, 목표)}이고, 목표에 닿는 순간 completed_at을
  * 채우고 CHALLENGE_COMPLETE 활동을 남긴다. 미달성 조건부 UPDATE라 같은 회원의 활동이 겹쳐도 COMPLETE는 한 번만 남는다.
+ *
+ * <p>부르는 트랜잭션은 READ_COMMITTED여야 한다. REPEATABLE READ면 참여 행 잠금 전에 잡힌 스냅샷으로 세어, 잠금을 기다리는 동안 커밋된 같은 회원의
+ * 활동이 빠진다 (#104). COUNT에 {@code FOR SHARE}는 쓰지 않는다 (서로의 미커밋 활동 행을 기다려 교착).
  */
 @Service
 public class ChallengeProgressService {
