@@ -2,6 +2,7 @@ package com.vibenote.analysis;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -9,6 +10,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 
+import com.vibenote.analysis.domain.AnalysisFile;
 import com.vibenote.analysis.fetch.FakeRepositoryServer;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -275,6 +277,25 @@ class AnalysisPipelineTest extends AnalysisTestSupport {
         assertThat(all)
                 .filteredOn(f -> !List.of("test", "doc").contains(f.get("layer")))
                 .allMatch(f -> f.get("importance") != null);
+    }
+
+    @Test
+    void F26a_AC9_개요용_인덱스_조회는_루트_README만_내용을_읽는다() throws IOException {
+        Map<String, String> entries = new LinkedHashMap<>();
+        entries.put("p/Readme.md", "# 소개");
+        entries.put("p/web/HomeController.java", "class HomeController {}");
+        entries.put("p/docs/README.md", "# 하위 문서");
+        long id = prepare(createUser("f26ac9", "JUNIOR"), zip(entries));
+        pipeline.run(id);
+
+        List<AnalysisFile> index = analysisService.findIndexFiles(id);
+
+        assertThat(index)
+                .extracting(AnalysisFile::getPath, AnalysisFile::getContent)
+                .containsExactlyInAnyOrder(
+                        tuple("Readme.md", "# 소개"),
+                        tuple("web/HomeController.java", null),
+                        tuple("docs/README.md", null));
     }
 
     @Test

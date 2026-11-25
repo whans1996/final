@@ -27,6 +27,7 @@ import com.vibenote.user.domain.User;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import org.springframework.context.ApplicationEventPublisher;
@@ -53,6 +54,12 @@ public class AnalysisService {
 
     /** analysis_files INSERT 한 번의 행 수 (F-26a 5.5절). */
     static final int INSERT_CHUNK = 100;
+
+    /**
+     * analysis_files INSERT 한 번의 content 글자 수 상한. 행이 100개가 안 돼도 이 값을 넘기 전에 끊는다. 글자당 최대 3바이트(U+FFFD
+     * 포함)에 드라이버 이스케이프까지 더해도 MySQL 기본 {@code max_allowed_packet}(64MB) 안에 든다.
+     */
+    static final int INSERT_CHUNK_CHARS = 4_000_000;
 
     private final AnalysisMapper analysisMapper;
     private final UserService userService;
@@ -167,7 +174,7 @@ public class AnalysisService {
 
     /**
      * 마스킹이 끝난 인덱스 전체와 인덱스 수치를 한 트랜잭션으로 저장한다 (SELECTING, F-26a 5.5절). 그사이 중단·삭제됐으면 저장하지 않는다. MySQL
-     * {@code max_allowed_packet}을 넘지 않게 {@value #INSERT_CHUNK}행씩 나눠 넣는다.
+     * {@code max_allowed_packet}을 넘지 않게 {@link #chunks}로 나눠 넣는다.
      *
      * @param files 저장 순서 (선별 파일 먼저)
      * @param droppedFiles 상한으로 버린 파일 수
@@ -177,13 +184,34 @@ public class AnalysisService {
         if (!lockInProgress(analysisId)) {
             return;
         }
-        for (int from = 0; from < files.size(); from += INSERT_CHUNK) {
+        for (List<SelectedFile> chunk : chunks(files)) {
             analysisMapper.insertFiles(
-                    files.subList(from, Math.min(from + INSERT_CHUNK, files.size())).stream()
-                            .map(f -> AnalysisFile.of(analysisId, f))
-                            .toList());
+                    chunk.stream().map(f -> AnalysisFile.of(analysisId, f)).toList());
         }
         analysisMapper.updateIndexCounts(analysisId, files.size(), droppedFiles);
+    }
+
+    /**
+     * 순서를 지켜 {@value #INSERT_CHUNK}행 또는 content {@value #INSERT_CHUNK_CHARS}자 중 먼저 닿는 쪽에서 끊는다. 상한보다
+     * 큰 파일 하나는 혼자 묶음이 된다.
+     */
+    static List<List<SelectedFile>> chunks(List<SelectedFile> files) {
+        List<List<SelectedFile>> chunks = new ArrayList<>();
+        int from = 0;
+        long chars = 0;
+        for (int i = 0; i < files.size(); i++) {
+            int length = files.get(i).content().length();
+            if (i > from && (i - from == INSERT_CHUNK || chars + length > INSERT_CHUNK_CHARS)) {
+                chunks.add(files.subList(from, i));
+                from = i;
+                chars = 0;
+            }
+            chars += length;
+        }
+        if (from < files.size()) {
+            chunks.add(files.subList(from, files.size()));
+        }
+        return chunks;
     }
 
     /** 파이프라인이 처리할 분석 (삭제 여부와 상관없음). 없으면 예기치 못한 오류다. */
@@ -198,7 +226,7 @@ public class AnalysisService {
         return analysisMapper.findFiles(analysisId);
     }
 
-    /** 저장된 인덱스 전체 (content 포함, id 오름차순). 개요 입력의 README·파일 목록에만 쓴다 (F-26a 5.5절). */
+    /** 저장된 인덱스 전체 (id 오름차순, content는 루트 README만). 개요 입력의 README·파일 목록에만 쓴다 (F-26a 5.5절). */
     public List<AnalysisFile> findIndexFiles(long analysisId) {
         return analysisMapper.findIndexFiles(analysisId);
     }

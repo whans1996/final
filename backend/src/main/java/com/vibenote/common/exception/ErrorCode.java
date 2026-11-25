@@ -46,7 +46,7 @@ public enum ErrorCode {
     // (F-05a 5.3절).
     /** 깨진 ZIP, 루트 밖·절대 경로 엔트리. */
     ANALYSIS_400(HttpStatus.BAD_REQUEST, "ZIP 파일을 읽을 수 없습니다. 손상되었거나 허용되지 않는 경로가 들어 있습니다."),
-    /** 업로드 multipart 또는 URL로 받은 저장소 압축 파일이 상한 초과 (F-26a부터 파일 수·합계로는 실패하지 않는다). */
+    /** URL로 받은 저장소 아카이브가 상한 초과. 업로드 multipart 초과는 COMMON_413이고, F-26a부터 파일 수·합계로는 실패하지 않는다. */
     ANALYSIS_413(HttpStatus.CONTENT_TOO_LARGE, "저장소 압축 파일이 너무 큽니다. 크기를 줄여서 다시 올려 주세요."),
     /** 지원 스택 코드(.java·.js·.mjs·.vue·.ts·.tsx·.jsx)가 없음. */
     ANALYSIS_415(

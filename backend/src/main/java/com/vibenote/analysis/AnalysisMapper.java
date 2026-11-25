@@ -57,7 +57,10 @@ public interface AnalysisMapper {
     /** 분석의 선별 파일 전체(content 포함), id 오름차순 = 선별 우선순위. 파이프라인 내부용. */
     List<AnalysisFile> findFiles(long analysisId);
 
-    /** 분석의 인덱스 전체(content 포함, 선별 여부와 상관없음), id 오름차순 (F-26a 5.5절). */
+    /**
+     * 분석의 인덱스 전체(선별 여부와 상관없음), id 오름차순 (F-26a 5.5절). 개요 입력용이라 content는 루트 README.md만 채우고 나머지는
+     * null이다 (인덱스 합계 최대 30MB를 다시 읽지 않기 위해).
+     */
     List<AnalysisFile> findIndexFiles(long analysisId);
 
     /** 분석의 선별 파일 목록(content 제외), id 오름차순 (F-06 AC10, F-26a AC8). */

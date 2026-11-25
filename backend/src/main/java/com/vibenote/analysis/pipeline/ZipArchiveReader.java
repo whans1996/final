@@ -41,6 +41,8 @@ public class ZipArchiveReader {
     /** {@code analysis_files.path VARCHAR(500)}. 더 긴 경로는 저장할 수 없으므로 건너뛴다. */
     static final int MAX_PATH_LENGTH = 500;
 
+    private static final String ROOT_README = "README.md";
+
     private static final Pattern DRIVE = Pattern.compile("^[A-Za-z]:");
     private static final String MAC_METADATA = "__MACOSX";
     private static final Set<String> EXCLUDED_DIRS =
@@ -94,9 +96,9 @@ public class ZipArchiveReader {
     }
 
     /**
-     * 필터를 통과한 파일을 (묶음, 경로) 순서로 상한까지 읽는다. 묶음은 코드·설정 → test·migration → doc 순이라, 상한에 걸려도 코드가 먼저 담긴다.
-     * 개수가 {@code max-index-files}에 이르거나 읽은 합계가 {@code max-index-bytes}를 처음 넘으면 그 파일과 뒤의 파일은 버린다. 단일
-     * 파일 상한을 넘는 파일은 건너뛴다. 버리거나 건너뛴 파일은 {@link IndexResult#dropped()}로 센다.
+     * 필터를 통과한 파일을 (묶음, 경로) 순서로 상한까지 읽는다. 묶음은 루트 README → 코드·설정 → test·migration → doc 순이라, 상한에 걸려도
+     * 코드가 먼저 담긴다. 개수가 {@code max-index-files}에 이르거나 읽은 합계가 {@code max-index-bytes}를 처음 넘으면 그 파일과 뒤의
+     * 파일은 버린다. 단일 파일 상한을 넘는 파일은 건너뛴다. 버리거나 건너뛴 파일은 {@link IndexResult#dropped()}로 센다.
      *
      * @throws AnalysisFailedException 깨진 ZIP·루트 밖 경로(ANALYSIS_400), 지원 스택 코드 없음(ANALYSIS_415)
      */
@@ -119,8 +121,7 @@ public class ZipArchiveReader {
         try (ZipFile zipFile = new ZipFile(zip.toFile(), charset)) {
             List<Candidate> candidates = supportedEntries(zipFile);
             candidates.sort(
-                    Comparator.comparingInt((Candidate c) -> bundle(c.path()))
-                            .thenComparing(Candidate::path));
+                    Comparator.comparingInt(Candidate::bundle).thenComparing(Candidate::path));
 
             long maxFileBytes = properties.maxFileBytes().toBytes();
             long maxIndexBytes = properties.maxIndexBytes().toBytes();
@@ -163,12 +164,18 @@ public class ZipArchiveReader {
         }
     }
 
-    /** 읽는 순서의 묶음. 경로만으로 정한다 (F-26a 5.2절 3): 0 코드·설정, 1 test·migration, 2 doc. */
+    /**
+     * 읽는 순서의 묶음. 경로만으로 정한다 (F-26a 5.2절 3): 0 루트 README.md, 1 코드·설정, 2 test·migration, 3 doc. 루트
+     * README는 개요 입력에 쓰므로 doc이어도 상한에 걸리기 전에 담는다.
+     */
     private static int bundle(String path) {
+        if (path.equalsIgnoreCase(ROOT_README)) {
+            return 0;
+        }
         return switch (FileSelector.layer(path, null)) {
-            case DOC -> 2;
-            case TEST, MIGRATION -> 1;
-            default -> 0;
+            case DOC -> 3;
+            case TEST, MIGRATION -> 2;
+            default -> 1;
         };
     }
 
@@ -186,7 +193,8 @@ public class ZipArchiveReader {
                     || path.startsWith(MAC_METADATA + "/")) {
                 continue;
             }
-            all.add(new Candidate(entry, path));
+            // 묶음은 공통 최상위 폴더를 뗀 경로로 정하므로 아래에서 다시 만든다
+            all.add(new Candidate(entry, path, -1));
         }
 
         String prefix = commonTopFolder(all);
@@ -194,7 +202,7 @@ public class ZipArchiveReader {
         for (Candidate candidate : all) {
             String path = candidate.path().substring(prefix.length());
             if (path.length() <= MAX_PATH_LENGTH && isSupported(path)) {
-                supported.add(new Candidate(candidate.entry(), path));
+                supported.add(new Candidate(candidate.entry(), path, bundle(path)));
             }
         }
         return supported;
@@ -292,5 +300,6 @@ public class ZipArchiveReader {
         return crc.getValue();
     }
 
-    private record Candidate(ZipEntry entry, String path) {}
+    /** {@code bundle}은 정렬 비교마다 layer를 다시 판정하지 않도록 한 번만 구한다. */
+    private record Candidate(ZipEntry entry, String path, int bundle) {}
 }

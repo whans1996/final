@@ -76,9 +76,10 @@
         FROM analysis_files WHERE analysis_id = #{analysisId} AND selected = TRUE ORDER BY id
     </select>
 
-    <!-- F-26a 5.5절: 인덱스 전체 (선별 여부와 상관없음). 개요 입력의 README·파일 목록용 -->
+    <!-- F-26a 5.5절: 인덱스 전체 (선별 여부와 상관없음). 개요 입력의 README·파일 목록용이라 내용은 루트 README.md만 읽는다 -->
     <select id="findIndexFiles" resultType="com.vibenote.analysis.domain.AnalysisFile">
-        SELECT id, analysis_id, path, layer, selected, importance, role, content, summary
+        SELECT id, analysis_id, path, layer, selected, importance, role,
+               CASE WHEN LOWER(path) = 'readme.md' THEN content END AS content, summary
         FROM analysis_files WHERE analysis_id = #{analysisId} ORDER BY id
     </select>
 

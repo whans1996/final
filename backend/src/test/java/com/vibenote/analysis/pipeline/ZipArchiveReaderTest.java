@@ -380,7 +380,7 @@ class ZipArchiveReaderTest {
         Path zip =
                 zip(
                         entries(
-                                "p/README.md", "x",
+                                "p/CHANGELOG.md", "x",
                                 "p/a/Z.java", "x",
                                 "p/src/test/java/ATest.java", "x",
                                 "p/docs/guide.md", "x",
@@ -397,6 +397,24 @@ class ZipArchiveReaderTest {
                         "b/B.vue",
                         "db/migration/V1__a.sql",
                         "src/test/java/ATest.java");
+        assertThat(result.dropped()).isEqualTo(2);
+    }
+
+    @Test
+    void AC2_루트_README는_doc이어도_개수_상한보다_먼저_담는다() throws IOException {
+        ZipArchiveReader small = new ZipArchiveReader(props(3, 1_000_000, 1_000));
+        Path zip =
+                zip(
+                        entries(
+                                "p/a/A.java", "x",
+                                "p/a/B.java", "x",
+                                "p/a/C.java", "x",
+                                "p/docs/README.md", "x",
+                                "p/readme.MD", "# 소개"));
+
+        IndexResult result = small.read(zip);
+
+        assertThat(paths(result)).containsExactly("readme.MD", "a/A.java", "a/B.java");
         assertThat(result.dropped()).isEqualTo(2);
     }
 
