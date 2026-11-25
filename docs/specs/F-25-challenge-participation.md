@@ -225,6 +225,7 @@
 | AC3·AC4·AC9 | `challenge/ChallengeParticipationApiTest` | MockMvc 통합 |
 | AC5~AC8 | `challenge/ChallengeProgressTest` (실제 `PATCH /api/review-plans`·`POST /api/quizzes/{id}/attempts`·`AnalysisService.complete` 경로로 활동을 만든다) | 통합 |
 | AC10·AC11 | `challenge/UserChallengeApiTest` | MockMvc 통합 |
+| #146 끝난 챌린지 다시 세기 | `challenge/ChallengeRecountJobTest` (`ChallengeRecountJob.recountEnded`를 직접 부른다) | 통합 |
 | 공개 경로 | `common/config/SecurityConfigTest`(비로그인 GET 3개 200, POST·DELETE·`/users/me/challenges` 401) | MockMvc 통합 |
 | AC12 | `views/challenge/__tests__/ChallengeListView.spec.js`, `components/challenge/__tests__/ChallengeCard.spec.js`, `utils/__tests__/navItems.spec.js` | Vitest |
 | AC13 | `views/challenge/__tests__/ChallengeDetailView.spec.js`, `components/challenge/__tests__/ChallengeJoinPanel.spec.js` | Vitest |

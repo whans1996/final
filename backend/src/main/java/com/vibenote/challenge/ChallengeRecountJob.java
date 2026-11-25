@@ -56,7 +56,7 @@ class ChallengeRecountJob {
                         status -> progressService.recountOpen(p.getChallengeId(), p.getUserId()));
             } catch (RuntimeException e) {
                 log.warn(
-                        "끝난 챌린지 {} 회원 {} 다시 세기 실패 (다음 날 다시 센다)",
+                        "끝난 챌린지 {} 회원 {} 다시 세기 실패 (종료 7일 안이면 다음 날 다시 센다)",
                         p.getChallengeId(),
                         p.getUserId(),
                         e);
