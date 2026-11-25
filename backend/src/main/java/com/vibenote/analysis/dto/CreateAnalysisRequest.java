@@ -27,7 +27,8 @@ public record CreateAnalysisRequest(MultipartFile file, RepositoryUrl repository
     public static final String SOURCE_BOTH = "ZIP 파일과 저장소 주소 중 하나만 보내세요.";
     public static final String FILE_REQUIRED = "ZIP 파일을 선택하세요.";
     public static final String FILE_NOT_ZIP = "ZIP 파일(.zip)만 올릴 수 있습니다.";
-    public static final String CONSENT_REQUIRED = "주요 파일이 Google Gemini로 전송되는 데 동의해야 분석할 수 있습니다.";
+    public static final String CONSENT_REQUIRED =
+            "주요 파일이 SSAFY GMS를 거쳐 외부 AI로 전송되는 데 동의해야 분석할 수 있습니다.";
     public static final String LEVEL_INVALID = "학습 수준은 BEGINNER·JUNIOR·SENIOR 중 하나여야 합니다.";
 
     private static final byte[] ZIP_SIGNATURE = {0x50, 0x4B, 0x03, 0x04};

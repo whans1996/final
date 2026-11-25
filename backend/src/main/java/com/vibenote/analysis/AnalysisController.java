@@ -109,7 +109,7 @@ public class AnalysisController {
                     @RequestPart(value = "level", required = false)
                     String level,
             @Parameter(
-                            description = "Google Gemini 전송 고지 동의. true여야 한다",
+                            description = "SSAFY GMS를 거친 외부 AI 전송 고지 동의. true여야 한다",
                             required = true,
                             schema =
                                     @Schema(

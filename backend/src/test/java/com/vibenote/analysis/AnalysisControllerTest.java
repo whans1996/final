@@ -186,6 +186,17 @@ class AnalysisControllerTest extends AnalysisTestSupport {
     }
 
     @Test
+    void F27_AC12_동의_거부_메시지는_GMS_기준이다() throws Exception {
+        long me = createUser("f27consent", "JUNIOR");
+
+        mockMvc.perform(request(me).file(file("todo.zip", sampleZip())))
+                .andExpect(status().isBadRequest())
+                .andExpect(
+                        jsonPath("$.details.consent")
+                                .value("주요 파일이 SSAFY GMS를 거쳐 외부 AI로 전송되는 데 동의해야 분석할 수" + " 있습니다."));
+    }
+
+    @Test
     void AC2_허용되지_않은_level이면_400_details_level() throws Exception {
         long me = createUser("ac2level", "JUNIOR");
 
