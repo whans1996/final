@@ -9,6 +9,8 @@ import { apiError, mountAt } from './viewTestUtils'
 
 vi.mock('@/api/analyses')
 vi.mock('@/api/quizzes')
+const mermaid = vi.hoisted(() => ({ initialize: vi.fn(), render: vi.fn() }))
+vi.mock('mermaid', () => ({ default: mermaid }))
 
 function login() {
   useAuthStore().setSession({
@@ -234,7 +236,7 @@ describe('AnalysisDetailView 결과 탭 (F-06 AC13~AC15)', () => {
     expect(analysesApi.fetchAnalysis).toHaveBeenCalledWith(42)
     expect(wrapper.find('h1').text()).toBe('todo-app')
     const tabs = wrapper.findAll('[role="tab"]')
-    expect(tabs.map((t) => t.text())).toEqual(['개요', '파일', '실행 흐름', '개념', '퀴즈'])
+    expect(tabs.map((t) => t.text())).toEqual(['개요', '구조', '파일', '실행 흐름', '개념', '퀴즈'])
     expect(tabs[0].attributes('aria-selected')).toBe('true')
     expect(wrapper.find('[data-section="summary"]').text()).toContain('Todo 서비스')
     expect(analysesApi.fetchAnalysisFiles).not.toHaveBeenCalled()
@@ -259,7 +261,7 @@ describe('AnalysisDetailView 결과 탭 (F-06 AC13~AC15)', () => {
 
     expect(analysesApi.fetchAnalysis).toHaveBeenCalledTimes(2)
     expect(wrapper.find('h1').text()).toBe('todo-app')
-    expect(wrapper.findAll('[role="tab"]')).toHaveLength(5)
+    expect(wrapper.findAll('[role="tab"]')).toHaveLength(6)
   })
 
   it('AC13 FAILED면 결과 탭 없이 F-05a 실패 화면 그대로다', async () => {
@@ -303,11 +305,11 @@ describe('AnalysisDetailView 결과 탭 (F-06 AC13~AC15)', () => {
     analysesApi.fetchAnalysis.mockResolvedValue(detail())
     const { wrapper, router } = await mountDetail()
 
-    await wrapper.findAll('[role="tab"]')[1].trigger('click')
+    await wrapper.findAll('[role="tab"]')[2].trigger('click')
     await flushPromises()
 
     expect(router.currentRoute.value.query).toEqual({ tab: 'files' })
-    expect(wrapper.findAll('[role="tab"]')[1].attributes('aria-selected')).toBe('true')
+    expect(wrapper.findAll('[role="tab"]')[2].attributes('aria-selected')).toBe('true')
     expect(wrapper.findAll('[data-file-id]')).toHaveLength(2)
   })
 
@@ -373,13 +375,60 @@ describe('AnalysisDetailView 결과 탭 (F-06 AC13~AC15)', () => {
 
     const { wrapper, router } = await mountDetail('/analyses/42?tab=flows')
 
-    expect(wrapper.findAll('[role="tab"]')[2].attributes('aria-selected')).toBe('true')
+    expect(wrapper.findAll('[role="tab"]')[3].attributes('aria-selected')).toBe('true')
     expect(analysesApi.fetchAnalysisFlows).toHaveBeenCalledWith(42)
     expect(wrapper.find('input[data-api="GET /api/todos"]').exists()).toBe(true)
 
     await wrapper.find('[data-action="open-file"]').trigger('click')
     await flushPromises()
     expect(router.currentRoute.value.query).toEqual({ tab: 'files', file: '101' })
+  })
+
+  it('F-21a AC14 구조 탭은 개요 다음이고, ?tab=structure로 열면 복원하며 연결 목록의 파일을 누르면 파일 탭으로 간다', async () => {
+    analysesApi.fetchAnalysisStatus.mockResolvedValue(status({ status: 'DONE', progress: 100 }))
+    analysesApi.fetchAnalysis.mockResolvedValue(detail())
+    analysesApi.fetchAnalysisStructure.mockResolvedValue({
+      nodes: [
+        { fileId: 101, path: 'src/A.java', name: 'A.java', layer: 'controller', role: null },
+        { fileId: 102, path: 'src/B.java', name: 'B.java', layer: 'service', role: null },
+      ],
+      edges: [{ from: 101, to: 102, type: 'IMPORT', line: 4 }],
+      unresolved: [],
+      edgesTruncated: false,
+      unresolvedTruncated: false,
+    })
+    mermaid.render.mockResolvedValue({ svg: '<svg></svg>' })
+
+    const { wrapper, router } = await mountDetail('/analyses/42?tab=structure')
+
+    const tabs = wrapper.findAll('[role="tab"]')
+    expect(tabs[1].text()).toBe('구조')
+    expect(tabs[1].attributes('aria-selected')).toBe('true')
+    expect(analysesApi.fetchAnalysisStructure).toHaveBeenCalledWith(42)
+    expect(mermaid.render).toHaveBeenCalledTimes(1)
+
+    await wrapper.find('details[data-section="edges"] li a').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.query).toEqual({ tab: 'files', file: '101' })
+  })
+
+  it('F-21a AC14 남의 공개 분석에서도 구조 탭을 연다', async () => {
+    analysesApi.fetchAnalysisStatus.mockResolvedValue(status({ status: 'DONE', progress: 100 }))
+    analysesApi.fetchAnalysis.mockResolvedValue(
+      detail({ mine: false, owner: { id: 7, nickname: 'vibecoder' } }),
+    )
+    analysesApi.fetchAnalysisStructure.mockResolvedValue({
+      nodes: [],
+      edges: [],
+      unresolved: [],
+      edgesTruncated: false,
+      unresolvedTruncated: false,
+    })
+
+    const { wrapper } = await mountDetail('/analyses/42?tab=structure')
+
+    expect(wrapper.find('[role="tab"][aria-selected="true"]').text()).toBe('구조')
+    expect(wrapper.find('[data-message="no-edges"]').exists()).toBe(true)
   })
 
   it('F-08 AC8 개념 탭은 실행 흐름 다음이고, ?tab=concepts로 열면 복원하며 위치를 누르면 파일 탭으로 간다', async () => {
@@ -409,8 +458,8 @@ describe('AnalysisDetailView 결과 탭 (F-06 AC13~AC15)', () => {
     const { wrapper, router } = await mountDetail('/analyses/42?tab=concepts')
 
     const tabs = wrapper.findAll('[role="tab"]')
-    expect(tabs.map((t) => t.text())).toEqual(['개요', '파일', '실행 흐름', '개념', '퀴즈'])
-    expect(tabs[3].attributes('aria-selected')).toBe('true')
+    expect(tabs.map((t) => t.text())).toEqual(['개요', '구조', '파일', '실행 흐름', '개념', '퀴즈'])
+    expect(tabs[4].attributes('aria-selected')).toBe('true')
     expect(analysesApi.fetchAnalysisConcepts).toHaveBeenCalledWith(42)
     expect(wrapper.find('[data-concept-id="12"]').exists()).toBe(true)
 
@@ -437,8 +486,8 @@ describe('AnalysisDetailView 결과 탭 (F-06 AC13~AC15)', () => {
     const { wrapper } = await mountDetail('/analyses/42?tab=quiz')
 
     const tabs = wrapper.findAll('[role="tab"]')
-    expect(tabs.map((t) => t.text())).toEqual(['개요', '파일', '실행 흐름', '개념', '퀴즈'])
-    expect(tabs[4].attributes('aria-selected')).toBe('true')
+    expect(tabs.map((t) => t.text())).toEqual(['개요', '구조', '파일', '실행 흐름', '개념', '퀴즈'])
+    expect(tabs[5].attributes('aria-selected')).toBe('true')
     expect(quizzesApi.fetchAnalysisQuiz).toHaveBeenCalledWith(42)
     expect(wrapper.find('[data-message="count"]').text()).toBe('객관식 5문항')
     expect(wrapper.find('[data-action="start-quiz"]').attributes('href')).toBe('/analyses/42/quiz')
@@ -638,6 +687,7 @@ describe('AnalysisDetailView 분석 관리·공개 분석 (F-19)', () => {
     expect(owner.attributes('href')).toBe('/users/7')
     expect(wrapper.findAll('[role="tab"]').map((t) => t.text())).toEqual([
       '개요',
+      '구조',
       '파일',
       '실행 흐름',
       '개념',

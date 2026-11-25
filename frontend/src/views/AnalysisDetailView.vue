@@ -1,8 +1,8 @@
 <script setup>
 // SC-07 분석 상세.
 // 진행 중: 상태를 바로 1회, 이후 2초마다 조회하고 DONE·FAILED·404이거나 화면을 떠나면 멈춘다 (F-05a AC15).
-// DONE: 상세를 1회 불러와 "개요"·"파일"·"실행 흐름"·"개념"·"퀴즈" 탭을 보여 준다. 탭과 선택 파일은 쿼리(?tab=files&file=123)에 둔다
-// (F-06 AC13~AC15, F-07 AC14, F-08 AC8, F-14 AC9).
+// DONE: 상세를 1회 불러와 "개요"·"구조"·"파일"·"실행 흐름"·"개념"·"퀴즈" 탭을 보여 준다. 탭과 선택 파일은 쿼리(?tab=files&file=123)에 둔다
+// (F-06 AC13~AC15, F-21a AC14, F-07 AC14, F-08 AC8, F-14 AC9).
 // FAILED도 상세를 1회 불러와 주인에게 관리 영역(삭제)을 보여 준다. 남의 공개 분석은 읽기 전용이다: 관리·메모·퀴즈 탭이 없고
 // 실행 흐름은 카드만 보인다 (F-19 AC13·AC14).
 import { computed, nextTick, ref, watch } from 'vue'
@@ -13,6 +13,7 @@ import { usePolling } from '@/composables/usePolling'
 import { isInProgress } from '@/utils/analysisStatus'
 import AnalysisStatusBadge from '@/components/analysis/AnalysisStatusBadge.vue'
 import AnalysisOverviewTab from '@/components/analysis/AnalysisOverviewTab.vue'
+import AnalysisStructureTab from '@/components/analysis/AnalysisStructureTab.vue'
 import AnalysisFilesTab from '@/components/analysis/AnalysisFilesTab.vue'
 import AnalysisFlowsTab from '@/components/analysis/AnalysisFlowsTab.vue'
 import AnalysisConceptsTab from '@/components/analysis/AnalysisConceptsTab.vue'
@@ -23,6 +24,7 @@ import { LEVELS } from '@/utils/authValidation'
 const POLL_INTERVAL_MS = 2000
 const TABS = [
   { name: 'overview', label: '개요' },
+  { name: 'structure', label: '구조' },
   { name: 'files', label: '파일' },
   { name: 'flows', label: '실행 흐름' },
   { name: 'concepts', label: '개념' },
@@ -257,6 +259,10 @@ watch(
             :aria-labelledby="`tab-${activeTab}`"
           >
             <AnalysisOverviewTab v-if="activeTab === 'overview'" :overview="analysis.overview" />
+            <AnalysisStructureTab
+              v-else-if="activeTab === 'structure'"
+              :analysis-id="analysis.id"
+            />
             <AnalysisFilesTab
               v-else-if="activeTab === 'files'"
               :analysis-id="analysis.id"

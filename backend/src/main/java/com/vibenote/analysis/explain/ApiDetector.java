@@ -41,11 +41,24 @@ public final class ApiDetector {
     private ApiDetector() {}
 
     public static List<ApiEndpoint> detect(List<AnalysisFile> files) {
+        return scan(files).apis();
+    }
+
+    /**
+     * 탐지 결과와 그 목록이 불완전한지.
+     *
+     * @param incomplete {@link #MAX_APIS}에서 잘렸거나, 경로를 알 수 없거나 너무 길어 건너뛴 매핑이 있다. 이때 목록에 없는 API가 요청을
+     *     받을 수 있다 (F-21a 5.3절 5)
+     */
+    public record Detection(List<ApiEndpoint> apis, boolean incomplete) {}
+
+    public static Detection scan(List<AnalysisFile> files) {
         List<ApiEndpoint> found = new ArrayList<>();
+        boolean[] skipped = {false};
         for (AnalysisFile file : files) {
             if (Layer.CONTROLLER.value().equals(file.getLayer())
                     && file.getPath().toLowerCase(Locale.ROOT).endsWith(".java")) {
-                found.addAll(detect(file.getId(), JavaComments.strip(file.getContent())));
+                found.addAll(detect(file.getId(), JavaComments.strip(file.getContent()), skipped));
             }
         }
         Map<String, ApiEndpoint> unique = new LinkedHashMap<>();
@@ -57,10 +70,13 @@ public final class ApiDetector {
                                         ApiEndpoint::fileId,
                                         Comparator.nullsLast(Comparator.naturalOrder())))
                 .forEach(api -> unique.putIfAbsent(api.method() + " " + api.path(), api));
-        return unique.values().stream().limit(MAX_APIS).toList();
+        return new Detection(
+                unique.values().stream().limit(MAX_APIS).toList(),
+                skipped[0] || unique.size() > MAX_APIS);
     }
 
-    private static List<ApiEndpoint> detect(Long fileId, String code) {
+    /** skipped[0]은 건너뛴 매핑이 있으면 true가 된다. */
+    private static List<ApiEndpoint> detect(Long fileId, String code, boolean[] skipped) {
         Matcher type = TYPE_DECLARATION.matcher(code);
         int typeStart = type.find() ? type.start() : 0;
 
@@ -74,6 +90,7 @@ public final class ApiDetector {
             if (m.start() < typeStart) {
                 if (kind.equals("Request") && mapping == null) {
                     // 클래스 경로가 상수 등이라 알 수 없으면 틀린 경로를 확정된 API처럼 남기지 않는다
+                    skipped[0] = true;
                     return List.of();
                 }
                 if (kind.equals("Request") && !mapping.paths().isEmpty()) {
@@ -82,6 +99,7 @@ public final class ApiDetector {
                 continue;
             }
             if (mapping == null) {
+                skipped[0] = true;
                 continue;
             }
             List<String> methods =
@@ -93,6 +111,7 @@ public final class ApiDetector {
                 for (String path : paths) {
                     String full = normalize(base + "/" + path);
                     if (full.length() > MAX_PATH_LENGTH) {
+                        skipped[0] = true;
                         continue;
                     }
                     for (String method : methods) {
