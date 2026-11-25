@@ -33,6 +33,20 @@ class FlowResponseParserTest {
                 .formatted(path, title);
     }
 
+    /** F-27 AC8: strict 스키마는 특정할 수 없는 symbol을 null로 채운다. 생략했을 때와 같은 결과여야 한다. */
+    @Test
+    void F27_AC8_symbol이_null이면_생략과_같다() {
+        String nulls =
+                """
+                {"summary":"요약","steps":[{"path":"src/a/TodoController.java","symbol":null,"title":"받기","description":"설명"}]}\
+                """;
+        String omitted = nulls.replace("\"symbol\":null,", "");
+
+        assertThat(omitted).doesNotContain("symbol");
+        assertThat(parse(nulls)).isEqualTo(parse(omitted));
+        assertThat(parse(nulls).steps().get(0).symbol()).isNull();
+    }
+
     @Test
     void AC4_분석_파일_경로면_fileId와_layer를_붙이고_아니면_null() {
         FlowResult result =

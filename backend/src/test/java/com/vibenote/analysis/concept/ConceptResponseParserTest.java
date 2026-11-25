@@ -59,6 +59,29 @@ class ConceptResponseParserTest {
         assertThatThrownBy(() -> parse("[]")).isInstanceOf(InvalidResponseException.class);
     }
 
+    /** F-27 AC8: strict 스키마는 선택 필드를 null로 채운다. 생략했을 때와 같은 결과여야 한다. */
+    @Test
+    void F27_AC8_선택_필드가_null이면_생략과_같다() {
+        String omitted =
+                """
+                {"concepts": [
+                  {"conceptId": 1, "contextNote": "연결"},
+                  {"new": {"name": "새 개념", "category": "spring", "difficulty": "SENIOR",
+                   "summary": "요약", "body": "## 핵심\\n본문"}, "fileNo": 1, "contextNote": "초안"}
+                ]}
+                """;
+        String nulls =
+                """
+                {"concepts": [
+                  {"conceptId": 1, "new": null, "fileNo": null, "lineHint": null, "contextNote": "연결"},
+                  {"conceptId": null, "new": {"name": "새 개념", "category": "spring", "difficulty": "SENIOR",
+                   "summary": "요약", "body": "## 핵심\\n본문"}, "fileNo": 1, "lineHint": null, "contextNote": "초안"}
+                ]}
+                """;
+
+        assertThat(parse(nulls)).isEqualTo(parse(omitted)).hasSize(2);
+    }
+
     @Test
     void AC6_빈_배열은_정상이다() {
         assertThat(parse("{\"concepts\": []}")).isEmpty();
