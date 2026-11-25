@@ -155,11 +155,12 @@ class WithdrawalApiTest extends UserTestSupport {
         long b = createUser("b@example.com", "회원비");
         long done = analysis(me, "DONE");
         long running = analysis(me, "EXPLAINING");
+        long failed = analysis(me, "FAILED");
         long others = analysis(b, "DONE");
 
         withdraw(me, "{\"password\":\"" + PASSWORD + "\"}").andExpect(status().isNoContent());
 
-        for (long id : new long[] {done, running}) {
+        for (long id : new long[] {done, running, failed}) {
             assertThat(
                             count(
                                     "SELECT COUNT(*) FROM analyses WHERE id = ? AND deleted_at IS"
@@ -171,7 +172,8 @@ class WithdrawalApiTest extends UserTestSupport {
         // 진행 중이던 분석은 FAILED로 바뀌어 파이프라인이 다음 단계에서 멈춘다 (advance → false)
         assertThat(
                         count(
-                                "SELECT COUNT(*) FROM analyses WHERE id = ? AND status = 'FAILED'",
+                                "SELECT COUNT(*) FROM analyses WHERE id = ? AND status = 'FAILED'"
+                                        + " AND error_code = 'ANALYSIS_500'",
                                 running))
                 .isEqualTo(1);
         // 퀴즈는 F-19 삭제처럼 남고, 다른 회원의 분석은 그대로다
@@ -202,6 +204,24 @@ class WithdrawalApiTest extends UserTestSupport {
                 id, List.of(new ExtractedConcept(conceptId, null, null, null, null)));
 
         assertThat(children(id)).isZero();
+    }
+
+    @Test
+    void AC6_탈퇴한_회원의_분석은_실행기가_완료하려_해도_DONE이_되지_않고_활동도_남지_않는다() throws Exception {
+        long me = createUser("user@example.com", "코딩초보");
+        jdbc.update(
+                "INSERT INTO analyses (user_id, source_type, project_name, title, level, status)"
+                        + " VALUES (?, 'ZIP', 'todo-app', 'todo-app', 'BEGINNER', 'QUIZ')",
+                me);
+        long id = count("SELECT MAX(id) FROM analyses WHERE user_id = ?", me);
+        // complete()가 users 행 잠금을 기다리는 동안 탈퇴가 커밋된 경우: users는 WITHDRAWN인데 분석은 아직 진행 중으로 보인다
+        jdbc.update("UPDATE users SET status = 'WITHDRAWN' WHERE id = ?", me);
+
+        analysisService.complete(id);
+
+        assertThat(count("SELECT COUNT(*) FROM analyses WHERE id = ? AND status = 'DONE'", id))
+                .isZero();
+        assertThat(count("SELECT COUNT(*) FROM activities WHERE user_id = ?", me)).isZero();
     }
 
     @Test

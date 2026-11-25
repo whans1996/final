@@ -304,17 +304,25 @@ public class AnalysisService {
     /**
      * DONE으로 바꾸고 피드 활동(ANALYSIS)을 남긴 뒤, 요청 날짜의 분석 챌린지 달성도를 다시 센다 (F-25 AC7). 그 사이에 이미 끝난 분석이면 아무것도
      * 하지 않는다.
+     *
+     * <p>회원 행을 먼저 잠가 탈퇴(users → analyses)와 잠금 순서를 맞춘다. 반대 순서면 activities INSERT의 users FK 잠금과 엇갈려
+     * 데드락이 난다 (#91). 그사이 탈퇴했으면 분석도 중단·삭제되었으므로 끝낸다.
      */
     @Transactional
     public void complete(long analysisId) {
-        if (analysisMapper.updateStage(analysisId, AnalysisStatus.DONE, DONE_PROGRESS, now())
-                != 1) {
-            return;
-        }
         Analysis analysis =
                 analysisMapper
                         .findById(analysisId)
                         .orElseThrow(() -> new IllegalStateException("분석 없음: " + analysisId));
+        try {
+            userService.lockActiveMember(analysis.getUserId());
+        } catch (BusinessException withdrawn) {
+            return;
+        }
+        if (analysisMapper.updateStage(analysisId, AnalysisStatus.DONE, DONE_PROGRESS, now())
+                != 1) {
+            return;
+        }
         activityService.record(analysis.getUserId(), ActivityType.ANALYSIS, analysisId);
         challengeProgressService.refresh(
                 analysis.getUserId(),
