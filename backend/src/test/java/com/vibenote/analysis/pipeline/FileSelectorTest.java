@@ -162,6 +162,7 @@ class FileSelectorTest {
     void AC4_JS_설정_파일은_js가_아니라_config() {
         assertThat(layer("frontend/vite.config.js")).isEqualTo(Layer.CONFIG);
         assertThat(layer("eslint.config.mjs")).isEqualTo(Layer.CONFIG);
+        assertThat(layer("frontend/postcss.config.cjs")).isEqualTo(Layer.CONFIG); // #158
         assertThat(layer("frontend/vitest.config.ts")).isEqualTo(Layer.CONFIG);
         assertThat(layer("frontend/src/config.js")).isEqualTo(Layer.JS);
     }

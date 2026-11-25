@@ -208,7 +208,12 @@ class ImportanceRankerTest {
         assertThat(selectedPaths(ranked)).contains("src/main/java/a/A.java", "frontend/src/a.js");
     }
 
-    /** #159: 점수 상위 config가 몫이 찬 BE에 있어도 FE 몫의 config가 선별된다. */
+    /**
+     * #159: 점수 상위 config가 몫이 찬 BE에 있어도 FE 몫의 config가 선별된다. FE 13 / 전체 46이라 FE 몫 10·BE 몫 20이고, BE 몫은
+     * controller(10점) 30개로 찬다. config는 모두 5점이라 경로순이 되므로 BE의 {@code a/application*}이 전체 상위 3개가 되게
+     * 두었다 (경로를 바꾸면 옛 구현도 통과해 회귀를 못 잡는다). FE config는 js·mjs·cjs를 섞어 {@code *.config.cjs}도 FE로 보는지 함께
+     * 본다 (#158).
+     */
     @Test
     void AC7_config_상한은_FE_BE_몫_안에서_실제로_고를_때_센다() {
         List<SourceFile> files = new ArrayList<>();
@@ -224,18 +229,20 @@ class ImportanceRankerTest {
         for (int i = 0; i < 10; i++) {
             files.add(file("frontend/src/util" + i + ".js", "const a = 1;"));
         }
-        for (int i = 0; i < 3; i++) {
-            files.add(file("z/tool" + i + ".config.js", "export default {};"));
-        }
+        List<String> feConfigs =
+                List.of("z/tool0.config.js", "z/tool1.config.mjs", "z/tool2.config.cjs");
+        feConfigs.forEach(path -> files.add(file(path, "export default {};")));
 
         List<RankedFile> ranked = ranker.rank(files, 30);
 
         assertThat(selectedPaths(ranked)).hasSize(30);
+        assertThat(selectedPaths(ranked))
+                .filteredOn(p -> p.startsWith("frontend/") || p.startsWith("z/"))
+                .hasSize(10);
         assertThat(ranked)
                 .filteredOn(f -> f.selected() && f.layer() == Layer.CONFIG)
                 .extracting(RankedFile::path)
-                .containsExactlyInAnyOrder(
-                        "z/tool0.config.js", "z/tool1.config.js", "z/tool2.config.js");
+                .containsExactlyInAnyOrderElementsOf(feConfigs);
     }
 
     @Test

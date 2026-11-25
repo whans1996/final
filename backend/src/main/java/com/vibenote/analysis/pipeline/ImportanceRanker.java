@@ -124,29 +124,36 @@ public class ImportanceRanker {
         int feShare = frontendShare(limit, feCandidates, scored.size());
 
         Set<String> chosen = new HashSet<>();
-        int[] taken = new int[2]; // [FE, BE]
-        int configs = 0;
-        for (boolean withinShare : new boolean[] {true, false}) {
-            for (Scored s : ordered) {
-                if (chosen.size() >= limit) {
-                    return chosen;
-                }
-                boolean config = s.layer() == Layer.CONFIG;
-                if (chosen.contains(s.path()) || (config && configs >= properties.maxConfig())) {
-                    continue;
-                }
-                int side = isFrontend(s) ? 0 : 1;
-                if (withinShare && taken[side] >= (side == 0 ? feShare : limit - feShare)) {
-                    continue;
-                }
-                chosen.add(s.path());
-                taken[side]++;
-                if (config) {
-                    configs++;
-                }
+        int[] taken = new int[3]; // [FE, BE, config]
+        // 1차: 쪽별 몫 안에서. 2차: 몫이 남은 쪽이 있으면 그 자리를 다른 쪽이 채운다
+        fill(ordered, limit, new int[] {feShare, limit - feShare}, chosen, taken);
+        fill(ordered, limit, new int[] {limit, limit}, chosen, taken);
+        return chosen;
+    }
+
+    /**
+     * {@code ordered} 순서로 쪽별 {@code quota}와 config 상한 안에서 {@code chosen}이 {@code limit}개가 될 때까지 더하고
+     * {@code taken}을 늘린다.
+     */
+    private void fill(
+            List<Scored> ordered, int limit, int[] quota, Set<String> chosen, int[] taken) {
+        for (Scored s : ordered) {
+            if (chosen.size() >= limit) {
+                return;
+            }
+            boolean config = s.layer() == Layer.CONFIG;
+            int side = isFrontend(s) ? 0 : 1;
+            if (chosen.contains(s.path())
+                    || taken[side] >= quota[side]
+                    || (config && taken[2] >= properties.maxConfig())) {
+                continue;
+            }
+            chosen.add(s.path());
+            taken[side]++;
+            if (config) {
+                taken[2]++;
             }
         }
-        return chosen;
     }
 
     /** FE 몫 = round(N × FE / 전체)를 [⌈N/3⌉, N − ⌈N/3⌉]로 자른다. 한쪽만 있으면 그쪽이 다 쓴다 (AC6). */
