@@ -1,4 +1,5 @@
-# 바이브노트 CI — PR마다 바뀐 영역만 검증한다 (GitHub 무료 플랜 private: 월 2,000분, Linux 러너 사용)
+# 바이브노트 CI — PR마다 바뀐 영역만 검증한다 (Linux 러너. 무료 플랜 private 월 2,000분 한도를 다 써서 11-26부터 저장소를 public으로 둔다).
+# 아래 job 이름 5개(PR 제목 형식·하네스·변경 영역·Backend·Frontend)는 develop·main 브랜치 보호의 필수 체크다. 이름을 바꾸면 보호 설정도 함께 바꾼다.
 # 로컬과 같은 검증 스크립트(scripts/verify.mjs)를 실행해 "로컬 통과 = CI 통과"가 되게 한다.
 name: CI
 

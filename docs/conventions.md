@@ -55,7 +55,7 @@
 | `COMMON` | 검증 실패(`COMMON_400`), 없는 주소(`COMMON_404`), 허용되지 않은 메서드(`COMMON_405`), 요청 크기 초과(`COMMON_413`: multipart 파일 10MB·요청 전체 12MB, JSON 본문 1MB), 지원하지 않는 Content-Type(`COMMON_415`), 서버 오류(`COMMON_500`) |
 | `AUTH` | 인증·토큰 (`AUTH_401` Access 토큰 없음/만료, `AUTH_403` 권한 없음, `AUTH_001` 로그인 실패, `AUTH_002` Refresh 무효·만료 → 다시 로그인) |
 | `USER` | 회원, 프로필, 팔로우 (`USER_409` 이메일·닉네임 중복, `details`에 필드 · `USER_404` 없거나 탈퇴한 회원 · `USER_001` 탈퇴 시 비밀번호 불일치, `details.password` · `USER_002` 자기 자신 팔로우·언팔로우) |
-| `ANALYSIS` | 분석 요청·파이프라인 (`ANALYSIS_413` 크기 초과, `ANALYSIS_415` 지원하지 않는 스택, `ANALYSIS_429` 일일 한도, `ANALYSIS_001` 그 분석의 파일이 아님(404), `ANALYSIS_002` 개요에 없는 API로 흐름 요청, `ANALYSIS_003` 분석당 흐름 3개 초과, `ANALYSIS_409` 분석이 끝나기 전 흐름 요청, `ANALYSIS_005` 진행 중인 분석 삭제(409), `ANALYSIS_006` 완료되지 않은 분석 공개(409), `ANALYSIS_007` 구조 그래프 동시 계산 상한이 차서 기다려도 자리가 나지 않음(503), 저장소 URL 수집 실패 사유 `ANALYSIS_004` 저장소 없음·비공개(404)·`ANALYSIS_502` 저장소에서 받지 못함·`ANALYSIS_503` 저장소 서비스 요청 한도) |
+| `ANALYSIS` | 분석 요청·파이프라인 (`ANALYSIS_404` 없는·남의·삭제된 분석(403 대신 404), `ANALYSIS_413` URL로 받은 저장소 압축 파일 상한 초과(업로드 초과는 `COMMON_413`), `ANALYSIS_415` 지원하지 않는 스택, `ANALYSIS_429` 일일 한도, 파이프라인 FAILED 사유 `ANALYSIS_400` 깨진 ZIP·루트 밖 경로·`ANALYSIS_500` 예기치 못한 오류·서버 재시작, `ANALYSIS_001` 그 분석의 파일이 아님(404), `ANALYSIS_002` 개요에 없는 API로 흐름 요청, `ANALYSIS_003` 분석당 흐름 3개 초과, `ANALYSIS_409` 분석이 끝나기 전 흐름 요청, `ANALYSIS_005` 진행 중인 분석 삭제(409), `ANALYSIS_006` 완료되지 않은 분석 공개(409), `ANALYSIS_007` 구조 그래프 동시 계산 상한이 차서 기다려도 자리가 나지 않음(503), 저장소 URL 수집 실패 사유 `ANALYSIS_004` 저장소 없음·비공개(404)·`ANALYSIS_502` 저장소에서 받지 못함·`ANALYSIS_503` 저장소 서비스 요청 한도) |
 | `CONCEPT` | 개념 카드, 리뷰, 찜 (`CONCEPT_404` 없거나 공개되지 않은 카드, `CONCEPT_001` 수정·삭제할 내 리뷰 없음, `CONCEPT_409` 같은 카드에 두 번째 리뷰, `CONCEPT_002` 관리자 카드 이름 중복, `CONCEPT_003` 공개·숨김 카드를 DRAFT로 되돌리거나 삭제) |
 | `QUIZ` | 퀴즈 (`QUIZ_404` 없는 퀴즈·남의 분석 퀴즈·삭제된 분석 퀴즈, 내 분석이지만 퀴즈 없음 · `QUIZ_400` 문항마다 정확히 한 번씩 답하지 않은 제출) |
 | `REVIEW_PLAN` | 복습 계획 (`REVIEW_PLAN_404` 없는 계획·남의 계획·공개되지 않은 카드의 계획 · `REVIEW_PLAN_409` 그 카드의 TODO가 이미 있음, 같은 날짜의 계획이 있음, 되돌릴 때 다른 TODO가 있음) |
@@ -118,7 +118,7 @@
 
 - 모든 Controller에 `@Tag`, 모든 엔드포인트에 `@Operation(summary)`과 에러 `@ApiResponse`, 모든 요청·응답 DTO 필드에 `@Schema(description, example)`를 단다.
 - Tag 이름은 한국어 도메인 이름으로 통일한다: `인증`, `회원`, `팔로우`, `피드`, `분석`, `개념 카드`, `퀴즈`, `복습 계획`, `추천`, `커뮤니티`, `팀`, `챌린지`, `관리자`.
-- 정본은 테스트가 추출하는 `docs/api/openapi.json`이다. 제출용 REST API 명세(`docs/산출물/07-REST-API-명세.md`)는 이 파일에서 생성한다.
+- 정본은 테스트가 추출하는 `docs/api/openapi.json`이다. 제출용 REST API 명세(`docs/산출물/07-REST-API-명세.md`)는 제출 단계에 이 파일에서 생성한다 (생성 스크립트 `scripts/export-api-doc.mjs`는 아직 없고 WBS 5.3에서 만든다).
 
 ## 9. 병렬 개발 경계 (11-19)
 

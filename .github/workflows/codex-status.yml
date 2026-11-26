@@ -1,5 +1,5 @@
 # Codex 리뷰 상태를 PR 체크 "Codex"로 보여 준다 (11-19 사용자 지시: Codex 리뷰를 통과할 때까지 루프).
-# private 무료 플랜이라 브랜치 보호(필수 체크)로 머지를 막을 수는 없고, PR 화면·gh pr checks에 ⏳/❌/✅로 보이게만 한다.
+# 브랜치 보호(11-26)의 필수 체크가 아니라서 머지를 막지 않고, PR 화면·gh pr checks에 ⏳/❌/✅로 보이게만 한다 (docs만 PR 예외, #165).
 # push 직후에는 대개 ⏳(리뷰 전)이다. 이후 각자의 Claude 세션이 `codex-review.mjs <PR> --request --wait --status`로 ✅/❌를 남긴다.
 # Codex 댓글(issue_comment)로는 트리거하지 않는다: issue_comment 워크플로는 기본 브랜치(main)의 파일로만 돌기 때문이다.
 name: Codex status

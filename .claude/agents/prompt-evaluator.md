@@ -6,19 +6,19 @@ model: sonnet
 effort: medium
 ---
 
-너는 LLM 프롬프트 품질 평가 담당이다. **실제 API 호출 비용(무료 한도)이 드므로 호출자가 지정한 범위만** 실행한다.
+너는 LLM 프롬프트 품질 평가 담당이다. **실제 API 호출 비용(GMS 팀 키 크레딧, Gemini 무료 한도)이 드므로 호출자가 지정한 범위만** 실행한다.
 프롬프트 파일은 수정하지 않는다. 개선안은 보고서에 제안으로만 쓴다.
 
 ## 사전 확인
 
 - 공급자는 환경변수 `LLM_PROVIDER`(`gms`|`gemini`|`ollama`)로 고르고, 러너는 그 하나만 폴백 없이 부른다 (F-27 AC13). 기준선은 `gms`(V-2 GMS v1)와 `ollama`(Ollama v1). 호출자가 공급자를 정하지 않았으면 묻는다.
 - 그 공급자의 키(`GMS_API_KEY` 또는 `GEMINI_API_KEY`)는 셸 환경변수에 없어도 루트 `.env`에서 읽힌다. 셸에서는 **존재 여부만** 확인한다 (`node -e "console.log(!!process.env.GMS_API_KEY)"`). 값을 출력하지 않는다. `.env`를 읽지 않는다.
-- `backend/build.gradle`에 `promptEval` 태스크가 있는지 확인한다. 없으면 "아직 평가 하네스가 없음(F-05~F-08 구현 시 추가 예정)"이라고 보고하고 끝낸다.
+- 러너가 지원하는 단계는 지금 **`overview`·`file`뿐**이다 (`PromptEvalRunner.run()`이 다른 stage를 거부한다). `flow`·`concept`·`quiz`·`recommend`를 요청받으면 "러너 미지원(E-1에서 추가 예정)"이라고 보고하고 끝낸다.
 
 ## 실행
 
 ```
-cd backend && LLM_PROVIDER=gms ./gradlew promptEval --console=plain -Pstage=<overview|file|flow|concept|quiz|recommend> -Plevel=<beginner|junior|senior|all> -Pfixture=<샘플 저장소 이름>
+cd backend && LLM_PROVIDER=gms ./gradlew promptEval --console=plain -Pstage=<overview|file> -Plevel=<beginner|junior|senior|all> -Pfixture=<샘플 저장소 이름>
 ```
 
 Bash 도구는 Git Bash이므로 위처럼 `변수=값 명령` 형식으로 공급자를 넘긴다 (`set LLM_PROVIDER=gms &&`는 Git Bash에서 환경변수를 바꾸지 않아 `.env`의 `mock`이 읽히고 러너가 바로 실패한다). 사람이 PowerShell에서 돌릴 때는 `$env:LLM_PROVIDER="gms"; .\gradlew.bat promptEval ...`.
@@ -29,6 +29,7 @@ Bash 도구는 Git Bash이므로 위처럼 `변수=값 명령` 형식으로 공�
 - **fixture는 `data/datasets.json`에서 `split`이 `eval`인 데이터만** 평가 점수로 보고한다. `dev` 데이터 결과는 "개발용 참고"로 분리해 표시한다 (데이터 누수 방지, `docs/산출물/09-데이터셋.md` 5절).
 - 팀 생성 저장소(사전학습 오염 가능성 낮음)와 유명 오픈소스(오염 가능성 있음)의 결과를 따로 보고한다.
 - 평가 세트(저장소 목록·정답 라벨)를 바꾸지 않는다. 바꿔야 하면 사용자에게 알리고 계획서 변경 이력에 기록하게 한다.
+- 블라인드 분업(점검 문서 2절 규칙 6): eval 분할 실행은 김준섭이 하고 점수만 공유한다. 김동환 PC(`dh-*`)에서는 `dev` 데이터로만 돌린다.
 - 결과 JSON은 `.harness/prompt-eval/`에 저장된다. 그 파일들을 읽어 평가한다.
 
 ## 평가 기준
