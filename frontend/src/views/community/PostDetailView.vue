@@ -22,6 +22,8 @@ const actionError = ref('')
 const deleting = ref(false)
 // 남의 글 edit에서 돌려보낼 때 PostWriteView가 history state로 넘긴 안내 (AC18)
 const notice = ref('')
+// 댓글 절이 마지막으로 받은 댓글 수. 화면에서 댓글을 달거나 지우면 상세 응답의 commentCount보다 새롭다 (#210)
+const liveCommentCount = ref(null)
 
 const isMine = computed(() => post.value?.authorId != null && post.value.authorId === auth.user?.id)
 
@@ -43,6 +45,7 @@ async function load(id) {
   notFound.value = false
   loadError.value = ''
   actionError.value = ''
+  liveCommentCount.value = null
   notice.value = takeNotice()
   try {
     const result = await fetchPost(id)
@@ -66,8 +69,16 @@ watch(
   { immediate: true },
 )
 
+// 댓글은 글과 함께 지워진다 (FK CASCADE). 있으면 확인 문구에 개수를 알린다 (#210)
+function deleteConfirmMessage() {
+  const count = liveCommentCount.value ?? post.value.commentCount ?? 0
+  return count > 0
+    ? `이 글을 삭제할까요?\n댓글 ${count}개도 함께 삭제됩니다.`
+    : '이 글을 삭제할까요?'
+}
+
 async function onDelete() {
-  if (!window.confirm('이 글을 삭제할까요?')) return
+  if (!window.confirm(deleteConfirmMessage())) return
   deleting.value = true
   actionError.value = ''
   try {
@@ -134,7 +145,7 @@ async function onDelete() {
       </div>
       <p v-if="actionError" class="form-error" role="alert">{{ actionError }}</p>
 
-      <PostComments :post-id="post.id" />
+      <PostComments :post-id="post.id" @count="liveCommentCount = $event" />
     </template>
   </article>
 </template>

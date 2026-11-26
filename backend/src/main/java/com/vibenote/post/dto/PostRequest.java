@@ -42,7 +42,9 @@ public record PostRequest(
                 String content,
         @Schema(
                         nullable = true,
-                        description = "첨부할 내 분석 ID (DONE이고 삭제되지 않은 내 분석). conceptId와 함께 보낼 수 없다",
+                        description =
+                                "첨부할 내 분석 ID (공개·DONE이고 삭제되지 않은 내 분석, 비공개는 POST_001). conceptId와 함께"
+                                        + " 보낼 수 없다",
                         example = "15")
                 Long analysisId,
         @Schema(

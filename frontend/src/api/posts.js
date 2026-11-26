@@ -26,12 +26,14 @@ export function fetchPosts({ boardType, keyword, page, size } = {}) {
 }
 
 /**
- * 글 상세. 부를 때마다 조회수가 1 오른다. 없으면 404 POST_404.
+ * 글 상세. 부를 때마다 조회수가 1 오른다(`countView: false`면 올리지 않는다, 글 수정 화면용 #209). 없으면 404 POST_404.
  * @param {number} id
+ * @param {{ countView?: boolean }} [options]
  * @returns {Promise<PostDetail>}
  */
-export function fetchPost(id) {
-  return http.get(`/posts/${id}`).then((res) => res.data)
+export function fetchPost(id, { countView = true } = {}) {
+  const config = countView ? undefined : { params: { countView: false } }
+  return http.get(`/posts/${id}`, config).then((res) => res.data)
 }
 
 /**

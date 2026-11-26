@@ -47,12 +47,17 @@ public interface PostMapper {
     /** 작성자 id (행 잠금, 수정·삭제가 겹치지 않게). 없는 글이면 null. */
     Long findAuthorIdForUpdate(@Param("id") long id);
 
+    /** 지금 첨부된 분석 id (없으면 null). 수정할 때 첨부를 그대로 두는지 본다 (#206). */
+    Long findAnalysisId(@Param("id") long id);
+
     /**
-     * 첨부할 수 있는 분석인지: 그 회원의 DONE이고 삭제되지 않은 분석. 표시용 읽기와 같은 이유로 analyses를 이 Mapper에서 직접 본다 (분석 도메인에 같은
-     * 조건의 조회가 없다).
+     * 첨부할 수 있는 분석인지: 그 회원의 DONE이고 삭제되지 않은 분석. {@code requirePublic}이면 공개 분석만 (#206, 수정 때 기존 첨부를 그대로
+     * 두면 false). 표시용 읽기와 같은 이유로 analyses를 이 Mapper에서 직접 본다 (분석 도메인에 같은 조건의 조회가 없다).
      */
     boolean existsAttachableAnalysis(
-            @Param("analysisId") long analysisId, @Param("userId") long userId);
+            @Param("analysisId") long analysisId,
+            @Param("userId") long userId,
+            @Param("requirePublic") boolean requirePublic);
 
     boolean existsPublishedConcept(@Param("conceptId") long conceptId);
 }

@@ -6,7 +6,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 /**
  * 상세의 분석 첨부 (F-17 AC5). 삭제되지 않았고, 요청한 사람이 주인이거나 공개이면서 주인이 탈퇴하지 않았으면 viewable이고, 아니면 제목·프로젝트명을 숨긴다.
  * 분석 상세의 열람 기준(F-19 AC10 {@code AnalysisMapper} viewable)과 맞춘다 (#92). 첨부는 DONE 분석만 되고 미완료 분석은 공개할 수
- * 없으므로 상태는 따로 보지 않는다.
+ * 없으므로 상태는 따로 보지 않는다. 첨부는 공개 분석만 되지만(#206) 첨부 뒤 비공개로 바꿀 수 있어 공개 여부는 계속 본다.
  */
 @Schema(description = "분석 첨부")
 public record PostAnalysisAttachment(
