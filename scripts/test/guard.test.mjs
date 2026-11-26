@@ -1,7 +1,7 @@
 // guard-bash hook의 명령 판정 (H-1: 정규식 → 셸 토큰 파서)
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { checkCommand, parseCommand, resolvePath } from '../lib/guard.mjs';
+import { checkCommand, checkTool, parseCommand, resolvePath } from '../lib/guard.mjs';
 
 const blocked = (cmd, opts) => checkCommand(cmd, { cwd: '/repo', ...opts });
 const ok = (cmd, opts) => assert.equal(blocked(cmd, opts), null, `차단되면 안 됨: ${cmd}`);
@@ -207,6 +207,117 @@ test('push: GitLab --repo, main·develop으로 직접 push', () => {
 test('.env를 출력할 수 있는 다른 읽기 명령', () => {
   for (const cmd of ['sort .env', 'uniq .env', 'cut -c1-500 .env', 'diff .env .env.example', 'jq . .env', 'comm .env x', 'rev .env']) no(cmd);
   ok('diff .env.example frontend/.env.example');
+});
+
+test('H-3: 작업 트리를 버리는 checkout·switch·restore·stash', () => {
+  const isDir = (p) => /[\\/](src|frontend)$/.test(p);
+  for (const cmd of ['git checkout -f develop', 'git checkout --force main', 'git switch --discard-changes develop', 'git switch -f main', 'git stash drop', 'git stash drop stash@{1}', 'git stash clear', "git checkout -- '*.js'"])
+    no(cmd);
+  for (const cmd of ['git restore src', 'git restore --worktree --staged src', 'git checkout -- src', 'git checkout HEAD~1 -- frontend', 'git checkout src', 'git restore --source HEAD~1 frontend']) no(cmd, { isDir });
+  for (const cmd of ['git restore src/a.js', 'git restore --staged src', 'git checkout develop', 'git checkout -b feature/x', 'git checkout -- src/a.js']) ok(cmd, { isDir });
+  for (const cmd of ['git switch -c feature/x', 'git switch develop', 'git stash', 'git stash push -m x', 'git stash pop', 'git stash list', 'git stash show -p']) ok(cmd);
+});
+
+test('H-4: grep·rg의 검색 패턴은 파일이 아니다', () => {
+  for (const cmd of ['grep "\\.env" src', 'rg -n "\\.env" scripts', "grep -rn '.env' docs", 'rg .env.local -g "*.md"', 'grep -e .env -r src', 'rg -A 3 .env scripts'])
+    ok(cmd);
+  for (const cmd of ['grep KEY .env', 'rg KEY backend/.env.local', 'grep -e KEY .env', 'grep -r -- KEY .env', 'rg -f pats.txt .env', 'rg KEY -g .env'])
+    no(cmd);
+  assert.ok(checkCommand('Select-String -Path .env -Pattern KEY', { cwd: 'C:/repo', shell: 'powershell' }));
+  assert.equal(checkCommand('Select-String -Pattern ".env" -Path docs\\a.md', { cwd: 'C:/repo', shell: 'powershell' }), null);
+});
+
+test('HX-1: 인라인 코드·인터프리터로 비밀 파일 읽기, 키 파일', () => {
+  for (const cmd of [
+    `node -e "console.log(require('fs').readFileSync('.env','utf8'))"`,
+    `node -p "require('fs').readFileSync('backend/.env.local','utf8')"`,
+    `python -c "print(open('.env').read())"`,
+    `python3 -c 'import dotenv; print(dotenv.dotenv_values())'`,
+    `py -c "print(open('.env').read())"`,
+    'node --env-file=.env -e "console.log(process.env)"',
+    'node --env-file .env scripts/x.mjs',
+    "node <<'EOF'\nconsole.log(require('fs').readFileSync('.env','utf8'))\nEOF",
+    `echo "print(open('.env').read())" | python`,
+    // 문자열로 넘긴 셸 명령도 본다
+    `node -e "require('child_process').execSync('git push --force')"`,
+    `python -c "import os; os.system('git reset --hard')"`,
+    'cat certs/server.pem',
+    'cat ~/.ssh/id_rsa',
+  ])
+    no(cmd);
+  for (const cmd of [`node -e "console.log(require('fs').readFileSync('.env.example','utf8'))"`, 'node -e "console.log(1)"', 'node scripts/verify.mjs harness', `node -e "import('./scripts/lib/owners.mjs').then(console.log)"`, 'python -c "print(1)"'])
+    ok(cmd);
+});
+
+test('HX-2: 김동환 PC(evalDir 지정)에서 data/raw/eval 접근과 eval 저장소 clone', () => {
+  const ev = { evalDir: '/repo/data/raw/eval' };
+  for (const cmd of ['cat data/raw/eval/README.md', 'ls data/raw/eval', 'cd data/raw/eval && cat x', 'cd data/raw && cat eval/sets.json', 'git -C data/raw/eval log -p', 'node x.js < data/raw/eval/a.json', 'cp -r data/raw/eval /tmp/x', 'gh repo clone JoonseobKim/vibenote-eval eval', 'git clone https://github.com/JoonseobKim/vibenote-eval.git'])
+    no(cmd, ev);
+  assert.ok(checkCommand('Get-Content data\\raw\\eval\\a.json', { cwd: '/repo', shell: 'powershell', ...ev }));
+  for (const cmd of ['cat data/raw/README.md', 'ls data/raw', 'git commit -m "data/raw/eval/ 읽기 차단"', 'gh pr create --body "data/raw/eval 가드"', 'echo data/raw/eval', 'cat data/raw/eval-notes.md']) ok(cmd, ev);
+  // 김준섭 PC(evalDir 없음)는 막지 않는다
+  ok('cat data/raw/eval/README.md');
+});
+
+test('#130: gh api·curl로 머지·ref·저장소 설정·시크릿을 바꾸는 요청', () => {
+  for (const cmd of [
+    'gh api -X PUT repos/o/r/pulls/1/merge',
+    'gh api --method PUT /repos/o/r/pulls/1/merge -f merge_method=squash',
+    'gh api --method=PUT repos/o/r/pulls/1/merge',
+    'gh api repos/o/r/pulls/1/merge -f merge_method=merge',
+    'gh api -X POST repos/o/r/merges -f base=develop -f head=x',
+    'gh api -X PATCH repos/o/r -f visibility=private',
+    'gh api -X DELETE repos/o/r',
+    'gh api -X PUT repos/o/r/actions/secrets/K -f encrypted_value=x',
+    'gh api -X PATCH repos/o/r/git/refs/heads/develop -f sha=x -F force=true',
+    'gh api -X PUT repos/o/r/contents/a.md -f message=x -f content=eA==',
+    'gh api -X DELETE repos/o/r/branches/develop/protection',
+    `gh api graphql -f query='mutation { mergePullRequest(input:{pullRequestId:"x"}) { clientMutationId } }'`,
+    'curl -X PUT -H "Authorization: token x" https://api.github.com/repos/o/r/pulls/1/merge',
+    'curl -d "{}" https://api.github.com/repos/o/r/merges',
+  ])
+    no(cmd);
+  for (const cmd of [
+    'gh api repos/o/r/pulls/1',
+    'gh api repos/o/r/pulls/1/merge',
+    'gh api --paginate --slurp repos/o/r/pulls/1/comments?per_page=100',
+    'gh api -X POST repos/o/r/issues/1/comments -f body=x',
+    'gh api -X POST repos/o/r/statuses/abc -f state=success -f context=Codex',
+    `gh api graphql -f query='query { viewer { login } }'`,
+    'curl https://api.github.com/repos/o/r',
+  ])
+    ok(cmd);
+});
+
+test('#139: 서브셸·명령 치환 안의 cd는 바깥 명령 위치로 이어지지 않는다', () => {
+  const commitBlocked = (cwd) => (cwd.endsWith('main-repo') ? 'develop' : null);
+  const exists = () => true;
+  no('(cd /tmp; git status); git commit -m x', { cwd: '/work/main-repo', commitBlocked, exists });
+  no('(cd /work/main-repo && git commit -m x)', { cwd: '/work/feature-repo', commitBlocked, exists });
+  ok('(cd /work/main-repo; git status); git commit -m x', { cwd: '/work/feature-repo', commitBlocked, exists });
+  ok('echo $(cd /work/main-repo; pwd); git commit -m x', { cwd: '/work/feature-repo', commitBlocked, exists });
+  ok('cat <<EOS\n$(cd /work/main-repo)\nEOS\ngit commit -m x', { cwd: '/work/feature-repo', commitBlocked, exists });
+  no('cd /work/main-repo; (git status); git commit -m x', { cwd: '/work/feature-repo', commitBlocked, exists });
+});
+
+test('MCP 셸 도구(Desktop Commander)도 같은 판정을 받는다 (H-1)', () => {
+  const DC = 'mcp__plugin_desktop-commander_desktop-commander__';
+  const tool = (name, input) => checkTool(name, input, { cwd: 'C:/repo' });
+  assert.ok(tool('Bash', { command: 'git push -f' }));
+  assert.ok(tool('PowerShell', { command: 'Get-Content .\\.env' }));
+  assert.ok(tool(`${DC}start_process`, { command: 'git push --force origin x', timeout_ms: 1000 }));
+  assert.ok(tool(`${DC}start_process`, { command: 'Get-Content .\\.env', timeout_ms: 1000 }));
+  assert.ok(tool(`${DC}start_process`, { command: 'cat .env', shell: 'bash', timeout_ms: 1000 }));
+  assert.ok(tool(`${DC}start_process`, { command: 'git commit --no-verify -m x', shell: 'cmd', timeout_ms: 1000 }));
+  // 셸이든 REPL이든: 셸 명령, 인라인 코드의 비밀 파일 읽기, 문자열 속 셸 명령
+  assert.ok(tool(`${DC}interact_with_process`, { pid: 1, input: 'git reset --hard' }));
+  assert.ok(tool(`${DC}interact_with_process`, { pid: 1, input: 'gc .\\.env' }));
+  assert.ok(tool(`${DC}interact_with_process`, { pid: 1, input: "require('fs').readFileSync('.env','utf8')" }));
+  assert.ok(tool(`${DC}interact_with_process`, { pid: 1, input: "import os; os.system('git push -f')" }));
+  assert.equal(tool(`${DC}start_process`, { command: 'node -i', timeout_ms: 1000 }), null);
+  assert.equal(tool(`${DC}interact_with_process`, { pid: 1, input: 'console.log(1 + 1)' }), null);
+  assert.equal(tool(`${DC}start_process`, { command: 'git status', timeout_ms: 1000 }), null);
+  assert.equal(tool('Read', { file_path: 'x' }), null);
 });
 
 test('cd 경로: Windows에서 Git Bash 경로를 드라이브 경로로', () => {

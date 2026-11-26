@@ -1,22 +1,30 @@
 #!/usr/bin/env node
-// PreToolUse(Bash|PowerShell) hook: 되돌리기 어려운 git 조작과 비밀 파일 접근을 막는다.
+// PreToolUse(Bash|PowerShell|Desktop Commander start_process·interact_with_process) hook:
+// 되돌리기 어려운 git 조작, 머지·저장소 설정 우회, 비밀 파일 접근, 김동환 PC의 eval 열람을 막는다.
 // 판정은 scripts/lib/guard.mjs(셸 토큰 파서, 테스트 있음)가 한다: 따옴표·heredoc 안 글자는 무시하고,
-// `cd <경로> &&`·`git -C <경로>`·`bash -c "..."`·명령 치환 안의 명령까지 본다.
-// 차단 시 exit 2 + stderr 메시지 → Claude에게 사유가 전달된다. 차단은 .harness/metrics/guard.jsonl에 남긴다 (주간 지표).
-import { appendFileSync, existsSync, mkdirSync } from 'node:fs';
+// `cd <경로> &&`·`git -C <경로>`·`bash -c "..."`·명령 치환·`node -e` 코드 안의 명령까지 본다.
+// MCP 셸 도구도 같은 판정을 받는다 (H-1: 예전에는 이 도구로 모든 가드를 우회할 수 있었다).
+// 차단 시 exit 2 + stderr 메시지 → Claude에게 사유가 전달된다. 차단은 .harness/metrics/guard.jsonl에 사유만 남긴다 (주간 지표).
+// 명령 원문은 남기지 않는다: 차단된 명령에 비밀값이 들어 있을 수 있다 (#135).
+import { appendFileSync, existsSync, mkdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import { PROTECTED_BRANCHES, ROOT, currentBranch, hasCommits, isMerging, readStdinJson } from '../../scripts/lib/common.mjs';
-import { checkCommand } from '../../scripts/lib/guard.mjs';
+import { PROTECTED_BRANCHES, ROOT, currentBranch, hasCommits, isMerging, localPcId, ownerKey, readStdinJson } from '../../scripts/lib/common.mjs';
+import { checkTool } from '../../scripts/lib/guard.mjs';
+import { EVAL_DIR_REL, evalBlockedFor } from '../../scripts/lib/protect.mjs';
 
 const input = readStdinJson();
-const command = String(input?.tool_input?.command || '');
-if (!command) process.exit(0);
-
-const reason = checkCommand(command, {
-  cwd: input.cwd || process.cwd(),
-  // PowerShell 도구는 \가 경로 구분자이고 백틱이 이스케이프다
-  shell: input.tool_name === 'PowerShell' ? 'powershell' : 'bash',
+const reason = checkTool(input?.tool_name, input?.tool_input || {}, {
+  cwd: input?.cwd || process.cwd(),
   exists: existsSync,
+  isDir: (p) => {
+    try {
+      return statSync(p).isDirectory();
+    } catch {
+      return false;
+    }
+  },
+  // eval 블라인드 (HX-2): 김동환 PC에서만 data/raw/eval 접근을 막는다
+  evalDir: evalBlockedFor(ownerKey(localPcId())) ? join(ROOT, EVAL_DIR_REL) : null,
   // 보호 브랜치 직접 커밋 (첫 커밋, merge 진행 중은 예외)
   commitBlocked: (cwd) => {
     const branch = currentBranch(cwd);
@@ -28,7 +36,7 @@ if (!reason) process.exit(0);
 try {
   const dir = join(ROOT, '.harness', 'metrics');
   mkdirSync(dir, { recursive: true });
-  appendFileSync(join(dir, 'guard.jsonl'), JSON.stringify({ at: new Date().toISOString(), tool: input.tool_name, reason, command: command.slice(0, 300) }) + '\n');
+  appendFileSync(join(dir, 'guard.jsonl'), JSON.stringify({ at: new Date().toISOString(), tool: input.tool_name, reason }) + '\n');
 } catch {
   // 기록 실패는 차단에 영향을 주지 않는다
 }

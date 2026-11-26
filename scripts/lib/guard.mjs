@@ -3,8 +3,12 @@
 // shell: 'bash'(기본) | 'powershell' | 'cmd'. PowerShell은 \가 글자 그대로이고 백틱이 이스케이프이며 { }가 스크립트 블록이다.
 // 완전한 셸 파서가 아니라 가드용 근사다. 모르는 형태는 단어로 남겨 규칙이 보게 한다.
 import { basename, isAbsolute, resolve } from 'node:path';
+import { codeReadsSecret, isSecretFile, isWithin, stringLiterals } from './protect.mjs';
 
 const SUBST = '$()'; // 명령 치환 자리 표시
+// 서브셸·명령 치환의 시작과 끝 표시. 그 안의 cd는 바깥 명령의 위치를 바꾸지 않는다 (#139). parseCommand는 걸러 낸다
+const PUSH = { scope: 'push' };
+const POP = { scope: 'pop' };
 
 /**
  * 명령 문자열을 단순 명령 목록으로 나눈다. 각 항목: { words: 따옴표를 푼 단어들, redirects: [{op, target}], stdin?, pipeFrom? }.
@@ -12,6 +16,11 @@ const SUBST = '$()'; // 명령 치환 자리 표시
  * 명령 치환·서브셸 안의 명령은 바깥 명령보다 먼저 나온다. 주석은 버린다.
  */
 export function parseCommand(src, shell = 'bash') {
+  return parseSegments(src, shell).filter((s) => !s.scope);
+}
+
+/** parseCommand + 범위 표시(PUSH·POP) */
+function parseSegments(src, shell) {
   const out = [];
   parseList(String(src || ''), 0, false, out, shell);
   return out;
@@ -21,10 +30,15 @@ export function parseCommand(src, shell = 'bash') {
 function scanSubstitutions(body, out) {
   for (let i = 0; i < body.length; i++) {
     if (body[i] === '\\') i++;
-    else if (body[i] === '$' && body[i + 1] === '(') i = parseList(body, i + 2, true, out, 'bash') - 1;
-    else if (body[i] === '`') {
+    else if (body[i] === '$' && body[i + 1] === '(') {
+      out.push(PUSH);
+      i = parseList(body, i + 2, true, out, 'bash') - 1;
+      out.push(POP);
+    } else if (body[i] === '`') {
       const end = body.indexOf('`', i + 1);
+      out.push(PUSH);
       parseList(body.slice(i + 1, end === -1 ? body.length : end), 0, false, out, 'bash');
+      out.push(POP);
       i = end === -1 ? body.length : end;
     }
   }
@@ -84,12 +98,14 @@ function parseList(src, start, nested, out, shell) {
   };
   const substitution = (close) => {
     // i는 여는 기호 바로 뒤
+    out.push(PUSH);
     if (close === ')') i = parseList(src, i, true, out, shell);
     else {
       const end = src.indexOf('`', i);
       parseList(src.slice(i, end === -1 ? src.length : end), 0, false, out, shell);
       i = end === -1 ? src.length : end + 1;
     }
+    out.push(POP);
     word = (word ?? '') + SUBST;
   };
 
@@ -127,7 +143,9 @@ function parseList(src, start, nested, out, shell) {
       } else if (c === '|') pipeFrom = seg;
     } else if (c === '(' && word === null) {
       endSegment();
+      out.push(PUSH);
       i = parseList(src, i + 1, true, out, shell);
+      out.push(POP);
     } else if (bash && (c === '>' || c === '<' || c === '&')) {
       if (word !== null && /^\d+$/.test(word)) word = null; // 2>&1 의 2
       endWord();
@@ -333,13 +351,108 @@ function options(args, valueShort = '', valueLong = []) {
 }
 
 const PROTECTED = ['main', 'develop'];
-const ENV_READERS = new Set(
-  'cat type more less head tail gc get-content select-string grep rg sed awk code notepad cp copy bat nl strings base64 xxd od source . tac findstr sort uniq cut diff cmp comm paste fold rev jq yq column expand pr fmt sort-object compare-object import-csv'.split(' '),
+// 파일 내용을 출력하는 명령. 인자 중 비밀 파일이 있으면 막는다
+const READERS = new Set(
+  'cat type more less head tail gc get-content select-string sls grep egrep fgrep rg sed awk code notepad cp copy bat nl strings base64 xxd od source . tac findstr sort uniq cut diff cmp comm paste fold rev jq yq column expand pr fmt sort-object compare-object import-csv'.split(' '),
 );
-const isEnvFile = (w) => {
-  const b = basename(String(w).replace(/\\/g, '/'));
-  return /^\.env([.*][\w.*-]*)?$/.test(b) && b !== '.env.example';
+// 첫 위치 인자가 파일이 아니라 검색 패턴인 명령 (H-4). value: 값을 받는 짧은 옵션, pattern: 패턴을 주는 옵션(있으면 첫 위치 인자도 파일)
+const GREP_LIKE = {
+  grep: { value: 'efmABCdD', pattern: 'ef' },
+  egrep: { value: 'efmABCdD', pattern: 'ef' },
+  fgrep: { value: 'efmABCdD', pattern: 'ef' },
+  rg: { value: 'efmABCgtTjMEr', pattern: 'ef' },
 };
+const GREP_LONG_VALUE = new Set(
+  '--regexp --file --max-count --after-context --before-context --context --include --exclude --exclude-dir --exclude-from --label --binary-files --devices --directories --glob --iglob --type --type-not --threads --replace --max-depth --encoding --type-add --pre'.split(' '),
+);
+
+/** 읽기 명령의 파일 인자. grep류는 검색 패턴을 뺀다 (`grep "\.env" src`는 .env를 읽지 않는다) */
+function readTargets(name, args) {
+  if (name === 'select-string' || name === 'sls') {
+    // PowerShell: -Pattern 값은 패턴, -Path·-LiteralPath 값과 나머지 위치 인자는 파일 (첫 위치 인자는 -Pattern 없을 때 패턴)
+    const files = [];
+    const positional = [];
+    let pattern = false;
+    for (let k = 0; k < args.length; k++) {
+      const a = args[k].toLowerCase();
+      if (a === '-pattern') (pattern = true), k++;
+      else if (a === '-path' || a === '-literalpath') files.push(args[++k] ?? '');
+      else if (!a.startsWith('-')) positional.push(args[k]);
+    }
+    return [...files, ...(pattern ? positional : positional.slice(1))];
+  }
+  if (name === 'findstr') {
+    const positional = args.filter((a) => !a.startsWith('/'));
+    return args.some((a) => /^\/[cg]:/i.test(a)) ? positional : positional.slice(1);
+  }
+  const spec = GREP_LIKE[name];
+  if (!spec) return args;
+  const files = [];
+  const positional = [];
+  let pattern = false;
+  for (let k = 0; k < args.length; k++) {
+    const a = args[k];
+    if (a === '--') {
+      positional.push(...args.slice(k + 1));
+      break;
+    }
+    if (a.startsWith('--')) {
+      const [n, ...v] = a.split('=');
+      const value = v.length ? v.join('=') : GREP_LONG_VALUE.has(n) ? args[++k] : undefined;
+      if (n === '--regexp') pattern = true;
+      else if (value !== undefined) files.push(value); // --file(패턴 파일)·--glob 등. 값도 파일 이름일 수 있다
+      if (n === '--file') pattern = true;
+    } else if (a.startsWith('-') && a.length > 1) {
+      for (let j = 1; j < a.length; j++) {
+        if (!spec.value.includes(a[j])) continue;
+        const value = a.slice(j + 1) || args[++k] || '';
+        if (spec.pattern.includes(a[j])) pattern = true;
+        if (a[j] !== 'e') files.push(value);
+        break;
+      }
+    } else positional.push(a);
+  }
+  return [...files, ...(pattern ? positional : positional.slice(1))];
+}
+
+// 인라인 코드를 실행하는 인터프리터: 이름 → 코드를 받는 옵션 (HX-1)
+const INTERPRETERS = {
+  node: ['-e', '--eval', '-p', '--print'],
+  bun: ['-e', '--eval', '-p', '--print'],
+  deno: ['eval'],
+  python: ['-c'],
+  python3: ['-c'],
+  py: ['-c'],
+  pythonw: ['-c'],
+  ruby: ['-e'],
+  perl: ['-e', '-E'],
+  php: ['-r'],
+};
+
+// GitHub API로 머지·ref·저장소 설정·시크릿을 바꾸는 경로 (#130). GET이 아닐 때만 막는다
+const GITHUB_WRITE_PATHS = [
+  /(^|\/)pulls\/\d+\/merge$/,
+  /^repos\/[^/]+\/[^/]+$/,
+  /^repos\/[^/]+\/[^/]+\/merges$/,
+  /\/(actions|dependabot|codespaces)\/(secrets|variables)(\/|$)/,
+  /\/environments\/[^/]+\/(secrets|variables)(\/|$)/,
+  /\/releases(\/|$)/,
+  /\/git\/refs(\/|$)/,
+  /\/branches\/[^/]+\/protection/,
+  /\/rulesets(\/|$)/,
+  /\/contents\//,
+  /\/collaborators(\/|$)/,
+  /\/hooks(\/|$)/,
+  /\/keys(\/|$)/,
+];
+const GRAPHQL_WRITE =
+  /\b(mergePullRequest|enablePullRequestAutoMerge|mergeBranch|createRef|updateRef|updateRefs|deleteRef|createCommitOnBranch|updateRepository|deleteRepository|archiveRepository|createBranchProtectionRule|updateBranchProtectionRule|deleteBranchProtectionRule)\b/;
+const apiPath = (p) =>
+  String(p || '')
+    .replace(/^https?:\/\/api\.github\.com/i, '')
+    .replace(/^\/+/, '')
+    .replace(/[?#].*$/, '');
+const githubWrite = (path, method, text) => (path === 'graphql' ? GRAPHQL_WRITE.test(text) : method !== 'GET' && GITHUB_WRITE_PATHS.some((re) => re.test(path)));
 
 const R = {
   noVerify: 'git hook 우회(--no-verify)는 금지입니다. 테스트가 실패하면 고치거나, 교대용이면 wip(F-xx): 로 커밋하세요.',
@@ -350,14 +463,18 @@ const R = {
   pushProtected: 'main·develop에 직접 push할 수 없습니다. feature 브랜치를 push하고 PR로 합치세요.',
   resetHard: 'git reset --hard는 금지입니다. 미커밋 작업이 사라집니다. 필요하면 사용자에게 직접 실행을 요청하세요.',
   clean: 'git clean -f는 금지입니다. 추적되지 않은 파일이 영구 삭제됩니다.',
-  restoreAll: '작업 트리 전체 되돌리기는 금지입니다. 파일을 지정하거나 사용자에게 확인하세요.',
+  restoreAll: '작업 트리를 디렉터리·와일드카드 단위로 되돌리는 것은 금지입니다. 파일을 하나씩 지정하거나 사용자에게 확인하세요.',
+  discard: '미커밋 변경을 버리는 브랜치 전환(checkout -f, switch -f·--discard-changes)은 금지입니다. 먼저 커밋(교대용이면 wip)하거나 사용자에게 확인하세요.',
+  stashDrop: 'git stash drop·clear는 금지입니다. 보관한 변경이 영구 삭제됩니다.',
   addForce: 'git add --force는 금지입니다. .gitignore된 비밀 파일이 커밋될 수 있습니다.',
   hooksPath: 'git hook 경로 변경은 금지입니다.',
   merge: 'PR 머지는 영역 오너가 CI 초록을 확인하고 GitHub에서 직접 합니다.',
+  ghApi: 'GitHub API로 머지·브랜치(ref)·저장소 설정·시크릿을 바꾸는 요청은 금지입니다 (gh pr merge 차단 우회, #130). 사람이 GitHub에서 직접 합니다.',
   repo: '저장소 설정 변경·삭제는 사람이 직접 합니다.',
   secret: '릴리스·시크릿·변수 변경은 사람이 직접 합니다.',
-  envRead: '.env 파일 내용을 읽을 수 없습니다. 필요한 변수 이름은 .env.example을 보세요.',
-  envAdd: '.env 파일은 커밋할 수 없습니다.',
+  envRead: '.env·키 파일 내용을 읽을 수 없습니다. 필요한 변수 이름은 .env.example을 보세요.',
+  envAdd: '.env·키 파일은 커밋할 수 없습니다.',
+  evalRead: '평가(eval) 데이터는 김동환(A) PC에서 열람할 수 없습니다 (블라인드 평가, docs/산출물/09-데이터셋.md 5절). 필요한 것은 김준섭에게 요청하세요.',
 };
 
 function checkGit(args, cwd, ctx) {
@@ -375,6 +492,8 @@ function checkGit(args, cwd, ctx) {
   }
   const rest = g.rest;
   const where = g.dir ? resolvePath(cwd, g.dir) : cwd;
+  // 되돌릴 범위가 넓은 경로: 전체(. :/), 와일드카드·매직 pathspec, 디렉터리 (H-3)
+  const broad = (p) => p === '.' || p === ':/' || /[*?[]/.test(p) || p.startsWith(':(') || Boolean(ctx.isDir?.(resolvePath(where, p)));
   switch (g.sub) {
     case 'commit': {
       const o = options(rest, 'mFCct', ['--message', '--file', '--author', '--date', '--reuse-message', '--reedit-message', '--fixup', '--squash', '--cleanup', '--template', '--trailer', '--pathspec-from-file']);
@@ -410,14 +529,23 @@ function checkGit(args, cwd, ctx) {
     }
     case 'checkout':
     case 'restore': {
-      const o = options(rest, 'sb', ['--source', '--conflict', '--pathspec-from-file']);
-      if (o.flags.has('--staged') && !o.flags.has('--worktree') && g.sub === 'restore') return null;
-      return o.positional.some((p) => p === '.' || p === ':/' || p === '*') ? R.restoreAll : null;
+      const o = options(rest, 'sbB', ['--source', '--conflict', '--pathspec-from-file']);
+      if (g.sub === 'checkout' && (o.flags.has('-f') || o.flags.has('--force'))) return R.discard;
+      const staged = o.flags.has('--staged') || o.flags.has('-S');
+      const worktree = o.flags.has('--worktree') || o.flags.has('-W');
+      if (g.sub === 'restore' && staged && !worktree) return null;
+      return o.positional.some(broad) ? R.restoreAll : null;
     }
+    case 'switch': {
+      const o = options(rest, 'cC', ['--create', '--force-create', '--orphan']);
+      return o.flags.has('--discard-changes') || o.flags.has('-f') || o.flags.has('--force') ? R.discard : null;
+    }
+    case 'stash':
+      return ['drop', 'clear'].includes(rest[0]) ? R.stashDrop : null;
     case 'add': {
       const o = options(rest, '', ['--chmod', '--pathspec-from-file']);
       if (o.flags.has('-f') || o.flags.has('--force')) return R.addForce;
-      return o.positional.some(isEnvFile) ? R.envAdd : null;
+      return o.positional.some(isSecretFile) ? R.envAdd : null;
     }
     case 'config': {
       const o = options(rest, 'f', ['--file', '--blob', '--type', '--default']);
@@ -437,11 +565,89 @@ function checkGit(args, cwd, ctx) {
   }
 }
 
+// gh api의 값을 받는 옵션
+const GH_API_VALUE = new Set(['-X', '--method', '-f', '--raw-field', '-F', '--field', '-H', '--header', '--input', '-q', '--jq', '-t', '--template', '--hostname', '--cache', '-p', '--preview']);
+
+function checkGhApi(args) {
+  let method = null;
+  let body = false;
+  let path = null;
+  for (let k = 0; k < args.length; k++) {
+    const [n, ...v] = args[k].split('=');
+    const inline = args[k].startsWith('--') && v.length;
+    if (GH_API_VALUE.has(n)) {
+      const value = inline ? v.join('=') : args[++k];
+      if (n === '-X' || n === '--method') method = String(value || '').toUpperCase();
+      if (['-f', '--raw-field', '-F', '--field', '--input'].includes(n)) body = true;
+    } else if (!args[k].startsWith('-') && path === null) path = apiPath(args[k]);
+  }
+  return githubWrite(path, method || (body ? 'POST' : 'GET'), args.join(' ')) ? R.ghApi : null;
+}
+
 function checkGh(args) {
   const [group, action] = args;
   if (group === 'pr' && action === 'merge') return R.merge;
+  if (group === 'api') return checkGhApi(args.slice(1));
   if (group === 'repo' && ['delete', 'edit', 'rename', 'archive'].includes(action)) return R.repo;
   if (['release', 'secret', 'variable'].includes(group) && ['delete', 'remove', 'set'].includes(action)) return R.secret;
+  return null;
+}
+
+/** curl·wget·Invoke-RestMethod로 GitHub API를 직접 부르는 경우 (#130) */
+function checkHttp(args) {
+  const url = args.find((a) => /^https?:\/\/api\.github\.com\//i.test(a));
+  if (!url) return null;
+  let method = null;
+  let body = false;
+  for (let k = 0; k < args.length; k++) {
+    const a = args[k];
+    if (a === '-X' || a === '--request' || /^-method$/i.test(a)) method = String(args[++k] || '').toUpperCase();
+    else if (/^-X./.test(a)) method = a.slice(2).toUpperCase();
+    else if (/^(-d|--data.*|--json|-F|--form|-T|--upload-file|-body|--post-data|--body-data)$/i.test(a.split('=')[0])) body = true;
+  }
+  return githubWrite(apiPath(url), method || (body ? 'POST' : 'GET'), args.join(' ')) ? R.ghApi : null;
+}
+
+// 경로가 아니라 글을 받는 명령 (eval 경로 검사에서 뺀다)
+const TEXT_ONLY = new Set(['echo', 'printf', 'write-output', 'write-host']);
+
+/** 김동환 PC에서 eval 경로를 건드리는가 (HX-2). 메시지 인자(git commit -m, gh pr create --body)는 경로로 보지 않는다 */
+function checkEval(name, args, redirects, cwd, ctx) {
+  if (['git', 'gh', 'curl', 'wget'].includes(name) && args.some((a) => /vibenote-eval/i.test(a))) return R.evalRead;
+  if (TEXT_ONLY.has(name) || name === 'gh') return null;
+  let words = args;
+  if (name === 'git') {
+    const g = parseGit(args);
+    words = [...(g.dir ? [g.dir] : []), ...(['commit', 'tag', 'notes'].includes(g.sub) ? [] : g.rest)];
+  }
+  const hit = (w) => /eval/i.test(w) && isWithin(resolvePath(cwd, w.replace(/^--?[\w-]+=/, '')), ctx.evalDir);
+  return [...words, ...redirects.map((r) => r.target)].some(hit) ? R.evalRead : null;
+}
+
+/** 인라인 코드: 비밀 파일 읽기, 문자열로 넘긴 셸 명령 (HX-1) */
+function checkCode(code, ctx, depth) {
+  if (codeReadsSecret(code)) return R.envRead;
+  if (depth >= 3) return null;
+  for (const literal of stringLiterals(code)) {
+    const r = checkCommand(literal, { ...ctx, shell: 'bash' }, depth + 1);
+    if (r) return r;
+  }
+  return null;
+}
+
+/** 인터프리터(node·python…) 실행: --env-file, -e/-c 코드, 표준 입력으로 받는 코드 */
+function checkInterpreter(name, args, seg, ctx, depth) {
+  for (let k = 0; k < args.length; k++) {
+    const m = /^--env-file(?:-if-exists)?(?:=(.*))?$/.exec(args[k]);
+    if (m && isSecretFile(m[1] ?? args[k + 1] ?? '')) return R.envRead;
+  }
+  const k = args.findIndex((a) => INTERPRETERS[name].includes(a));
+  if (k !== -1) return checkCode(args[k + 1] ?? '', ctx, depth);
+  // 스크립트 파일 없이 실행(node, python -)하면 표준 입력을 코드로 읽는다
+  if (!args.some((a) => !a.startsWith('-')) || args.includes('-')) {
+    const code = seg.stdin ?? pipedText(seg.pipeFrom);
+    if (code) return checkCode(code, ctx, depth);
+  }
   return null;
 }
 
@@ -454,18 +660,32 @@ export function resolvePath(cwd, p, platform = process.platform) {
 
 /**
  * 명령을 판정한다. 막을 사유(문자열) 또는 null.
- * ctx.cwd: 시작 위치, ctx.exists(path): cd 대상이 있는지, ctx.commitBlocked(cwd): 그 위치에서 커밋하면 안 되는 보호 브랜치 이름(없으면 null)
+ * ctx.cwd: 시작 위치, ctx.exists(path): cd 대상이 있는지, ctx.commitBlocked(cwd): 그 위치에서 커밋하면 안 되는 보호 브랜치 이름(없으면 null),
+ * ctx.isDir(path): 디렉터리인지 (되돌리기 범위 판정), ctx.evalDir: 열람을 막을 eval 폴더 절대 경로 (김동환 PC만)
  */
 export function checkCommand(command, ctx = {}, depth = 0) {
   let cwd = ctx.cwd || process.cwd();
   const shell = ctx.shell || 'bash';
   const nested = (script, sh) => (depth < 3 && script ? checkCommand(script, { ...ctx, cwd, shell: sh }, depth + 1) : null);
-  for (const seg of parseCommand(command, shell)) {
-    if (seg.redirects.some((r) => r.op.startsWith('<') && isEnvFile(r.target))) return R.envRead;
+  const stack = [];
+  for (const seg of parseSegments(command, shell)) {
+    if (seg === PUSH) {
+      stack.push(cwd);
+      continue;
+    }
+    if (seg === POP) {
+      cwd = stack.pop() ?? cwd;
+      continue;
+    }
+    if (seg.redirects.some((r) => r.op.startsWith('<') && isSecretFile(r.target))) return R.envRead;
     // GIT_CONFIG_KEY_n=core.hooksPath, GIT_CONFIG_PARAMETERS로 hook 경로를 바꾸는 환경변수 (할당·export·$env: 모두)
     if (seg.words.some((w) => /GIT_CONFIG/i.test(w)) && seg.words.some((w) => /core\.hookspath/i.test(w))) return R.hooksPath;
     const { name, args } = unwrap(seg.words);
     if (!name) continue;
+    if (ctx.evalDir) {
+      const r = checkEval(name, args, seg.redirects, cwd, ctx);
+      if (r) return r;
+    }
     const inner = innerScript(name, args, shell);
     if (inner && inner.script !== '-') {
       const r = nested(inner.script, inner.shell);
@@ -483,9 +703,55 @@ export function checkCommand(command, ctx = {}, depth = 0) {
       if (!ctx.exists || ctx.exists(target)) cwd = target;
       continue;
     }
-    const r = name === 'git' ? checkGit(args, cwd, ctx) : name === 'gh' ? checkGh(args) : null;
+    if (INTERPRETERS[name]) {
+      const r = checkInterpreter(name, args, seg, { ...ctx, cwd }, depth);
+      if (r) return r;
+      continue;
+    }
+    const r =
+      name === 'git'
+        ? checkGit(args, cwd, ctx)
+        : name === 'gh'
+          ? checkGh(args)
+          : ['curl', 'wget', 'invoke-restmethod', 'irm', 'invoke-webrequest', 'iwr'].includes(name)
+            ? checkHttp(args)
+            : null;
     if (r) return r;
-    if (ENV_READERS.has(name) && args.some(isEnvFile)) return R.envRead;
+    if (READERS.has(name) && readTargets(name, args).some(isSecretFile)) return R.envRead;
+  }
+  return null;
+}
+
+// ── 도구별 입력 (H-1) ── 내장 Bash·PowerShell과 Desktop Commander MCP의 셸 도구
+const DC_START = /desktop-commander__start_process$/;
+const DC_INPUT = /desktop-commander__interact_with_process$/;
+
+/** MCP 셸 이름 → 판정할 셸 목록. 지정이 없으면(Windows 기본 powershell, 그 밖 기본 셸) 둘 다 본다 */
+function shellsOf(sh) {
+  const s = String(sh || '').toLowerCase();
+  if (!s) return ['bash', 'powershell'];
+  if (/cmd(\.exe)?$/.test(s)) return ['cmd'];
+  if (/pwsh|powershell/.test(s)) return ['powershell'];
+  return ['bash'];
+}
+
+/** PreToolUse 입력(tool_name, tool_input)을 판정한다. 셸 도구가 아니면 null */
+export function checkTool(toolName, input = {}, ctx = {}) {
+  const t = String(toolName || '');
+  const run = (command, shells) => {
+    for (const shell of shells) {
+      const r = checkCommand(command, { ...ctx, shell });
+      if (r) return r;
+    }
+    return null;
+  };
+  if (t === 'Bash') return run(String(input.command || ''), ['bash']);
+  if (t === 'PowerShell') return run(String(input.command || ''), ['powershell']);
+  if (DC_START.test(t)) return run(String(input.command || ''), shellsOf(input.shell));
+  // 실행 중인 셸이나 REPL(node -i, python -i)에 보내는 입력: 셸 명령이든 코드든 본다
+  if (DC_INPUT.test(t)) {
+    const text = String(input.input || '');
+    return run(text, ['bash', 'powershell']) || checkCode(text, ctx, 0);
   }
   return null;
 }

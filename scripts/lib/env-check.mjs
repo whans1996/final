@@ -4,7 +4,8 @@ import { exec } from 'node:child_process';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { hostname } from 'node:os';
 import { join } from 'node:path';
-import { ROOT, git, isGitRepo, isWin, readText } from './common.mjs';
+import { ROOT, git, isGitRepo, isWin, ownerKey, readText } from './common.mjs';
+import { EVAL_FETCH_EXCLUDE, evalBlockedFor, evalFetchExcluded } from './protect.mjs';
 
 const HARNESS_DIR = join(ROOT, '.harness');
 export const PC_FILE = join(HARNESS_DIR, 'pc.json');
@@ -102,6 +103,11 @@ export async function runChecks({ fast = false } = {}) {
     const name = git(['config', 'user.name']).out;
     const email = git(['config', 'user.email']).out;
     add(name && email ? 'ok' : 'warn', 'git 사용자', name && email ? `${name} <${email}>` : 'git config user.name / user.email 설정 필요');
+    // eval 블라인드 (HX-2): 김동환 PC의 fetch는 eval 기록 브랜치(eval/…)를 받지 않는다. setup.mjs가 refspec을 넣는다
+    if (evalBlockedFor(ownerKey(pc.id))) {
+      const excluded = evalFetchExcluded(git(['config', '--get-all', 'remote.origin.fetch']).out.split(/\r?\n/));
+      add(excluded ? 'ok' : 'warn', 'eval 브랜치 제외', excluded ? `fetch에서 ${EVAL_FETCH_EXCLUDE} 제외` : '없음 → node scripts/setup.mjs (eval 블라인드, HX-2)');
+    }
     if (!fast) {
       const origin = git(['remote', 'get-url', 'origin']);
       add(origin.ok ? 'ok' : 'warn', 'origin (GitHub)', origin.ok ? origin.out : '없음 → git remote add origin <GitHub private 저장소 URL>');
