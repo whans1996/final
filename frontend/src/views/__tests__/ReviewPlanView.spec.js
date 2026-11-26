@@ -246,6 +246,28 @@ describe('ReviewPlanView (F-15 SC-11)', () => {
     expect(wrapper.find('[data-challenge-id="2"]').text()).toContain('2 / 5회')
   })
 
+  it('#211 DONE 계획을 지우면 달성도를 다시 부르고, TODO 계획을 지우면 부르지 않는다', async () => {
+    reviewPlansApi.fetchReviewPlans.mockResolvedValue(response())
+    reviewPlansApi.deleteReviewPlan.mockResolvedValue(undefined)
+    challengesApi.fetchMyChallenges.mockResolvedValue(
+      page([myChallenge(2, { goalType: 'REVIEW_COUNT', goalValue: 5, progress: 1 })]),
+    )
+    const { wrapper } = await mountView()
+
+    await item(wrapper, 4).find('[data-action="remove"]').trigger('click')
+    await flushPromises()
+    expect(challengesApi.fetchMyChallenges).not.toHaveBeenCalled()
+
+    await item(wrapper, 3).find('[data-action="remove"]').trigger('click')
+    await flushPromises()
+    expect(challengesApi.fetchMyChallenges).toHaveBeenCalledTimes(1)
+    const notice = wrapper.find('[data-section="challenge-progress"]')
+    expect(notice.attributes('role')).toBe('status')
+    // 목록을 밀지 않게 복습 목록 뒤에 둔다
+    const sections = wrapper.findAll('section.day, [data-section="challenge-progress"]')
+    expect(sections.at(-1).attributes('data-section')).toBe('challenge-progress')
+  })
+
   it('#211 체크가 실패하면 챌린지 달성도를 부르지 않는다', async () => {
     reviewPlansApi.fetchReviewPlans.mockResolvedValue(response())
     reviewPlansApi.updateReviewPlanStatus.mockRejectedValue(apiError(500, { message: '오류' }))

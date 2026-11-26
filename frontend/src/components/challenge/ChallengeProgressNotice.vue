@@ -2,7 +2,9 @@
 // 분석·퀴즈·복습을 끝낸 화면의 챌린지 진행 (#211). 진행 중인 내 챌린지 중 같은 목표 유형만 달성도와 상세 링크로 보인다.
 // 집계는 서버가 활동과 함께 하므로(F-25) 활동 뒤 refreshKey를 바꿔 다시 부른다.
 // 보조 정보라 해당 챌린지가 없거나 조회가 실패하면 아무것도 보이지 않는다.
-import { ref, watch } from 'vue'
+// 분석은 완료 커밋 뒤 별도 트랜잭션으로 집계하므로(F-25 spec 4절) DONE 직후 값이 1 늦을 수 있다. 다시 부르지는 않는다.
+// 활동 직후 나타나는 블록이라 role="status"로 낭독한다.
+import { ref, useId, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { JOINED_CHALLENGE_MAX_SIZE, fetchMyChallenges } from '@/api/challenges'
 import ChallengeProgressBar from '@/components/challenge/ChallengeProgressBar.vue'
@@ -15,6 +17,7 @@ const props = defineProps({
 })
 
 const items = ref([])
+const headingId = useId()
 let lastRequest = 0
 
 async function load() {
@@ -36,9 +39,10 @@ watch(() => [props.goalType, props.refreshKey], load, { immediate: true })
     v-if="items.length > 0"
     class="challenge-progress"
     data-section="challenge-progress"
-    aria-label="참여 중인 챌린지"
+    role="status"
+    :aria-labelledby="headingId"
   >
-    <h2>🏁 참여 중인 챌린지</h2>
+    <h2 :id="headingId"><span aria-hidden="true">🏁 </span>참여 중인 챌린지</h2>
     <ul>
       <li v-for="c in items" :key="c.id" :data-challenge-id="c.id">
         <RouterLink :to="{ name: 'challenge-detail', params: { id: c.id } }" class="title">

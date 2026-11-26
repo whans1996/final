@@ -141,7 +141,7 @@ describe('QuizView (F-14 SC-08)', () => {
     expect(wrapper.find('input[type="radio"]').exists()).toBe(false)
   })
 
-  it('#211 제출하면 결과 위에 진행 중인 퀴즈 챌린지 달성도를 보여 주고, 다시 제출하면 다시 부른다', async () => {
+  it('#211 제출하면 점수 아래에 진행 중인 퀴즈 챌린지 달성도를 보여 주고, 다시 제출하면 다시 부른다', async () => {
     quizzesApi.fetchAnalysisQuiz.mockResolvedValue(quiz())
     quizzesApi.submitQuizAttempt.mockResolvedValue(attempt())
     challengesApi.fetchMyChallenges.mockResolvedValue(page([myChallenge(1, { progress: 4 })]))

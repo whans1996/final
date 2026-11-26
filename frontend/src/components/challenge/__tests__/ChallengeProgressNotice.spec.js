@@ -50,6 +50,10 @@ describe('ChallengeProgressNotice (#211 완료 화면의 챌린지 진행)', () 
     expect(items[0].text()).toContain('4 / 10회')
     expect(items[0].find('[data-badge="completed"]').exists()).toBe(false)
     expect(items[1].find('[data-badge="completed"]').text()).toBe('달성 완료')
+    const section = wrapper.find('[data-section="challenge-progress"]')
+    expect(section.attributes('role')).toBe('status')
+    expect(section.attributes('aria-labelledby')).toBe(section.find('h2').attributes('id'))
+    expect(section.find('h2 [aria-hidden="true"]').text()).toBe('🏁')
   })
 
   it('#211 같은 유형의 챌린지가 없거나 조회가 실패하면 아무것도 보이지 않는다', async () => {
