@@ -72,6 +72,26 @@ class EvalGraderTest {
         assertThat(scores.path("evidence").path("checked").asInt()).isEqualTo(3);
         assertThat(scores.path("evidence").path("valid").asDouble())
                 .isCloseTo(1.0 / 3, within(EPS));
+        // long을 넘는 줄 번호도 예외 없이 무효 (보고서가 채점에서 빠지지 않게)
+        assertThat(EvalGrader.withinLines("L99999999999999999999", 15)).isFalse();
+        assertThat(EvalGrader.withinLines("L1-L99999999999999999999", 15)).isFalse();
+    }
+
+    @Test
+    void AC6_금지_사실_판정_입력에는_퀴즈의_정답_보기만_넣는다() {
+        JsonNode quiz =
+                JSON.readTree(
+                        """
+                        {"quiz":[{"conceptName":"@Transactional","question":"예외가 나면 저장은?",
+                          "choices":["그대로 남는다","되돌려진다","두 번 저장된다","로그만 남는다"],
+                          "answerIndex":1,"explanation":"런타임 예외면 롤백됩니다."}]}
+                        """);
+
+        String text = EvalGrader.outputText(quiz);
+
+        // 오답 보기는 일부러 틀린 문장이라 출력의 주장이 아니다
+        assertThat(text).contains("예외가 나면 저장은?", "되돌려진다", "런타임 예외면 롤백됩니다.");
+        assertThat(text).doesNotContain("그대로 남는다", "두 번 저장된다", "로그만 남는다");
     }
 
     @Test

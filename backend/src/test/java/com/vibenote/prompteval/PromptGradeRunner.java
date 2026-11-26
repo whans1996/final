@@ -72,17 +72,19 @@ class PromptGradeRunner {
         List<Map<String, Object>> grades = new ArrayList<>();
         int failed = 0;
         for (Path report : reports) {
-            JsonNode node = JSON.readTree(report.toFile());
-            if (!node.has("units")) {
-                System.out.printf("[prompt-grade] 보고서가 아니어서 건너뜀: %s%n", report.getFileName());
-                continue;
-            }
-            JsonNode label = label(labels, node.path("fixture").asString(""));
+            JsonNode node;
+            JsonNode label;
             Map<String, Object> grade;
             try {
+                node = JSON.readTree(report.toFile());
+                if (!node.has("units")) {
+                    System.out.printf("[prompt-grade] 보고서가 아니어서 건너뜀: %s%n", report.getFileName());
+                    continue;
+                }
+                label = label(labels, node.path("fixture").asString(""));
                 grade = grader.grade(node, label);
             } catch (RuntimeException e) {
-                // 보고서 하나(예: fixtureZip을 못 찾음) 때문에 폴더 채점 전체가 멈추지 않게 한다
+                // 보고서 하나(잘린 JSON, fixtureZip을 못 찾음 등) 때문에 폴더 채점 전체가 멈추지 않게 한다
                 failed++;
                 System.out.printf(
                         "[prompt-grade] 채점 실패로 건너뜀: %s (%s)%n",

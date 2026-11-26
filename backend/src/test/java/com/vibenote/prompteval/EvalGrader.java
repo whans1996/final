@@ -249,9 +249,14 @@ final class EvalGrader {
         if (lines < 0 || !m.matches()) {
             return false;
         }
-        long start = Long.parseLong(m.group(1));
-        long end = m.group(2) == null ? start : Long.parseLong(m.group(2));
-        return start >= 1 && start <= end && end <= lines;
+        try {
+            long start = Long.parseLong(m.group(1));
+            long end = m.group(2) == null ? start : Long.parseLong(m.group(2));
+            return start >= 1 && start <= end && end <= lines;
+        } catch (NumberFormatException e) {
+            // long을 넘는 줄 번호는 파일 줄 수를 넘으므로 무효
+            return false;
+        }
     }
 
     /** C: 수준마다 출력 개념(이름 정규화, 중복 제거)을 라벨 등급과 대조한다. */
@@ -411,8 +416,12 @@ final class EvalGrader {
         } else if (node.isArray()) {
             node.forEach(child -> collectText(child, out));
         } else if (node.isObject()) {
+            // 퀴즈 문항: 오답 보기는 일부러 틀린 문장이라 출력의 주장이 아니다. 정답 보기만 넣는다
+            boolean quiz = node.has("choices") && node.path("answerIndex").isIntegralNumber();
             for (Map.Entry<String, JsonNode> e : node.properties()) {
-                if (!NOT_TEXT.contains(e.getKey())) {
+                if (quiz && e.getKey().equals("choices")) {
+                    collectText(e.getValue().path(node.path("answerIndex").asInt()), out);
+                } else if (!NOT_TEXT.contains(e.getKey())) {
                     collectText(e.getValue(), out);
                 }
             }
