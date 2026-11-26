@@ -286,7 +286,7 @@ export function lastContextTokens(path, tailBytes = 512 * 1024) {
  * SessionStart 화면 배너 (systemMessage). additionalContext는 모델에만 가므로 사람에게는 이것만 보인다.
  * 누구·어느 PC·브랜치·환경·주의·follow-up 이슈·내/상대 현재 기능을 몇 줄로 요약한다.
  */
-export function sessionBanner({ pc, branch, envBad = [], warnings = [], syncLines = [], issueLine, myFeature, peerName, peerFeature }) {
+export function sessionBanner({ pc, branch, envBad = [], warnings = [], syncLines = [], issueLine, roadmapLines = [], myFeature, peerName, peerFeature }) {
   const cut = (t, n = 90) => (t.length > n ? `${t.slice(0, n - 1)}…` : t);
   let who = `👤 ? · 🖥️ 미등록 PC (hostname ${pc?.hostname ?? '?'}) → node scripts/setup.mjs --pc <id>`;
   if (pc?.id) {
@@ -302,6 +302,8 @@ export function sessionBanner({ pc, branch, envBad = [], warnings = [], syncLine
   // 자동 동기화 결과 (scripts/lib/sync.mjs): 줄마다 ✅·⚠️·⏸️로 시작한다
   for (const s of syncLines) lines.push(`🔄 ${cut(s.replace(/^- /, ''), 110)}`);
   if (issueLine) lines.push(issueLine);
+  // 로드맵 (scripts/lib/roadmap.mjs bannerLines): 🗺️ 트랙별 다음 항목, 🤝·⚠️·📅 넘겨주는 시점
+  for (const r of roadmapLines) lines.push(cut(r, 150));
   if (myFeature) lines.push(`내 작업: ${cut(myFeature)}`);
   if (peerFeature) lines.push(`${peerName ?? '상대'}: ${cut(peerFeature)}`);
   return lines.join('\n');

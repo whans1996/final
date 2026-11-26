@@ -73,6 +73,10 @@ test('하네스: 테스트 자신과, 바뀐 모듈을 import하는 테스트', 
   assert.deepEqual(relatedHarnessTests(['scripts/lib/x-common.mjs'], testFiles, read), []);
   // 테스트가 없는 hook은 고를 것이 없다 (전체는 pre-push)
   assert.deepEqual(relatedHarnessTests(['.claude/hooks/guard-bash.mjs'], testFiles, read), []);
+  // 하네스가 읽는 문서(로드맵)는 그 파일을 파싱하는 테스트를 고른다
+  assert.deepEqual(relatedHarnessTests(['docs/로드맵.md'], [...testFiles, 'scripts/test/roadmap.test.mjs'], read), ['scripts/test/roadmap.test.mjs']);
+  assert.deepEqual(areasOf(['docs/로드맵.md']), ['harness']);
+  assert.deepEqual(areasOf(['docs/기획서.md']), []);
 });
 
 test('pre-push: wip는 건너뛰고, 같은 커밋을 이미 통과한 영역은 다시 돌리지 않는다', () => {

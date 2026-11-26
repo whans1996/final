@@ -84,7 +84,7 @@
 | Vue 컴포넌트 | PascalCase, 화면은 `XxxView.vue` | `ConceptCard.vue`, `ConceptDetailView.vue` |
 | FE API 함수 | 동사 + 리소스, camelCase | `fetchConcepts`, `createReview` |
 | Pinia store | `useXxxStore`, 파일은 `xxx.js` | `useAuthStore` in `stores/auth.js` |
-| 브랜치 | `feature/F-xx-slug`, `fix/F-xx-slug`, follow-up 이슈만 처리하면 `feature/issue-<번호>-slug` | `feature/F-05-analysis-request`, `feature/issue-26-endpoint-case` |
+| 브랜치 | `feature/F-xx-slug`, `fix/F-xx-slug`, 로드맵 항목(`docs/로드맵.md`)이면 `feature/<항목 ID>-slug`, follow-up 이슈만 처리하면 `feature/issue-<번호>-slug` | `feature/F-05-analysis-request`, `feature/K-3a-seed-check`, `feature/issue-26-endpoint-case` |
 
 ## 6. 커밋 메시지
 
@@ -101,6 +101,7 @@
 - 대상: `feature/*` → `develop`. 마일스톤 마감 때 `develop` → `main`.
 - **제목은 커밋 메시지와 같은 형식** `타입(F-xx): 요약` (CI가 검사한다).
 - 본문은 `.github/pull_request_template.md`를 채운다 (`/pr-review`가 생성).
+- **로드맵 상태는 PR 본문으로 계산한다** (R-1, `docs/로드맵.md`). 이 PR이 끝내는 항목을 `Roadmap: K-3a`(여러 개는 쉼표, 일부만이면 `Roadmap: T-1 (일부)`) 한 줄로 적는다. 머지되면 ✅, 열린 PR·일부·이름에 ID가 든 브랜치는 🔨로 보인다. 로드맵 밖 작업이면 그 줄을 지운다. 일정(기간·의존·넘겨주는 시점)을 바꿀 때는 `docs/로드맵.md` 표만 고친다 (상태 칸은 없다).
 - **리뷰는 reviewer 에이전트(`/pr-review`)와 Codex 봇이 한다.** 사람 리뷰 승인은 받지 않는다.
 - **CI가 초록이고 Codex가 COMPLETE일 때만** 영역 오너(PR 작성자 본인)가 머지한다. 예외: `docs/`만 바꾸는 주간 `/progress` PR은 Codex 재리뷰를 기다리지 않고 CI 초록이면 머지한다(자동 리뷰에 지적이 달리면 읽고 판단한다). head 커밋에 남은 Codex 지적이 모두 P2이고 각각 `follow-up` 이슈로 넘겨 스레드에 이슈 번호를 답했으면 `node scripts/codex-review.mjs <PR> --resolve`로 이관 완료를 표시한다(PR 설명 "후속 작업"에 기록). wip 커밋이 섞여 있으면 **Squash and merge**.
 - **공통 코드**(SecurityConfig, GlobalExceptionHandler, 공통 응답·ErrorCode, FE 라우터·레이아웃·공용 컴포넌트·api 클라이언트, 빌드 설정)를 바꾼 PR은 본문에서 상대를 @멘션한다 (A `@whans1996`, B `@JoonseobKim`).
