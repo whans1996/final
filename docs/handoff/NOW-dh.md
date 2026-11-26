@@ -13,7 +13,7 @@
 
 - ✅ PR ① #192 머지(11-26 13:30), #130·#135·#136·#139 닫힘. #192·#175 본문에 `Roadmap: HP-1`·`D-1` 추가
 - ✅ `docs/로드맵.md` 정본(항목 47·넘겨주는 시점 10·공통 일정 4, 점검 2절에서 옮김)
-- ✅ `scripts/lib/roadmap.mjs`(파싱·상태 계산·배너·블록·nextItem·newlyOverdue) + `scripts/roadmap.mjs` CLI + `roadmap.test.mjs` 15개
+- ✅ `scripts/lib/roadmap.mjs`(파싱·상태 계산·배너·블록·nextItem·newlyOverdue) + `scripts/roadmap.mjs` CLI + `roadmap.test.mjs` 21개
 - ✅ SessionStart 배너 🗺️·🤝·⚠️·📅 + 컨텍스트 "## 로드맵" 블록, `related.mjs` 로드맵 문서 → 하네스 영역
 - ✅ `.github/workflows/roadmap.yml`: develop push 때 새로 지난 넘겨주기를 Mattermost로 한 번 (schedule은 기본 브랜치 main만 돌아 못 씀)
 - ✅ PR 템플릿 `Roadmap:` 줄, /pr-review·/pickup·/handoff·conventions(브랜치 `feature/<ID>-slug`)·CLAUDE.md
@@ -31,4 +31,4 @@
 
 ## 주의
 - 다음 마이그레이션은 V14 · node heredoc으로 파일 고치면 `$'`·`\r` 이스케이프가 깨짐 → Edit 도구 · 이 PC에 python 없음
-- 로드맵 상태는 GitHub 검색 색인이라 PR 본문을 고친 직후 몇 초~분 늦게 반영된다
+- 로드맵 상태는 `gh pr list --state all`(검색 색인 안 씀)로 계산한다. 커밋 범위에 로드맵 ID 사용 가능(`feat(K-3a): …`)
