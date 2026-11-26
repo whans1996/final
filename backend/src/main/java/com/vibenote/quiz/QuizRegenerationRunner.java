@@ -34,6 +34,11 @@ public class QuizRegenerationRunner {
 
     public void run(long analysisId) {
         try {
+            if (!analysisService.isQuizRegenerating(analysisId)) {
+                // 그사이 삭제·탈퇴했으면 결과를 버리게 되므로 LLM을 부르지 않는다 (AC8)
+                log.info("분석 {}이 삭제됐거나 재생성 중이 아니어서 퀴즈 재생성을 멈춤", analysisId);
+                return;
+            }
             Analysis analysis = analysisService.findForPipeline(analysisId);
             quizSaveService.saveRegenerated(
                     analysisId,
@@ -44,6 +49,11 @@ public class QuizRegenerationRunner {
         } catch (RuntimeException e) {
             log.error("분석 {} 퀴즈 재생성 오류", analysisId, e);
             analysisService.failQuizRegeneration(analysisId);
+        } catch (Error e) {
+            // GENERATING으로 남으면 화면이 계속 폴링하므로 FAILED로 바꾸고 스레드에는 그대로 알린다 (AnalysisPipeline과 같음)
+            log.error("분석 {} 퀴즈 재생성 치명적 오류", analysisId, e);
+            analysisService.failQuizRegeneration(analysisId);
+            throw e;
         }
     }
 }

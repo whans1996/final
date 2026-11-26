@@ -1,11 +1,14 @@
 package com.vibenote.quiz;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 import com.vibenote.analysis.AnalysisService;
 import com.vibenote.common.exception.BusinessException;
@@ -169,6 +172,20 @@ class QuizRegenerationRunnerTest extends QuizTestSupport {
 
         assertThat(count("quizzes", "analysis_id = ?", id)).isZero();
         assertThat(row(id).get("quiz_status")).isEqualTo("GENERATING");
+        // 결과를 버릴 분석에 GMS 크레딧을 쓰지 않는다 (PR 리뷰)
+        verify(llmClient, never()).complete(argThat(r -> r != null && r.stage() == LlmStage.QUIZ));
+    }
+
+    @Test
+    void AC6_Error가_나도_FAILED로_바꾸고_다시_던진다() {
+        long id = generatingAnalysis(createUser("l1aac6e"));
+        doThrow(new StackOverflowError("boom"))
+                .when(quizSaveService)
+                .saveRegenerated(anyLong(), anyList());
+
+        assertThatThrownBy(() -> runner.run(id)).isInstanceOf(StackOverflowError.class);
+
+        assertFailedWithoutRefund(id);
     }
 
     @Test
@@ -183,5 +200,6 @@ class QuizRegenerationRunnerTest extends QuizTestSupport {
 
         assertThat(count("quizzes", "analysis_id = ?", id)).isZero();
         assertThat(row(id).get("deleted_at")).isNotNull();
+        verify(llmClient, never()).complete(argThat(r -> r != null && r.stage() == LlmStage.QUIZ));
     }
 }

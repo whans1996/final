@@ -162,6 +162,12 @@
         WHERE id = #{id} AND quiz_status = 'GENERATING' AND deleted_at IS NULL
     </update>
 
+    <!-- L-1a AC8. LLM을 부르기 전에 아직 재생성할 분석인지 (삭제·탈퇴면 크레딧을 쓰지 않는다) -->
+    <select id="isQuizRegenerating" resultType="boolean">
+        SELECT COUNT(*) > 0 FROM analyses
+        WHERE id = #{id} AND quiz_status = 'GENERATING' AND deleted_at IS NULL
+    </select>
+
     <!-- L-1a AC8. 재시작 때 재생성 중이던 퀴즈를 모두 실패로 (삭제된 분석 포함) -->
     <update id="failInterruptedQuizRegenerations">
         UPDATE analyses SET quiz_status = 'FAILED' WHERE quiz_status = 'GENERATING'

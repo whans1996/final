@@ -112,6 +112,9 @@ public interface AnalysisMapper {
     /** 재생성 중(GENERATING)이고 삭제되지 않은 분석의 퀴즈 상태를 바꾼다 (L-1a AC5·AC6·AC8). 바꾼 행 수. */
     int finishQuizRegeneration(@Param("id") long id, @Param("quizStatus") QuizStatus quizStatus);
 
+    /** 퀴즈 재생성 중(GENERATING)이고 삭제되지 않은 분석인지 (L-1a AC8). */
+    boolean isQuizRegenerating(@Param("id") long id);
+
     /** GENERATING인 퀴즈를 모두 FAILED로 바꾼다 (재시작 복구, L-1a AC8). */
     int failInterruptedQuizRegenerations();
 

@@ -444,6 +444,11 @@ public class AnalysisService {
         analysisMapper.finishQuizRegeneration(analysisId, QuizStatus.FAILED);
     }
 
+    /** 퀴즈 재생성 중이고 삭제되지 않은 분석인지. 재생성 실행기가 LLM을 부르기 전에 확인한다 (L-1a AC8). */
+    public boolean isQuizRegenerating(long analysisId) {
+        return analysisMapper.isQuizRegenerating(analysisId);
+    }
+
     /** 재생성 중이던 퀴즈를 모두 FAILED로 바꾼다 (서버 재시작, L-1a AC8). 바꾼 수를 돌려준다. */
     @Transactional
     public int failInterruptedQuizRegenerations() {

@@ -193,6 +193,39 @@ class AnalysisRerunApiTest extends AnalysisTestSupport {
     }
 
     @Test
+    void AC3_팀에_공유된_분석도_주인이_아니면_404() throws Exception {
+        long owner = createUser("l1aac3t", "JUNIOR");
+        long member = createUser("l1aac3m", "JUNIOR");
+        long shared = failedUrlAnalysis(owner);
+        jdbc.update(
+                "INSERT INTO teams (name, invite_code, owner_id) VALUES ('l1a팀', 'L1AAC3TM', ?)",
+                owner);
+        long teamId = jdbc.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
+        jdbc.update(
+                "INSERT INTO team_members (team_id, user_id, role) VALUES (?, ?, 'OWNER'), (?, ?,"
+                        + " 'MEMBER')",
+                teamId,
+                owner,
+                teamId,
+                member);
+        jdbc.update(
+                "INSERT INTO team_analyses (team_id, analysis_id) VALUES (?, ?)", teamId, shared);
+
+        rerun(member, shared)
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value(ErrorCode.ANALYSIS_404.name()));
+
+        assertThat(analysisRow(shared).get("deleted_at")).isNull();
+        assertThat(maxId(owner)).isEqualTo(shared);
+        assertThat(
+                        jdbc.queryForObject(
+                                "SELECT COUNT(*) FROM analyses WHERE user_id = ?",
+                                Integer.class,
+                                member))
+                .isZero();
+    }
+
+    @Test
     void AC3_동시에_재실행하면_하나만_202이고_새_행은_1개다() throws Exception {
         long userId = createUser("l1aac3c", "JUNIOR");
         long id = failedUrlAnalysis(userId);
