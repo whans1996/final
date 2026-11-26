@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 |---|---|
-| 상태 | APPROVED <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
+| 상태 | DONE (PR #220) <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
 | 기능 ID | E-1 (로드맵 트랙 1, 11/26~11/29, 11/29 B에 넘김 → EV-1 기준선) |
 | 우선순위 | T0 (기획서 7.4b) |
 | 영역 오너 | A 김동환 (AI·분석·학습 루프) |
@@ -158,5 +158,5 @@ LLM_PROVIDER=gms ./gradlew promptEval -Pstage=all -Plevel=all -Pfixture=<id|zip>
 - [x] `prompt-evaluator` 에이전트(지원 단계·`promptGrade`), `docs/산출물/09-데이터셋.md` DS-04 "사용 기능" 갱신
 - [x] dev 실호출 1회 확인 (11-26, DS-02-01 `all` `-Pbatches=1` × GMS gpt-4.1-mini 21회, 판정 Gemini 27회, 개발용 참고): 오류·건너뜀 없음, A 전 단계 100%, B 없는 경로·심볼 0, 근거 유효율 100%(72), D 100%(27, 1묶음 제외), E 기계 86%(해설 위치 언급 3문항, 검사기 오탐 아님) · 정답 유일 100%(22). 금지 사실 판정은 이 실행 뒤 추가라 미확인
 - [x] reviewer 지적 사항 반영 (11-26: ZIP fixture는 파일 이름을 id로 datasets.json split·오염 조회, 요약 그룹에 분할 추가·같은 저장소 재채점은 최신만, 채점기 Docker 의존 제거, 폴더 채점 견고성. 후속 #218 #219)
-- [ ] PR CI 초록
-- [ ] 상태 DONE (PR 머지 후)
+- [x] PR CI 초록 (Codex ✅ 81873d4, 재리뷰 3회. P2 이관 #219 #221 #223)
+- [x] 상태 DONE (PR #220)
