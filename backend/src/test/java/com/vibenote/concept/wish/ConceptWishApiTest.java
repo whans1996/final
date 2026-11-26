@@ -531,4 +531,26 @@ class ConceptWishApiTest extends IntegrationTestBase {
                 .andExpect(jsonPath("$.code").value("AUTH_401"));
         mockMvc.perform(get("/api/users/me/wishes")).andExpect(status().isUnauthorized());
     }
+
+    // ── #169 회귀: 찜 수 반정규화가 카드 수정일을 바꾸지 않는다 ──
+
+    private LocalDateTime updatedAt(long conceptId) {
+        return jdbc.queryForObject(
+                "SELECT updated_at FROM concepts WHERE id = ?", LocalDateTime.class, conceptId);
+    }
+
+    @Test
+    void 찜과_찜_해제는_카드의_updated_at을_바꾸지_않는다() throws Exception {
+        long me = insertUser("f12i169");
+        long c = published();
+        jdbc.update("UPDATE concepts SET updated_at = ? WHERE id = ?", BASE, c);
+
+        wish(c, me).andExpect(status().isOk());
+        assertThat(wishCount(c)).isOne();
+        assertThat(updatedAt(c)).isEqualTo(BASE);
+
+        unwish(c, me).andExpect(status().isOk());
+        assertThat(wishCount(c)).isZero();
+        assertThat(updatedAt(c)).isEqualTo(BASE);
+    }
 }
