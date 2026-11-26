@@ -568,4 +568,30 @@ class ConceptReviewApiTest extends IntegrationTestBase {
                                 c))
                 .isEqualTo("탈퇴 전 리뷰");
     }
+
+    // ── #169 회귀: 평점 반정규화가 카드 수정일을 바꾸지 않는다 ──
+
+    private LocalDateTime updatedAt(long conceptId) {
+        return jdbc.queryForObject(
+                "SELECT updated_at FROM concepts WHERE id = ?", LocalDateTime.class, conceptId);
+    }
+
+    @Test
+    void 리뷰_작성_수정_삭제는_카드의_updated_at을_바꾸지_않는다() throws Exception {
+        long c = published("f11-i169");
+        long me = insertUser("f11i169me");
+        jdbc.update("UPDATE concepts SET updated_at = ? WHERE id = ?", BASE, c);
+
+        create(c, bearer(me), body(4, "처음 씀")).andExpect(status().isCreated());
+        assertThat(avgRating(c)).isEqualByComparingTo("4.0");
+        assertThat(updatedAt(c)).isEqualTo(BASE);
+
+        update(c, bearer(me), body(2, "고쳐 씀")).andExpect(status().isOk());
+        assertThat(avgRating(c)).isEqualByComparingTo("2.0");
+        assertThat(updatedAt(c)).isEqualTo(BASE);
+
+        remove(c, bearer(me)).andExpect(status().isOk());
+        assertThat(avgRating(c)).isEqualByComparingTo("0.0");
+        assertThat(updatedAt(c)).isEqualTo(BASE);
+    }
 }

@@ -1,26 +1,26 @@
 # NOW — 김준섭 현재 작업 스냅샷
 
 > 김준섭(B 영역: 카드·소셜) 전용. 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
-갱신: 2026-11-26 13:44 · 작업자: JoonseobKim · PC: js-home · 브랜치: feature/issue-171-post-notice-search-race
+갱신: 2026-11-26 14:17 · 작업자: JoonseobKim · PC: js-home · 브랜치: feature/issue-169-concept-updated-at
 
 ---
 
 ## 현재 기능
 
-**V-1 MVP 감사 (B 몫, 앞당겨 11-26)** — reviewer 3개(팀 / 커뮤니티·팔로우·피드 / 개념 카드)로 B 코드 전체 감사: P1·P2 0건, P3 5건 코드 확인 후 이슈 #168~#172(area:B). 지금 #171·#172(F-17 FE) **PR #194** CI 초록·Codex COMPLETE(38f2160), 사람 머지 대기. V-2(DS-03·04)는 생성·검수 끝, 12/03 고정만 남음 (private `JoonseobKim/vibenote-eval`, 로컬 `data/raw/eval/`)
+**V-1 MVP 감사 (B 몫, 앞당겨 11-26)** — reviewer 3개(팀 / 커뮤니티·팔로우·피드 / 개념 카드)로 B 코드 전체 감사: P1·P2 0건, P3 5건 코드 확인 후 이슈 #168~#172(area:B). #171·#172는 PR #194로 머지·닫힘(11-26). 지금 #169 `feature/issue-169-concept-updated-at`: PR #197 (078f99f 수정·테스트), verify all ✅, Codex ✅ 0f54249, 머지 대기. V-2(DS-03·04)는 생성·검수 끝, 12/03 고정만 남음 (private `JoonseobKim/vibenote-eval`, 로컬 `data/raw/eval/`)
 
 ## 진행
 
-- ✅ #171 `PostDetailView` `takeNotice()`로 history state 정리, #172 `AttachmentPicker.searchConcepts` `lastSearch`로 늦은 응답 무시 (ff64828). verify all ✅, reviewer 반드시 수정 0·권장 3건 테스트 보강 반영 (38f2160). push·**PR #194** 생성(Closes #171 #172), Codex COMPLETE 지적 없음
-- ⬜ 남은 이슈: #168 F-20c 공유 해제↔목표 만들기 경합 500(B 혼자), #169 F-13 updated_at 자동 갱신(mapper/concept 공통 → PR에 @whans1996), #170 F-04 시각 오프셋(user/ DTO 공통 → 김동환과 먼저 합의)
+- ✅ #171·#172 PR #194 머지 (b078b35), 이슈 닫힘 확인
+- ↪️ #168 F-20c 팀 경합 500은 PR #176(team 영역 A 이관)으로 area:A·김동환 담당 → 내 목록에서 뺌
+- ✅ #169: 두 매퍼 SET에 `updated_at = updated_at` + 회귀 테스트 2개(`ConceptWishApiTest.찜과_찜_해제는_…`, `ConceptReviewApiTest.리뷰_작성_수정_삭제는_…`) red→green (078f99f)
+- ⬜ 남은 내 이슈: #170 F-04 시각 오프셋(user/ DTO 공통 → 김동환과 먼저 합의)
 
 ## 바로 다음 할 일
 
-1. PR #194: **사람이 GitHub에서 머지** (그 전에 develop에 새 커밋이 생기면 `git merge origin/develop` → push → CI 재확인) → `git switch develop && git pull`
-2. `feature/issue-168-team-challenge-unshare-race`: `TeamChallengeService.create`의 `challengeMapper.insert`에서 `DataIntegrityViolationException` → `TEAM_006`, 경합 재현 테스트(`TeamChallengeServiceTest` 또는 API 테스트)
-3. #169: `ConceptWishMapper.refreshWishCount`·`ConceptReviewMapper.refreshAvgRating` SET에 `updated_at = updated_at`, 찜·리뷰 후 updated_at 불변 테스트
-4. 김동환에게: 이전 원격 브랜치 `feature/common-ds03-labels` 열람 여부 확인(라벨 내용은 말하지 않음), #170 user DTO 오프셋 변경 합의
-5. 11/27 Figma 공동 세션(F-29) → 새 세션(Opus/high) `/spec F-29` (`node scripts/branches.mjs F-29` 먼저). 12/03 eval `sets.json` `frozenAt`
+1. PR #197: Backend CI 초록 확인 → 사람이 GitHub에서 머지 → `/pickup`에서 develop pull, #169 닫힘 확인
+2. 김동환에게: 이전 원격 브랜치 `feature/common-ds03-labels` 열람 여부 확인(라벨 내용은 말하지 않음), #170 user DTO 오프셋 변경 합의
+3. 11/27 Figma 공동 세션(F-29) → 새 세션(Opus/high) `/spec F-29` (`node scripts/branches.mjs F-29` 먼저). 12/03 eval `sets.json` `frozenAt`
 
 ## 막힌 점 / 결정 필요
 
