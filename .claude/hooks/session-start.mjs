@@ -223,7 +223,7 @@ let issueFailure = null;
 try {
   const res = me ? issuesRes : null;
   if (res && !res.ok) issueFailure = issueFailureLine(res.reason);
-  issueSummary = res?.ok ? summarizeIssues(res.issues, { key: me, github: pc.github }) : null;
+  issueSummary = res?.ok ? summarizeIssues(res.issues, { key: me, github: pc.github, truncated: res.truncated }) : null;
   issueList = issueSummary ? issueContext(issueSummary) : null;
 } catch (e) {
   issueSummary = null;

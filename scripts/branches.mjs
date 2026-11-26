@@ -5,8 +5,10 @@
 // 사용법:
 //   node scripts/branches.mjs          내 NOW 파일을 바꾼 원격 브랜치 (세션 시작 배너와 같은 목록)
 //   node scripts/branches.mjs F-14     F-14를 진행 중인 원격 브랜치 (/spec 1단계 가드). 있으면 새 spec을 쓰지 않는다
+//                                      로드맵 ID(E-1·L-1a·K-3a·HP-3)도 같은 규칙: feature/<ID>-* 브랜치, docs/specs/<ID>-*.md (#213)
 import { NON_INTERACTIVE_GIT_ENV, currentBranch, git, localPcId, nowRelPath, ownerKey } from './lib/common.mjs';
 import { featureOnRemotes, myBranchLines, myBranchNows } from './lib/peer.mjs';
+import { normalizeItemId } from './lib/roadmap.mjs';
 
 const arg = process.argv[2];
 const fetched = git(['fetch', '--quiet', '--prune', 'origin'], { timeout: 15_000, env: NON_INTERACTIVE_GIT_ENV });
@@ -14,9 +16,9 @@ const fetched = git(['fetch', '--quiet', '--prune', 'origin'], { timeout: 15_000
 if (!fetched.ok) console.log(`⚠️ git fetch 실패 (${fetched.err.split('\n')[0] || `exit ${fetched.status}`}) → 마지막으로 받은 원격 상태 기준이다`);
 
 if (arg) {
-  const fid = /^f-\d+[a-z]?$/i.test(arg) ? arg.replace(/^f/, 'F') : null;
+  const fid = normalizeItemId(arg);
   if (!fid) {
-    console.error(`기능 ID 형식이 아닙니다: ${arg} (예: F-14, F-05a)`);
+    console.error(`기능·로드맵 ID 형식이 아닙니다: ${arg} (예: F-14, F-05a, E-1, L-1a, HP-3)`);
     process.exit(2);
   }
   const found = featureOnRemotes(fid, { current: currentBranch() });

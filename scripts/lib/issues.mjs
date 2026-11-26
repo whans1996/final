@@ -8,18 +8,20 @@ export const COMMON_AREA = 'area:common';
 /** 누군가의 작업(커밋·머지·다음 기능)을 막는 이슈. 영역과 무관하게 두 사람 모두에게 먼저 보인다 (#67) */
 export const BLOCKER = 'blocker';
 export const STALE_DAYS = 7;
+/** 한 번에 가져오는 이슈 수 상한. 이만큼 받으면 잘렸을 수 있다고 알린다 (#179: 50개 상한이 조용히 잘랐다) */
+export const ISSUE_LIMIT = 200;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
- * 열린 follow-up 이슈 목록 → { ok: true, issues } | { ok: false, reason }.
+ * 열린 follow-up 이슈 목록 → { ok: true, issues, truncated } | { ok: false, reason }. truncated = 상한만큼 받아 더 있을 수 있음.
  * 세션 시작을 막지 않도록 비동기·제한 시간. 실패를 조용히 삼키지 않고 이유를 돌려준다 (#67: 이슈 16개가 경고 없이 빠졌다).
  * 주의: 띄운 뒤 동기 작업으로 이벤트 루프를 막으면 제한 시간 타이머가 먼저 터져 출력이 버려진다 → 동기 git이 끝난 뒤 부른다.
  */
-export function followUpIssues({ timeout = 4000, exec = execFile } = {}) {
+export function followUpIssues({ timeout = 4000, exec = execFile, limit = ISSUE_LIMIT } = {}) {
   return new Promise((resolve) => {
     exec(
       'gh',
-      ['issue', 'list', '--label', 'follow-up', '--state', 'open', '--limit', '50', '--json', 'number,title,labels,assignees,createdAt'],
+      ['issue', 'list', '--label', 'follow-up', '--state', 'open', '--limit', String(limit), '--json', 'number,title,labels,assignees,createdAt'],
       { cwd: ROOT, encoding: 'utf8', windowsHide: true, timeout },
       (err, stdout, stderr) => {
         if (err?.code === 'ENOENT') return resolve({ ok: false, reason: 'gh 없음' });
@@ -31,7 +33,7 @@ export function followUpIssues({ timeout = 4000, exec = execFile } = {}) {
         if (!String(stdout ?? '').trim()) return resolve({ ok: false, reason: '빈 응답' });
         try {
           const issues = JSON.parse(stdout);
-          resolve(Array.isArray(issues) ? { ok: true, issues } : { ok: false, reason: '응답 형식 오류' });
+          resolve(Array.isArray(issues) ? { ok: true, issues, truncated: issues.length >= limit } : { ok: false, reason: '응답 형식 오류' });
         } catch {
           resolve({ ok: false, reason: '응답 형식 오류' });
         }
@@ -42,15 +44,15 @@ export function followUpIssues({ timeout = 4000, exec = execFile } = {}) {
 
 /** 이슈 조회 실패 줄 (배너·모델 컨텍스트 공용). 빠진 줄과 "이슈 없음"을 구분하려고 실패하면 항상 낸다 */
 export function issueFailureLine(reason) {
-  return `⚠️ 이슈 조회 실패 (${reason}) → gh issue list --label follow-up`;
+  return `⚠️ 이슈 조회 실패 (${reason}) → gh issue list --label follow-up --limit ${ISSUE_LIMIT}`;
 }
 
 /**
  * 이슈를 차단·내 것·공통·분류 필요로 나눈다 (상대 영역은 차단이 아니면 세지 않는다).
  * 차단 = blocker 라벨(영역 무관, 다른 그룹에서 뺀다), 공통 = area:common, 내 것 = (공통이 아닌 것 중) 내 area 라벨이거나 담당자가 나.
- * stale = 차단·내 것·공통 중 STALE_DAYS일 넘게 열린 것.
+ * stale = 차단·내 것·공통 중 STALE_DAYS일 넘게 열린 것. truncated(조회 결과)는 그대로 실어 배너·목록이 알리게 한다.
  */
-export function summarizeIssues(issues, { key, github } = {}, now = Date.now()) {
+export function summarizeIssues(issues, { key, github, truncated = false } = {}, now = Date.now()) {
   const blockers = [];
   const mine = [];
   const common = [];
@@ -67,23 +69,24 @@ export function summarizeIssues(issues, { key, github } = {}, now = Date.now()) 
   }
   const byNumber = (a, b) => a.number - b.number;
   const stale = [...blockers, ...mine, ...common].filter((i) => now - Date.parse(i.createdAt) > STALE_DAYS * DAY_MS).sort(byNumber);
-  return { blockers: blockers.sort(byNumber), mine: mine.sort(byNumber), common: common.sort(byNumber), untriaged: untriaged.sort(byNumber), stale };
+  return { blockers: blockers.sort(byNumber), mine: mine.sort(byNumber), common: common.sort(byNumber), untriaged: untriaged.sort(byNumber), stale, truncated: Boolean(truncated) };
 }
 
 /** 세션 시작 배너 한 줄. 차단 이슈가 있으면 🔴로 시작하고 첫 이슈로 보여 준다. 볼 이슈가 없으면 null */
-export function issueBannerLine({ blockers = [], mine, common, untriaged, stale }) {
+export function issueBannerLine({ blockers = [], mine, common, untriaged, stale, truncated = false }) {
   const all = [...blockers, ...mine, ...common, ...untriaged];
   if (!all.length) return null;
   const counts = [`내 ${mine.length}`, `공통 ${common.length}`];
   if (blockers.length) counts.unshift(`차단 ${blockers.length}`);
   if (untriaged.length) counts.push(`분류 필요 ${untriaged.length}`);
   if (stale.length) counts.push(`${STALE_DAYS}일 넘음 ${stale.length}`);
+  if (truncated) counts.push(`⚠️ ${ISSUE_LIMIT}개에서 잘림`);
   const first = all[0];
   return `${blockers.length ? '🔴' : '📌'} 이슈: ${counts.join(' · ')} (#${first.number} ${first.title.length > 40 ? `${first.title.slice(0, 39)}…` : first.title}${all.length > 1 ? ' 외' : ''})`;
 }
 
 /** 모델에 주는 이슈 목록 (그룹별 최대 limit개) */
-export function issueContext({ blockers = [], mine, common, untriaged }, limit = 10) {
+export function issueContext({ blockers = [], mine, common, untriaged, truncated = false }, limit = 10) {
   const list = (items) => items.slice(0, limit).map((i) => `  - #${i.number} ${i.title}`).join('\n') + (items.length > limit ? `\n  - … 외 ${items.length - limit}개` : '');
   const groups = [
     ['🔴 차단 (blocker: 작업 전에 멈추고 사용자에게 해결·우회 여부를 묻는다)', blockers],
@@ -92,7 +95,9 @@ export function issueContext({ blockers = [], mine, common, untriaged }, limit =
     ['분류 필요 (area 라벨 없음 → 라벨·담당자 지정 제안)', untriaged],
   ].filter(([, items]) => items.length);
   if (!groups.length) return null;
-  return groups.map(([name, items]) => `- ${name} ${items.length}개\n${list(items)}`).join('\n');
+  const body = groups.map(([name, items]) => `- ${name} ${items.length}개\n${list(items)}`).join('\n');
+  // 상한을 채웠으면 개수·목록이 실제보다 적을 수 있다 (#179)
+  return truncated ? `${body}\n- ⚠️ 조회 상한 ${ISSUE_LIMIT}개를 채워 일부가 빠졌을 수 있다 → gh issue list --label follow-up --limit 1000` : body;
 }
 
 /** PR 본문에서 닫을 이슈 번호 (GitHub 키워드: close·closes·closed·fix·fixes·fixed·resolve·resolves·resolved) */

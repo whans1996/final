@@ -2,13 +2,13 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
-import { closingRefs, followUpIssues, issueBannerLine, issueContext, issueFailureLine, summarizeIssues } from '../lib/issues.mjs';
+import { ISSUE_LIMIT, closingRefs, followUpIssues, issueBannerLine, issueContext, issueFailureLine, summarizeIssues } from '../lib/issues.mjs';
 
 // execFile 대역: (file, args, opts, cb) → cb(err, stdout)
 const fakeExec = (err, stdout = '') => (file, args, opts, cb) => cb(err, stdout, '');
 
 test('이슈 조회는 성공·실패를 null이 아닌 {ok, issues, reason}으로 알린다 (#67)', async () => {
-  assert.deepEqual(await followUpIssues({ exec: fakeExec(null, '[{"number":1}]') }), { ok: true, issues: [{ number: 1 }] });
+  assert.deepEqual(await followUpIssues({ exec: fakeExec(null, '[{"number":1}]') }), { ok: true, issues: [{ number: 1 }], truncated: false });
   assert.deepEqual(await followUpIssues({ exec: fakeExec(Object.assign(new Error('x'), { code: 'ENOENT' })) }), { ok: false, reason: 'gh 없음' });
   assert.deepEqual(await followUpIssues({ exec: fakeExec(Object.assign(new Error('x'), { killed: true }), ''), timeout: 4000 }), {
     ok: false,
@@ -26,8 +26,33 @@ test('이슈 조회는 성공·실패를 null이 아닌 {ok, issues, reason}으�
   assert.deepEqual(await followUpIssues({ exec: fakeExec(null, 'not json') }), { ok: false, reason: '응답 형식 오류' });
 });
 
+test('조회 상한을 채우면 truncated로 알리고 배너·목록이 잘림을 보인다 (#179)', async () => {
+  // gh에 넘기는 상한은 ISSUE_LIMIT (50이면 열린 이슈 39개 시점에 곧 넘었다)
+  let args = null;
+  await followUpIssues({ exec: (f, a, o, cb) => { args = a; cb(null, '[]', ''); } });
+  assert.equal(args[args.indexOf('--limit') + 1], String(ISSUE_LIMIT));
+  assert.ok(ISSUE_LIMIT >= 200);
+
+  const full = JSON.stringify(Array.from({ length: 3 }, (_, i) => ({ number: i + 1 })));
+  assert.equal((await followUpIssues({ exec: fakeExec(null, full), limit: 3 })).truncated, true);
+  assert.equal((await followUpIssues({ exec: fakeExec(null, full), limit: 4 })).truncated, false);
+
+  const cut = summarizeIssues(ISSUES, { key: 'dh', github: 'whans1996', truncated: true }, NOW);
+  assert.equal(cut.truncated, true);
+  assert.ok(issueBannerLine(cut).includes(`· ⚠️ ${ISSUE_LIMIT}개에서 잘림 (#16`));
+  assert.match(issueContext(cut), /⚠️ 조회 상한 \d+개를 채워 일부가 빠졌을 수 있다/);
+  // 잘리지 않았으면 표시하지 않는다
+  const whole = summarizeIssues(ISSUES, { key: 'dh', github: 'whans1996' }, NOW);
+  assert.equal(whole.truncated, false);
+  assert.doesNotMatch(issueBannerLine(whole), /잘림/);
+  assert.doesNotMatch(issueContext(whole), /조회 상한/);
+  // session-start가 조회 결과의 truncated를 넘긴다
+  const src = readFileSync(new URL('../../.claude/hooks/session-start.mjs', import.meta.url), 'utf8');
+  assert.match(src, /summarizeIssues\(res\.issues, \{[^}]*truncated: res\.truncated/);
+});
+
 test('이슈 조회 실패 줄은 이유와 직접 확인할 명령을 담는다', () => {
-  assert.equal(issueFailureLine('빈 응답'), '⚠️ 이슈 조회 실패 (빈 응답) → gh issue list --label follow-up');
+  assert.equal(issueFailureLine('빈 응답'), '⚠️ 이슈 조회 실패 (빈 응답) → gh issue list --label follow-up --limit 200');
 });
 
 test('session-start는 동기 git(fetch·autoSync)이 끝난 뒤 gh·docker 조회를 시작한다 (#67)', () => {

@@ -17,6 +17,7 @@ import {
   nextItem,
   nextItemLine,
   overdueMessage,
+  normalizeItemId,
   parseRoadmap,
   roadmapBlock,
   roadmapRefs,
@@ -137,6 +138,18 @@ test('roadmapRefIssues는 형식 오류·없는 ID·대소문자 차이를 알�
   assert.deepEqual(roadmapRefIssues('Roadmap: **HP-2**', ids), ['형식 오류 "**HP-2**" (예: Roadmap: HP-2, T-1 (일부))']);
   assert.deepEqual(roadmapRefIssues('Roadmap: k-3a', ids), ['대소문자가 다름 "k-3a" → K-3a']);
   assert.deepEqual(roadmapRefIssues('Roadmap: HP-9', ids), ['로드맵에 없는 ID "HP-9" (docs/로드맵.md 항목 표)']);
+});
+
+test('normalizeItemId는 기능·로드맵 ID를 표준 표기로 바꾸고 형식이 아니면 null (#213 branches.mjs 가드)', () => {
+  // 실제 로드맵의 모든 ID는 그대로 돌아온다 (E-1·L-1a·K-3a·HP-3 등을 거부하던 #213)
+  const { items } = parseRoadmap(readFileSync(ROADMAP_FILE, 'utf8'));
+  for (const { id } of items) assert.equal(normalizeItemId(id), id, id);
+  assert.equal(normalizeItemId('e-1'), 'E-1');
+  assert.equal(normalizeItemId('l-1A'), 'L-1a');
+  assert.equal(normalizeItemId('f-05a'), 'F-05a');
+  assert.equal(normalizeItemId('hp-3'), 'HP-3');
+  assert.equal(normalizeItemId(' F-26b2 '), 'F-26b2');
+  for (const bad of ['', null, 'F14', 'F-', '-1', 'ABCDE-1', 'F-12345', 'F-1abc', 'F-1/x', 'feature/F-14']) assert.equal(normalizeItemId(bad), null, String(bad));
 });
 
 test('모든 로드맵 ID는 커밋·PR 제목 범위로 쓸 수 있다 (commit-msg SCOPE·ci.yml pr-title)', () => {
