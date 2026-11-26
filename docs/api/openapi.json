@@ -1109,14 +1109,14 @@
         "description" : "댓글 목록",
         "properties" : {
           "items" : {
-            "description" : "오래된순(작성 시각, id 오름차순) 최대 200개",
+            "description" : "가장 최근 200개를 오래된순(작성 시각, id 오름차순)으로",
             "items" : {
               "$ref" : "#/components/schemas/CommentResponse"
             },
             "type" : "array"
           },
           "total" : {
-            "description" : "그 글의 전체 댓글 수 (items 수보다 크면 200개만 보낸 것)",
+            "description" : "그 글의 전체 댓글 수 (items 수보다 크면 오래된 댓글은 빠진 것)",
             "example" : 2,
             "format" : "int64",
             "type" : "integer"
@@ -7043,7 +7043,7 @@
     },
     "/api/posts/{postId}/comments" : {
       "get" : {
-        "description" : "한 글의 댓글을 오래된순(작성 시각, id 오름차순)으로 최대 200개 돌려준다. total은 전체 댓글 수. 비로그인도 쓸 수 있다.",
+        "description" : "한 글의 댓글 중 가장 최근 200개를 오래된순(작성 시각, id 오름차순)으로 돌려준다. total은 전체 댓글 수. 비로그인도 쓸 수 있다.",
         "operationId" : "list_1",
         "parameters" : [ {
           "description" : "글 ID",
