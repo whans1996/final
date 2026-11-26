@@ -21,6 +21,7 @@ com.vibenote
 ├─ recommendation  맞춤 추천 (F-16)
 ├─ post            게시글(게시판 3종), 댓글 (F-17, F-18)
 ├─ challenge       학습 챌린지 관리, 참여·달성도 집계 (F-24, F-25)
+├─ team            팀·초대 코드, 팀 분석 공유·이해도, 팀 챌린지 (F-20a~c, B 영역. T-1 팀 프로젝트는 공통 PR·@멘션)
 ├─ llm             LlmClient와 구현체(Mock, GMS, Ollama, Gemini), 단계 출력 스키마, 프롬프트 로더, 사용량 로그
 └─ common          예외, GlobalExceptionHandler, 페이지, JsonTypeHandler, 보안 설정, 유틸
 ```

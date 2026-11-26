@@ -4,12 +4,14 @@
 # - 하네스: scripts/lib/owners.mjs가 읽어 상대 영역·공통 파일을 수정하면 Claude에게 알리고(area-notice hook),
 #   `node scripts/owners.mjs --diff origin/develop`이 PR 설명에 @멘션할 대상을 뽑는다.
 # - 새 도메인 패키지·FE 폴더를 만들면 같은 PR에서 이 파일에 한 줄 추가한다. FE views·components는 도메인 폴더(views/quiz/ 등)에 둔다.
+# - FE 파일 규칙은 `**/`로 같은 이름의 __tests__ 파일까지 맞춘다 (api/**/auth.* = api/auth.js와 api/__tests__/auth.spec.js).
 
 # ── 공통 (둘 다) ─────────────────────────────────────────
 /backend/build.gradle*                       @whans1996 @JoonseobKim
 /backend/settings.gradle*                    @whans1996 @JoonseobKim
 /backend/src/main/resources/application*.yml @whans1996 @JoonseobKim
 /backend/src/main/resources/db/              @whans1996 @JoonseobKim
+/backend/src/main/java/com/vibenote/VibeNoteApplication.java @whans1996 @JoonseobKim
 **/vibenote/common/                          @whans1996 @JoonseobKim
 **/vibenote/auth/                            @whans1996 @JoonseobKim
 **/vibenote/user/                            @whans1996 @JoonseobKim
@@ -24,19 +26,38 @@
 /frontend/vite.config.*                      @whans1996 @JoonseobKim
 /frontend/src/App.vue                        @whans1996 @JoonseobKim
 /frontend/src/main.js                        @whans1996 @JoonseobKim
+/frontend/src/__tests__/                     @whans1996 @JoonseobKim
+/frontend/src/assets/                        @whans1996 @JoonseobKim
 /frontend/src/router/                        @whans1996 @JoonseobKim
-/frontend/src/api/http.js                    @whans1996 @JoonseobKim
-/frontend/src/api/auth.js                    @whans1996 @JoonseobKim
-/frontend/src/api/users.js                   @whans1996 @JoonseobKim
-/frontend/src/api/concepts.js                @whans1996 @JoonseobKim
-/frontend/src/utils/conceptCategories.js     @whans1996 @JoonseobKim
-/frontend/src/stores/auth.js                 @whans1996 @JoonseobKim
+/frontend/src/stores/                        @whans1996 @JoonseobKim
+/frontend/src/api/**/http.*                  @whans1996 @JoonseobKim
+/frontend/src/api/**/auth.*                  @whans1996 @JoonseobKim
+/frontend/src/api/**/users.*                 @whans1996 @JoonseobKim
+/frontend/src/api/**/concepts.*              @whans1996 @JoonseobKim
+/frontend/src/api/**/adminConcepts.*         @whans1996 @JoonseobKim
+/frontend/src/api/**/feed.*                  @whans1996 @JoonseobKim
+/frontend/src/utils/**/conceptCategories.*   @whans1996 @JoonseobKim
+/frontend/src/utils/**/authValidation.*      @whans1996 @JoonseobKim
+/frontend/src/utils/**/navItems.*            @whans1996 @JoonseobKim
+/frontend/src/utils/**/pagination.*          @whans1996 @JoonseobKim
+/frontend/src/utils/**/relativeTime.*        @whans1996 @JoonseobKim
+/frontend/src/utils/**/seoulDate.*           @whans1996 @JoonseobKim
 /frontend/src/components/common/             @whans1996 @JoonseobKim
+/frontend/src/components/feed/               @whans1996 @JoonseobKim
 /frontend/src/composables/                   @whans1996 @JoonseobKim
 /frontend/src/views/concept/                 @whans1996 @JoonseobKim
 /frontend/src/components/concept/            @whans1996 @JoonseobKim
 /frontend/src/layouts/                       @whans1996 @JoonseobKim
 /frontend/src/views/admin/                   @whans1996 @JoonseobKim
+/frontend/src/views/**/Admin*                @whans1996 @JoonseobKim
+/frontend/src/views/**/Concept*              @whans1996 @JoonseobKim
+/frontend/src/views/**/HomeView.*            @whans1996 @JoonseobKim
+/frontend/src/views/**/LoginView.*           @whans1996 @JoonseobKim
+/frontend/src/views/**/SignupView.*          @whans1996 @JoonseobKim
+/frontend/src/views/**/MySettingsView.*      @whans1996 @JoonseobKim
+/frontend/src/views/**/NotFoundView.*        @whans1996 @JoonseobKim
+/frontend/src/views/**/UserProfileView.*     @whans1996 @JoonseobKim
+/frontend/src/views/__tests__/viewTestUtils.js @whans1996 @JoonseobKim
 
 # ── A 김동환: 분석·LLM·퀴즈·복습·추천·챌린지 ───────────────
 **/vibenote/analysis/                        @whans1996
@@ -48,42 +69,60 @@
 **/vibenote/prompteval/                      @whans1996
 /backend/src/main/resources/mapper/analysis/ @whans1996
 /backend/src/main/resources/mapper/llm/      @whans1996
+/backend/src/main/resources/mapper/quiz/     @whans1996
+/backend/src/main/resources/mapper/reviewplan/ @whans1996
+/backend/src/main/resources/mapper/recommendation/ @whans1996
+/backend/src/main/resources/mapper/challenge/ @whans1996
 /backend/src/main/resources/prompts/         @whans1996
 /backend/src/main/resources/llm-fixtures/    @whans1996
-/frontend/src/api/analyses.js                @whans1996
-/frontend/src/utils/analysisStatus.js        @whans1996
-/frontend/src/utils/layers.js                @whans1996
-/frontend/src/views/Analysis*                @whans1996
-/frontend/src/views/__tests__/Analysis*      @whans1996
+/backend/src/main/resources/llm-schemas/     @whans1996
+/frontend/src/api/**/analyses.*              @whans1996
+/frontend/src/api/**/quizzes.*               @whans1996
+/frontend/src/api/**/reviewPlans.*           @whans1996
+/frontend/src/api/**/recommendations.*       @whans1996
+/frontend/src/api/**/challenges.*            @whans1996
+/frontend/src/api/**/adminChallenges.*       @whans1996
+/frontend/src/utils/**/analysisStatus.*      @whans1996
+/frontend/src/utils/**/layers.*              @whans1996
+/frontend/src/utils/**/structure.*           @whans1996
+/frontend/src/utils/**/mermaid.*             @whans1996
+/frontend/src/utils/**/quizFormat.*          @whans1996
+/frontend/src/views/**/Analysis*             @whans1996
 /frontend/src/components/analysis/           @whans1996
+/frontend/src/views/**/QuizView.*            @whans1996
 /frontend/src/views/quiz/                    @whans1996
+/frontend/src/components/quiz/               @whans1996
 /frontend/src/views/reviewplan/              @whans1996
-/frontend/src/views/__tests__/ReviewPlan*     @whans1996
+/frontend/src/views/**/ReviewPlan*           @whans1996
 /frontend/src/components/reviewplan/         @whans1996
-/frontend/src/api/reviewPlans.js             @whans1996
 /frontend/src/views/dashboard/               @whans1996
-/frontend/src/views/__tests__/Dashboard*     @whans1996
+/frontend/src/views/**/Dashboard*            @whans1996
 /frontend/src/components/recommendation/     @whans1996
-/frontend/src/api/recommendations.js         @whans1996
-/frontend/src/router/routes/dashboard.js     @whans1996
 /frontend/src/views/challenge/               @whans1996
+/frontend/src/components/challenge/          @whans1996
+/frontend/src/router/routes/dashboard.js     @whans1996
 /frontend/src/router/routes/analysis.js      @whans1996
 /frontend/src/router/routes/challenge.js     @whans1996
 /frontend/src/router/routes/reviewplan.js    @whans1996
 
-# ── B 김준섭: 팔로우·커뮤니티·팀 (카드 F-09~13은 공통 기반 위 concept 하위 폴더) ──
+# ── B 김준섭: 팔로우·커뮤니티(BE 패키지 post)·팀 (카드 F-09~13은 공통 기반 위 concept 하위 폴더) ──
 **/vibenote/follow/                          @JoonseobKim
-**/vibenote/community/                       @JoonseobKim
+**/vibenote/post/                            @JoonseobKim
 /backend/src/main/resources/mapper/follow/   @JoonseobKim
-/backend/src/main/resources/mapper/community/ @JoonseobKim
+/backend/src/main/resources/mapper/post/     @JoonseobKim
+/frontend/src/api/**/follows.*               @JoonseobKim
+/frontend/src/api/**/posts.*                 @JoonseobKim
+/frontend/src/components/follow/             @JoonseobKim
+/frontend/src/views/**/UserFollowsView.*     @JoonseobKim
 /frontend/src/views/community/               @JoonseobKim
+/frontend/src/views/**/Post*                 @JoonseobKim
 /frontend/src/components/community/          @JoonseobKim
 /frontend/src/router/routes/community.js     @JoonseobKim
 **/vibenote/team/                            @JoonseobKim
 /backend/src/main/resources/mapper/team/     @JoonseobKim
 /frontend/src/views/team/                    @JoonseobKim
 /frontend/src/components/team/               @JoonseobKim
-/frontend/src/api/teams.js                   @JoonseobKim
+/frontend/src/api/**/teams.*                 @JoonseobKim
 /frontend/src/router/routes/team.js          @JoonseobKim
 
 # ── 하네스 (A가 유지보수) ─────────────────────────────────
