@@ -1,6 +1,6 @@
 # ER Diagram — 바이브노트
 
-> 작성 상태: 🟡 초안 (Flyway **V1~V10** 반영, 2026-11-24). **DDL 정본은 `backend/src/main/resources/db/migration/`**(`V1__init.sql` 이후 V2+)이고, 이 문서는 그 DDL을 읽어 그린 것이다. `docs/기획서.md` 3절 "ERD 초안"은 기획 단계의 설계 기록이라 V7 이후(카드 출처 ADMIN, 팀·팀 챌린지)를 담고 있지 않다.
+> 작성 상태: 🟡 초안 (Flyway **V1~V13** 반영, 2026-11-26). **DDL 정본은 `backend/src/main/resources/db/migration/`**(`V1__init.sql` 이후 V2+)이고, 이 문서는 그 DDL을 읽어 그린 것이다. `docs/기획서.md` 3절 "ERD 초안"은 기획 단계의 설계 기록이라 V7 이후(카드 출처 ADMIN, 팀·팀 챌린지)를 담고 있지 않다.
 > **최종본**은 구현이 끝난 뒤 실제 DB(Flyway 적용 후)에서 MySQL Workbench Reverse Engineer로 만든 이미지(`diagrams/erd.png`)를 아래 도메인별 다이어그램 앞에 붙인다 (W5).
 
 <!-- 최종: ![ERD](diagrams/erd.png) -->

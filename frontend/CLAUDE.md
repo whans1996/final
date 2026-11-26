@@ -10,7 +10,7 @@
 src/
 ├─ api/          모든 HTTP 호출. 도메인별 파일 (auth.js, concepts.js, analyses.js ...)
 │  └─ http.js    Axios 인스턴스, 인터셉터 (토큰 첨부, 401 → refresh → 1회 재시도)
-├─ stores/       Pinia (auth.js, user.js ...)
+├─ stores/       Pinia (지금은 auth.js 하나뿐. user.js는 없다)
 ├─ router/       index.js(합치기·인증 가드), routes/<도메인>.js (route 배열)
 ├─ layouts/      AdminLayout.vue (/admin 공통 레이아웃)
 ├─ views/        화면 단위 컴포넌트 XxxView.vue (라우트와 1:1)
@@ -26,7 +26,7 @@ src/
 - 에러는 `error.response.data.message`를 사용자에게 보여 준다 (BE가 한국어 메시지를 보낸다). 코드 분기는 `error.response.data.code`로 한다.
 - 모든 목록 화면은 **로딩 / 빈 목록 / 에러** 세 가지 상태를 처리한다.
 - 로그인 상태, Access 토큰, 사용자 수준(level)은 `useAuthStore`에서 관리한다. Access 토큰은 **메모리에만** 두고(localStorage 금지), Refresh 토큰은 HttpOnly 쿠키라 JS가 다루지 않는다. 앱 시작 시 `restore()`가 refresh로 세션을 복원한다. `http.js`는 401 `AUTH_401`이면 `auth.refresh()`(동시 호출 1회) 후 1회 재시도하고, 실패하면 `setUnauthorizedHandler`로 등록한 로그인 화면 이동을 부른다 (F-02).
-- **라우트는 `router/routes/<도메인>.js`에 둔다** (F-00b). `index.js`는 합치기만 하고, 기능 PR은 자기 도메인 파일만 고친다 (`analysis.js`·`challenge.js` A, `community.js` B, `concept.js`·`user.js`·`auth.js`·`admin.js` 공통). `not-found`는 항상 마지막이다.
+- **라우트는 `router/routes/<도메인>.js`에 둔다** (F-00b). `index.js`는 합치기만 하고, 기능 PR은 자기 도메인 파일만 고친다 (`analysis.js`·`challenge.js`·`dashboard.js`·`reviewplan.js`·`team.js` A, `community.js` B, `concept.js`·`user.js`·`auth.js`·`admin.js` 공통. 영역 정본은 `.github/CODEOWNERS`). `not-found`는 항상 마지막이다.
 - **헤더 메뉴는 route의 `meta.nav = { label, order, show: 'guest' | 'user' | 'admin' }`**로 정한다 (`utils/navItems.js`, `user`는 ADMIN에게도 보인다). `App.vue`에 링크를 직접 추가하지 않는다. 닉네임·로그아웃만 App 고정이다.
 - **관리자 화면은 `/admin` 자식 route**다. 각 도메인 파일이 `export const adminChildren = [...]`로 내보내면 `admin.js`가 합친다. 자식에 `name`과 `meta.adminNav = { label, order }`를 달면 `AdminLayout` 사이드 메뉴에 나온다. `requiresAuth`·`requiresAdmin`은 부모에서 상속되므로 다시 달지 않는다.
 - 공용 컴포넌트: 카드 요약 `components/concept/ConceptCard.vue`(BE `ConceptSummaryResponse` 그대로), 페이지 이동 `components/common/PageNav.vue`(`page`·`size`·`total`, `@change`), 빈 목록 `components/common/EmptyState.vue`(`message`, `#action` 슬롯).

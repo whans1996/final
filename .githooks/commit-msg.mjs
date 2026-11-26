@@ -1,12 +1,15 @@
 #!/usr/bin/env node
-// git commit-msg hook (사람과 Claude 모두에게 적용)
-//  1) 형식: 타입(범위): 요약   — docs/conventions.md 6절
-//  2) main·develop 직접 커밋 금지 (첫 커밋, merge 커밋은 예외)
-//  3) wip가 아니면 스테이징된 영역(backend/frontend/하네스)의 빠른 검사(verify --staged)를 돌려 실패 시 거부
+// git commit-msg hook (사람과 Claude 모두에게 적용). 메시지 판정은 scripts/lib/commit-msg.mjs (테스트 있음)
+//  1) main·develop 직접 커밋 금지 (첫 커밋, merge 진행 중은 예외. 제목이 "Merge "여도 막는다, #136)
+//  2) 형식: 타입(범위): 요약   — docs/conventions.md 6절 (git 자동 메시지는 통과, "Merge …"는 merge 진행 중만)
+//  3) 스테이징된 추가 줄에 비밀값(토큰·웹훅·GMS 키 등)이 있으면 거부 (wip 포함, merge는 충돌 해결 줄만, H-2)
+//  4) wip가 아니면 스테이징된 영역(backend/frontend/하네스)의 빠른 검사(verify --staged)를 돌려 실패 시 거부
 import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { PROTECTED_BRANCHES, ROOT, currentBranch, hasCommits, isMerging } from '../scripts/lib/common.mjs';
+import { ROOT, currentBranch, hasCommits, isMerging } from '../scripts/lib/common.mjs';
+import { commitVerdict } from '../scripts/lib/commit-msg.mjs';
+import { scanDiffForSecrets, scanMergeForSecrets } from '../scripts/lib/protect.mjs';
 
 const msgFile = process.argv[2];
 const raw = readFileSync(msgFile, 'utf8');
@@ -17,36 +20,33 @@ const fail = (lines) => {
   process.exit(1);
 };
 
-// git이 자동으로 만드는 메시지는 통과
-if (/^(Merge |Revert "|fixup! |squash! |amend! )/.test(subject)) process.exit(0);
+const verdict = commitVerdict({ subject, branch: currentBranch(), hasCommits: hasCommits(), merging: isMerging() });
+if (verdict.fail) fail(verdict.fail);
 
-// 2) 보호 브랜치
-const branch = currentBranch();
-if (branch && PROTECTED_BRANCHES.includes(branch) && hasCommits() && !isMerging()) {
+// 3) 비밀값: 값은 출력하지 않고 파일과 종류만 알린다. merge 커밋은 diff가 커서 버퍼를 넉넉히 준다
+const stagedDiff = (...base) => {
+  const d = spawnSync('git', ['-c', 'core.quotepath=false', 'diff', '--cached', '--no-color', '--no-ext-diff', '-U0', ...base], {
+    cwd: ROOT,
+    encoding: 'utf8',
+    maxBuffer: 256 * 1024 * 1024,
+    windowsHide: true,
+  });
+  if (d.status !== 0) fail([`스테이징된 변경을 읽지 못해 비밀값 검사를 할 수 없습니다: ${(d.stderr || d.error?.message || '').trim()}`]);
+  return d.stdout;
+};
+// merge 커밋은 충돌 해결로 새로 쓴 줄만 본다: develop에서 들어온 줄은 원래 커밋의 검사·push protection이 맡는다
+const secrets = isMerging() ? scanMergeForSecrets(stagedDiff('HEAD'), stagedDiff('MERGE_HEAD')) : scanDiffForSecrets(stagedDiff());
+if (secrets.length) {
   fail([
-    `보호 브랜치(${branch})에는 직접 커밋할 수 없습니다.`,
-    `git switch -c feature/F-xx-slug 로 브랜치를 만든 뒤 커밋하고, develop에는 PR로 합치세요.`,
+    '비밀값으로 보이는 문자열이 스테이징되어 있습니다:',
+    ...secrets.map((s) => `  - ${s.file} (${s.label})`),
+    '키는 환경변수로 참조하고 예시는 .env.example에 이름만 둡니다. 테스트용 가짜 값은 문자열을 나눠 이어 붙이세요.',
   ]);
 }
 
-// 1) 형식
-const SCOPE = '(F-\\d{2}[a-z]?|common|harness)';
-const scoped = new RegExp(`^(feat|fix|refactor|test|wip)\\(${SCOPE}\\): \\S.*$`);
-const optional = new RegExp(`^(docs|chore)(\\(${SCOPE}\\))?: \\S.*$`);
-if (!scoped.test(subject) && !optional.test(subject)) {
-  fail([
-    `커밋 메시지 형식이 맞지 않습니다: "${subject}"`,
-    `형식: 타입(범위): 요약`,
-    `  타입: feat fix refactor test wip (범위 필수) / docs chore (범위 생략 가능)`,
-    `  범위: F-xx(분할 spec은 F-05a) | common | harness`,
-    `예: feat(F-05): 분석 요청 API 추가 / wip(F-05): 중간 저장 / docs: README 수정`,
-  ]);
-}
+if (!verdict.verify) process.exit(0);
 
-const type = subject.split(/[(:]/)[0];
-if (type === 'wip') process.exit(0); // 교대용 커밋은 테스트 게이트 예외
-
-// 3) 빠른 검사: 스테이징된 영역의 포맷·린트·관련 테스트만 (H-1). 빌드·전체 테스트는 pre-push hook과 CI가 한다
+// 4) 빠른 검사: 스테이징된 영역의 포맷·린트·관련 테스트만 (H-1). 빌드·전체 테스트는 pre-push hook과 CI가 한다
 const r = spawnSync(process.execPath, [join(ROOT, 'scripts', 'verify.mjs'), '--staged'], {
   cwd: ROOT,
   stdio: 'inherit',

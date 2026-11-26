@@ -1,35 +1,32 @@
 # NOW — 김동환 현재 작업 스냅샷
 
 > 김동환(A 영역: AI·분석·학습 루프) 전용. 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
-> "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
+> 머리 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
-갱신: 2026-11-26 09:13 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/common-progress-1126
+갱신: 2026-11-26 13:25 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/common-harness-guard-1126
 
 ## 현재 기능
 
-**/progress W2 (11-26)** — 진행현황·WBS·간트 갱신 PR(base develop, docs만). 노션 대시보드 "진행 현황" 섹션도 갱신함. 직전 F-27 PR #161은 11/26 머지됨
+**트랙 4 PR ① 보안·가드** (기획서 7.7절, H-1~4·HX-1~3 + #130·#135·#136·#139) — **PR #192** CI 초록·Codex COMPLETE(6c2c91a), **사람 머지 대기**. 사용자 지시: 머지 직전까지 자동, 머지는 사람이 GitHub에서
 
 ## 진행
 
-- ✅ 2차 T0 중 A 3건 완료: H-1(PR #138·#141), F-26a(PR #157·#160), F-27(PR #161). spec 30개 DONE, 마이그레이션 V13
-- ✅ 진행현황: T1 머지는 V-2 기준선(12/04) 뒤로 둔다는 판단 기록. WBS 1.8·6.1~6.3 ✅, 4.1 🟡, 간트 실적 막대 4개 추가
-- ✅ PR #161 리뷰 제안은 follow-up #163(F-27b)
+- ✅ 새 lib: `protect.mjs`(비밀값 패턴·비밀 파일·eval 경로), `file-guard.mjs`(파일 도구 판정), `commit-msg.mjs`(메시지 판정, #136) + 테스트 각각
+- ✅ `guard.mjs`: `checkTool`(MCP start_process·interact_with_process), H-3 checkout -f·switch -f·디렉터리 restore·stash drop/clear, H-4 grep 패턴 제외, HX-1 `node -e`·`python -c`·`--env-file`·코드 속 셸 명령, HX-2 eval 경로·clone, #130 `gh api`·curl 쓰기, #139 서브셸 cwd 범위
+- ✅ hook: guard-bash(원문 미기록 #135)·guard-files(MCP·Read·Grep·Glob)·commit-msg(비밀값 검사) · settings.json matcher + `settings.test.mjs` · CODEOWNERS test llm-fixtures + `codeowners.test.mjs`(HX-3)
+- ✅ setup·env-check: 김동환 PC fetch에 `^refs/heads/eval/*` (dh-ssafy 적용됨). 결정로그·09-데이터셋 5절 반영
+- ✅ reviewer: 반드시 수정 3(PowerShell 괄호 범위 퇴행, `gh api -XPUT`, `node -pe`)·권장 다수 반영(4f3c2c4), 넘긴 것 #188~#191
+- ✅ **Codex ✅ 6c2c91a** (재리뷰 3회: 1·2회차 P2 5건 수정, 3회차 P2 3건 → #189·#193 이관, `--resolve`). CI 첫 BE 실패는 spotless 일시 오류(재실행 통과)
+- 보류 이슈 #178~#182 (중복 #183~#187은 닫음)
 
 ## 바로 다음 할 일
 
-1. 진행현황 PR: CI 초록이면 GitHub에서 머지 (docs만이라 Codex 루프 생략, conventions 7절) → `git switch develop && git pull` → 로컬 `feature/F-26a-index-selection`·`feature/F-27-gms-provider` `git branch -d`
-2. V-2 블라인드 점검(김준섭 요청): dh-ssafy는 ds03 브랜치 고아 커밋 7개(내용 미열람)를 11-26 `git reflog expire --expire-unreachable=now --all && git gc --prune=now`로 삭제 완료. **dh-home도 같은 점검**(`git fsck --unreachable --no-reflogs` → 작성자 JoonseobKim·11-25 커밋이 있으면 위 명령). 김준섭에게 답장
-3. `/clear` → `/spec F-26b` (커버리지 개편, #121·#156 흡수, 12/04 기준선 전엔 머지 안 함). 짬 나면 공통 하네스 이슈 #130·#135(보안 성격) 먼저
-4. 11/27 Figma 세션 → 11/29~ V-1 MVP 감사
+1. PR #192: CI 초록 + Codex COMPLETE → **사람이 GitHub에서 머지** (머지 전 develop에 새 커밋이 있으면 `git merge origin/develop` → push → CI 재확인). 머지 뒤 `git switch develop && git pull`
+2. dh-home에서 `node scripts/setup.mjs` 한 번 (eval fetch 제외 refspec)
+3. 트랙 4 PR ② 로드맵 R-1: `docs/로드맵.md` + `scripts/lib/roadmap.mjs` + SessionStart·`/pickup`·`/handoff` 표시 → ③ → ④ → ⑤ (기획서 7.7절)
 
 ## 막힌 점 / 결정 필요
-
-- **GMS 키 2026-12-09 18:00 만료** (발표 12-24 전) → 재발급·연장 사람 확인 필요
-- V-2 기준선 앞당기기: DS-03·04를 12/03 전에 고정할 수 있는지 김준섭과 합의
-- 사람: 노션 팀원 초대, F-05b liveTest, 제출 zip 이름, dh-ssafy `.env`에 GMS 키
+- 사람: dh-home git `user.name` 통일(H-7), 노션 팀원 초대, F-05b liveTest · eval 기록 브랜치 `eval/` 접두사를 김준섭에게 알리기
 
 ## 주의
-
-- 다음 마이그레이션은 V14 (김준섭도 V14 이상 예정이라 `node scripts/next-migration.mjs`로 확인)
-- ui-verifier가 로컬 DB에 테스트 계정 `f27shot@example.com`을 만들어 둠 (로컬 전용)
-- node 스크립트로 Java 편집 시 백슬래시가 깨짐 → Edit 도구 사용 · 이 PC에 python 없음
+- 다음 마이그레이션은 V14 · node heredoc으로 파일 고치면 `$'`·`\r` 이스케이프가 깨짐 → Edit 도구 · 이 PC에 python 없음

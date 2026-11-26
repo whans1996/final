@@ -2,8 +2,9 @@
 // PC마다 최초 1회 실행: PC 등록 + git hook 경로 연결 + 개발 환경 점검
 // 사용법: node scripts/setup.mjs --pc <dh-ssafy|dh-home|js-ssafy|js-home>   (등록 뒤에는 --pc 생략 가능)
 // 결과는 .harness/env-check.json에 남고, SessionStart hook이 세션마다 빠른 점검을 다시 한다.
-import { ROOT, git, isGitRepo } from './lib/common.mjs';
+import { ROOT, git, isGitRepo, ownerKey } from './lib/common.mjs';
 import { currentPc, icon, loadPcs, registerPc, runChecks, saveFullCheck } from './lib/env-check.mjs';
+import { EVAL_FETCH_EXCLUDE, evalBlockedFor, evalFetchExcluded } from './lib/protect.mjs';
 
 // git hook 연결 (유일하게 상태를 바꾸는 단계). PC 등록과 무관하므로 먼저 한다
 const hookSet = isGitRepo() ? git(['config', 'core.hooksPath', '.githooks']) : null;
@@ -36,6 +37,14 @@ if (pcArg !== undefined) {
 }
 
 const pc = currentPc();
+// eval 블라인드 (HX-2): 김동환 PC의 fetch(자동 동기화 포함)가 김준섭의 eval 기록 브랜치(eval/…)를 받지 않게 negative refspec을 넣는다
+if (evalBlockedFor(ownerKey(pc.id)) && isGitRepo()) {
+  const specs = git(['config', '--get-all', 'remote.origin.fetch']);
+  if (specs.ok && !evalFetchExcluded(specs.out.split(/\r?\n/))) {
+    const added = git(['config', '--add', 'remote.origin.fetch', EVAL_FETCH_EXCLUDE]);
+    if (!added.ok) console.error(`⚠️  eval 브랜치 fetch 제외 설정 실패: ${added.err}`);
+  }
+}
 const rows = await runChecks();
 saveFullCheck(pc.id, rows);
 
