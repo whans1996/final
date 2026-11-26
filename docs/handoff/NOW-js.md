@@ -1,7 +1,7 @@
 # NOW — 김준섭 현재 작업 스냅샷
 
 > 김준섭(B 영역: 카드·소셜) 전용. 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
-갱신: 2026-11-26 15:40 · 작업자: JoonseobKim · PC: js-home · 브랜치: feature/V-1b-f17-fixes
+갱신: 2026-11-26 15:44 · 작업자: JoonseobKim · PC: js-home · 브랜치: feature/V-1b-f17-fixes
 
 ---
 
@@ -18,7 +18,7 @@
 
 ## 바로 다음 할 일
 
-1. PR 생성 → CI·Codex 루프 (`.harness/pr-V-1b-f17.md`, `Roadmap: V-1b (일부)`, Closes #206 #207 #209 #210, @whans1996). reviewer 반드시 수정 0, 권장 반영: 수정 때 기존 첨부 유지면 공개 여부 안 봄(`checkAttachments(…, keptAnalysisId)`, AC9·결정로그), spec AC16 문구
+1. **PR #215** Codex ✅ e7bcfe5 · CI Backend 대기 → 초록이면 **사람이 GitHub에서 머지** (그 전 develop 새 커밋이면 `git merge origin/develop` → push). 머지 뒤 `git switch develop && git pull`, #206 #207 #209 #210 닫힘 확인
 2. #208 F-18 댓글 200개 초과: 새 브랜치 `feature/issue-208-comment-page`
 3. V-2 DS-03·04 고정 **11/28** (결정로그 11-26 R-1): eval `sets.json` `frozenAt` 기록·push → 메타데이터 docs PR(`Roadmap: V-2`). 라벨 9/9 reviewed
 4. 11/27 Figma 공동 세션 → F-29 `/spec` (11/29~)
