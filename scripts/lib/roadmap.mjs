@@ -415,8 +415,8 @@ export function fetchRoadmapPrs({ timeout = 4000, exec = execFile, limit = 500 }
 }
 
 /** develop에 아직 안 합쳐진 원격 브랜치 이름 (origin/ 뗌). squash 머지로 남은 브랜치는 PR의 ✅가 이긴다 */
-export function unmergedRemoteBranches({ cwd = ROOT, base = 'origin/develop' } = {}) {
-  const r = git(['for-each-ref', '--format=%(refname:short)', '--no-merged', base, 'refs/remotes/origin'], { cwd, timeout: 3000 });
+export function unmergedRemoteBranches({ cwd = ROOT, base = 'origin/develop', timeout = 3000 } = {}) {
+  const r = git(['for-each-ref', '--format=%(refname:short)', '--no-merged', base, 'refs/remotes/origin'], { cwd, timeout: Math.max(1, timeout) });
   return r.ok ? r.out.split('\n').filter(Boolean).map((b) => b.replace(/^origin\//, '')).filter((b) => b !== 'HEAD' && b !== 'origin') : [];
 }
 

@@ -450,8 +450,17 @@ test('세션 시작 시간 예산이 모자라면 병합하지 않고 건너뛴 
   const before = sh(me, 'rev-parse', 'HEAD');
   const lines = autoSync({ cwd: me, timeLeft: () => AUTO_SYNC_MIN_MS - 1 });
   assert.equal(lines.length, 1);
-  assert.match(lines[0], /^- ⏸️ 세션 시작 시간 예산/);
+  // peer-watch도 같은 예산을 쓰므로 "세션 시작"이라 하지 않는다 (reviewer)
+  assert.match(lines[0], /^- ⏸️ hook 시간 예산이 모자라 자동 동기화/);
   assert.equal(sh(me, 'rev-parse', 'HEAD'), before);
   // 시간이 넉넉하면 그대로 합친다
   assert.match(autoSync({ cwd: me, timeLeft: () => AUTO_SYNC_MIN_MS })[0], /^- ✅ origin\/develop/);
+});
+
+test('예산이 모자라 로컬 develop·main 최신화를 건너뛰어도 알린다 (H-5, reviewer)', () => {
+  const { me } = setup();
+  // 합칠 것이 없어도 로컬 develop·main 최신화는 건너뛰었으므로 말없이 넘어가지 않는다 (한 줄만)
+  const lines = autoSync({ cwd: me, timeLeft: () => 0 });
+  assert.equal(lines.length, 1);
+  assert.match(lines[0], /^- ⏸️ hook 시간 예산/);
 });

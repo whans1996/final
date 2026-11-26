@@ -48,6 +48,15 @@ test('session-start는 동기 git(fetch·autoSync)이 끝난 뒤 gh·docker 조�
   }
 });
 
+test('session-start는 gh를 기다린 뒤의 로컬 git에도 남은 예산에서 제한 시간을 준다 (H-5, reviewer)', () => {
+  // 고정 상한(호출당 1.5초·3초)을 합치면 gh를 다 기다린 뒤 7~8초가 더 걸려 hook 제한(15초)을 넘을 수 있다
+  const src = readFileSync(new URL('../../.claude/hooks/session-start.mjs', import.meta.url), 'utf8');
+  assert.match(src, /latestPeerNow\(other, \{ timeoutMs: /);
+  assert.match(src, /myBranchNows\(me, \{ budgetMs: myBranchMs \}\)/);
+  assert.match(src, /workFilesNewerThanNow\(ROOT, nowFileOf\(me\), \{ timeout: /);
+  assert.match(src, /unmergedRemoteBranches\(\{ timeout: budget\.timeout\(/);
+});
+
 const NOW = Date.parse('2026-11-19T12:00:00Z');
 const issue = (number, labels, { days = 1, assignees = [], title = `이슈 ${number}` } = {}) => ({
   number,

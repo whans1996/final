@@ -15,8 +15,9 @@ const DEVELOP_TARGET = /^(feature|fix)\//;
 const MERGE_TIMEOUT = 6000;
 /** 병합 한 번을 시작하려면 남아 있어야 하는 시간 (H-5): 병합 제한 시간 + 뒤따르는 git 조회 여유 */
 export const AUTO_SYNC_MIN_MS = MERGE_TIMEOUT + 2000;
+// 세션 시작·peer-watch가 같이 쓴다. 병합과 로컬 develop·main 최신화 중 어느 것을 건너뛰어도 한 번만 알린다
 const BUDGET_LINE =
-  '- ⏸️ 세션 시작 시간 예산이 모자라 자동 병합을 건너뛰었습니다 (H-5). 10분 안에 peer-watch가 다시 확인합니다. 바로 받으려면 `git merge origin/develop`.';
+  '- ⏸️ hook 시간 예산이 모자라 자동 동기화(병합·로컬 develop·main 최신화)를 건너뛰었습니다 (H-5). 10분 안에 peer-watch가 다시 확인합니다. 바로 받으려면 `git merge origin/develop`.';
 
 // git의 불리언 해석을 그대로 쓴다: false·no·off·0(대소문자 무관)이면 끈다. 없거나 불리언이 아닌 값이면 켜 둔다 (#44)
 export function autoSyncEnabled(cwd = ROOT) {
@@ -216,11 +217,18 @@ function syncLocalRefs(cwd) {
  */
 export function autoSync({ cwd = ROOT, timeLeft = null } = {}) {
   const short = () => timeLeft !== null && timeLeft() < AUTO_SYNC_MIN_MS;
+  let budgetNoted = false;
+  const budgetLine = () => {
+    if (budgetNoted) return [];
+    budgetNoted = true;
+    return [BUDGET_LINE];
+  };
   try {
     if (!autoSyncEnabled(cwd)) return [];
     const plan = syncPlan(readState(cwd));
     const localLines = () => {
-      if (short()) return [];
+      // 건너뛴 것도 알린다 (말없이 넘어가면 로컬 develop이 뒤처진 줄 모른다, reviewer)
+      if (short()) return budgetLine();
       try {
         return syncLocalRefs(cwd);
       } catch {
@@ -236,7 +244,7 @@ export function autoSync({ cwd = ROOT, timeLeft = null } = {}) {
     const merged = new Set();
     for (const action of plan.actions) {
       if (short()) {
-        lines.push(BUDGET_LINE);
+        lines.push(...budgetLine());
         break;
       }
       const result = mergeOne(action, cwd);

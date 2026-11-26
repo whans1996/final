@@ -115,10 +115,10 @@ export function mdSection(md, title) {
 const WORK_WATCH = /^(backend\/|frontend\/|docs\/specs\/)/;
 const WORK_IGNORE = /(^|\/)(node_modules|build|dist|\.gradle)\/|(^|\/)CLAUDE\.md$/;
 
-/** 내 NOW 파일보다 1초 넘게 나중에 바뀐 미커밋 작업 파일 경로. 최근 것부터. PC 미등록(nowFile null)이면 판정하지 않는다 */
-export function workFilesNewerThanNow(cwd = ROOT, nowFile = myNowFile()) {
+/** 내 NOW 파일보다 1초 넘게 나중에 바뀐 미커밋 작업 파일 경로. 최근 것부터. PC 미등록(nowFile null)이면 판정하지 않는다. timeout: git status 제한 시간 (세션 시작 예산) */
+export function workFilesNewerThanNow(cwd = ROOT, nowFile = myNowFile(), { timeout } = {}) {
   if (!nowFile) return [];
-  const st = git(['status', '--porcelain', '-z', '--untracked-files=all'], { cwd });
+  const st = git(['status', '--porcelain', '-z', '--untracked-files=all'], { cwd, timeout });
   if (!st.ok || !st.out) return [];
 
   // -z 형식: "XY path\0" (rename/copy는 뒤에 원래 경로가 하나 더 붙음)

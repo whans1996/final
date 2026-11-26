@@ -57,10 +57,10 @@ export function nowHeadline(text) {
 }
 
 /** origin 원격 브랜치 [{ branch: 'origin/x', name: 'x', at }] (최근 커밋 순, HEAD 제외). noMerged를 주면 그 ref에 머지 안 된 것만. 조회 실패면 null */
-function remoteBranches(cwd, { noMerged } = {}) {
+function remoteBranches(cwd, { noMerged, timeout = LOCAL_GIT_TIMEOUT } = {}) {
   const args = ['for-each-ref', '--sort=-committerdate', '--format=%(refname:lstrip=3)%09%(committerdate:unix)'];
   if (noMerged) args.push(`--no-merged=${noMerged}`);
-  const r = git([...args, 'refs/remotes/origin/'], { cwd, timeout: LOCAL_GIT_TIMEOUT });
+  const r = git([...args, 'refs/remotes/origin/'], { cwd, timeout });
   if (!r.ok) return null;
   return r.out
     .split('\n')
@@ -70,9 +70,9 @@ function remoteBranches(cwd, { noMerged } = {}) {
 }
 
 /** `<rev>:<path>` 여러 개를 git 한 번으로 읽는다 (원격 브랜치가 많아도 hook 제한 안에 끝나게) → [{ sha, text }]. 없는 것은 null */
-function readBlobs(specs, cwd) {
+function readBlobs(specs, cwd, timeout = LOCAL_GIT_TIMEOUT) {
   if (!specs.length) return [];
-  const r = spawnSync('git', ['cat-file', '--batch'], { cwd, input: specs.join('\n') + '\n', windowsHide: true, timeout: LOCAL_GIT_TIMEOUT });
+  const r = spawnSync('git', ['cat-file', '--batch'], { cwd, input: specs.join('\n') + '\n', windowsHide: true, timeout });
   if (r.status !== 0 || !r.stdout) return specs.map(() => null);
   const buf = r.stdout;
   let pos = 0;
@@ -94,13 +94,16 @@ function readBlobs(specs, cwd) {
 /**
  * 사람 key의 NOW 중 가장 최근 것: 작업 트리와 원격 브랜치마다의 NOW를 갱신 시각으로 비교 → { source, text } | null.
  * NOW를 바꾼 커밋 1개만 보면 나중에 머지된 옛 브랜치의 NOW가 다른 브랜치의 새 NOW를 가린다 (#32)
+ * timeoutMs: git 두 번(브랜치 목록·NOW 읽기)에 쓸 전체 시간 (H-5, 세션 시작 예산의 남은 시간). 0 이하면 git 없이 작업 트리만 본다
  */
-export function latestPeerNow(key, { cwd = ROOT } = {}) {
+export function latestPeerNow(key, { cwd = ROOT, timeoutMs = LOCAL_GIT_TIMEOUT } = {}) {
   const rel = nowRelPath(key);
-  const branches = remoteBranches(cwd) ?? [];
+  const started = Date.now();
+  const branches = timeoutMs > 0 ? (remoteBranches(cwd, { timeout: timeoutMs }) ?? []) : [];
   const blobs = readBlobs(
     branches.map((b) => `${b.branch}:${rel}`),
     cwd,
+    Math.max(1, timeoutMs - (Date.now() - started)),
   );
   return pickLatestNow([
     { source: '작업 트리', text: readText(join(cwd, rel)), at: 0 },
@@ -121,6 +124,8 @@ export const MY_BRANCH_BUDGET_MS = 3000;
 export function myBranchNows(key, { cwd = ROOT, base = 'origin/develop', budgetMs = MY_BRANCH_BUDGET_MS } = {}) {
   const rel = nowRelPath(key);
   const started = Date.now();
+  // 호출마다 줄 제한 시간: 기본 상한과 남은 budgetMs 중 작은 것 (0이 되면 1ms로 바로 끝나 결과 없음으로 본다)
+  const remaining = () => Math.max(1, Math.min(LOCAL_GIT_TIMEOUT, budgetMs - (Date.now() - started)));
   const touched = [];
   let truncated = false;
   for (const b of remoteBranches(cwd, { noMerged: base }) ?? []) {
@@ -129,13 +134,17 @@ export function myBranchNows(key, { cwd = ROOT, base = 'origin/develop', budgetM
       truncated = true;
       break;
     }
-    if (git(['log', '-1', '--format=%H', `${base}..${b.branch}`, '--', rel], { cwd, timeout: LOCAL_GIT_TIMEOUT }).out) touched.push(b);
+    // 마지막 호출이 budgetMs를 넘기지 않게 남은 시간만 준다 (H-5, reviewer)
+    if (git(['log', '-1', '--format=%H', `${base}..${b.branch}`, '--', rel], { cwd, timeout: remaining() }).out) touched.push(b);
   }
   if (!touched.length) return { branches: [], truncated };
-  const onBase = blobsInHistory(base, rel, cwd) ?? new Set();
+  // 시간이 모자라 develop 이력을 못 읽으면 squash 머지된 브랜치를 거르지 못해 거짓 경고가 나므로 생략으로 알린다
+  const onBase = blobsInHistory(base, rel, cwd, remaining());
+  if (!onBase) return { branches: [], truncated: true };
   const blobs = readBlobs(
     touched.map((b) => `${b.branch}:${rel}`),
     cwd,
+    remaining(),
   );
   return {
     branches: touched
@@ -153,8 +162,8 @@ function rawEntry(line) {
 }
 
 /** ref의 이력에서 paths(파일·디렉터리)가 가졌던 내용(blob sha) 전체. 조회 실패면 null. 머지로 들어온 쪽 커밋도 보게 --full-history */
-function blobsInHistory(ref, paths, cwd) {
-  const r = git(['log', '--full-history', '--no-renames', '--format=', '--raw', '--no-abbrev', ref, '--', paths], { cwd, timeout: LOCAL_GIT_TIMEOUT });
+function blobsInHistory(ref, paths, cwd, timeout = LOCAL_GIT_TIMEOUT) {
+  const r = git(['log', '--full-history', '--no-renames', '--format=', '--raw', '--no-abbrev', ref, '--', paths], { cwd, timeout });
   if (!r.ok) return null;
   return new Set(
     r.out
@@ -256,8 +265,8 @@ export function peerPrs(peerGithub, { timeout = 3000 } = {}) {
 
 /**
  * origin/develop의 prev..curr 사이 커밋(전부)·첫 부모 커밋 작성자·변경 파일. 잘라서 보면 앞쪽 상대 커밋이 "전부 내 커밋" 판정에서 빠진다 (#32).
- * firstParent: develop에 직접 쌓인 커밋(= GitHub PR 병합 커밋)의 작성자. GitHub이 머지한 사람의 계정 이름으로 만들므로
- * PC마다 git user.name이 달라도 같은 사람으로 판정할 수 있다 (H-7)
+ * firstParent: develop에 직접 쌓인 커밋(= GitHub PR 병합 커밋)의 작성자. GitHub이 머지한 사람의 프로필 Name(비어 있으면 계정)으로 만들므로
+ * PC마다 git user.name이 달라도 같은 사람으로 판정할 수 있다 (H-7). 프로필 Name을 계정과 다르게 정하면 내 머지도 알린다(안전한 쪽, conventions 9절)
  */
 export function developChanges(prevSha, currSha, { cwd = ROOT } = {}) {
   if (!prevSha || !currSha || prevSha === currSha) return null;

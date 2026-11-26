@@ -30,7 +30,7 @@ import {
 } from '../../scripts/lib/common.mjs';
 import { followUpIssues, issueBannerLine, issueContext, issueFailureLine, summarizeIssues } from '../../scripts/lib/issues.mjs';
 import { MY_BRANCH_BUDGET_MS, latestPeerNow, myBranchLines, myBranchNows, nowHeadline, readPeerState, writePeerState } from '../../scripts/lib/peer.mjs';
-import { ROADMAP_FILE, ROADMAP_REL, bannerLines, fetchRoadmapPrs, loadView, roadmapBlock } from '../../scripts/lib/roadmap.mjs';
+import { ROADMAP_FILE, ROADMAP_REL, bannerLines, fetchRoadmapPrs, loadView, roadmapBlock, unmergedRemoteBranches } from '../../scripts/lib/roadmap.mjs';
 import { roadmapSnapshot, writeStatus } from '../../scripts/lib/status.mjs';
 import { autoSync, mergeNotes } from '../../scripts/lib/sync.mjs';
 
@@ -70,7 +70,7 @@ if (!inRepo) {
     else budget.skip('원격 확인(fetch)');
     // 다른 PC가 push한 내 브랜치 커밋과 상대가 develop에 머지한 커밋을 자동으로 합친다 (scripts/lib/sync.mjs). 예산이 모자라면 건너뛴다
     synced = autoSync({ timeLeft: budget.left });
-    if (synced.some((l) => l.includes('시간 예산'))) budget.skip('자동 병합');
+    if (synced.some((l) => l.includes('시간 예산'))) budget.skip('자동 동기화');
     const ab = git(['rev-list', '--left-right', '--count', 'HEAD...@{u}']);
     if (ab.ok) {
       const [ahead, behind] = ab.out.split(/\s+/).map(Number);
@@ -149,7 +149,12 @@ if (rows.some((r) => r.status === 'fail')) warnings.push('환경 점검에 ❌ �
 const me = ownerKey(pc.id ?? localPcId());
 const now = me ? readText(nowFileOf(me)) : null;
 const other = me ? otherOwnerKey(me) : null;
-const otherNow = other ? latestPeerNow(other) : null;
+// 여기부터의 로컬 git도 남은 예산에서 제한 시간을 받는다 (H-5, reviewer). 고정 상한(호출당 1.5초·3초)을 합치면
+// gh를 다 기다린 뒤(LOCAL_RESERVE_MS만 남음) 7~8초가 더 걸려 hook 제한을 넘을 수 있다.
+// 상대 NOW는 내 브랜치 조회·작업 파일·로드맵 몫(2초)을 남기고, 모자라면 원격 브랜치 없이 작업 트리의 것만 본다
+const peerMs = budget.timeout(1500, 2000);
+if (other && peerMs < 300) budget.skip('상대 NOW 원격 조회');
+const otherNow = other ? latestPeerNow(other, { timeoutMs: peerMs >= 300 ? peerMs : 0 }) : null;
 // 같은 사람의 다른 PC가 진행 중인 브랜치 (#54): develop의 내 NOW가 그 진행을 가려 이미 한 일(/spec 등)을 다시 할 수 있다
 const myBranchMs = budget.timeout(MY_BRANCH_BUDGET_MS, 2000);
 if (me && inRepo && myBranchMs < 300) budget.skip('내 원격 브랜치 조회');
@@ -166,7 +171,7 @@ if (myBranches.others.length) {
 const myEntry = me ? lastWorklogEntryOf(worklogEntries(readText(WORKLOG_FILE)), me, loadPcs()) : null;
 
 // 이전 세션이 체크포인트 없이 남긴 변경 (Stop hook은 이 세션이 건드린 파일만 보므로 여기서 알린다)
-const unrecorded = inRepo && me ? workFilesNewerThanNow(ROOT, nowFileOf(me)) : [];
+const unrecorded = inRepo && me ? workFilesNewerThanNow(ROOT, nowFileOf(me), { timeout: Math.max(1, budget.timeout(1500)) }) : [];
 if (unrecorded.length) {
   warnings.push(
     `${nowRelPath(me)}보다 나중에 바뀐 미커밋 작업 파일 ${unrecorded.length}개 (${unrecorded.slice(0, 3).join(', ')}${unrecorded.length > 3 ? ' …' : ''}). ` +
@@ -238,7 +243,11 @@ let roadmapLines = [];
 try {
   const md = me ? readText(ROADMAP_FILE) : null;
   if (md) {
-    const { roadmap, view } = loadView(md, roadmapPrsRes);
+    // 진행 중 브랜치 목록(git)도 남은 예산 안에서만 본다. 모자라면 지금 브랜치만 진행 중으로 센다
+    const branchesMs = budget.timeout(3000);
+    if (branchesMs < 300) budget.skip('진행 중 브랜치 조회(로드맵)');
+    const remote = branchesMs >= 300 ? unmergedRemoteBranches({ timeout: budget.timeout(3000) }) : [];
+    const { roadmap, view } = loadView(md, roadmapPrsRes, { branches: [...remote, branchName].filter(Boolean) });
     const peerName = other ? Object.entries(loadPcs()).find(([id]) => ownerKey(id) === other)?.[1].owner : undefined;
     const errors = roadmap.errors.length ? `\n- ⚠️ ${ROADMAP_REL} 형식 오류 ${roadmap.errors.length}건 → \`node scripts/roadmap.mjs --check\`` : '';
     parts.push(`${roadmapBlock(view, me, { branch: branchName, peerName })}${errors}\n- /pickup 보고에 🗺️ 줄로 넣는다`);

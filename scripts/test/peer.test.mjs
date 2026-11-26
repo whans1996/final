@@ -278,6 +278,9 @@ test('상대 NOW는 원격 브랜치마다 보고 갱신 시각이 늦은 것을
   const picked = latestPeerNow('js', { cwd: me });
   assert.equal(picked.source, 'origin/feature/F-09-cards');
   assert.match(picked.text, /F-09 카드 목록/);
+  // 세션 시작 예산이 바닥나면(timeoutMs 0) git을 부르지 않고 작업 트리의 NOW만 본다 (H-5, reviewer)
+  const local = latestPeerNow('js', { cwd: me, timeoutMs: 0 });
+  assert.ok(!local || local.source === '작업 트리', local?.source);
 });
 
 test('develop 변화는 10개로 자르지 않고 작성자를 전부 본다 (#32-2)', () => {
