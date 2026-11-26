@@ -72,17 +72,23 @@ function onAnalysisChange(event) {
   if (analysis) emit('update:modelValue', { type: 'ANALYSIS', id, label: analysisLabel(analysis) })
 }
 
+// Enter는 "찾기" 버튼의 disabled를 거치지 않아 검색이 겹칠 수 있다. 마지막 검색의 응답만 반영한다 (#172)
+let lastSearch = 0
+
 async function searchConcepts() {
+  const request = ++lastSearch
   searching.value = true
   conceptsError.value = ''
   try {
     const result = await fetchConcepts({ keyword: keyword.value.trim(), size: CONCEPT_RESULT_SIZE })
+    if (request !== lastSearch) return
     concepts.value = result.items
   } catch (error) {
+    if (request !== lastSearch) return
     concepts.value = []
     conceptsError.value = errorMessage(error)
   } finally {
-    searching.value = false
+    if (request === lastSearch) searching.value = false
   }
 }
 
