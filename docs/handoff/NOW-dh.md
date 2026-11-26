@@ -3,33 +3,33 @@
 > 김동환(A 영역: AI·분석·학습 루프) 전용. 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
 > 머리 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
-갱신: 2026-11-26 10:12 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/common-plan2-1126
+갱신: 2026-11-26 10:49 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/common-interview-1126
 
 ## 현재 기능
 
-**2차 점검·진행 순서 (11-26)** — 읽기 전용 점검 5갈래 + GMS 실호출 결과를 `docs/점검/2026-11-26-2차점검.md`에 정리, 결정로그 11-26 7행. docs PR(base develop)
+**재인터뷰 (11-26, 기획서 7절)** — 문제 정의에서 다시: 1~4단계 끝, 5단계 UI(11/27 Figma 뒤)·6단계 운영 남음. 결과는 기획서 1절·6.1절·7절, 결정로그 11-26, 점검 문서 2·3절. docs PR(base develop) 준비
 
 ## 진행
 
-- ✅ develop·main 브랜치 보호 적용 (PR 필수·CI 5개 필수·관리자 포함·force push 금지)
-- ✅ 결정: GMS 키 재발급(만료 제약 아님), 개발 끝까지 public, F-33 T2-5 유지, A가 자기 FE 맡음(김준섭 합의 필요), 카드 200장+·카탈로그 개편, Colab 안 함
-- ✅ GMS 실호출(DS-02-01 dev, 개요·파일): senior≈junior, XML 매퍼 오판 → 점검 문서 5절
+- ✅ 문제 정의: 주 타깃 A, 문제 6 재정의(수준 다른 팀원·내가 안 만든 부분), **문제 7 면접 대비** 추가, 문제 2는 다른 기능으로 대응, 한 줄 정의·목표(근거 들어 설명)·시연 주인공(팀) 개정
+- ✅ 새 항목: P-1 프로젝트→버전+증분 재분석, T-1 팀 프로젝트(A가 전부, team은 B 영역), I-1 면접 준비, I-2 소개 스크립트·기술 선택 이유·내보내기, I-3 모의 면접(확장)
+- ✅ 재정렬(7.4b): T0 P-1a·T-1·I-1·I-2·L-1·E-1·D-1·K-1·O-1·E2E / F-31·F-26b②·S-1은 T2 / A 3트랙 일정, 12/08 점검(W-1→K-2→F-27b→P-1b 순으로 내림)
+- ✅ 그 전 1단계(6.1절)도 후보로 유지: L-1 범위, AI 기준, 카드 12종·검수 4단계·시드 수준별 본문, W-1·cs 카드
 
 ## 바로 다음 할 일
 
-1. PR #173(docs): CI 초록이면 GitHub에서 머지 (docs만이라 Codex 생략). 본문에서 @JoonseobKim에게 역할 조정·DS 고정 11/28·F-29 공통 PR 12/02 합의 요청함
-2. **새 세션에서 `/project-interview` 1단계** (`docs/점검/2026-11-26-2차점검.md` 먼저 읽기): ① L-1 범위(재실행 URL만?·"학습함" 정의·오답 노트 범위·분석 접근 규칙 통합) ② AI 기준(수준 기준표·합격선·설명 스키마 학습 필드·수준별 mock) ③ 카드(추가 카테고리 tooling·ts/react?·시드 검수 기준·카드 수준 적응). 2단계 UI는 11/27 Figma, 3~6단계(모델 배정·한도·idea 이슈·시연·배포·보안 가드·동결 뒤)는 이후
-3. 인터뷰 결과 → 결정로그·점검 문서 반영 + 점검 문서 4절 A 항목 follow-up 이슈 등록(area:A) + 기획서 6절·WBS 6절·간트에 L-1·K-1~3·E-1·LP-1·S-1 반영 (docs PR)
-4. D-1 문서 정정 PR (점검 문서 3절) → E-1 `PromptEvalRunner.java:98` stage 제한 풀기 + 채점기
-5. dh-home V-2 블라인드 점검: `git fsck --unreachable --no-reflogs` → 작성자 JoonseobKim·11-25 커밋이 있으면 `git reflog expire --expire-unreachable=now --all && git gc --prune=now`
+1. docs PR 생성(base develop) → 본문에 김준섭 합의 체크리스트(@JoonseobKim): 새 문제 정의·T-1의 team 코드 수정·K-3·S-1 이관·카드 수준 열·DS-03·04 고정 11/28·F-29 공통 PR 12/02 → CI 초록이면 GitHub에서 머지
+2. 11/27 Figma 세션 첫머리에 합의 확정 → `/project-interview` 5단계 UI(새 화면: 프로젝트·버전, 팀 프로젝트, 면접 준비)
+3. 6단계 운영(모델 배정·F-28 한도에 면접 피드백 추가·시연·배포·보안 가드) → 그 뒤 기획서 6절 백로그 표·WBS 6절·간트·02 유스케이스·01 요구사항 정의서 반영 (docs PR)
+4. 트랙 1: D-1 문서 정정 PR(점검 문서 3절) → E-1 `PromptEvalRunner.java:98` stage 제한 풀기 + 채점기 / 트랙 3: K-3 검수 스크립트 ①형식 ②예제 실행
+5. dh-home V-2 블라인드 점검: `git fsck --unreachable --no-reflogs` → JoonseobKim·11-25 커밋이 있으면 `git reflog expire --expire-unreachable=now --all && git gc --prune=now`
 
 ## 막힌 점 / 결정 필요
 
-- 김준섭 합의: 역할 조정(A가 F-28·L-1 FE), DS-03·04 고정 11/28로 당기기, F-29 공통 PR 12/02
-- 사람: 노션 팀원 초대, F-05b liveTest, 제출 zip 이름, dh-ssafy `.env` GMS 키 (현재 동작함)
+- 김준섭 합의(위 1번 목록)
+- 사람: 노션 팀원 초대, F-05b liveTest, 제출 zip 이름
 
 ## 주의
 
-- 다음 마이그레이션은 V14 (`node scripts/next-migration.mjs`로 확인)
-- 브랜치 보호 관리자 포함: develop·main 직접 push 불가, 급할 땐 GitHub Settings에서 잠시 끈다
+- 다음 마이그레이션은 V14 (`node scripts/next-migration.mjs`) · 브랜치 보호 관리자 포함 · PR #173 머지됨
 - node 스크립트로 Java 편집 시 백슬래시가 깨짐 → Edit 도구 사용 · 이 PC에 python 없음
