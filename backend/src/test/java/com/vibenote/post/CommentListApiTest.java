@@ -64,7 +64,7 @@ class CommentListApiTest extends PostApiTestBase {
     }
 
     @Test
-    void AC2_댓글이_201개면_오래된_200개와_total_201을_받는다() throws Exception {
+    void AC2_issue208_댓글이_201개면_최근_200개를_오래된순으로_total_201과_받는다() throws Exception {
         List<Object[]> rows = new ArrayList<>();
         for (int i = 0; i < 201; i++) {
             rows.add(
@@ -81,8 +81,8 @@ class CommentListApiTest extends PostApiTestBase {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.total").value(201))
                 .andExpect(jsonPath("$.items", hasSize(200)))
-                .andExpect(jsonPath("$.items[0].content").value("댓글 0"))
-                .andExpect(jsonPath("$.items[199].content").value("댓글 199"));
+                .andExpect(jsonPath("$.items[0].content").value("댓글 1"))
+                .andExpect(jsonPath("$.items[199].content").value("댓글 200"));
     }
 
     @Test

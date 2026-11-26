@@ -1,5 +1,5 @@
 <script setup>
-// SC-15 "댓글" 절 (F-18 AC11~AC13). 오래된순 목록(최대 200개) + 작성 폼/로그인 링크.
+// SC-15 "댓글" 절 (F-18 AC11~AC13). 최근 200개를 오래된순으로 + 작성 폼/로그인 링크 (#208).
 // 작성·수정·삭제가 끝나면 댓글 목록만 다시 받는다 (글을 다시 부르면 조회수가 오른다).
 import { computed, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
@@ -29,7 +29,8 @@ const formError = ref('')
 // 수정 중인 댓글 id (한 번에 하나)
 const editingId = ref(null)
 
-const truncated = computed(() => total.value > items.value.length)
+// 서버가 최근 200개만 보내므로 안 보이는 것은 오래된 댓글이다 (#208)
+const hiddenCount = computed(() => Math.max(0, total.value - items.value.length))
 const loginLink = computed(() => ({
   path: '/login',
   query: { redirect: `/community/${props.postId}` },
@@ -125,6 +126,9 @@ function onChanged() {
       첫 댓글을 남겨 주세요
     </p>
     <template v-else>
+      <p v-if="hiddenCount > 0" class="hint" data-role="comments-truncated">
+        이전 댓글 {{ hiddenCount }}개는 보이지 않습니다
+      </p>
       <ul class="list">
         <CommentItem
           v-for="comment in items"
@@ -138,9 +142,6 @@ function onChanged() {
           @changed="onChanged"
         />
       </ul>
-      <p v-if="truncated" class="hint" data-role="comments-truncated">
-        댓글이 많아 처음 200개만 보입니다
-      </p>
     </template>
   </section>
 </template>

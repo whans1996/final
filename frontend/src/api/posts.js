@@ -75,7 +75,7 @@ export function deletePost(id) {
  */
 
 /**
- * 글의 댓글 (오래된순 최대 200개). total이 items 수보다 크면 200개만 온 것이다. 없는 글이면 404 POST_404.
+ * 글의 댓글 (최근 200개를 오래된순으로, #208). total이 items 수보다 크면 오래된 댓글은 빠진 것이다. 없는 글이면 404 POST_404.
  * @param {number} postId
  * @returns {Promise<{ items: PostComment[], total: number }>}
  */
