@@ -622,8 +622,9 @@ const CURL_SHORT_VALUE = 'dFTXHuoAebcKmrwxECQyYz';
 
 /** curl·wget·Invoke-RestMethod로 GitHub API를 직접 부르는 경우 (#130) */
 function checkHttp(args) {
-  const url = args.find((a) => /^https?:\/\/api\.github\.com\//i.test(a));
-  if (!url) return null;
+  // curl은 URL을 여러 개 받아 같은 메서드로 차례로 요청한다: 하나라도 쓰기 경로면 막는다
+  const urls = args.filter((a) => /^https?:\/\/api\.github\.com\//i.test(a));
+  if (!urls.length) return null;
   let method = null;
   let body = false;
   for (let k = 0; k < args.length; k++) {
@@ -641,7 +642,7 @@ function checkHttp(args) {
       }
     }
   }
-  return githubWrite(apiPath(url), method || (body ? 'POST' : 'GET'), args.join(' ')) ? R.ghApi : null;
+  return urls.some((url) => githubWrite(apiPath(url), method || (body ? 'POST' : 'GET'), args.join(' '))) ? R.ghApi : null;
 }
 
 // 경로가 아니라 글을 받는 명령 (eval 경로 검사에서 뺀다)
@@ -693,6 +694,9 @@ function checkInterpreter(name, args, seg, ctx, depth) {
     const eq = a.indexOf('=');
     if (a.startsWith('--') && eq !== -1 && INTERPRETERS[name].includes(a.slice(0, eq))) return checkCode(a.slice(eq + 1), ctx, depth);
     if (INTERPRETERS[name].includes(a) || bundle?.test(a)) return checkCode(args[k + 1] ?? '', ctx, depth);
+    // python·perl·ruby·php는 코드를 옵션에 붙여 쓸 수 있다 (python3 -c'…', python -Ic"…"). node는 붙여 쓰기를 받지 않는다
+    const attached = short.length && !['node', 'bun', 'deno'].includes(name) ? new RegExp(`^-[A-Za-z]*?[${short.join('')}](.+)$`, 's').exec(a) : null;
+    if (attached) return checkCode(attached[1], ctx, depth);
   }
   // 스크립트 파일 없이 실행(node, python -)하면 표준 입력을 코드로 읽는다
   if (!args.some((a) => !a.startsWith('-')) || args.includes('-')) {

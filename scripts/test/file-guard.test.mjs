@@ -42,6 +42,8 @@ test('쓰기 내용의 비밀값 (H-2)', () => {
   no('Write', { file_path: '/repo/a.txt', content: 'github_pat_' + 'A'.repeat(30) });
   no('Write', { file_path: '/repo/.env.example', content: 'GMS_API_KEY=' + 'x1'.repeat(12) });
   no(`${DC}edit_block`, { file_path: '/repo/a.md', old_string: 'x', new_string: 'AIza' + 'q'.repeat(35) });
+  no(`${DC}write_pdf`, { path: '/repo/report.pdf', content: '# 보고서\n' + 'github_pat_' + 'A'.repeat(30) });
+  no(`${DC}write_pdf`, { path: '/repo/report.pdf', content: [{ text: 'ghp_' + 'b'.repeat(36) }] });
   ok('Write', { file_path: '/repo/.env.example', content: 'GMS_API_KEY=\n# GMS_BASE_URL=https://gms.ssafy.io/gmsapi/api.openai.com/v1' });
 });
 

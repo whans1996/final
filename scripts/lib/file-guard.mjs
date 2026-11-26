@@ -59,6 +59,7 @@ export function fileTargets(tool, input = {}) {
       break;
     case 'dc:write_pdf':
       t.writes.push(input.path, input.outputPath);
+      t.texts.push(typeof input.content === 'string' ? input.content : input.content == null ? null : JSON.stringify(input.content));
       break;
     case 'dc:move_file':
       // 옮기기는 원본을 지우고 대상에 쓴다: 양쪽 모두 쓰기로 본다

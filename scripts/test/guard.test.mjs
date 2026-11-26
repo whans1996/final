@@ -359,6 +359,11 @@ test('Codex 반영: curl -d{…}·-XPUT 붙여 쓰기, grep --reg= 축약', () =
     'grep --rege KEY .env',
     'grep --fil=pats.txt .env',
     'rg --regex=KEY backend/.env.local',
+    // Codex 2회차: curl은 URL을 여러 개 순서대로 요청한다, python -c 뒤에 코드를 붙여 쓸 수 있다
+    'curl -X DELETE https://api.github.com/zen https://api.github.com/repos/o/r/git/refs/heads/develop',
+    `python3 -c'print(open(".env").read())'`,
+    `python -Ic"print(open('.env').read())"`,
+    `perl -e'open(F, ".env")'`,
   ])
     no(cmd);
   for (const cmd of ['curl -s https://api.github.com/repos/o/r', 'curl -sH "Accept: application/json" https://api.github.com/repos/o/r/pulls/1/merge', 'grep --ignore-case "\\.env" src', 'grep --reg="\\.env" src'])
