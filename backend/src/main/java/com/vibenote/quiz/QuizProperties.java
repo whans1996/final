@@ -11,6 +11,7 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * @param conceptListMaxChars 연결 개념 목록 상한
  * @param maxFileChars 코드 파일 하나에 넣는 최대 글자 수
  * @param maxChars 프롬프트 입력(개념 목록 + 코드) 합계 상한
+ * @param maxRegenerations 분석 하나의 퀴즈 재생성 요청 상한 (L-1a AC7)
  */
 @ConfigurationProperties("quiz")
 public record QuizProperties(
@@ -18,4 +19,5 @@ public record QuizProperties(
         @DefaultValue("10") int maxQuestions,
         @DefaultValue("3000") int conceptListMaxChars,
         @DefaultValue("3000") int maxFileChars,
-        @DefaultValue("24000") int maxChars) {}
+        @DefaultValue("24000") int maxChars,
+        @DefaultValue("3") int maxRegenerations) {}

@@ -5,9 +5,10 @@
 // (F-06 AC13~AC15, F-21a AC14, F-07 AC14, F-08 AC8, F-14 AC9).
 // FAILED도 상세를 1회 불러와 주인에게 관리 영역(삭제)을 보여 준다. 남의 공개 분석은 읽기 전용이다: 관리·메모·퀴즈 탭이 없고
 // 실행 흐름은 카드만 보인다 (F-19 AC13·AC14). 내 분석이 DONE이면 진행 중인 분석 챌린지 달성도를 보인다 (#211).
+// FAILED인 내 URL 분석은 같은 설정으로 다시 실행해 새 분석으로 바꾸고, ZIP 분석은 다시 올리라고 안내한다 (L-1a AC9).
 import { computed, nextTick, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
-import { fetchAnalysis, fetchAnalysisStatus } from '@/api/analyses'
+import { fetchAnalysis, fetchAnalysisStatus, rerunAnalysis } from '@/api/analyses'
 import { errorCode, errorMessage } from '@/api/http'
 import { usePolling } from '@/composables/usePolling'
 import { isInProgress } from '@/utils/analysisStatus'
@@ -43,6 +44,9 @@ const loadError = ref('')
 const analysis = ref(null)
 const detailLoading = ref(false)
 const detailError = ref('')
+
+const rerunning = ref(false)
+const rerunError = ref('')
 
 const isDone = computed(() => status.value?.status === 'DONE')
 const isFailed = computed(() => status.value?.status === 'FAILED')
@@ -113,6 +117,20 @@ function onUpdated(changes) {
   analysis.value = { ...analysis.value, ...changes }
 }
 
+async function rerun() {
+  rerunning.value = true
+  rerunError.value = ''
+  try {
+    const result = await rerunAnalysis(currentId)
+    // 실패한 분석은 지워졌으므로 뒤로 가기로 돌아오지 않게 바꿔 넣는다. 새 id로 바뀌면 폴링이 다시 시작된다
+    await router.replace({ name: 'analysis-detail', params: { id: String(result.analysisId) } })
+  } catch (error) {
+    rerunError.value = errorMessage(error)
+  } finally {
+    rerunning.value = false
+  }
+}
+
 function onDeleted() {
   router.push({ name: 'analyses' })
 }
@@ -169,6 +187,7 @@ watch(
     detailStage = null
     detailLoading.value = false
     detailError.value = ''
+    rerunError.value = ''
     notFound.value = false
     loadError.value = ''
     loading.value = true
@@ -287,7 +306,13 @@ watch(
               :analysis-id="analysis.id"
               @select-file="selectFile"
             />
-            <AnalysisQuizTab v-else-if="mine" :analysis-id="analysis.id" />
+            <AnalysisQuizTab
+              v-else-if="mine"
+              :analysis-id="analysis.id"
+              :quiz-status="analysis.quizStatus ?? null"
+              :regenerations-left="analysis.quizRegenerationsLeft ?? 0"
+              @updated="onUpdated"
+            />
           </div>
         </template>
       </div>
@@ -297,7 +322,29 @@ watch(
 
         <div v-if="status.status === 'FAILED'" class="failed" data-message="failed">
           <p class="form-error">{{ status.errorMessage }}</p>
-          <RouterLink :to="{ name: 'analysis-new' }" class="retry" data-action="retry">
+          <template v-if="mine && analysis.sourceType === 'URL'">
+            <button
+              type="button"
+              class="retry-button"
+              data-action="rerun"
+              :disabled="rerunning"
+              @click="rerun"
+            >
+              같은 설정으로 다시 실행
+            </button>
+            <p v-if="rerunError" class="form-error" role="alert" data-error="rerun">
+              {{ rerunError }}
+            </p>
+          </template>
+          <template v-else-if="mine && analysis.sourceType === 'ZIP'">
+            <p class="hint" data-message="zip-rerun">
+              ZIP 분석은 원본을 보관하지 않습니다. ZIP 파일을 다시 올려 주세요.
+            </p>
+            <RouterLink :to="{ name: 'analysis-new' }" class="retry" data-action="retry">
+              ZIP 다시 올리기
+            </RouterLink>
+          </template>
+          <RouterLink v-else :to="{ name: 'analysis-new' }" class="retry" data-action="retry">
             다시 요청하기
           </RouterLink>
         </div>

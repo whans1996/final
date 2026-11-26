@@ -42,7 +42,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 /**
  * 분석 요청(ZIP F-05a·저장소 URL F-05b), 내 분석 목록, 진행 상태 (F-05a), 상세·파일 조회 (F-06), 개념 조회 (F-08), 수정·공개·삭제와
- * 공개 분석 열람 (F-19).
+ * 공개 분석 열람 (F-19), 실패 분석 재실행 (L-1a).
  */
 @Tag(name = AnalysisApiDocs.TAG, description = AnalysisApiDocs.TAG_DESCRIPTION)
 @RestController
@@ -119,6 +119,36 @@ public class AnalysisController {
                     String consent) {
         return analysisService.request(
                 user.id(), CreateAnalysisRequest.of(file, sourceUrl, level, consent));
+    }
+
+    @Operation(
+            summary = "실패한 저장소 분석 재실행",
+            description =
+                    "FAILED로 끝난 내 저장소 URL 분석을 같은 주소·수준·제목·메모로 새 분석으로 다시 접수하고 202를 준다. 실패한 분석은"
+                            + " 삭제된다(F-19 삭제와 같음). 새 분석은 비공개이고 오늘 요청 1회로 센다. ZIP 분석은 원본을 보관하지 않아 다시"
+                            + " 올려야 한다.")
+    @ApiResponse(responseCode = "202", description = "새 분석 접수됨")
+    @ApiResponse(
+            responseCode = "401",
+            description = "토큰 없음·만료 (AUTH_401)",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(
+            responseCode = "404",
+            description = "없는 분석, 다른 회원의 분석(공개·팀 공유여도), 삭제된 분석 (ANALYSIS_404)",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(
+            responseCode = "409",
+            description = "ZIP 분석이거나 FAILED가 아닌 분석 (ANALYSIS_008)",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(
+            responseCode = "429",
+            description = "오늘 분석 요청 횟수를 다 씀 (ANALYSIS_429)",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @PostMapping("/{id:\\d+}/rerun")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public CreateAnalysisResponse rerun(
+            @AuthenticationPrincipal AuthUser user, @PathVariable long id) {
+        return analysisService.rerun(user.id(), id);
     }
 
     @Operation(summary = "내 분석 목록", description = "삭제하지 않은 내 분석을 요청 시각 최신순으로 준다.")

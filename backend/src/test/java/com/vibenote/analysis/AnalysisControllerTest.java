@@ -360,6 +360,26 @@ class AnalysisControllerTest extends AnalysisTestSupport {
                 .andExpect(jsonPath("$.errorMessage").value("분석할 수 있는 코드가 없습니다."));
     }
 
+    /** L-1a AC4: 상태에 퀴즈 상태를 함께 준다. QUIZ 단계 전이면 null. */
+    @Test
+    void L1a_AC4_상태에_quizStatus를_준다() throws Exception {
+        long me = createUser("l1aac4s", "JUNIOR");
+        long running = insertAnalysis(me, "EXTRACTING", null, false, "running");
+        long generating = insertAnalysis(me, "DONE", null, false, "generating");
+        jdbc.update("UPDATE analyses SET quiz_status = 'GENERATING' WHERE id = ?", generating);
+
+        mockMvc.perform(
+                        get(URL + "/{id}/status", running)
+                                .header(HttpHeaders.AUTHORIZATION, bearer(me)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.quizStatus").value(nullValue()));
+        mockMvc.perform(
+                        get(URL + "/{id}/status", generating)
+                                .header(HttpHeaders.AUTHORIZATION, bearer(me)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.quizStatus").value("GENERATING"));
+    }
+
     @Test
     void AC13_없거나_남의_것이거나_삭제된_분석이면_404_ANALYSIS_404() throws Exception {
         long me = createUser("ac13404", "JUNIOR");

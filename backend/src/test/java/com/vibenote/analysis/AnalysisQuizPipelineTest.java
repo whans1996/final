@@ -127,6 +127,7 @@ class AnalysisQuizPipelineTest extends AnalysisTestSupport {
         assertThat(row.get("status")).isEqualTo("DONE");
         assertThat(row.get("progress")).isEqualTo(100);
         assertThat(row.get("error_code")).isNull();
+        assertThat(row.get("quiz_status")).as("L-1a AC4").isEqualTo("READY");
         InOrder order = inOrder(analysisService);
         order.verify(analysisService).advance(id, AnalysisStatus.EXTRACTING, 70);
         order.verify(analysisService).advance(id, AnalysisStatus.QUIZ, 85);
@@ -250,6 +251,7 @@ class AnalysisQuizPipelineTest extends AnalysisTestSupport {
         assertThat(row.get("status")).isEqualTo("DONE");
         assertThat(row.get("error_code")).isNull();
         assertThat(quizCount(id)).isZero();
+        assertThat(row.get("quiz_status")).as("L-1a AC4").isEqualTo("FAILED");
         assertThat(requests(LlmStage.QUIZ)).hasSize(2);
     }
 
@@ -266,6 +268,7 @@ class AnalysisQuizPipelineTest extends AnalysisTestSupport {
         assertThat(row.get("status")).isEqualTo("DONE");
         assertThat(row.get("error_code")).isNull();
         assertThat(quizCount(id)).isZero();
+        assertThat(row.get("quiz_status")).as("L-1a AC4").isEqualTo("FAILED");
         assertThat(requests(LlmStage.QUIZ)).hasSize(1);
     }
 
@@ -282,5 +285,6 @@ class AnalysisQuizPipelineTest extends AnalysisTestSupport {
         assertThat(row.get("status")).isEqualTo("FAILED");
         assertThat(row.get("error_code")).isEqualTo("ANALYSIS_500");
         assertThat(row.get("progress")).isEqualTo(85);
+        assertThat(row.get("quiz_status")).as("L-1a AC4").isNull();
     }
 }

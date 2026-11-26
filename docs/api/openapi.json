@@ -614,6 +614,19 @@
             "example" : "todo-app",
             "type" : [ "string", "null" ]
           },
+          "quizRegenerationsLeft" : {
+            "description" : "퀴즈 다시 만들기 남은 횟수 (분석당 3회 − 사용, 최소 0, L-1a)",
+            "example" : 2,
+            "format" : "int32",
+            "minimum" : 0,
+            "type" : "integer"
+          },
+          "quizStatus" : {
+            "description" : "퀴즈 상태. GENERATING 재생성 중, READY 퀴즈 있음, FAILED 생성 실패(다시 만들 수 있음). QUIZ 단계를 끝내기 전이면 null (L-1a)",
+            "enum" : [ "GENERATING", "READY", "FAILED" ],
+            "example" : "READY",
+            "type" : [ "string", "null" ]
+          },
           "sourceType" : {
             "description" : "입력 종류",
             "enum" : [ "URL", "ZIP" ],
@@ -637,7 +650,7 @@
             "type" : [ "string", "null" ]
           }
         },
-        "required" : [ "createdAt", "explainedFileCount", "fileCount", "id", "isPublic", "level", "liteMode", "mine", "owner", "progress", "sourceType", "status" ],
+        "required" : [ "createdAt", "explainedFileCount", "fileCount", "id", "isPublic", "level", "liteMode", "mine", "owner", "progress", "quizRegenerationsLeft", "sourceType", "status" ],
         "type" : "object"
       },
       "AnalysisFileResponse" : {
@@ -795,6 +808,12 @@
             "example" : 15,
             "format" : "int32",
             "type" : "integer"
+          },
+          "quizStatus" : {
+            "description" : "퀴즈 상태. GENERATING 재생성 중, READY 퀴즈 있음, FAILED 생성 실패(다시 만들 수 있음). QUIZ 단계를 끝내기 전이면 null (L-1a)",
+            "enum" : [ "GENERATING", "READY", "FAILED" ],
+            "example" : "READY",
+            "type" : [ "string", "null" ]
           },
           "sourceUrl" : {
             "description" : "저장소 주소(정규화). ZIP 분석이면 null. FAILED 화면의 \"저장소 보기\" 링크 (F-19 AC12)",
@@ -2925,6 +2944,32 @@
           }
         },
         "required" : [ "choices", "id", "no", "question" ],
+        "type" : "object"
+      },
+      "QuizRegenerationResponse" : {
+        "description" : "퀴즈 재생성 접수",
+        "properties" : {
+          "analysisId" : {
+            "description" : "분석 ID",
+            "example" : 42,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "quizRegenerationsLeft" : {
+            "description" : "이번 요청을 뺀 남은 재생성 횟수",
+            "example" : 2,
+            "format" : "int32",
+            "minimum" : 0,
+            "type" : "integer"
+          },
+          "quizStatus" : {
+            "description" : "퀴즈 상태 (접수 직후 항상 GENERATING)",
+            "enum" : [ "GENERATING", "READY", "FAILED" ],
+            "example" : "GENERATING",
+            "type" : "string"
+          }
+        },
+        "required" : [ "analysisId", "quizRegenerationsLeft", "quizStatus" ],
         "type" : "object"
       },
       "QuizResponse" : {
@@ -5458,6 +5503,142 @@
         },
         "summary" : "분석의 퀴즈 조회",
         "tags" : [ "퀴즈" ]
+      },
+      "post" : {
+        "description" : "생성에 실패한(quizStatus = FAILED) 내 완료 분석의 퀴즈를 같은 입력으로 다시 만든다. 바로 202를 주고 생성은 백그라운드에서 하며, 결과는 /api/analyses/{id}/status의 quizStatus(READY·FAILED)로 확인한다. 분석당 3회까지이고 실패해도 횟수는 돌아오지 않는다.",
+        "operationId" : "regenerate",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "202" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/QuizRegenerationResponse"
+                }
+              }
+            },
+            "description" : "접수됨 (quizStatus = GENERATING)"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "토큰 없음·만료 (AUTH_401)"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "없는·삭제된 분석, 남의 분석(팀 공유 멤버 포함) (ANALYSIS_404)"
+          },
+          "409" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "분석이 DONE이 아니거나 퀴즈가 이미 있거나 만드는 중 (QUIZ_409)"
+          },
+          "429" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "재생성 횟수를 다 씀 (QUIZ_429)"
+          }
+        },
+        "summary" : "퀴즈 다시 만들기",
+        "tags" : [ "퀴즈" ]
+      }
+    },
+    "/api/analyses/{id}/rerun" : {
+      "post" : {
+        "description" : "FAILED로 끝난 내 저장소 URL 분석을 같은 주소·수준·제목·메모로 새 분석으로 다시 접수하고 202를 준다. 실패한 분석은 삭제된다(F-19 삭제와 같음). 새 분석은 비공개이고 오늘 요청 1회로 센다. ZIP 분석은 원본을 보관하지 않아 다시 올려야 한다.",
+        "operationId" : "rerun",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "202" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CreateAnalysisResponse"
+                }
+              }
+            },
+            "description" : "새 분석 접수됨"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "토큰 없음·만료 (AUTH_401)"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "없는 분석, 다른 회원의 분석(공개·팀 공유여도), 삭제된 분석 (ANALYSIS_404)"
+          },
+          "409" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "ZIP 분석이거나 FAILED가 아닌 분석 (ANALYSIS_008)"
+          },
+          "429" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "오늘 분석 요청 횟수를 다 씀 (ANALYSIS_429)"
+          }
+        },
+        "summary" : "실패한 저장소 분석 재실행",
+        "tags" : [ "분석" ]
       }
     },
     "/api/analyses/{id}/status" : {
@@ -9525,7 +9706,7 @@
     "description" : "공개 개념 카드 목록·검색·상세·리뷰·찜",
     "name" : "개념 카드"
   }, {
-    "description" : "분석한 코드로 만든 객관식 퀴즈 조회, 풀이 제출·채점",
+    "description" : "분석한 코드로 만든 객관식 퀴즈 조회, 다시 만들기, 풀이 제출·채점",
     "name" : "퀴즈"
   }, {
     "description" : "학습 챌린지 목록·상세, 참여·취소, 참여한 챌린지와 달성도",

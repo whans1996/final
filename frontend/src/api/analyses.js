@@ -27,7 +27,7 @@ export function fetchAnalyses({ page, size }) {
 /**
  * 진행 상태. 없거나 볼 수 없는 분석이면 404 ANALYSIS_404.
  * sourceUrl은 URL 분석의 저장소 주소이고 ZIP 분석이면 null이다 (FAILED 화면의 "저장소 보기", F-19 AC12).
- * @returns {Promise<{ analysisId: number, status: string, progress: number, errorCode: string|null, errorMessage: string|null, sourceUrl: string|null, updatedAt: string }>}
+ * @returns {Promise<{ analysisId: number, status: string, progress: number, errorCode: string|null, errorMessage: string|null, sourceUrl: string|null, updatedAt: string, quizStatus: 'GENERATING'|'READY'|'FAILED'|null }>}
  */
 export function fetchAnalysisStatus(id) {
   return http.get(`/analyses/${id}/status`).then((res) => res.data)
@@ -40,7 +40,7 @@ export function fetchAnalysisStatus(id) {
  * 분석 상세 (overview·fileCount·explainedFileCount 포함). 진행 중이면 overview가 null일 수 있다.
  * sourceUrl은 URL 분석의 정규화한 저장소 주소이고 ZIP 분석이면 null이다 (F-05b AC12).
  * mine은 내 분석인지, owner는 주인 `{ id, nickname }`, memo는 주인에게만 온다 (남이면 null, F-19 AC9·AC11).
- * @returns {Promise<{ id: number, title: string|null, memo: string|null, mine: boolean, owner: { id: number, nickname: string }, projectName: string|null, sourceType: string, sourceUrl: string|null, level: string, status: string, progress: number, isPublic: boolean, errorCode: string|null, errorMessage: string|null, createdAt: string, fileCount: number, explainedFileCount: number, overview: object|null }>}
+ * @returns {Promise<{ id: number, title: string|null, memo: string|null, mine: boolean, owner: { id: number, nickname: string }, projectName: string|null, sourceType: string, sourceUrl: string|null, level: string, status: string, progress: number, isPublic: boolean, errorCode: string|null, errorMessage: string|null, createdAt: string, fileCount: number, explainedFileCount: number, overview: object|null, quizStatus: 'GENERATING'|'READY'|'FAILED'|null, quizRegenerationsLeft: number }>}
  */
 export function fetchAnalysis(id) {
   return http.get(`/analyses/${id}`).then((res) => res.data)
@@ -116,4 +116,15 @@ export function deleteAnalysis(id) {
  */
 export function fetchAnalysisStructure(id) {
   return http.get(`/analyses/${id}/structure`).then((res) => res.data)
+}
+
+// 실패 분석 재실행 (L-1a, docs/specs/L-1a-rerun-quiz-regenerate.md 3절). 주인만 되고, 남의 분석·삭제·없음은 404 ANALYSIS_404.
+
+/**
+ * FAILED로 끝난 내 URL 분석을 같은 설정으로 새 분석으로 다시 접수한다 (202). 실패한 분석은 삭제된다.
+ * ZIP이거나 FAILED가 아니면 409 ANALYSIS_008, 오늘 한도를 넘으면 429 ANALYSIS_429.
+ * @returns {Promise<{ analysisId: number, status: string }>}
+ */
+export function rerunAnalysis(id) {
+  return http.post(`/analyses/${id}/rerun`).then((res) => res.data)
 }

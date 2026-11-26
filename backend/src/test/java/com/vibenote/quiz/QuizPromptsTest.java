@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 /** F-14 AC2 입력 구성 (6.2절). */
 class QuizPromptsTest {
 
-    static final QuizProperties PROPS = new QuizProperties(5, 10, 3000, 3000, 24000);
+    static final QuizProperties PROPS = new QuizProperties(5, 10, 3000, 3000, 24000, 3);
 
     static AnalysisFile file(long id, String path, String layer, String content) {
         AnalysisFile f = new AnalysisFile();

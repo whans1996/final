@@ -77,6 +77,8 @@ public enum ErrorCode {
     ANALYSIS_006(HttpStatus.CONFLICT, "완료된 분석만 공개할 수 있습니다."),
     /** 구조 그래프 동시 계산 상한이 차서 기다려도 자리가 나지 않음 (F-21a 5.3절 4). */
     ANALYSIS_007(HttpStatus.SERVICE_UNAVAILABLE, "구조 계산 요청이 많습니다. 잠시 뒤 다시 시도해 주세요."),
+    /** ZIP 분석이거나 FAILED가 아닌 분석의 재실행 (L-1a AC3). */
+    ANALYSIS_008(HttpStatus.CONFLICT, "실패한 저장소 주소 분석만 다시 실행할 수 있습니다. ZIP은 파일을 다시 올려 주세요."),
 
     // ── CONCEPT (A F-08 · B F-09~13) ──
     /** 없는 카드, 또는 PUBLISHED가 아닌 카드(DRAFT·HIDDEN)를 일반 사용자가 조회 (F-00b, NF-04). */
@@ -95,6 +97,10 @@ public enum ErrorCode {
     QUIZ_404(HttpStatus.NOT_FOUND, "퀴즈를 찾을 수 없습니다."),
     /** 제출이 그 퀴즈의 문항마다 정확히 한 번씩 답하지 않음 (누락·중복·다른 퀴즈의 문항, F-14 AC8). */
     QUIZ_400(HttpStatus.BAD_REQUEST, "모든 문항에 한 번씩 답해 주세요."),
+    /** 분석이 DONE이 아니거나 퀴즈가 이미 있거나 만드는 중(READY·GENERATING·NULL)인데 재생성 요청 (L-1a AC7). */
+    QUIZ_409(HttpStatus.CONFLICT, "퀴즈를 다시 만들 수 없는 상태입니다. 화면을 새로 고쳐 주세요."),
+    /** 분석당 재생성 횟수(quiz.max-regenerations) 소진 (L-1a AC7). {limit}은 서비스가 채운다. */
+    QUIZ_429(HttpStatus.TOO_MANY_REQUESTS, "이 분석의 퀴즈 다시 만들기 횟수({limit}회)를 모두 썼습니다."),
 
     // ── REVIEW_PLAN (A F-15) ──
     /** 없는 계획, 다른 회원의 계획, PUBLISHED가 아닌 카드의 계획 (F-15 AC7). */

@@ -4,7 +4,7 @@
 
     <sql id="columns">
         id, user_id, source_type, source_url, project_name, title, memo, level, status, progress, is_public,
-        error_code, error_message, created_at, updated_at
+        error_code, error_message, created_at, updated_at, quiz_status, quiz_regenerations
     </sql>
 
     <!-- F-19 "볼 수 있는 분석": 미삭제 AND (내 분석 OR 공개·DONE이고 주인이 ACTIVE) -->
@@ -17,8 +17,8 @@
 
     <!-- updated_at은 DB 세션 시간대의 기본값·ON UPDATE 대신 서비스 Clock 값(Asia/Seoul)으로 쓴다 -->
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO analyses (user_id, source_type, source_url, project_name, title, level, status, created_at, updated_at)
-        VALUES (#{userId}, #{sourceType}, #{sourceUrl}, #{projectName}, #{title}, #{level}, #{status}, #{createdAt}, #{createdAt})
+        INSERT INTO analyses (user_id, source_type, source_url, project_name, title, memo, level, status, created_at, updated_at)
+        VALUES (#{userId}, #{sourceType}, #{sourceUrl}, #{projectName}, #{title}, #{memo}, #{level}, #{status}, #{createdAt}, #{createdAt})
     </insert>
 
     <!-- idx_analyses_user_created. deleted_at 조건 없음: 삭제해도 한도는 돌아오지 않는다 (V2 주석) -->
@@ -134,6 +134,43 @@
     <update id="softDelete">
         UPDATE analyses SET deleted_at = #{now}, updated_at = #{now}
         WHERE id = #{id} AND user_id = #{userId} AND deleted_at IS NULL AND status IN ('DONE', 'FAILED')
+    </update>
+
+    <!-- L-1a AC1·AC3. 실패한 URL 분석만 한 문장으로 판단한다 (F-19 softDelete와 같은 방식) -->
+    <update id="softDeleteFailedUrl">
+        UPDATE analyses SET deleted_at = #{now}, updated_at = #{now}
+        WHERE id = #{id} AND user_id = #{userId} AND deleted_at IS NULL
+          AND status = 'FAILED' AND source_type = 'URL'
+    </update>
+
+    <!-- L-1a AC4. QUIZ 단계의 결과 기록 -->
+    <update id="updateQuizStatus">
+        UPDATE analyses SET quiz_status = #{quizStatus} WHERE id = #{id}
+    </update>
+
+    <!-- L-1a AC5·AC7. 조건과 횟수 증가를 한 문장으로 해 동시 요청 중 하나만 통과한다 -->
+    <update id="startQuizRegeneration">
+        UPDATE analyses
+        SET quiz_status = 'GENERATING', quiz_regenerations = quiz_regenerations + 1
+        WHERE id = #{id} AND user_id = #{userId} AND deleted_at IS NULL
+          AND status = 'DONE' AND quiz_status = 'FAILED' AND quiz_regenerations &lt; #{max}
+    </update>
+
+    <!-- L-1a AC5·AC6·AC8. 재생성 중이고 삭제되지 않았을 때만 결과를 기록한다 -->
+    <update id="finishQuizRegeneration">
+        UPDATE analyses SET quiz_status = #{quizStatus}
+        WHERE id = #{id} AND quiz_status = 'GENERATING' AND deleted_at IS NULL
+    </update>
+
+    <!-- L-1a AC8. LLM을 부르기 전에 아직 재생성할 분석인지 (삭제·탈퇴면 크레딧을 쓰지 않는다) -->
+    <select id="isQuizRegenerating" resultType="boolean">
+        SELECT COUNT(*) > 0 FROM analyses
+        WHERE id = #{id} AND quiz_status = 'GENERATING' AND deleted_at IS NULL
+    </select>
+
+    <!-- L-1a AC8. 재시작 때 재생성 중이던 퀴즈를 모두 실패로 (삭제된 분석 포함) -->
+    <update id="failInterruptedQuizRegenerations">
+        UPDATE analyses SET quiz_status = 'FAILED' WHERE quiz_status = 'GENERATING'
     </update>
 
     <select id="lockInProgress" resultType="long">
