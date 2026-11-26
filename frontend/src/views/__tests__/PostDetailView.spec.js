@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
-import { createPinia } from 'pinia'
+import { createPinia, setActivePinia } from 'pinia'
+import { createMemoryHistory, createRouter } from 'vue-router'
+import { routes } from '@/router'
 import PostDetailView from '@/views/community/PostDetailView.vue'
 import * as postsApi from '@/api/posts'
 import { useAuthStore } from '@/stores/auth'
@@ -38,7 +40,7 @@ async function mountDetail(path = '/community/42', options) {
   return mounted
 }
 
-describe('PostDetailView (F-17 AC15·AC16)', () => {
+describe('PostDetailView (F-17 AC15·AC16·AC18)', () => {
   beforeEach(() => {
     vi.resetAllMocks()
     // F-18 댓글 절이 함께 뜬다. 댓글 테스트는 PostComments.spec.js에 있다
@@ -214,5 +216,23 @@ describe('PostDetailView (F-17 AC15·AC16)', () => {
     const reloaded = mount(PostDetailView, { global: { plugins: [createPinia(), router] } })
     await flushPromises()
     expect(reloaded.find('[role="status"]').exists()).toBe(false)
+  })
+
+  it('AC18 #171 edit이 replace로 보내 상세가 새로 마운트될 때도 안내를 한 번 보이고 state에서 지운다', async () => {
+    postsApi.fetchPost.mockResolvedValue(detail())
+    setActivePinia(createPinia())
+    const router = createRouter({ history: createMemoryHistory(), routes })
+    await router.push('/community/42/edit')
+    await router.replace({
+      path: '/community/42',
+      state: { notice: '본인이 쓴 글만 수정할 수 있습니다.' },
+    })
+    await router.isReady()
+
+    const wrapper = mount(PostDetailView, { global: { plugins: [createPinia(), router] } })
+    await flushPromises()
+
+    expect(wrapper.find('[role="status"]').text()).toBe('본인이 쓴 글만 수정할 수 있습니다.')
+    expect(router.options.history.state.notice).toBeFalsy()
   })
 })
