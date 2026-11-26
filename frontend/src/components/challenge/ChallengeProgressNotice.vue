@@ -4,11 +4,8 @@
 // 보조 정보라 해당 챌린지가 없거나 조회가 실패하면 아무것도 보이지 않는다.
 import { ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
-import { fetchMyChallenges } from '@/api/challenges'
+import { JOINED_CHALLENGE_MAX_SIZE, fetchMyChallenges } from '@/api/challenges'
 import ChallengeProgressBar from '@/components/challenge/ChallengeProgressBar.vue'
-
-// 서버 page size 상한. 진행 중 참여 챌린지가 이보다 많은 경우는 없다고 본다
-const MAX_SIZE = 100
 
 const props = defineProps({
   /** 'REVIEW_COUNT' | 'QUIZ_COUNT' | 'ANALYSIS_COUNT' */
@@ -23,7 +20,7 @@ let lastRequest = 0
 async function load() {
   const request = ++lastRequest
   try {
-    const result = await fetchMyChallenges({ status: 'ONGOING', size: MAX_SIZE })
+    const result = await fetchMyChallenges({ status: 'ONGOING', size: JOINED_CHALLENGE_MAX_SIZE })
     if (request !== lastRequest) return
     items.value = (result?.items ?? []).filter((c) => c.goalType === props.goalType)
   } catch {

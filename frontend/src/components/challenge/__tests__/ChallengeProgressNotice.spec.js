@@ -7,7 +7,10 @@ import { routes } from '@/router'
 import { apiError } from '@/views/__tests__/viewTestUtils'
 import { myChallenge, page } from './fixtures'
 
-vi.mock('@/api/challenges')
+vi.mock('@/api/challenges', async (importOriginal) => ({
+  ...(await importOriginal()),
+  fetchMyChallenges: vi.fn(),
+}))
 
 async function mountNotice(props) {
   const router = createRouter({ history: createMemoryHistory(), routes })
@@ -39,7 +42,7 @@ describe('ChallengeProgressNotice (#211 완료 화면의 챌린지 진행)', () 
 
     const wrapper = await mountNotice({ goalType: 'QUIZ_COUNT' })
 
-    expect(challengesApi.fetchMyChallenges).toHaveBeenCalledWith({ status: 'ONGOING', size: 100 })
+    expect(challengesApi.fetchMyChallenges).toHaveBeenCalledWith({ status: 'ONGOING', size: 50 })
     const items = wrapper.findAll('[data-challenge-id]')
     expect(items.map((i) => i.attributes('data-challenge-id'))).toEqual(['1', '3'])
     expect(items[0].find('a').attributes('href')).toBe('/challenges/1')
