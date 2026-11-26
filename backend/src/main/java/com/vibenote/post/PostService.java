@@ -21,6 +21,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -80,7 +81,7 @@ public class PostService {
     @Transactional
     public PostIdResponse create(long userId, PostRequest request) {
         userService.getActiveMember(userId);
-        checkAttachments(userId, request);
+        checkAttachments(userId, request, null);
         Post post =
                 new Post(
                         userId,
@@ -104,7 +105,7 @@ public class PostService {
         userService.getActiveMember(userId);
         checkAuthor(postId, userId);
         validate(request);
-        checkAttachments(userId, request);
+        checkAttachments(userId, request, postMapper.findAnalysisId(postId));
         postMapper.update(
                 postId,
                 request.boardTypeValue(),
@@ -149,14 +150,20 @@ public class PostService {
         throw new BusinessException(ErrorCode.COMMON_400, details);
     }
 
-    private void checkAttachments(long userId, PostRequest request) {
+    /**
+     * 분석은 내 공개 DONE 분석만 새로 첨부할 수 있다 (#206). 수정에서 지금 첨부({@code keptAnalysisId})를 그대로 두면 공개 여부는 보지
+     * 않는다: 첨부 뒤 비공개로 바꾼 글도 고쳐 저장할 수 있게 한다 (보이는 범위는 AC5).
+     */
+    private void checkAttachments(long userId, PostRequest request, Long keptAnalysisId) {
         Long analysisId = request.analysisId();
         Long conceptId = request.conceptId();
         if (analysisId != null && conceptId != null) {
             throw new BusinessException(
                     ErrorCode.COMMON_400, Map.of("conceptId", SINGLE_ATTACHMENT_MESSAGE));
         }
-        if (analysisId != null && !postMapper.existsAttachableAnalysis(analysisId, userId)) {
+        boolean requirePublic = !Objects.equals(analysisId, keptAnalysisId);
+        if (analysisId != null
+                && !postMapper.existsAttachableAnalysis(analysisId, userId, requirePublic)) {
             throw new BusinessException(ErrorCode.POST_001);
         }
         if (conceptId != null && !postMapper.existsPublishedConcept(conceptId)) {

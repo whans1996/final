@@ -238,6 +238,29 @@ class PostWriteApiTest extends PostApiTestBase {
     }
 
     @Test
+    void AC9_issue206_첨부_뒤_비공개로_바뀐_분석은_그대로_두면_저장되고_다른_비공개로는_못_바꾼다() throws Exception {
+        long attached = insertAnalysis(me, "DONE", false, false); // 첨부 뒤 비공개로 바꾼 분석
+        long post = insertPost(me, "QNA", "제목", "본문", attached, null, 0, BASE);
+
+        update(me, post, body("QNA", "오타 고친 제목", "본문", attached, null))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.title").value("오타 고친 제목"))
+                .andExpect(jsonPath("$.analysis.id").value((int) attached));
+
+        long otherPrivate = insertAnalysis(me, "DONE", false, false);
+        update(me, post, body("QNA", "제목", "본문", otherPrivate, null))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("POST_001"));
+
+        // 유지하더라도 삭제된 분석이면 첨부할 수 없다 (공개 여부만 보지 않는다)
+        jdbc.update("UPDATE analyses SET deleted_at = ? WHERE id = ?", BASE, attached);
+        update(me, post, body("QNA", "제목", "본문", attached, null))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("POST_001"));
+        assertThat(postRow(post).get("analysis_id")).isEqualTo(attached);
+    }
+
+    @Test
     void AC9_수정도_작성과_같은_검증과_첨부_규칙을_따른다() throws Exception {
         long post = insertPost(me, "QNA", "제목", "본문", null, null, 0, BASE);
 
