@@ -17,7 +17,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 
 import { join, relative } from 'node:path';
 import { ROOT, git, isWin } from './lib/common.mjs';
 import { acquireLock } from './lib/lock.mjs';
-import { areasOf, frontendCodeFiles, relatedBackendTests, relatedHarnessTests } from './lib/related.mjs';
+import { HARNESS_DATA_FILES, areasOf, frontendCodeFiles, relatedBackendTests, relatedHarnessTests } from './lib/related.mjs';
 
 const args = process.argv.slice(2);
 const fix = args.includes('--fix');
@@ -173,7 +173,8 @@ function verifyHarness() {
   run('harness', `관련 테스트 ${picked.length}개`, `node --test ${picked.join(' ')}`, ROOT);
 }
 
-const AREA_PATHS = { be: ['backend'], fe: ['frontend'], harness: ['scripts', '.claude/hooks', '.githooks'] };
+// 하네스가 읽는 문서(로드맵)도 넣는다: 작업 트리에서만 고친 로드맵으로 통과한 결과를 HEAD에 남기지 않게 (Codex 리뷰)
+const AREA_PATHS = { be: ['backend'], fe: ['frontend'], harness: ['scripts', '.claude/hooks', '.githooks', ...HARNESS_DATA_FILES] };
 
 // 전체 검증을 통과한 커밋을 남긴다. 그 영역에 커밋 안 된 변경이 있으면 HEAD와 검증한 내용이 달라 남기지 않는다
 function recordVerified(areas) {

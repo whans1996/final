@@ -124,6 +124,9 @@ test('roadmapRefs는 PR 본문의 Roadmap: 줄을 읽고 템플릿 주석은 무
   assert.deepEqual(roadmapRefs('Roadmap: HP-2\r\n'), [{ id: 'HP-2', partial: false }]);
   // 펜스 코드 블록 속 사용 예시는 상태로 치지 않는다 (하네스 PR이 쓰기 쉬움, reviewer)
   assert.deepEqual(roadmapRefs('예시:\n```\nRoadmap: K-3a\n```\nRoadmap: HP-2'), [{ id: 'HP-2', partial: false }]);
+  assert.deepEqual(roadmapRefs('예시:\n~~~md\nRoadmap: V-2\n~~~\nRoadmap: HP-2'), [{ id: 'HP-2', partial: false }]);
+  // 대소문자가 달라도 같은 ID로 합쳐 완료가 이긴다 (Codex 리뷰)
+  assert.deepEqual(roadmapRefs('Roadmap: HP-2 (일부)\nRoadmap: hp-2'), [{ id: 'HP-2', partial: false }]);
 });
 
 test('roadmapRefIssues는 형식 오류·없는 ID·대소문자 차이를 알린다 (--check-body)', () => {

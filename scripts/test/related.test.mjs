@@ -1,7 +1,8 @@
 // 커밋 hook·pre-push의 검증 대상 선택 (H-1)
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
-import { areasOf, frontendCodeFiles, prePushPlan, protectedPushes, relatedBackendTests, workTreeMismatch, relatedHarnessTests } from '../lib/related.mjs';
+import { HARNESS_DATA_FILES, areasOf, frontendCodeFiles, prePushPlan, protectedPushes, relatedBackendTests, workTreeMismatch, relatedHarnessTests } from '../lib/related.mjs';
 
 const T = 'backend/src/test/java/com/vibenote/';
 const M = 'backend/src/main/java/com/vibenote/';
@@ -77,6 +78,10 @@ test('하네스: 테스트 자신과, 바뀐 모듈을 import하는 테스트', 
   assert.deepEqual(relatedHarnessTests(['docs/로드맵.md'], [...testFiles, 'scripts/test/roadmap.test.mjs'], read), ['scripts/test/roadmap.test.mjs']);
   assert.deepEqual(areasOf(['docs/로드맵.md']), ['harness']);
   assert.deepEqual(areasOf(['docs/기획서.md']), []);
+  // 검증 캐시(verify.mjs recordVerified)의 미커밋 변경 검사도 같은 문서를 본다 (Codex 리뷰)
+  assert.deepEqual(HARNESS_DATA_FILES, ['docs/로드맵.md']);
+  const verifySrc = readFileSync(new URL('../verify.mjs', import.meta.url), 'utf8');
+  assert.match(verifySrc, /harness: \[[^\]]*\.\.\.HARNESS_DATA_FILES\]/);
 });
 
 test('pre-push: wip는 건너뛰고, 같은 커밋을 이미 통과한 영역은 다시 돌리지 않는다', () => {

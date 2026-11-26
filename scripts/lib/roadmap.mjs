@@ -137,7 +137,8 @@ const refLines = (body) =>
   [
     ...String(body ?? '')
       .replace(/<!--[\s\S]*?-->/g, '')
-      .replace(/^[ \t]*```[\s\S]*?^[ \t]*```[^\n]*$/gm, '')
+      // 펜스는 ``` 와 ~~~ 둘 다 (Codex 리뷰)
+      .replace(/^[ \t]*(```|~~~)[\s\S]*?^[ \t]*\1[^\n]*$/gm, '')
       .matchAll(REF_LINE),
   ]
     .map((m) => m[1].trim())
@@ -153,12 +154,14 @@ export function roadmapRefs(body) {
     for (const part of line.split(/[,·]/)) {
       const r = REF_PART.exec(part);
       if (!r) continue;
-      const id = r[1];
+      // 대소문자를 무시하고 합친다 (HP-2 (일부) + hp-2 → 완료, Codex 리뷰). id는 처음 적은 표기
+      const key = r[1].toLowerCase();
       const partial = Boolean(r[2]);
-      refs.set(id, refs.has(id) ? refs.get(id) && partial : partial);
+      const prev = refs.get(key);
+      refs.set(key, { id: prev?.id ?? r[1], partial: prev ? prev.partial && partial : partial });
     }
   }
-  return [...refs].map(([id, partial]) => ({ id, partial }));
+  return [...refs.values()];
 }
 
 /**
