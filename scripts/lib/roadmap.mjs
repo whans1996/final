@@ -289,6 +289,12 @@ function handoffText(h) {
   return `${shortDate(h.date)} ${h.from}→${h.to} ${h.item} ${h.what}`;
 }
 
+/** 내가 주거나 받는 넘겨주는 시점 중 가장 이른 미완료 것 { date, text } | null (상태 표시줄, HX-6). 날짜 없는 것은 뺀다 */
+export function nextHandoff(view, key) {
+  const h = myHandoffs(view, key).list.find((x) => x.date && x.days !== null);
+  return h ? { date: h.date, text: handoffText(h) } : null;
+}
+
 /**
  * 세션 시작 배너 줄. 순수 함수.
  * ① 🗺️ 트랙마다 지금 기간의 다음 항목 (시작한 미완료 항목 중 가장 이른 것) ② 넘겨주는 시점: D-2 안이면 🤝, 날짜가 지났으면 ⚠️, 그 밖에는 가장 가까운 것 하나 📅

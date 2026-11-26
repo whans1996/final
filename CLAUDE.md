@@ -3,7 +3,7 @@
 AI로 코딩하는 주니어와 개발자 지망생이 **AI가 쓴 코드를 수준별 설명 → 개념 카드 → 퀴즈·복습**으로 이해하게 돕는 학습 플랫폼이다.
 SSAFY 관통 프로젝트(2026-11-17 시작, 12-24 발표). Spring Boot 4 + MyBatis + MySQL 8 / Vue 3 + Pinia.
 
-2인이 **영역별로 병렬 개발**한다 (11-19부터. A 김동환 = AI·분석·학습 루프, B 김준섭 = 카드·소셜, `docs/기획서.md` 4절). 각자 PC 2대(SSAFY 교육장·집, id `dh-ssafy`·`dh-home`·`js-ssafy`·`js-home`)를 오가며 Claude Code로 작업하고, 같은 사람의 PC 사이에서는 사람별 NOW 파일로 교대한다. PC는 `setup.mjs --pc`로 등록하고, 세션 시작 hook이 PC·환경 점검·PC 전환·상대 작업 요약(원격 브랜치의 상대 NOW)을 알리고, 세션 중에는 `peer-watch` hook(10분 간격)과 Mattermost가 상대 변화를 알린다 (`docs/환경설정.md` 0·7절, `docs/conventions.md` 9절). 세션은 토큰 소진으로 언제든 끊길 수 있다.
+2인이 **영역별로 병렬 개발**한다 (11-19부터. A 김동환 = AI·분석·학습 루프, B 김준섭 = 카드·소셜, `docs/기획서.md` 4절). 각자 PC 2대(SSAFY 교육장·집, id `dh-ssafy`·`dh-home`·`js-ssafy`·`js-home`)를 오가며 Claude Code로 작업하고, 같은 사람의 PC 사이에서는 사람별 NOW 파일로 교대한다. PC는 `setup.mjs --pc`로 등록하고, 세션 시작 hook이 PC·환경 점검·PC 전환·상대 작업 요약(원격 브랜치의 상대 NOW)을 알리고, 세션 중에는 `peer-watch` hook(10분 간격)과 Mattermost가 상대 변화를 알리고, 상태 표시줄이 PC·브랜치·컨텍스트 크기·내 PR CI/Codex·다음 로드맵 항목·넘겨주는 시점을 보인다 (`docs/환경설정.md` 0·7절, `docs/conventions.md` 9절). 세션은 토큰 소진으로 언제든 끊길 수 있다.
 그래서 **상태를 파일에 남기는 일을 코드 작성만큼 중요하게** 다룬다.
 
 - 개발 저장소: **GitHub public** (`origin`, PR + Actions CI). Actions 한도 때문에 개발이 끝날 때까지 public으로 둔다 (11-26). 그래서 비밀값·eval 데이터 내용이 커밋·PR·이슈에 들어가지 않게 더 엄격히 본다. develop·main은 브랜치 보호(PR 필수, CI 5개 필수, 관리자 포함, force push·삭제 금지)

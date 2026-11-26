@@ -5,6 +5,7 @@ import { spawnSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { PROTECTED_BRANCHES, ROOT, git, mdSection, nowRelPath, nowStamp, readText } from './common.mjs';
+import { mergeNotes } from './sync.mjs';
 
 export const PEER_STATE_FILE = join(ROOT, '.harness', 'peer-watch.json');
 export const PEER_WATCH_INTERVAL_MS = 10 * 60 * 1000;
@@ -253,7 +254,11 @@ export function peerPrs(peerGithub, { timeout = 3000 } = {}) {
   }
 }
 
-/** origin/develop의 prev..curr 사이 커밋(전부)·변경 파일. 잘라서 보면 앞쪽 상대 커밋이 "전부 내 커밋" 판정에서 빠진다 (#32) */
+/**
+ * origin/develop의 prev..curr 사이 커밋(전부)·첫 부모 커밋 작성자·변경 파일. 잘라서 보면 앞쪽 상대 커밋이 "전부 내 커밋" 판정에서 빠진다 (#32).
+ * firstParent: develop에 직접 쌓인 커밋(= GitHub PR 병합 커밋)의 작성자. GitHub이 머지한 사람의 계정 이름으로 만들므로
+ * PC마다 git user.name이 달라도 같은 사람으로 판정할 수 있다 (H-7)
+ */
 export function developChanges(prevSha, currSha, { cwd = ROOT } = {}) {
   if (!prevSha || !currSha || prevSha === currSha) return null;
   const log = git(['log', '--format=%h%x09%an%x09%s', `${prevSha}..${currSha}`], { cwd, timeout: LOCAL_GIT_TIMEOUT });
@@ -263,6 +268,9 @@ export function developChanges(prevSha, currSha, { cwd = ROOT } = {}) {
       const [sha, author, subject] = l.split('\t');
       return { sha, author, subject };
     }),
+    firstParent: git(['log', '--first-parent', '--format=%an', `${prevSha}..${currSha}`], { cwd, timeout: LOCAL_GIT_TIMEOUT })
+      .out.split('\n')
+      .filter(Boolean),
     files: git(['diff', '--name-only', prevSha, currSha], { cwd, timeout: LOCAL_GIT_TIMEOUT }).out.split('\n').filter(Boolean),
   };
 }
@@ -270,18 +278,18 @@ export function developChanges(prevSha, currSha, { cwd = ROOT } = {}) {
 /**
  * 직전 스냅샷과 비교해 알릴 변화(마크다운 줄 목록). 순수 함수.
  * state: { developSha, develop?: developChanges 결과, peerNow: { source, stamp, feature, next }, prs: {...}|null }
- * myNames: 내 커밋 작성자 이름들(내 PR 머지만 있으면 develop 변화를 알리지 않는다)
+ * myNames: 내 커밋 작성자 이름들(내 PR 머지만 있으면 develop 변화를 알리지 않는다). 커밋 전부가 내 이름이거나,
+ *   develop에 직접 쌓인 병합 커밋(firstParent)이 전부 내 계정이면 내 것으로 본다 (H-7: 다른 PC의 user.name이 달라도)
  */
 export function peerDigest(prev, curr, { peerName = '상대', myNames = [] } = {}) {
   if (!prev) return [];
   const lines = [];
 
   const dev = curr.develop;
-  if (dev?.commits?.length && !dev.commits.every((c) => myNames.includes(c.author))) {
-    const migrations = dev.files.filter((f) => /db\/migration\/V[^/]*\.sql$/.test(f)).map((f) => f.split('/').at(-1));
-    const notes = [migrations.length ? `새 마이그레이션 ${migrations.join(', ')}` : '', dev.files.includes('docs/api/openapi.json') ? 'openapi.json 변경' : '']
-      .filter(Boolean)
-      .join(', ');
+  const mine = (name) => myNames.includes(name);
+  const allMine = dev?.commits?.every((c) => mine(c.author)) || (dev?.firstParent?.length > 0 && dev.firstParent.every(mine));
+  if (dev?.commits?.length && !allMine) {
+    const notes = mergeNotes(dev.files).join(', ');
     lines.push(
       `- develop에 새 커밋 ${dev.commits.length}개${notes ? ` (${notes})` : ''}: ${dev.commits
         .slice(0, 3)
@@ -304,4 +312,22 @@ export function peerDigest(prev, curr, { peerName = '상대', myNames = [] } = {
     }
   }
   return lines;
+}
+
+const BANNER_MAX_LINES = 5;
+
+/**
+ * peer-watch 결과의 사람용 한 묶음 (HX-7). additionalContext는 모델에만 가므로 사용자 화면에는 systemMessage로 보인다. 순수 함수.
+ * lines: peerDigest 줄, synced: autoSync 줄(✅·⚠️·⏸️로 시작하는 결과만 보인다). 보일 것이 없으면 null
+ */
+export function peerWatchBanner(lines, synced) {
+  const cut = (t, n = 110) => (t.length > n ? `${t.slice(0, n - 1)}…` : t);
+  const items = [
+    ...lines.map((l) => `📣 ${cut(l.replace(/^- /, ''))}`),
+    ...synced.filter((l) => /^- (✅|⚠️|⏸️)/.test(l)).map((l) => `🔄 ${cut(l.replace(/^- /, ''))}`),
+  ];
+  if (!items.length) return null;
+  const shown = items.slice(0, BANNER_MAX_LINES);
+  const rest = items.length - shown.length;
+  return ['[바이브노트] 📣 상대 작업 변화 (10분마다 확인)', ...shown, ...(rest > 0 ? [`… 외 ${rest}건 (Claude에게 전달됨)`] : [])].join('\n');
 }

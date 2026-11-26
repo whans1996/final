@@ -5,7 +5,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, test } from 'node:test';
-import { autoSync, localRefPlan, mergeNotes, syncPlan } from '../lib/sync.mjs';
+import { AUTO_SYNC_MIN_MS, autoSync, dependencyActions, localRefPlan, mergeNotes, syncPlan } from '../lib/sync.mjs';
 
 // git hook(커밋 테스트 게이트) 안에서 돌면 GIT_DIR·GIT_INDEX_FILE 등이 실제 저장소를 가리킨다. 그대로 두면 아래 임시
 // 저장소용 git 명령이 실제 저장소의 index·설정을 건드리므로 모두 지운다 (autoSync도 process.env를 물려받는다).
@@ -422,4 +422,36 @@ test('사용자 설정 merge.ff=false·mergeOptions --no-ff여도 다른 PC가 p
 
   assert.match(lines[0], /원격 origin\/feature\/F-09-x의 새 커밋 1개/);
   assert.equal(sh(me, 'log', '-1', '--format=%s'), 'feat: from other pc', '병합 커밋 없이 따라간다');
+});
+
+test('병합으로 FE·BE 의존성 파일이 바뀌면 할 일을 알린다 (H-6)', () => {
+  assert.deepEqual(mergeNotes(['frontend/package-lock.json', 'backend/build.gradle']), ['FE 의존성 변경', 'BE 빌드 설정 변경']);
+  const acts = dependencyActions(['frontend/package-lock.json', 'frontend/package.json', 'backend/gradle/wrapper/gradle-wrapper.properties']);
+  assert.equal(acts.length, 2);
+  assert.match(acts[0], /^- ⚠️ .*cd frontend && npm ci/);
+  assert.match(acts[1], /^- ⚠️ .*bootRun/);
+  assert.deepEqual(dependencyActions(['frontend/src/a.js', 'backend/src/main/java/A.java']), []);
+});
+
+test('병합으로 package-lock.json이 들어오면 자동 동기화 결과에 npm ci를 알린다 (H-6)', () => {
+  const { peer, me } = setup();
+  mkdirSync(join(peer, 'frontend'), { recursive: true });
+  peerMergesToDevelop(peer, 'frontend/package-lock.json', '{}\n');
+  sh(me, 'fetch', '-q');
+  const lines = autoSync({ cwd: me });
+  assert.match(lines[0], /FE 의존성 변경/);
+  assert.ok(lines.some((l) => /npm ci/.test(l)));
+});
+
+test('세션 시작 시간 예산이 모자라면 병합하지 않고 건너뛴 것을 알린다 (H-5)', () => {
+  const { peer, me } = setup();
+  peerMergesToDevelop(peer, 'peer.txt', 'x\n');
+  sh(me, 'fetch', '-q');
+  const before = sh(me, 'rev-parse', 'HEAD');
+  const lines = autoSync({ cwd: me, timeLeft: () => AUTO_SYNC_MIN_MS - 1 });
+  assert.equal(lines.length, 1);
+  assert.match(lines[0], /^- ⏸️ 세션 시작 시간 예산/);
+  assert.equal(sh(me, 'rev-parse', 'HEAD'), before);
+  // 시간이 넉넉하면 그대로 합친다
+  assert.match(autoSync({ cwd: me, timeLeft: () => AUTO_SYNC_MIN_MS })[0], /^- ✅ origin\/develop/);
 });

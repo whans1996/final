@@ -33,14 +33,16 @@ test('이슈 조회 실패 줄은 이유와 직접 확인할 명령을 담는다
 test('session-start는 동기 git(fetch·autoSync)이 끝난 뒤 gh·docker 조회를 시작한다 (#67)', () => {
   // 동기 git이 이벤트 루프를 막는 동안 제한 시간 타이머가 터져 결과가 사라진다
   const src = readFileSync(new URL('../../.claude/hooks/session-start.mjs', import.meta.url), 'utf8');
-  const syncAt = src.indexOf('autoSync()');
+  const syncAt = src.indexOf('autoSync({');
   assert.ok(syncAt > 0);
   assert.ok(src.indexOf('followUpIssues(') > syncAt, 'followUpIssues는 autoSync 뒤에 시작');
   assert.ok(src.indexOf('runChecks(') > syncAt, 'runChecks는 autoSync 뒤에 시작');
   // 받기 전에 다른 동기 git(상대 NOW·작업 파일·peer 상태)을 하면 같은 경합이 생긴다 (reviewer)
   // 로드맵 PR 조회(roadmapPrsP)도 같은 자리에서 함께 받는다
-  const awaitAt = src.indexOf('await Promise.all([checksP, issuesP, roadmapPrsP])');
+  // 시간 예산(H-5) 안에서 기다린다: budget.within(checksP|issuesP|roadmapPrsP, …)
+  const awaitAt = src.indexOf('await Promise.all([');
   assert.ok(awaitAt > 0, '환경 점검·이슈·로드맵 조회를 함께 받는다');
+  for (const p of ['checksP', 'issuesP', 'roadmapPrsP']) assert.ok(src.indexOf(`budget.within(${p},`, awaitAt) > awaitAt, `${p}를 함께 받는다`);
   for (const sync of ['latestPeerNow(', 'myBranchNows(', 'workFilesNewerThanNow(', 'writePeerState(']) {
     assert.ok(src.indexOf(sync) > awaitAt, `${sync}은 gh·docker 결과를 받은 뒤에 한다`);
   }
