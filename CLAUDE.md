@@ -15,6 +15,7 @@ SSAFY 관통 프로젝트(2026-11-17 시작, 12-24 발표). Spring Boot 4 + MyBa
 | 알고 싶은 것 | 읽을 곳 |
 |---|---|
 | 지금 무엇을 하던 중인가 | 내 NOW 파일 `docs/handoff/NOW-dh.md`(김동환)·`NOW-js.md`(김준섭) (세션 시작 시 hook이 내 것 전문과 상대 요약을 주입) |
+| 일정 (기간 × 사람 × 트랙 할 일, 넘겨주는 시점, 공통 일정) | `docs/로드맵.md` (정본. 상태는 PR 본문 `Roadmap: <ID>` 줄로 계산, `node scripts/roadmap.mjs`. 세션 시작 배너 🗺️ 줄) |
 | 작업 이력 | `docs/작업로그.md` (두 사람 공용, 맨 아래 추가) |
 | 기획·운영 결정 기록 | `docs/결정로그.md` (맨 아래 추가) |
 | 기능 하나의 상세 요구사항 | `docs/specs/F-xx-*.md` |
@@ -100,6 +101,7 @@ SSAFY 관통 프로젝트(2026-11-17 시작, 12-24 발표). Spring Boot 4 + MyBa
 | AI 없이 교대 | `node scripts/handoff.mjs [-m "메모"] [--no-push]` |
 | 기록 머리 줄·내 NOW 파일·내 이슈 영역 라벨 | `node scripts/stamp.mjs [--now\|--log\|--file\|--area]` |
 | 기록 초안·NOW 갱신 줄·작업로그 추가 | `node scripts/stamp.mjs --draft`, `--touch-now`, `--append-log --did … --next …` |
+| 로드맵 (지금 할 항목·내 남은 항목·넘겨주는 시점, 다음 항목, 형식 검사) | `node scripts/roadmap.mjs [--next [--after <ID>]] [--check]` |
 | 다음 마이그레이션 번호 | `node scripts/next-migration.mjs` (develop·원격 feature 브랜치 포함) |
 | develop 밖에서 진행 중인 브랜치 | `node scripts/branches.mjs` (내 NOW를 바꾼 원격 브랜치), `node scripts/branches.mjs F-xx` (`/spec` 전 중복 확인) |
 | 하네스 단위 테스트 | `node --test "scripts/test/*.test.mjs"` |

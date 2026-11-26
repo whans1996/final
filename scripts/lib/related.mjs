@@ -3,6 +3,11 @@
 import { posix } from 'node:path';
 
 const HARNESS_RE = /^(scripts|\.claude\/hooks|\.githooks)\/.*\.mjs$/;
+// 하네스가 읽는 문서: 형식이 깨지면 표시가 틀리므로 하네스 영역으로 보고 그 파일을 파싱하는 테스트를 고른다 (로드맵 R-1)
+const HARNESS_DATA = { 'docs/로드맵.md': 'scripts/test/roadmap.test.mjs' };
+/** 하네스 영역에 드는 문서 경로 (verify.mjs가 검증 캐시의 미커밋 변경 검사에 쓴다, Codex 리뷰) */
+export const HARNESS_DATA_FILES = Object.keys(HARNESS_DATA);
+const isHarness = (f) => HARNESS_RE.test(f) || Object.hasOwn(HARNESS_DATA, f);
 // 실제 Gemini·Ollama를 부르는 테스트는 `test` 태스크에서 빠진다 (build.gradle 태그 제외). 필터에 넣으면 "No tests found"로 실패한다
 const LIVE_TEST_RE = /LiveTest$/;
 const BE_TEST_DIR = 'backend/src/test/java/';
@@ -14,7 +19,7 @@ export function areasOf(files) {
   const areas = [];
   if (files.some((f) => f.startsWith('backend/') && !f.endsWith('.md'))) areas.push('be');
   if (files.some((f) => f.startsWith('frontend/') && !f.endsWith('.md'))) areas.push('fe');
-  if (files.some((f) => HARNESS_RE.test(f))) areas.push('harness');
+  if (files.some(isHarness)) areas.push('harness');
   return areas;
 }
 
@@ -75,6 +80,7 @@ export function frontendCodeFiles(files) {
  */
 export function relatedHarnessTests(files, testFiles, readTest) {
   const picked = new Set();
+  for (const f of files) if (HARNESS_DATA[f] && testFiles.includes(HARNESS_DATA[f])) picked.add(HARNESS_DATA[f]);
   const changed = files.filter((f) => HARNESS_RE.test(f));
   for (const f of changed) if (testFiles.includes(f)) picked.add(f);
   const names = changed.filter((f) => !testFiles.includes(f)).map((f) => posix.basename(f));

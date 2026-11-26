@@ -4,6 +4,7 @@
 
 - 기능 ID: F-xx
 - spec: `docs/specs/F-xx-slug.md`
+- Roadmap: <!-- docs/로드맵.md 항목 ID. 끝내면 `HP-2`, 일부만이면 `T-1 (일부)`, 여러 개는 쉼표. 머지되면 그 항목이 ✅로 계산된다. 로드맵 밖 작업이면 이 줄을 지운다 -->
 - 영역 오너(머지): <!-- @whans1996 (A) 또는 @JoonseobKim (B). 본인이 머지한다 -->
 - [ ] 머지 직전 `git merge origin/develop` 후 push해 CI 초록을 다시 확인했다 (상대 PR이 먼저 머지된 경우. 마이그레이션 번호·openapi.json 충돌은 머지 뒤에야 드러난다)
 - [ ] 상대 영역·공통 파일(`node scripts/owners.mjs --diff origin/develop`, `.github/CODEOWNERS`)을 바꿨으면 이유를 적고 상대를 @멘션했다

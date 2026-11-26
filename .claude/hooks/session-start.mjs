@@ -28,6 +28,7 @@ import {
 } from '../../scripts/lib/common.mjs';
 import { followUpIssues, issueBannerLine, issueContext, issueFailureLine, summarizeIssues } from '../../scripts/lib/issues.mjs';
 import { latestPeerNow, myBranchLines, myBranchNows, nowHeadline, readPeerState, writePeerState } from '../../scripts/lib/peer.mjs';
+import { ROADMAP_FILE, ROADMAP_REL, bannerLines, fetchRoadmapPrs, loadView, roadmapBlock } from '../../scripts/lib/roadmap.mjs';
 import { autoSync } from '../../scripts/lib/sync.mjs';
 
 // env-check가 깨져도 NOW 주입은 살린다
@@ -95,6 +96,8 @@ const checksFailed = (e) => [{ status: 'warn', item: '환경 점검', detail: `�
 const checksP = envCheck.runChecks ? envCheck.runChecks({ fast: true }).catch(checksFailed) : Promise.resolve(checksFailed(envCheck.error));
 // 만들기만 하고 다시 안 보던 follow-up 이슈를 세션마다 보여 준다 (실패하면 실패 줄을 낸다)
 const issuesP = followUpIssues().catch((e) => ({ ok: false, reason: e?.message ?? String(e) }));
+// 로드맵 상태(PR 본문 Roadmap: 줄)도 같은 방식으로 받는다 (docs/로드맵.md, R-1)
+const roadmapPrsP = fetchRoadmapPrs().catch((e) => ({ ok: false, reason: e?.message ?? String(e) }));
 
 // PC·환경 (git hooks 연결 여부도 여기서 본다)
 const {
@@ -105,7 +108,7 @@ const {
 } = envCheck;
 const pc = currentPc();
 // 둘 다 여기서 받는다. 이슈를 아래 동기 git(상대 NOW·작업 파일·peer 상태) 뒤에 받으면 같은 경합으로 사라진다 (reviewer)
-const [rows, issuesRes] = await Promise.all([checksP, issuesP]);
+const [rows, issuesRes, roadmapPrsRes] = await Promise.all([checksP, issuesP, roadmapPrsP]);
 const env = [pc.id ? `- PC: ${pc.label} (${pc.id}) · hostname ${pc.hostname}` : `- PC: 미등록 (hostname ${pc.hostname})`];
 const bad = rows.filter((r) => r.status !== 'ok');
 env.push(
@@ -204,6 +207,21 @@ if (issueFailure) {
   );
 }
 
+// 로드맵이 깨져도 NOW 주입은 살린다 (형식 오류는 블록에 적어 /pickup에서 고치게 한다)
+let roadmapLines = [];
+try {
+  const md = me ? readText(ROADMAP_FILE) : null;
+  if (md) {
+    const { roadmap, view } = loadView(md, roadmapPrsRes);
+    const peerName = other ? Object.entries(loadPcs()).find(([id]) => ownerKey(id) === other)?.[1].owner : undefined;
+    const errors = roadmap.errors.length ? `\n- ⚠️ ${ROADMAP_REL} 형식 오류 ${roadmap.errors.length}건 → \`node scripts/roadmap.mjs --check\`` : '';
+    parts.push(`${roadmapBlock(view, me, { branch: isGitRepo() ? currentBranch() : null, peerName })}${errors}\n- /pickup 보고에 🗺️ 줄로 넣는다`);
+    roadmapLines = bannerLines(view, me);
+  }
+} catch (e) {
+  parts.push(`## 로드맵\n- ⚠️ 표시 오류: ${e?.message ?? e} → \`node scripts/roadmap.mjs\``);
+}
+
 if (warnings.length) parts.splice(1, 0, `## ⚠️ 주의\n${warnings.map((w) => `- ${w}`).join('\n')}`);
 parts.push(
   input.source === 'compact'
@@ -224,6 +242,7 @@ try {
     warnings,
     syncLines: synced.filter((l) => /^- (✅|⚠️|⏸️)/.test(l)),
     issueLine: issueFailure ?? (issueSummary ? issueBannerLine(issueSummary) : null),
+    roadmapLines,
     myFeature: me && now ? nowHeadline(now).feature : null,
     peerName: other ? Object.entries(loadPcs()).find(([id]) => ownerKey(id) === other)?.[1].owner : null,
     peerFeature: otherNow ? nowHeadline(otherNow.text).feature : null,

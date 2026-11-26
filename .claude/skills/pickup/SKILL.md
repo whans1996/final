@@ -21,7 +21,7 @@ SessionStart hook이 내 NOW 파일, 상대 작업 요약, git 상태를 이미 
    - 내 NOW 파일의 PR이 있으면 `node scripts/codex-review.mjs <번호>`(대기 없음)로 Codex 상태를 확인한다. `STALE`이나 `FINDINGS`이면 `/pr-review` 8단계 루프로 이어 간다. `RUNNING`이면 `--wait --status`를 백그라운드로 다시 걸어 결과를 받는다. `ERROR Codex 계정 미연결`이면 `docs/환경설정.md` 8절을 사용자에게 안내한다. `CLOSED`(이미 머지·종료)면 루프를 돌지 않는다.
    - 현재 브랜치가 main/develop이면 **내 NOW 파일의 브랜치**로 `git switch` 한다 (없으면 사용자에게 확인). **상대 NOW 파일의 브랜치로는 switch하지 않는다.**
    - SessionStart에 "내 원격 브랜치 (develop 미머지)" 섹션이 있으면 내 다른 PC가 진행 중인 브랜치다 (#54). 그 브랜치 NOW의 현재 기능이 내 NOW의 "다음 할 일"과 엇갈리면(예: 내 NOW는 "F-14 `/spec`"인데 `feature/F-14-*`에 구현이 진행됨) 보고 ⚠️ 줄에 넣고, 어느 브랜치를 이어 갈지 사용자에게 묻는다. 그 기능을 새로 시작(`/spec`)하지 않는다. 다시 볼 때는 `node scripts/branches.mjs`.
-   - **내 NOW 파일의 PR이 머지되었으면** (`gh pr view <번호> --json state,body`가 `MERGED`) `git switch develop && git pull` 후 다음 기능을 시작한다. PR 본문의 `Closes #n` 이슈가 아직 열려 있으면 `close-issues` 워크플로가 실패한 것이니 보고에 적는다. spec DONE은 `/pr-review` 10단계에서 PR 안에 이미 반영했다. WBS·간트·진행현황은 주간 `/progress`가 맞춘다 (PR에서 고치지 않는다, 11-19 결정).
+   - **내 NOW 파일의 PR이 머지되었으면** (`gh pr view <번호> --json state,body`가 `MERGED`) `git switch develop && git pull` 후 다음 기능을 시작한다. 다음 기능은 `node scripts/roadmap.mjs --next --after <그 PR 본문 Roadmap: ID>`(같은 트랙의 다음 로드맵 항목·추천 모델)로 고르고, 그 ID로 `feature/<ID>-slug` 브랜치를 만든다. PR 본문의 `Closes #n` 이슈가 아직 열려 있으면 `close-issues` 워크플로가 실패한 것이니 보고에 적는다. spec DONE은 `/pr-review` 10단계에서 PR 안에 이미 반영했다. WBS·간트·진행현황은 주간 `/progress`가 맞춘다 (PR에서 고치지 않는다, 11-19 결정).
    - SessionStart가 "자동 동기화"로 develop·내 원격 브랜치를 이미 합쳤으면 결과만 짧게 알린다 (⏸️ 미룸·⚠️ 충돌이면 커밋 후 `git merge origin/develop` 또는 충돌 해결을 제안한다). 세션을 main·develop에서 시작해 내 feature 브랜치로 `git switch`했으면 자동 동기화는 다음 확인(10분)까지 돌지 않으므로 바로 `git merge origin/develop`을 실행한다.
    - SessionStart가 "develop에 이 브랜치에 없는 커밋"을 알렸고 새 마이그레이션·openapi.json 변경이 있으면, 마이그레이션·API를 추가하기 전에 `git merge origin/develop`을 제안한다.
 2. **상태 읽기**
@@ -29,12 +29,13 @@ SessionStart hook이 내 NOW 파일, 상대 작업 요약, git 상태를 이미 
    - `docs/작업로그.md`의 **내 마지막 항목**(hook이 주입)
    - 내 NOW 파일의 현재 기능 spec(`docs/specs/F-xx-*.md`)에서 수용 기준 표, 결정 필요, 구현 체크리스트
    - 열린 follow-up 이슈 (hook이 "열린 follow-up 이슈" 섹션에 주입. 섹션이 없으면 볼 이슈가 없는 것이고, "⚠️ 이슈 조회 실패"면 그 줄의 `gh issue list --label follow-up`으로 직접 확인한다. 실패를 "이슈 없음"으로 보고하지 않는다). **🔴 차단(`blocker`) 이슈가 있으면 다음 할 일을 시작하기 전에 멈추고 사용자에게 묻는다** (먼저 해결할지, 우회할지, 상대에게 알릴지. 상대 영역이어도 내 작업을 막을 수 있다). 분류 필요(area 라벨 없음)가 있으면 라벨·담당자 안을 보여 주고 사용자 확인 뒤 `gh issue edit <n> --add-label area:<..> --add-assignee <영역 오너>`로 붙인다. 지금 기능과 관련된 내 이슈는 이번 작업에 흡수할지 묻는다.
+   - **로드맵**: SessionStart의 "## 로드맵" 블록(지금 세션에서 할 일, 내 남은 항목, 상대 이번 기간, 넘겨주는 시점, 공통 일정. 없거나 브랜치를 바꿨으면 `node scripts/roadmap.mjs`). 넘겨주는 시점이 ⚠️(날짜 지남)이면 보고 ⚠️ 줄에 넣는다. 내가 주는 쪽이면 그 항목을 먼저 할지, 받는 쪽이면 상대에게 확인할지 묻는다. 내 NOW "바로 다음 할 일"과 로드맵 "지금 세션에서 할 일"이 엇갈리면 어느 쪽을 할지 묻는다. 일정이 바뀌었으면 `docs/로드맵.md` 표를 고치는 docs PR을 제안한다 (상태는 PR 본문 `Roadmap:` 줄로 계산되므로 표에 쓰지 않는다).
    - 마지막 커밋이 `wip(...)` 이면 `git show --stat HEAD`로 무엇이 중간 상태인지 확인한다.
    - **NOW 파일 본문이 마지막 커밋보다 오래되었으면**(갱신 줄에 `자동 handoff, 본문 미갱신`, 갑작스러운 종료) `git diff HEAD~3 --stat` 등으로 실제 진행을 추정하고, NOW 파일을 믿지 말아야 할 부분을 표시한다.
 3. **검증 상태**
    - `verifier` 에이전트로 현재 기능 영역의 테스트를 돌린다 (backend/frontend 미생성이면 건너뜀).
    - 실패 테스트가 "의도된 red(TDD 진행 중)"인지 "깨진 것"인지 spec 체크리스트와 대조해 구분한다.
-4. **보고** (아래 형식, 11줄 이내)
+4. **보고** (아래 형식, 12줄 이내)
 
 ```
 📍 김동환 @dh-ssafy · F-08 개념 추출 · feature/F-08-concepts · 마지막 작업: @dh-home (11/20 22:10, wip)
@@ -43,6 +44,7 @@ SessionStart hook이 내 NOW 파일, 상대 작업 요약, git 상태를 이미 
 🟡 진행 중: AC3 — 테스트 작성됨(red), ConceptExtractor.link() 구현 필요
 ⛔ 막힌 점: 없음 / ⚠️ 주의: develop에 상대 V6 머지됨 → 내 마이그레이션은 V7
 👥 상대: F-09 카드 목록 (feature/F-09-card-list, PR #31 열림)
+🗺️ 로드맵: 지금 F-08 🔨 (~11/22, Opus/high) · 다른 트랙 K-3a ⬜ ~11/28 · 넘겨주기 D-2 11/28 B→A V-2 · 공통 12/08 중간 점검
 🔀 PR: #30 F-08 — CI ✅, Codex FINDINGS 1건(P2)
 📌 이슈: 내 4 · 공통 3 (7일 넘음 2: #16, #17) / 분류 필요 1 → 라벨 제안 (차단이 있으면 🔴 #63 … 을 맨 앞에)
 ➡️ 다음: ConceptExtractor.link()에서 기존 카드 매칭 → AC3 테스트 green
