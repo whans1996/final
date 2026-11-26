@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 |---|---|
-| 상태 | APPROVED <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
+| 상태 | DONE (PR #227) <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
 | 기능 ID | L-1a (로드맵 트랙 2, 2차 점검 J2-01·Q-02) |
 | 우선순위 | T0 (기획서 7.4b) |
 | 영역 오너 | A 김동환 (AI·분석·학습 루프) |
@@ -174,5 +174,5 @@ SET quiz_status = CASE
 - [x] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일). 로그인이 필요한 FAILED·퀴즈 없음 화면은 연결된 Chrome으로 확인 (11-26 Chrome: URL 재실행 8→9·원본 404, ZIP 안내, 1280·375px 넘침·콘솔 에러 없음, 409 QUIZ_409·ANALYSIS_008. 퀴즈 FAILED·GENERATING 화면은 mock이 항상 성공해 Vitest로만 확인)
 - [x] reviewer 지적 사항 반영 (반드시 수정 1건, 권장 4건 모두 반영)
 - [x] 산출물 반영: 화면 설계서 SC-07(재실행·재생성), ERD `analyses` 두 열, 요구사항 정의서 F-14 행(생성 실패 시 재생성)
-- [ ] PR CI 초록
-- [ ] 상태 DONE (PR 머지 후)
+- [x] PR CI 초록 (Codex ✅ 394038c)
+- [x] 상태 DONE (PR #227)
