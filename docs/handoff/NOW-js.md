@@ -1,7 +1,7 @@
 # NOW — 김준섭 현재 작업 스냅샷
 
 > 김준섭(B 영역: 카드·소셜) 전용. 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
-갱신: 2026-11-26 14:48 · 작업자: JoonseobKim · PC: js-home · 브랜치: feature/issue-170-offset
+갱신: 2026-11-26 14:52 · 작업자: JoonseobKim · PC: js-home · 브랜치: feature/issue-170-offset
 
 ---
 
@@ -16,8 +16,8 @@
 
 ## 바로 다음 할 일
 
-1. ✅ verify be·fe 초록, 커밋함 (`AnalysisManageApiTest` AC4 기대값은 A 영역 테스트 → PR "공통 코드 변경"에 명시)
-2. `/pr-review`, PR 본문 `Closes #170` + @whans1996 멘션(user/ 공통)
+1. ✅ `bd3b1b6` 커밋 + develop 병합(e79cb0d), `/pr-review` 2단계: verify all ✅, contract-checker 지적 4건 반영(미커밋: `utils/relativeTime.js` 주석, `relativeTime.spec.js` 입력·NOW `+09:00`, `FeedView.spec.js` fixture, `UserProfileView.vue` 주석)
+2. reviewer 결과 반영 → `fix(F-04): FE 시각 주석·테스트를 오프셋 형식으로 정리` 커밋 → push → `gh pr create --base develop --title "fix(F-04): 피드·팔로우·프로필 응답 시각에 오프셋 추가" --body-file .harness/pr-issue-170.md` (사용자 확인 후) → Codex 루프
 3. 11/27 Figma 공동 세션 → 새 세션(Opus/high)에서 `node scripts/branches.mjs F-29` → `/spec F-29`
 4. DS-03·04 고정일 확인: 기획서 7절 표(`docs/기획서.md:695`)는 11/28, 이 NOW는 12/03이었음
 

@@ -25,7 +25,7 @@ function login() {
 const activity = (id, type = 'POST') => ({
   id,
   type,
-  createdAt: '2026-11-20T10:00:00',
+  createdAt: '2026-11-20T10:00:00+09:00',
   actor: { id: 7, nickname: 'java러버' },
   target: { id: id + 1000, title: `글 ${id}`, rating: null },
 })
