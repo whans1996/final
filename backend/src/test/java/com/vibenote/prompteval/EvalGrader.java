@@ -28,8 +28,8 @@ import tools.jackson.databind.JsonNode;
  *
  * <ul>
  *   <li>A 스키마 적합률: 단계별 단위의 첫 시도 통과율·최종 통과율
- *   <li>B 환각률: 출력이 가리킨 경로가 {@code index}에 없는 비율, 흐름 심볼의 메서드 이름이 그 파일 본문에 없는 비율, 라벨 금지 사실이 나온 (수준,
- *       사실) 수
+ *   <li>B 환각률: 출력이 가리킨 경로가 {@code index}에 없는 비율, 흐름 심볼의 메서드 이름이 그 파일 본문에 없는 비율, 출력이 라벨 금지 사실 문장을
+ *       주장한 수 ({@link ForbiddenJudge}, 판정 모델 필요)
  *   <li>C 개념: must 재현율, (must+ok) 정밀도, wrong 비율, must 근거 파일 일치율 (라벨 필요)
  *   <li>D 수준 구분도: {@link LevelJudge} (판정 LLM 필요) · E 퀴즈: {@link QuizCheck}
  *   <li>커버리지: 라벨 파일 선별률(전체·FE), API 탐지 재현율·정밀도 (라벨 필요)
@@ -92,7 +92,12 @@ final class EvalGrader {
             b.put("forbiddenHits", NO_LABEL);
             scores.put("C", NO_LABEL);
         } else {
-            b.put("forbiddenHits", forbidden(report, label, details));
+            // 금지 사실은 문장 라벨이라 판정 모델로만 센다 (11-26 결정로그)
+            if (judge.isPresent()) {
+                b.putAll(new ForbiddenJudge(judge.get()).judge(report, label, details));
+            } else {
+                b.put("forbiddenHits", JUDGE_SKIPPED);
+            }
             scores.put("C", concepts(report, label, details));
         }
         scores.put(
@@ -394,27 +399,11 @@ final class EvalGrader {
         return apis;
     }
 
-    /**
-     * B 금지 사실: 수준마다 출력 텍스트에 라벨 {@code forbidden[]} 문자열이 그대로(대소문자 무시) 나온 항목 수의 합. 문자열을 패턴으로 보고 부분
-     * 일치만 센다 (문장 단위 사실성 판정은 범위 밖, spec 8절).
-     */
-    private static int forbidden(JsonNode report, JsonNode label, Map<String, Object> details) {
-        int hits = 0;
-        List<String> found = new ArrayList<>();
-        for (Map.Entry<String, JsonNode> level : report.path("results").properties()) {
-            StringBuilder text = new StringBuilder();
-            collectText(level.getValue(), text);
-            String haystack = text.toString().toLowerCase(Locale.ROOT);
-            for (JsonNode fact : label.path("forbidden")) {
-                String pattern = fact.asString("").strip().toLowerCase(Locale.ROOT);
-                if (!pattern.isEmpty() && haystack.contains(pattern)) {
-                    hits++;
-                    found.add(level.getKey() + ": " + fact.asString());
-                }
-            }
-        }
-        details.put("forbiddenHits", found);
-        return hits;
+    /** 수준 하나의 출력 텍스트 (경로·layer·메타·호출 원문 제외). 금지 사실 판정({@link ForbiddenJudge})에 넣는다. */
+    static String outputText(JsonNode levelResult) {
+        StringBuilder text = new StringBuilder();
+        collectText(levelResult, text);
+        return text.toString();
     }
 
     private static void collectText(JsonNode node, StringBuilder out) {

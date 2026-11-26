@@ -90,9 +90,9 @@ class EvalGraderTest {
         assertThat(coverage.path("labelFeFiles").asDouble()).isEqualTo(0.0);
         assertThat(coverage.path("apiRecall").asDouble()).isCloseTo(0.5, within(EPS));
         assertThat(coverage.path("apiPrecision").asDouble()).isCloseTo(0.5, within(EPS));
-
-        // 금지 문자열 "JPA"가 세 수준 출력(개념 이름)에 나온다. Redis는 없다
-        assertThat(scores.path("B").path("forbiddenHits").asInt()).isEqualTo(3);
+        // 금지 사실 문장은 판정 모델로만 센다 (ForbiddenJudgeTest). 판정이 꺼져 있으면 건너뛴다
+        assertThat(scores.path("B").path("forbiddenHits").asString())
+                .isEqualTo(EvalGrader.JUDGE_SKIPPED);
     }
 
     @Test
@@ -108,7 +108,7 @@ class EvalGraderTest {
     }
 
     @Test
-    void AC9_판정을_끄면_D와_정답_유일률만_건너뛴다() {
+    void AC9_판정을_끄면_판정_지표만_건너뛴다() {
         Map<String, Object> grade =
                 new EvalGrader(Optional.empty(), 42)
                         .grade(GradeFixtures.report(GradeFixtures.zip(dir)), GradeFixtures.label());
@@ -116,6 +116,8 @@ class EvalGraderTest {
         JsonNode scores = node.path("scores");
 
         assertThat(scores.path("D").asString()).isEqualTo(EvalGrader.JUDGE_SKIPPED);
+        assertThat(scores.path("B").path("forbiddenHits").asString())
+                .isEqualTo(EvalGrader.JUDGE_SKIPPED);
         assertThat(scores.path("E").path("uniqueAnswer").asString())
                 .isEqualTo(EvalGrader.JUDGE_SKIPPED);
         // 기계 검사는 그대로: 수준마다 2문항 중 해설에 "2번 보기"가 있는 1문항이 실패
