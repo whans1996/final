@@ -21,7 +21,7 @@
 //   --resolve  head가 FINDINGS일 때 "남은 지적을 이슈로 이관함" 마커 댓글을 달고 COMPLETE로 끝낸다 (pr-review 8-3)
 //   --status   최종 판정을 PR head 커밋의 상태 체크 "Codex"로 남긴다 (COMPLETE ✅, FINDINGS ❌, 그 밖 ⏳·ERROR). --resolve는 항상 남긴다
 //              (FINDINGS로 ❌가 된 체크를 이관 완료 뒤 ✅로 바꾸려면, Codex 리뷰)
-//              develop 브랜치 보호의 필수 체크(CI 5개)에는 넣지 않아 머지를 막지는 않고, PR 화면·gh pr checks에 보이게만 한다.
+//              develop·main 브랜치 보호의 필수 체크(CI 5개)에는 넣지 않아 머지를 막지는 않고, PR 화면·gh pr checks에 보이게만 한다.
 //              Codex COMPLETE 확인은 팀 규칙(CLAUDE.md 절대 규칙 1)으로 지킨다 (codex-status.yml도 쓴다)
 //
 // 출력 첫 줄과 종료 코드:

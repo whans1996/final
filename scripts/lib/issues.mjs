@@ -8,12 +8,15 @@ export const COMMON_AREA = 'area:common';
 /** 누군가의 작업(커밋·머지·다음 기능)을 막는 이슈. 영역과 무관하게 두 사람 모두에게 먼저 보인다 (#67) */
 export const BLOCKER = 'blocker';
 export const STALE_DAYS = 7;
-/** 한 번에 가져오는 이슈 수 상한. 이만큼 받으면 잘렸을 수 있다고 알린다 (#179: 50개 상한이 조용히 잘랐다) */
+/** 한 번에 가져오는 이슈 수 상한. 넘으면 잘렸다고 알린다 (#179: 50개 상한이 조용히 잘랐다) */
 export const ISSUE_LIMIT = 200;
+/** 사람이 직접 확인할 때 쓰는 명령 (조회 실패·잘림 안내 공용). 잘림을 알린 뒤 같은 상한으로 다시 자르지 않게 더 크게 둔다 */
+export const ISSUE_CHECK_CMD = 'gh issue list --label follow-up --limit 1000';
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
- * 열린 follow-up 이슈 목록 → { ok: true, issues, truncated } | { ok: false, reason }. truncated = 상한만큼 받아 더 있을 수 있음.
+ * 열린 follow-up 이슈 목록 → { ok: true, issues, truncated } | { ok: false, reason }.
+ * truncated = limit개를 넘게 있음. limit+1개를 받아 판정하므로 딱 limit개일 때는 잘림이 아니다 (reviewer).
  * 세션 시작을 막지 않도록 비동기·제한 시간. 실패를 조용히 삼키지 않고 이유를 돌려준다 (#67: 이슈 16개가 경고 없이 빠졌다).
  * 주의: 띄운 뒤 동기 작업으로 이벤트 루프를 막으면 제한 시간 타이머가 먼저 터져 출력이 버려진다 → 동기 git이 끝난 뒤 부른다.
  */
@@ -21,7 +24,7 @@ export function followUpIssues({ timeout = 4000, exec = execFile, limit = ISSUE_
   return new Promise((resolve) => {
     exec(
       'gh',
-      ['issue', 'list', '--label', 'follow-up', '--state', 'open', '--limit', String(limit), '--json', 'number,title,labels,assignees,createdAt'],
+      ['issue', 'list', '--label', 'follow-up', '--state', 'open', '--limit', String(limit + 1), '--json', 'number,title,labels,assignees,createdAt'],
       { cwd: ROOT, encoding: 'utf8', windowsHide: true, timeout },
       (err, stdout, stderr) => {
         if (err?.code === 'ENOENT') return resolve({ ok: false, reason: 'gh 없음' });
@@ -33,7 +36,7 @@ export function followUpIssues({ timeout = 4000, exec = execFile, limit = ISSUE_
         if (!String(stdout ?? '').trim()) return resolve({ ok: false, reason: '빈 응답' });
         try {
           const issues = JSON.parse(stdout);
-          resolve(Array.isArray(issues) ? { ok: true, issues, truncated: issues.length >= limit } : { ok: false, reason: '응답 형식 오류' });
+          resolve(Array.isArray(issues) ? { ok: true, issues: issues.slice(0, limit), truncated: issues.length > limit } : { ok: false, reason: '응답 형식 오류' });
         } catch {
           resolve({ ok: false, reason: '응답 형식 오류' });
         }
@@ -44,7 +47,7 @@ export function followUpIssues({ timeout = 4000, exec = execFile, limit = ISSUE_
 
 /** 이슈 조회 실패 줄 (배너·모델 컨텍스트 공용). 빠진 줄과 "이슈 없음"을 구분하려고 실패하면 항상 낸다 */
 export function issueFailureLine(reason) {
-  return `⚠️ 이슈 조회 실패 (${reason}) → gh issue list --label follow-up --limit ${ISSUE_LIMIT}`;
+  return `⚠️ 이슈 조회 실패 (${reason}) → ${ISSUE_CHECK_CMD}`;
 }
 
 /**
@@ -72,10 +75,10 @@ export function summarizeIssues(issues, { key, github, truncated = false } = {},
   return { blockers: blockers.sort(byNumber), mine: mine.sort(byNumber), common: common.sort(byNumber), untriaged: untriaged.sort(byNumber), stale, truncated: Boolean(truncated) };
 }
 
-/** 세션 시작 배너 한 줄. 차단 이슈가 있으면 🔴로 시작하고 첫 이슈로 보여 준다. 볼 이슈가 없으면 null */
+/** 세션 시작 배너 한 줄. 차단 이슈가 있으면 🔴로 시작하고 첫 이슈로 보여 준다. 볼 이슈가 없으면 null (잘렸으면 "이슈 없음"과 구분되게 잘림을 낸다) */
 export function issueBannerLine({ blockers = [], mine, common, untriaged, stale, truncated = false }) {
   const all = [...blockers, ...mine, ...common, ...untriaged];
-  if (!all.length) return null;
+  if (!all.length) return truncated ? `📌 이슈: ⚠️ ${ISSUE_LIMIT}개에서 잘림 (받은 것 중 볼 이슈 없음 → ${ISSUE_CHECK_CMD})` : null;
   const counts = [`내 ${mine.length}`, `공통 ${common.length}`];
   if (blockers.length) counts.unshift(`차단 ${blockers.length}`);
   if (untriaged.length) counts.push(`분류 필요 ${untriaged.length}`);
@@ -94,10 +97,11 @@ export function issueContext({ blockers = [], mine, common, untriaged, truncated
     ['공통', common],
     ['분류 필요 (area 라벨 없음 → 라벨·담당자 지정 제안)', untriaged],
   ].filter(([, items]) => items.length);
-  if (!groups.length) return null;
+  // 상한을 넘었으면 개수·목록이 실제보다 적다 (#179). 받은 것이 모두 상대 영역이어도 "이슈 없음"으로 보이지 않게 경고만은 낸다
+  const warn = truncated ? `- ⚠️ 조회 상한 ${ISSUE_LIMIT}개를 넘어 일부가 빠졌다 → ${ISSUE_CHECK_CMD}` : null;
+  if (!groups.length) return warn;
   const body = groups.map(([name, items]) => `- ${name} ${items.length}개\n${list(items)}`).join('\n');
-  // 상한을 채웠으면 개수·목록이 실제보다 적을 수 있다 (#179)
-  return truncated ? `${body}\n- ⚠️ 조회 상한 ${ISSUE_LIMIT}개를 채워 일부가 빠졌을 수 있다 → gh issue list --label follow-up --limit 1000` : body;
+  return warn ? `${body}\n${warn}` : body;
 }
 
 /** PR 본문에서 닫을 이슈 번호 (GitHub 키워드: close·closes·closed·fix·fixes·fixed·resolve·resolves·resolved) */

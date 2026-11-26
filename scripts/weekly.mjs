@@ -43,7 +43,7 @@ for (const [status, list] of Object.entries(byStatus)) {
 }
 
 // ── follow-up 이슈 ──
-const issues = gh(['issue', 'list', '--label', 'follow-up', '--state', 'all', '--limit', '200', '--json', 'number,state,labels,createdAt,closedAt']);
+const issues = gh(['issue', 'list', '--label', 'follow-up', '--state', 'all', '--limit', '1000', '--json', 'number,state,labels,createdAt,closedAt']);
 out.push('', '## follow-up 이슈');
 if (!issues) out.push('⚠️ 이슈 조회 실패 (gh issue list --label follow-up)');
 else {

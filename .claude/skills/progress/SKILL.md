@@ -15,10 +15,10 @@ description: 기능 spec 상태, 관통 필수 요구사항 13개와 명세서 �
    - **먼저 `node scripts/weekly.mjs`** (1~2분): spec 상태·체크 비율, follow-up 이슈 영역별 열림·닫힘·7일 넘음, 기간 안 머지 PR과 PR별 Codex 재리뷰·지적, 하네스 지표(가드 차단·토큰, 이 PC 기준)를 한 번에 낸다. 아래 항목 중 이 출력에 있는 것은 다시 조회하지 않는다
    - `docs/기획서.md`: 기능 목록 표(F-01~F-25, 우선순위, 필수 요구사항 매핑), "명세서 구조 매핑", 4절 마일스톤, **2차 백로그**(6절 표·6.1절, 티어는 **7.4b 재정렬 표가 우선**), 점검 문서(`docs/점검/2026-11-26-2차점검.md`) 2절 일정표·3절 새 항목, 일정 판단 기준(12/08 중간 점검, 12/14 기능 동결)
    - `docs/specs/*.md`: 각 파일 헤더의 상태(DRAFT/APPROVED/DONE)와 구현 체크리스트 체크 비율
-   - git·GitHub: `git branch -a`, `git log origin/develop --oneline`(없으면 `develop`), `gh pr list --state all --limit 50 --json number,title,state,headRefName,mergedAt` (gh가 없거나 원격이 없으면 생략). 실적 날짜는 PR의 `mergedAt`을 쓴다
+   - git·GitHub: `git branch -a`, `git log origin/develop --oneline`(없으면 `develop`), `gh pr list --state all --limit 1000 --json number,title,state,headRefName,mergedAt` (gh가 없거나 원격이 없으면 생략). 실적 날짜는 PR의 `mergedAt`을 쓴다
    - 두 사람의 NOW 파일(`docs/handoff/NOW-dh.md`·`NOW-js.md`)의 현재 기능
    - `docs/산출물/` 각 파일의 존재와 "작성 상태" 표시, `docs/api/openapi.json` 존재
-   - follow-up 이슈: `gh issue list --label follow-up --state all --limit 100 --json number,title,state,labels,assignees,createdAt,closedAt`. 영역(area:A·B·common)별 열림 수, 이번 주 닫힘 수, 7일 넘게 열린 것, area 라벨 없는 것
+   - follow-up 이슈: `gh issue list --label follow-up --state all --limit 1000 --json number,title,state,labels,assignees,createdAt,closedAt`. 영역(area:A·B·common)별 열림 수, 이번 주 닫힘 수, 7일 넘게 열린 것, area 라벨 없는 것
    - 오늘 날짜로 현재 주차(W1~W5, 버퍼)를 계산한다.
 2. **판정**: 기능 상태는 다음 중 하나로 정한다.
    - ⬜ 미착수 (spec 없음) · 📝 spec 작성 · 🔨 구현 중 (APPROVED + 체크 일부) · 🔍 PR 열림 · ✅ 완료 (develop에 머지)
