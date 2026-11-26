@@ -3,7 +3,7 @@
 > 김동환(A 영역: AI·분석·학습 루프) 전용. 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
 > 머리 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
-갱신: 2026-11-26 12:29 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/common-harness-guard-1126
+갱신: 2026-11-26 13:25 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/common-harness-guard-1126
 
 ## 현재 기능
 
@@ -16,12 +16,12 @@
 - ✅ hook: guard-bash(원문 미기록 #135)·guard-files(MCP·Read·Grep·Glob)·commit-msg(비밀값 검사) · settings.json matcher + `settings.test.mjs` · CODEOWNERS test llm-fixtures + `codeowners.test.mjs`(HX-3)
 - ✅ setup·env-check: 김동환 PC fetch에 `^refs/heads/eval/*` (dh-ssafy 적용됨). 결정로그·09-데이터셋 5절 반영
 - ✅ reviewer: 반드시 수정 3(PowerShell 괄호 범위 퇴행, `gh api -XPUT`, `node -pe`)·권장 다수 반영(4f3c2c4), 넘긴 것 #188~#191
-- ✅ Codex 1회차 P2 2건(curl `-d'{…}'` 붙여 쓰기, grep `--reg=` 축약) 수정 → 재리뷰 대기. CI 첫 BE 실패는 spotless 일시 오류(재실행 통과)
+- ✅ **Codex ✅ 6c2c91a** (재리뷰 3회: 1·2회차 P2 5건 수정, 3회차 P2 3건 → #189·#193 이관, `--resolve`). CI 첫 BE 실패는 spotless 일시 오류(재실행 통과)
 - 보류 이슈 #178~#182 (중복 #183~#187은 닫음)
 
 ## 바로 다음 할 일
 
-1. PR #192: Codex 결과 대기 → FINDINGS면 `/pr-review` 8-3 (보안 지적은 고치고, 그 밖 P2는 이슈로) → COMPLETE + CI 초록이면 사람에게 머지 요청 (PR 설명 `.harness/pr-harness-guard.md`)
+1. PR #192: CI 초록 + Codex COMPLETE → **사람이 GitHub에서 머지** (머지 전 develop에 새 커밋이 있으면 `git merge origin/develop` → push → CI 재확인). 머지 뒤 `git switch develop && git pull`
 2. dh-home에서 `node scripts/setup.mjs` 한 번 (eval fetch 제외 refspec)
 3. 트랙 4 PR ② 로드맵 R-1: `docs/로드맵.md` + `scripts/lib/roadmap.mjs` + SessionStart·`/pickup`·`/handoff` 표시 → ③ → ④ → ⑤ (기획서 7.7절)
 
