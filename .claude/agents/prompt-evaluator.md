@@ -29,7 +29,7 @@ Bash 도구는 Git Bash이므로 위처럼 `변수=값 명령` 형식으로 공�
 
 - 하네스: `backend/src/test/java/com/vibenote/prompteval/PromptEvalRunner.java` (`@Tag("prompt-eval")`, `test`에서 제외). 실제 파이프라인과 같은 경로(ZIP 읽기 → 선별 → 비밀 가림 → API 탐지 → 개요 → 파일 묶음 → 흐름 → 개념 → 퀴즈)로 돈다 (`EvalPipeline`). 호출 전에 예상 호출 수를 출력한다. 키는 앱과 같이 application.yml이 import하는 루트 `.env`에서 읽으므로 셸 환경변수가 없어도 된다(없으면 skip).
 - `-Pfixture`는 `data/datasets.json`의 저장소 id(예: `DS-02-01`. 고정 커밋을 codeload에서 받아 `.harness/prompt-eval/repos/`에 캐시) 또는 ZIP 경로(파일 이름을 id로 쓴다: `DS-03-01.zip` → 라벨 `DS-03-01.json`, split·오염은 datasets.json의 `DS-03-01`이나 `DS-03`). 수준마다 호출 수: 개요 1 + 파일 묶음 `-Pbatches`(기본 전부) + 흐름 `-Pflows`(기본 3, 탐지 API 앞 N개) + 개념 1 + 퀴즈 1. `-PpauseMs`(기본 4000)는 호출 사이 대기.
-- 채점(`promptGrade`, `PromptGradeRunner`): 보고서 옆에 `<보고서>-grade.json`(지표 A~E·커버리지·근거 유효율 + 항목별 세부), 폴더면 `summary.md`(공급자 × 분할 × 오염 그룹, 다시 채점한 같은 저장소는 최신만, v2 하한 ✅/❌)를 쓴다. 판정 호출 수는 (세 수준 key 수) + (퀴즈 문항 수) + (라벨이 있으면 수준 수: 금지 사실 판정, 라벨 `forbidden[]` 문장이 Gemini로 간다)이고 형식 오류면 1회씩 더 묻는다. **eval 결과를 보고할 때는 `summary.md`·`scores`(점수·개수)만 옮기고 `details`(라벨 개념 이름·경로·금지 사실)는 보고서에 쓰지 않는다.**
+- 채점(`promptGrade`, `PromptGradeRunner`): 보고서 옆에 `<보고서>-grade.json`(지표 A~E·커버리지·근거 유효율 + 항목별 세부), 폴더면 `summary.md`(공급자 × 단계 × 분할 × 오염 그룹, 다시 채점한 같은 저장소는 최신만, v2 하한 ✅/❌)를 쓴다. 판정 호출 수는 (세 수준 key 수) + (퀴즈 문항 수) + (라벨이 있으면 수준 수: 금지 사실 판정, 라벨 `forbidden[]` 문장이 Gemini로 간다)이고 형식 오류면 1회씩 더 묻는다. **eval 결과를 보고할 때는 `summary.md`·`scores`(점수·개수)만 옮기고 `details`(라벨 개념 이름·경로·금지 사실)는 보고서에 쓰지 않는다.**
 - 기본은 stage 1개 × level all × fixture 1개 (호출 3회 안팎). 그 이상은 호출 횟수를 먼저 알리고 확인받는다.
 - **fixture는 `data/datasets.json`에서 `split`이 `eval`인 데이터만** 평가 점수로 보고한다. `dev` 데이터 결과는 "개발용 참고"로 분리해 표시한다 (데이터 누수 방지, `docs/산출물/09-데이터셋.md` 5절).
 - 팀 생성 저장소(사전학습 오염 가능성 낮음)와 유명 오픈소스(오염 가능성 있음)의 결과를 따로 보고한다.

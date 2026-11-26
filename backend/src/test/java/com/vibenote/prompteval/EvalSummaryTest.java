@@ -41,6 +41,7 @@ class EvalSummaryTest {
         Map<String, Object> grade = new LinkedHashMap<>();
         grade.put("fixture", "DS-02-01");
         grade.put("provider", provider);
+        grade.put("stage", "all");
         grade.put("split", "eval");
         grade.put("contamination", contamination);
         grade.put("scores", scores);
@@ -57,18 +58,18 @@ class EvalSummaryTest {
                                 graded("gms", "eval", "high", "DS-02-02"),
                                 passing("gms", "none")));
 
-        int none = md.indexOf("| gms | eval | none | 1 |");
-        int high = md.indexOf("| gms | eval | high | 2 |");
-        int ollama = md.indexOf("| ollama | eval | low | 1 |");
+        int none = md.indexOf("| gms | all | eval | none | 1 |");
+        int high = md.indexOf("| gms | all | eval | high | 2 |");
+        int ollama = md.indexOf("| ollama | all | eval | low | 1 |");
         assertThat(none).as(md).isPositive();
         // 공급자 이름순, 같은 공급자 안에서는 none → low → high
         assertThat(high).isGreaterThan(none);
         assertThat(ollama).isGreaterThan(high);
 
         // v2 하한: 통과 그룹은 ✅, 합성 보고서 그룹(퀴즈 최종 통과 2/3, 근거 57%)은 ❌, 판정 건너뜀은 -
-        String passLine = line(md, "| gms | eval | none |", 1);
+        String passLine = line(md, "| gms | all | eval | none |", 1);
         assertThat(passLine).doesNotContain("❌").contains("✅");
-        String failLine = line(md, "| gms | eval | high |", 1);
+        String failLine = line(md, "| gms | all | eval | high |", 1);
         assertThat(failLine).contains("❌").contains("-");
     }
 
@@ -82,13 +83,27 @@ class EvalSummaryTest {
                                 graded("gms", "dev", "high", "DS-02-01")));
 
         // 같은 오염 high라도 dev는 eval과 다른 줄이고, eval 줄이 먼저 나온다
-        int eval = md.indexOf("| gms | eval | high | 1 |");
-        int dev = md.indexOf("| gms | dev | high | 1 |");
+        int eval = md.indexOf("| gms | all | eval | high | 1 |");
+        int dev = md.indexOf("| gms | all | dev | high | 1 |");
         assertThat(eval).as(md).isPositive();
         assertThat(dev).as(md).isGreaterThan(eval);
         // eval 줄의 하한은 dev 합성 결과(❌)에 끌려 내려가지 않는다
-        assertThat(line(md, "| gms | eval | high |", 1)).doesNotContain("❌");
+        assertThat(line(md, "| gms | all | eval | high |", 1)).doesNotContain("❌");
         assertThat(md).contains("최신 것으로 바꿔 셌다");
+    }
+
+    @Test
+    void AC10_같은_저장소의_단계_구성이_다르면_다른_줄로_센다() {
+        Map<String, Object> overviewOnly = passing("gms", "high");
+        overviewOnly.put("stage", "overview");
+        Map<String, Object> all = graded("gms", "eval", "high", "DS-02-01");
+
+        String md = EvalSummary.markdown(List.of(overviewOnly, all));
+
+        // overview만 돌린 결과(100%)가 all 결과(퀴즈 최종 2/3)와 평균되지 않고 저장소 수도 1씩
+        assertThat(md).as(md).contains("| gms | all | eval | high | 1 |");
+        assertThat(md).contains("| gms | overview | eval | high | 1 |");
+        assertThat(line(md, "| gms | all | eval | high |", 1)).contains("❌");
     }
 
     @Test

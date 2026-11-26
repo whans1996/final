@@ -14,9 +14,9 @@ import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * 채점 결과 여러 개의 요약 Markdown (E-1 AC10). 공급자 × 분할 × 오염 그룹(팀 생성 {@code none} / {@code low} / {@code
- * high})으로 묶어 저장소 평균(금지 사실은 합계)과 v2 절대 하한 대비 ✅/❌를 낸다. <b>점수·개수만</b> 쓰고 fixture id·라벨 내용(개념 이름·파일
- * 경로·금지 사실)은 쓰지 않는다. 세부는 각 {@code *-grade.json}의 {@code details}에만 있다.
+ * 채점 결과 여러 개의 요약 Markdown (E-1 AC10). 공급자 × 단계 × 분할 × 오염 그룹(팀 생성 {@code none} / {@code low} /
+ * {@code high})으로 묶어 저장소 평균(금지 사실은 합계)과 v2 절대 하한 대비 ✅/❌를 낸다. <b>점수·개수만</b> 쓰고 fixture id·라벨 내용(개념
+ * 이름·파일 경로·금지 사실)은 쓰지 않는다. 세부는 각 {@code *-grade.json}의 {@code details}에만 있다.
  */
 final class EvalSummary {
 
@@ -78,18 +78,21 @@ final class EvalSummary {
         }
         int replaced = grades.size() - latest.size();
 
-        // dev·demo 결과가 eval 점수에 섞이지 않게 분할도 그룹에 넣는다 (09-데이터셋 5절)
+        // 단계 구성(overview만·all 등)이 다르면 지표가 달라 평균하지 않고, dev·demo 결과가 eval 점수에 섞이지 않게 분할도 그룹에 넣는다
+        // (09-데이터셋 5절)
         Map<List<String>, List<JsonNode>> groups =
                 new TreeMap<>(
                         Comparator.<List<String>, String>comparing(k -> k.get(0))
-                                .thenComparing(k -> order(SPLIT, k.get(1)))
                                 .thenComparing(k -> k.get(1))
-                                .thenComparing(k -> order(CONTAMINATION, k.get(2)))
-                                .thenComparing(k -> k.get(2)));
+                                .thenComparing(k -> order(SPLIT, k.get(2)))
+                                .thenComparing(k -> k.get(2))
+                                .thenComparing(k -> order(CONTAMINATION, k.get(3)))
+                                .thenComparing(k -> k.get(3)));
         for (JsonNode node : latest.values()) {
             List<String> key =
                     List.of(
                             text(node, "provider"),
+                            text(node, "stage"),
                             text(node, "split"),
                             text(node, "contamination"));
             groups.computeIfAbsent(key, k -> new ArrayList<>()).add(node.path("scores"));
@@ -105,9 +108,9 @@ final class EvalSummary {
                     .append(replaced)
                     .append("개는 최신 것으로 바꿔 셌다.\n");
         }
-        md.append("\n## 지표\n\n| 공급자 | 분할 | 오염 | 저장소 |");
+        md.append("\n## 지표\n\n| 공급자 | 단계 | 분할 | 오염 | 저장소 |");
         COLUMNS.forEach(c -> md.append(' ').append(c.header()).append(" |"));
-        md.append("\n|---|---|---|---|").append("---|".repeat(COLUMNS.size())).append('\n');
+        md.append("\n|---|---|---|---|---|").append("---|".repeat(COLUMNS.size())).append('\n');
         groups.forEach(
                 (key, scores) -> {
                     md.append(row(key, scores));
@@ -119,9 +122,9 @@ final class EvalSummary {
                     md.append('\n');
                 });
 
-        md.append("\n## v2 절대 하한\n\n| 공급자 | 분할 | 오염 | 저장소 |");
+        md.append("\n## v2 절대 하한\n\n| 공급자 | 단계 | 분할 | 오염 | 저장소 |");
         FLOORS.forEach(f -> md.append(' ').append(f.header()).append(" |"));
-        md.append("\n|---|---|---|---|").append("---|".repeat(FLOORS.size())).append('\n');
+        md.append("\n|---|---|---|---|---|").append("---|".repeat(FLOORS.size())).append('\n');
         groups.forEach(
                 (key, scores) -> {
                     md.append(row(key, scores));
