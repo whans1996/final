@@ -1,35 +1,35 @@
 # NOW — 김동환 현재 작업 스냅샷
 
 > 김동환(A 영역: AI·분석·학습 루프) 전용. 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
-> "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
+> 머리 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
-갱신: 2026-11-26 09:13 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/common-progress-1126
+갱신: 2026-11-26 10:12 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/common-plan2-1126
 
 ## 현재 기능
 
-**/progress W2 (11-26)** — 진행현황·WBS·간트 갱신 PR(base develop, docs만). 노션 대시보드 "진행 현황" 섹션도 갱신함. 직전 F-27 PR #161은 11/26 머지됨
+**2차 점검·진행 순서 (11-26)** — 읽기 전용 점검 5갈래 + GMS 실호출 결과를 `docs/점검/2026-11-26-2차점검.md`에 정리, 결정로그 11-26 7행. docs PR(base develop)
 
 ## 진행
 
-- ✅ 2차 T0 중 A 3건 완료: H-1(PR #138·#141), F-26a(PR #157·#160), F-27(PR #161). spec 30개 DONE, 마이그레이션 V13
-- ✅ 진행현황: T1 머지는 V-2 기준선(12/04) 뒤로 둔다는 판단 기록. WBS 1.8·6.1~6.3 ✅, 4.1 🟡, 간트 실적 막대 4개 추가
-- ✅ PR #161 리뷰 제안은 follow-up #163(F-27b)
+- ✅ develop·main 브랜치 보호 적용 (PR 필수·CI 5개 필수·관리자 포함·force push 금지)
+- ✅ 결정: GMS 키 재발급(만료 제약 아님), 개발 끝까지 public, F-33 T2-5 유지, A가 자기 FE 맡음(김준섭 합의 필요), 카드 200장+·카탈로그 개편, Colab 안 함
+- ✅ GMS 실호출(DS-02-01 dev, 개요·파일): senior≈junior, XML 매퍼 오판 → 점검 문서 5절
 
 ## 바로 다음 할 일
 
-1. 진행현황 PR: CI 초록이면 GitHub에서 머지 (docs만이라 Codex 루프 생략, conventions 7절) → `git switch develop && git pull` → 로컬 `feature/F-26a-index-selection`·`feature/F-27-gms-provider` `git branch -d`
-2. V-2 블라인드 점검(김준섭 요청): dh-ssafy는 ds03 브랜치 고아 커밋 7개(내용 미열람)를 11-26 `git reflog expire --expire-unreachable=now --all && git gc --prune=now`로 삭제 완료. **dh-home도 같은 점검**(`git fsck --unreachable --no-reflogs` → 작성자 JoonseobKim·11-25 커밋이 있으면 위 명령). 김준섭에게 답장
-3. `/clear` → `/spec F-26b` (커버리지 개편, #121·#156 흡수, 12/04 기준선 전엔 머지 안 함). 짬 나면 공통 하네스 이슈 #130·#135(보안 성격) 먼저
-4. 11/27 Figma 세션 → 11/29~ V-1 MVP 감사
+1. PR #173(docs): CI 초록이면 GitHub에서 머지 (docs만이라 Codex 생략). 본문에서 @JoonseobKim에게 역할 조정·DS 고정 11/28·F-29 공통 PR 12/02 합의 요청함
+2. **새 세션에서 `/project-interview` 1단계** (`docs/점검/2026-11-26-2차점검.md` 먼저 읽기): ① L-1 범위(재실행 URL만?·"학습함" 정의·오답 노트 범위·분석 접근 규칙 통합) ② AI 기준(수준 기준표·합격선·설명 스키마 학습 필드·수준별 mock) ③ 카드(추가 카테고리 tooling·ts/react?·시드 검수 기준·카드 수준 적응). 2단계 UI는 11/27 Figma, 3~6단계(모델 배정·한도·idea 이슈·시연·배포·보안 가드·동결 뒤)는 이후
+3. 인터뷰 결과 → 결정로그·점검 문서 반영 + 점검 문서 4절 A 항목 follow-up 이슈 등록(area:A) + 기획서 6절·WBS 6절·간트에 L-1·K-1~3·E-1·LP-1·S-1 반영 (docs PR)
+4. D-1 문서 정정 PR (점검 문서 3절) → E-1 `PromptEvalRunner.java:98` stage 제한 풀기 + 채점기
+5. dh-home V-2 블라인드 점검: `git fsck --unreachable --no-reflogs` → 작성자 JoonseobKim·11-25 커밋이 있으면 `git reflog expire --expire-unreachable=now --all && git gc --prune=now`
 
 ## 막힌 점 / 결정 필요
 
-- **GMS 키 2026-12-09 18:00 만료** (발표 12-24 전) → 재발급·연장 사람 확인 필요
-- V-2 기준선 앞당기기: DS-03·04를 12/03 전에 고정할 수 있는지 김준섭과 합의
-- 사람: 노션 팀원 초대, F-05b liveTest, 제출 zip 이름, dh-ssafy `.env`에 GMS 키
+- 김준섭 합의: 역할 조정(A가 F-28·L-1 FE), DS-03·04 고정 11/28로 당기기, F-29 공통 PR 12/02
+- 사람: 노션 팀원 초대, F-05b liveTest, 제출 zip 이름, dh-ssafy `.env` GMS 키 (현재 동작함)
 
 ## 주의
 
-- 다음 마이그레이션은 V14 (김준섭도 V14 이상 예정이라 `node scripts/next-migration.mjs`로 확인)
-- ui-verifier가 로컬 DB에 테스트 계정 `f27shot@example.com`을 만들어 둠 (로컬 전용)
+- 다음 마이그레이션은 V14 (`node scripts/next-migration.mjs`로 확인)
+- 브랜치 보호 관리자 포함: develop·main 직접 push 불가, 급할 땐 GitHub Settings에서 잠시 끈다
 - node 스크립트로 Java 편집 시 백슬래시가 깨짐 → Edit 도구 사용 · 이 PC에 python 없음
