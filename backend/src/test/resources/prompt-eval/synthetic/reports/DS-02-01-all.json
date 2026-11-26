@@ -1,0 +1,635 @@
+{
+  "_note": "E-1 채점기 테스트용 합성 보고서. dev 분할(DS-02-01)의 경로 이름만 빌려 손으로 만든 값이며 실제 LLM 출력이 아니다 (AC11).",
+  "fixture": "DS-02-01",
+  "fixtureZip": "",
+  "provider": "mock",
+  "model": "mock",
+  "split": "dev",
+  "contamination": "high",
+  "stage": "all",
+  "levels": [
+    "beginner",
+    "junior",
+    "senior"
+  ],
+  "expectedCalls": 21,
+  "index": [
+    {
+      "path": "src/main/java/io/spring/api/ArticlesApi.java",
+      "layer": "controller",
+      "selected": true,
+      "lines": 20
+    },
+    {
+      "path": "src/main/java/io/spring/application/article/ArticleCommandService.java",
+      "layer": "service",
+      "selected": true,
+      "lines": 15
+    },
+    {
+      "path": "src/main/java/io/spring/infrastructure/mybatis/mapper/ArticleMapper.java",
+      "layer": "mapper",
+      "selected": true,
+      "lines": 10
+    },
+    {
+      "path": "src/main/java/io/spring/JacksonCustomizations.java",
+      "layer": "config",
+      "selected": false,
+      "lines": 30
+    }
+  ],
+  "apis": [
+    {
+      "method": "POST",
+      "path": "/articles"
+    },
+    {
+      "method": "GET",
+      "path": "/articles"
+    }
+  ],
+  "results": {
+    "beginner": {
+      "overview": {
+        "summary": "입문 설명: 게시글을 쓰고 읽는 API 서버입니다.",
+        "techStack": [
+          "Spring Boot",
+          "MyBatis"
+        ],
+        "layers": [
+          {
+            "layer": "controller",
+            "role": "입문 설명: 요청을 받습니다."
+          }
+        ],
+        "readingOrder": [
+          {
+            "fileId": 1,
+            "path": "src/main/java/io/spring/api/ArticlesApi.java",
+            "reason": "입문 설명: API 목록을 먼저 봅니다."
+          },
+          {
+            "fileId": 9,
+            "path": "src/main/java/io/spring/api/MissingApi.java",
+            "reason": "입문 설명: 없는 파일입니다."
+          }
+        ],
+        "apis": [
+          {
+            "method": "POST",
+            "path": "/articles"
+          },
+          {
+            "method": "GET",
+            "path": "/articles"
+          }
+        ]
+      },
+      "files": [
+        {
+          "path": "src/main/java/io/spring/api/ArticlesApi.java",
+          "layer": "controller",
+          "role": "입문 설명: 게시글 API",
+          "explanation": "입문 설명: 요청을 받아 서비스를 부릅니다."
+        },
+        {
+          "path": "src/main/java/io/spring/application/article/ArticleCommandService.java",
+          "layer": "service",
+          "role": "입문 설명: 게시글 작성",
+          "explanation": "입문 설명: 트랜잭션 안에서 저장합니다."
+        }
+      ],
+      "flows": [
+        {
+          "endpoint": "POST /articles",
+          "summary": "입문 설명: 게시글 작성 흐름입니다.",
+          "steps": [
+            {
+              "no": 1,
+              "layer": "controller",
+              "fileId": 1,
+              "path": "src/main/java/io/spring/api/ArticlesApi.java",
+              "symbol": "ArticlesApi.createArticle",
+              "title": "요청 받기",
+              "description": "입문 설명: 본문을 받습니다."
+            },
+            {
+              "no": 2,
+              "layer": "service",
+              "fileId": 2,
+              "path": "src/main/java/io/spring/application/article/ArticleCommandService.java",
+              "symbol": "ArticleCommandService.createArticle",
+              "title": "저장",
+              "description": "입문 설명: 저장합니다."
+            },
+            {
+              "no": 3,
+              "layer": "mapper",
+              "fileId": 3,
+              "path": "src/main/java/io/spring/infrastructure/mybatis/mapper/ArticleMapper.java",
+              "symbol": "ArticleMapper.insertArticle",
+              "title": "SQL",
+              "description": "입문 설명: 없는 메서드입니다."
+            },
+            {
+              "no": 4,
+              "layer": null,
+              "fileId": null,
+              "path": "src/main/java/io/spring/infrastructure/Ghost.java",
+              "symbol": "Ghost.run",
+              "title": "없는 파일",
+              "description": "입문 설명: 없는 경로입니다."
+            }
+          ],
+          "error": null
+        }
+      ],
+      "concepts": [
+        {
+          "name": "@Transactional",
+          "conceptId": 5,
+          "draft": false,
+          "category": "spring-data",
+          "path": "src/main/java/io/spring/application/article/ArticleCommandService.java",
+          "lineHint": "L5-L9",
+          "contextNote": "입문 설명: 저장을 묶습니다."
+        },
+        {
+          "name": "의존성 주입 (DI)",
+          "conceptId": 3,
+          "draft": false,
+          "category": "spring-core",
+          "path": "src/main/java/io/spring/api/ArticlesApi.java",
+          "lineHint": "L25",
+          "contextNote": "입문 설명: 생성자로 받습니다."
+        },
+        {
+          "name": "JPA 엔티티",
+          "conceptId": null,
+          "draft": true,
+          "category": "spring-data",
+          "path": "src/main/java/io/spring/infrastructure/mybatis/mapper/ArticleMapper.java",
+          "lineHint": "L2",
+          "contextNote": "입문 설명: 잘못 뽑은 개념입니다."
+        }
+      ],
+      "quiz": [
+        {
+          "conceptName": "@Transactional",
+          "question": "입문 설명: 예외가 나면 저장은 어떻게 되나요?",
+          "choices": [
+            "그대로 남는다",
+            "되돌려진다",
+            "두 번 저장된다",
+            "로그만 남는다"
+          ],
+          "answerIndex": 1,
+          "explanation": "런타임 예외면 트랜잭션이 롤백됩니다."
+        },
+        {
+          "conceptName": "의존성 주입 (DI)",
+          "question": "입문 설명: 서비스는 어떻게 받나요?",
+          "choices": [
+            "생성자로 받는다",
+            "new로 만든다",
+            "정적 필드로 둔다",
+            "매번 조회한다"
+          ],
+          "answerIndex": 0,
+          "explanation": "2번 보기는 결합이 강해집니다."
+        }
+      ],
+      "skipped": {},
+      "errors": {}
+    },
+    "junior": {
+      "overview": {
+        "summary": "주니어 설명: 게시글을 쓰고 읽는 API 서버입니다.",
+        "techStack": [
+          "Spring Boot",
+          "MyBatis"
+        ],
+        "layers": [
+          {
+            "layer": "controller",
+            "role": "주니어 설명: 요청을 받습니다."
+          }
+        ],
+        "readingOrder": [
+          {
+            "fileId": 1,
+            "path": "src/main/java/io/spring/api/ArticlesApi.java",
+            "reason": "주니어 설명: API 목록을 먼저 봅니다."
+          },
+          {
+            "fileId": 9,
+            "path": "src/main/java/io/spring/api/MissingApi.java",
+            "reason": "주니어 설명: 없는 파일입니다."
+          }
+        ],
+        "apis": [
+          {
+            "method": "POST",
+            "path": "/articles"
+          },
+          {
+            "method": "GET",
+            "path": "/articles"
+          }
+        ]
+      },
+      "files": [
+        {
+          "path": "src/main/java/io/spring/api/ArticlesApi.java",
+          "layer": "controller",
+          "role": "주니어 설명: 게시글 API",
+          "explanation": "주니어 설명: 요청을 받아 서비스를 부릅니다."
+        },
+        {
+          "path": "src/main/java/io/spring/application/article/ArticleCommandService.java",
+          "layer": "service",
+          "role": "주니어 설명: 게시글 작성",
+          "explanation": "주니어 설명: 트랜잭션 안에서 저장합니다."
+        }
+      ],
+      "flows": [
+        {
+          "endpoint": "POST /articles",
+          "summary": "주니어 설명: 게시글 작성 흐름입니다.",
+          "steps": [
+            {
+              "no": 1,
+              "layer": "controller",
+              "fileId": 1,
+              "path": "src/main/java/io/spring/api/ArticlesApi.java",
+              "symbol": "ArticlesApi.createArticle",
+              "title": "요청 받기",
+              "description": "주니어 설명: 본문을 받습니다."
+            },
+            {
+              "no": 2,
+              "layer": "service",
+              "fileId": 2,
+              "path": "src/main/java/io/spring/application/article/ArticleCommandService.java",
+              "symbol": "ArticleCommandService.createArticle",
+              "title": "저장",
+              "description": "주니어 설명: 저장합니다."
+            },
+            {
+              "no": 3,
+              "layer": "mapper",
+              "fileId": 3,
+              "path": "src/main/java/io/spring/infrastructure/mybatis/mapper/ArticleMapper.java",
+              "symbol": "ArticleMapper.insertArticle",
+              "title": "SQL",
+              "description": "주니어 설명: 없는 메서드입니다."
+            },
+            {
+              "no": 4,
+              "layer": null,
+              "fileId": null,
+              "path": "src/main/java/io/spring/infrastructure/Ghost.java",
+              "symbol": "Ghost.run",
+              "title": "없는 파일",
+              "description": "주니어 설명: 없는 경로입니다."
+            }
+          ],
+          "error": null
+        }
+      ],
+      "concepts": [
+        {
+          "name": "@Transactional",
+          "conceptId": 5,
+          "draft": false,
+          "category": "spring-data",
+          "path": "src/main/java/io/spring/application/article/ArticleCommandService.java",
+          "lineHint": "L5-L9",
+          "contextNote": "주니어 설명: 저장을 묶습니다."
+        },
+        {
+          "name": "의존성 주입 (DI)",
+          "conceptId": 3,
+          "draft": false,
+          "category": "spring-core",
+          "path": "src/main/java/io/spring/api/ArticlesApi.java",
+          "lineHint": "L25",
+          "contextNote": "주니어 설명: 생성자로 받습니다."
+        },
+        {
+          "name": "JPA 엔티티",
+          "conceptId": null,
+          "draft": true,
+          "category": "spring-data",
+          "path": "src/main/java/io/spring/infrastructure/mybatis/mapper/ArticleMapper.java",
+          "lineHint": "L2",
+          "contextNote": "주니어 설명: 잘못 뽑은 개념입니다."
+        }
+      ],
+      "quiz": [
+        {
+          "conceptName": "@Transactional",
+          "question": "주니어 설명: 예외가 나면 저장은 어떻게 되나요?",
+          "choices": [
+            "그대로 남는다",
+            "되돌려진다",
+            "두 번 저장된다",
+            "로그만 남는다"
+          ],
+          "answerIndex": 1,
+          "explanation": "런타임 예외면 트랜잭션이 롤백됩니다."
+        },
+        {
+          "conceptName": "의존성 주입 (DI)",
+          "question": "주니어 설명: 서비스는 어떻게 받나요?",
+          "choices": [
+            "생성자로 받는다",
+            "new로 만든다",
+            "정적 필드로 둔다",
+            "매번 조회한다"
+          ],
+          "answerIndex": 0,
+          "explanation": "2번 보기는 결합이 강해집니다."
+        }
+      ],
+      "skipped": {},
+      "errors": {}
+    },
+    "senior": {
+      "overview": {
+        "summary": "시니어 설명: 게시글을 쓰고 읽는 API 서버입니다.",
+        "techStack": [
+          "Spring Boot",
+          "MyBatis"
+        ],
+        "layers": [
+          {
+            "layer": "controller",
+            "role": "시니어 설명: 요청을 받습니다."
+          }
+        ],
+        "readingOrder": [
+          {
+            "fileId": 1,
+            "path": "src/main/java/io/spring/api/ArticlesApi.java",
+            "reason": "시니어 설명: API 목록을 먼저 봅니다."
+          },
+          {
+            "fileId": 9,
+            "path": "src/main/java/io/spring/api/MissingApi.java",
+            "reason": "시니어 설명: 없는 파일입니다."
+          }
+        ],
+        "apis": [
+          {
+            "method": "POST",
+            "path": "/articles"
+          },
+          {
+            "method": "GET",
+            "path": "/articles"
+          }
+        ]
+      },
+      "files": [
+        {
+          "path": "src/main/java/io/spring/api/ArticlesApi.java",
+          "layer": "controller",
+          "role": "시니어 설명: 게시글 API",
+          "explanation": "시니어 설명: 요청을 받아 서비스를 부릅니다."
+        },
+        {
+          "path": "src/main/java/io/spring/application/article/ArticleCommandService.java",
+          "layer": "service",
+          "role": "시니어 설명: 게시글 작성",
+          "explanation": "시니어 설명: 트랜잭션 안에서 저장합니다."
+        }
+      ],
+      "flows": [
+        {
+          "endpoint": "POST /articles",
+          "summary": "시니어 설명: 게시글 작성 흐름입니다.",
+          "steps": [
+            {
+              "no": 1,
+              "layer": "controller",
+              "fileId": 1,
+              "path": "src/main/java/io/spring/api/ArticlesApi.java",
+              "symbol": "ArticlesApi.createArticle",
+              "title": "요청 받기",
+              "description": "시니어 설명: 본문을 받습니다."
+            },
+            {
+              "no": 2,
+              "layer": "service",
+              "fileId": 2,
+              "path": "src/main/java/io/spring/application/article/ArticleCommandService.java",
+              "symbol": "ArticleCommandService.createArticle",
+              "title": "저장",
+              "description": "시니어 설명: 저장합니다."
+            },
+            {
+              "no": 3,
+              "layer": "mapper",
+              "fileId": 3,
+              "path": "src/main/java/io/spring/infrastructure/mybatis/mapper/ArticleMapper.java",
+              "symbol": "ArticleMapper.insertArticle",
+              "title": "SQL",
+              "description": "시니어 설명: 없는 메서드입니다."
+            },
+            {
+              "no": 4,
+              "layer": null,
+              "fileId": null,
+              "path": "src/main/java/io/spring/infrastructure/Ghost.java",
+              "symbol": "Ghost.run",
+              "title": "없는 파일",
+              "description": "시니어 설명: 없는 경로입니다."
+            }
+          ],
+          "error": null
+        }
+      ],
+      "concepts": [
+        {
+          "name": "@Transactional",
+          "conceptId": 5,
+          "draft": false,
+          "category": "spring-data",
+          "path": "src/main/java/io/spring/application/article/ArticleCommandService.java",
+          "lineHint": "L5-L9",
+          "contextNote": "시니어 설명: 저장을 묶습니다."
+        },
+        {
+          "name": "의존성 주입 (DI)",
+          "conceptId": 3,
+          "draft": false,
+          "category": "spring-core",
+          "path": "src/main/java/io/spring/api/ArticlesApi.java",
+          "lineHint": "L25",
+          "contextNote": "시니어 설명: 생성자로 받습니다."
+        },
+        {
+          "name": "JPA 엔티티",
+          "conceptId": null,
+          "draft": true,
+          "category": "spring-data",
+          "path": "src/main/java/io/spring/infrastructure/mybatis/mapper/ArticleMapper.java",
+          "lineHint": "L2",
+          "contextNote": "시니어 설명: 잘못 뽑은 개념입니다."
+        }
+      ],
+      "quiz": [
+        {
+          "conceptName": "@Transactional",
+          "question": "시니어 설명: 예외가 나면 저장은 어떻게 되나요?",
+          "choices": [
+            "그대로 남는다",
+            "되돌려진다",
+            "두 번 저장된다",
+            "로그만 남는다"
+          ],
+          "answerIndex": 1,
+          "explanation": "런타임 예외면 트랜잭션이 롤백됩니다."
+        },
+        {
+          "conceptName": "의존성 주입 (DI)",
+          "question": "시니어 설명: 서비스는 어떻게 받나요?",
+          "choices": [
+            "생성자로 받는다",
+            "new로 만든다",
+            "정적 필드로 둔다",
+            "매번 조회한다"
+          ],
+          "answerIndex": 0,
+          "explanation": "2번 보기는 결합이 강해집니다."
+        }
+      ],
+      "skipped": {},
+      "errors": {}
+    }
+  },
+  "units": [
+    {
+      "stage": "overview",
+      "level": "beginner",
+      "key": "overview",
+      "calls": 1,
+      "firstPass": true,
+      "ok": true
+    },
+    {
+      "stage": "file",
+      "level": "beginner",
+      "key": "src/main/java/io/spring/api/ArticlesApi.java,src/main/java/io/spring/application/article/ArticleCommandService.java",
+      "calls": 1,
+      "firstPass": true,
+      "ok": true
+    },
+    {
+      "stage": "flow",
+      "level": "beginner",
+      "key": "POST /articles",
+      "calls": 1,
+      "firstPass": true,
+      "ok": true
+    },
+    {
+      "stage": "concept",
+      "level": "beginner",
+      "key": "concept",
+      "calls": 1,
+      "firstPass": true,
+      "ok": true
+    },
+    {
+      "stage": "quiz",
+      "level": "beginner",
+      "key": "quiz",
+      "calls": 1,
+      "firstPass": true,
+      "ok": true
+    },
+    {
+      "stage": "overview",
+      "level": "junior",
+      "key": "overview",
+      "calls": 1,
+      "firstPass": true,
+      "ok": true
+    },
+    {
+      "stage": "file",
+      "level": "junior",
+      "key": "src/main/java/io/spring/api/ArticlesApi.java,src/main/java/io/spring/application/article/ArticleCommandService.java",
+      "calls": 2,
+      "firstPass": false,
+      "ok": true
+    },
+    {
+      "stage": "flow",
+      "level": "junior",
+      "key": "POST /articles",
+      "calls": 1,
+      "firstPass": true,
+      "ok": true
+    },
+    {
+      "stage": "concept",
+      "level": "junior",
+      "key": "concept",
+      "calls": 1,
+      "firstPass": true,
+      "ok": true
+    },
+    {
+      "stage": "quiz",
+      "level": "junior",
+      "key": "quiz",
+      "calls": 1,
+      "firstPass": true,
+      "ok": true
+    },
+    {
+      "stage": "overview",
+      "level": "senior",
+      "key": "overview",
+      "calls": 1,
+      "firstPass": true,
+      "ok": true
+    },
+    {
+      "stage": "file",
+      "level": "senior",
+      "key": "src/main/java/io/spring/api/ArticlesApi.java,src/main/java/io/spring/application/article/ArticleCommandService.java",
+      "calls": 1,
+      "firstPass": true,
+      "ok": true
+    },
+    {
+      "stage": "flow",
+      "level": "senior",
+      "key": "POST /articles",
+      "calls": 1,
+      "firstPass": true,
+      "ok": true
+    },
+    {
+      "stage": "concept",
+      "level": "senior",
+      "key": "concept",
+      "calls": 1,
+      "firstPass": true,
+      "ok": true
+    },
+    {
+      "stage": "quiz",
+      "level": "senior",
+      "key": "quiz",
+      "calls": 2,
+      "firstPass": false,
+      "ok": false
+    }
+  ]
+}
