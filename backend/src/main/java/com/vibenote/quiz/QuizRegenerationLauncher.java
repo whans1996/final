@@ -39,7 +39,7 @@ class QuizRegenerationLauncher {
             executor.execute(() -> runner.run(id));
         } catch (TaskRejectedException e) {
             log.warn("분석 실행기가 가득 차 분석 {}의 퀴즈 재생성을 시작하지 못함", id);
-            analysisService.finishQuizRegeneration(id, QuizStatus.FAILED);
+            analysisService.failQuizRegeneration(id);
         }
     }
 }

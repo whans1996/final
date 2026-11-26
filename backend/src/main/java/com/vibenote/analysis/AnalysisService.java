@@ -435,6 +435,15 @@ public class AnalysisService {
         return analysisMapper.finishQuizRegeneration(analysisId, status) == 1;
     }
 
+    /**
+     * 재생성을 FAILED로 끝낸다 (L-1a AC6). 실행기 거절처럼 커밋 이후 콜백(AFTER_COMMIT)에서도 불리므로 {@link #markFailed}와 같이
+     * 끝난 트랜잭션에 참여하지 않게 새 트랜잭션으로 쓴다. 아직 GENERATING이고 삭제되지 않았을 때만 바꾼다.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void failQuizRegeneration(long analysisId) {
+        analysisMapper.finishQuizRegeneration(analysisId, QuizStatus.FAILED);
+    }
+
     /** 재생성 중이던 퀴즈를 모두 FAILED로 바꾼다 (서버 재시작, L-1a AC8). 바꾼 수를 돌려준다. */
     @Transactional
     public int failInterruptedQuizRegenerations() {

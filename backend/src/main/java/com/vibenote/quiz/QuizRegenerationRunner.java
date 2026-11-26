@@ -43,7 +43,7 @@ public class QuizRegenerationRunner {
                             analysisService.findFiles(analysisId)));
         } catch (RuntimeException e) {
             log.error("분석 {} 퀴즈 재생성 오류", analysisId, e);
-            analysisService.finishQuizRegeneration(analysisId, QuizStatus.FAILED);
+            analysisService.failQuizRegeneration(analysisId);
         }
     }
 }
