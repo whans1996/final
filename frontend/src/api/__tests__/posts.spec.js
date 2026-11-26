@@ -49,6 +49,15 @@ describe('api/posts (F-17)', () => {
     await expect(fetchPost(42)).resolves.toEqual({ id: 42 })
     expect(calls[0].method).toBe('get')
     expect(calls[0].url).toBe('/posts/42')
+    expect(calls[0].params).toBeUndefined()
+  })
+
+  it('AC18 #209 fetchPost(id, { countView: false })는 ?countView=false로 조회수를 올리지 않는다', async () => {
+    const calls = capture({ id: 42 })
+
+    await fetchPost(42, { countView: false })
+    expect(calls[0].url).toBe('/posts/42')
+    expect(calls[0].params).toEqual({ countView: false })
   })
 
   it('AC17 createPost는 POST /api/posts에 PostRequest 본문을 보내고 {id}를 돌려준다', async () => {

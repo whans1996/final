@@ -65,7 +65,8 @@ const attachmentFromPost = (post) => {
 
 async function loadPost() {
   try {
-    const post = await fetchPost(postId)
+    // 수정 화면에서 불러오는 것은 조회가 아니므로 조회수를 올리지 않는다 (#209)
+    const post = await fetchPost(postId, { countView: false })
     if (post.authorId === null || post.authorId !== auth.user?.id) {
       notice.value = NOT_MINE
       await router.replace({ path: `/community/${postId}`, state: { notice: NOT_MINE } })

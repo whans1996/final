@@ -64,10 +64,13 @@ public class PostService {
         return PageResponse.of(items, page, postMapper.count(boardType, keyword));
     }
 
-    /** 조회수를 1 올린 뒤 그 값을 담아 돌려준다 (같은 트랜잭션). 없는 글이면 아무 글도 바꾸지 않고 POST_404. */
+    /**
+     * 조회수를 1 올린 뒤 그 값을 담아 돌려준다 (같은 트랜잭션). 없는 글이면 아무 글도 바꾸지 않고 POST_404. {@code countView}가 false면
+     * 올리지 않는다 (글 수정 화면, #209).
+     */
     @Transactional
-    public PostDetailResponse getDetail(long postId, Long viewerId) {
-        if (postMapper.incrementViewCount(postId) == 0) {
+    public PostDetailResponse getDetail(long postId, Long viewerId, boolean countView) {
+        if (countView && postMapper.incrementViewCount(postId) == 0) {
             throw new BusinessException(ErrorCode.POST_404);
         }
         return PostDetailResponse.from(getRow(postId), viewerId);

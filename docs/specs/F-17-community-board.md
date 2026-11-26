@@ -96,6 +96,7 @@ AI로 코딩하는 학습자가 **코드 이해 Q&A·학습 후기·자유** 게
 
 - 권한: 공개. 유효한 토큰이 있으면 분석 첨부의 `viewable` 판단에 쓴다 (AC5)
 - 부수 효과: `view_count`를 1 올린 뒤 그 값을 응답한다 (`UPDATE posts SET view_count = view_count + 1` 후 조회, 같은 트랜잭션)
+- 쿼리 `countView`(boolean, 기본 `true`): `false`면 조회수를 올리지 않고 지금 값을 응답한다. SC-16 수정 화면이 글을 불러올 때 쓴다 (#209, 11-26). 없는 글이면 마찬가지로 404 `POST_404`
 - 응답 `200` (`PostDetailResponse`)
 
 ```json

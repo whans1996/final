@@ -262,7 +262,8 @@ describe('PostWriteView (F-17 AC17·AC18)', () => {
     postsApi.updatePost.mockResolvedValue(detail({ title: '바뀐 제목' }))
     const { wrapper, router } = await mountWrite('/community/42/edit')
 
-    expect(postsApi.fetchPost).toHaveBeenCalledWith(42)
+    // 수정용 조회는 조회수를 올리지 않는다 (#209)
+    expect(postsApi.fetchPost).toHaveBeenCalledWith(42, { countView: false })
     expect(wrapper.find('input[name="boardType"][value="REVIEW"]').element.checked).toBe(true)
     expect(wrapper.find('input[name="title"]').element.value).toBe('원래 제목')
     expect(wrapper.find('textarea[name="content"]').element.value).toBe('원래 본문')

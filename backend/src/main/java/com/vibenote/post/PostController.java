@@ -27,6 +27,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -63,8 +64,8 @@ public class PostController {
     @Operation(
             summary = "게시글 상세",
             description =
-                    "조회수를 1 올리고 글을 돌려준다(작성자 본인도 오른다). 비로그인도 쓸 수 있고, 유효한 토큰이 있으면 분석 첨부의 볼 수 있는지"
-                            + " 판단(내 분석)에 쓴다.")
+                    "조회수를 1 올리고 글을 돌려준다(작성자 본인도 오른다. countView=false면 올리지 않는다). 비로그인도 쓸 수 있고, 유효한"
+                            + " 토큰이 있으면 분석 첨부의 볼 수 있는지 판단(내 분석)에 쓴다.")
     @SecurityRequirements
     @ApiResponse(responseCode = "200", description = "조회 성공")
     @ApiResponse(
@@ -74,8 +75,13 @@ public class PostController {
     @GetMapping("/{postId}")
     public PostDetailResponse detail(
             @Parameter(description = "글 ID", example = "42") @PathVariable long postId,
+            @Parameter(
+                            description = "false면 조회수를 올리지 않고 지금 값을 돌려준다 (글 수정 화면이 글을 불러올 때, #209)",
+                            example = "true")
+                    @RequestParam(defaultValue = "true")
+                    boolean countView,
             @AuthenticationPrincipal AuthUser user) {
-        return postService.getDetail(postId, user == null ? null : user.id());
+        return postService.getDetail(postId, user == null ? null : user.id(), countView);
     }
 
     @Operation(
