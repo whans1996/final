@@ -61,6 +61,7 @@ SSAFY 관통 프로젝트(2026-11-17 시작, 12-24 발표). Spring Boot 4 + MyBa
 
 - 서브에이전트는 frontmatter로 고정한다: verifier Haiku·low, contract-checker·ui-verifier Sonnet·medium, prompt-evaluator Sonnet·medium, reviewer Opus(inherit)·high.
 - 사용량 확인: `node scripts/token-report.mjs [latest|--list]`.
+- **진행 보고**: 도구만 여러 번 쓰는 작업이 길어지면 지금 무엇을 하는지 한국어 한 줄로 먼저 알리고 이어 간다 (사용자는 도구 출력을 보지 못한다, 11-26).
 
 ## 절대 규칙
 
@@ -124,5 +125,5 @@ SSAFY 관통 프로젝트(2026-11-17 시작, 12-24 발표). Spring Boot 4 + MyBa
 
 - Windows 11 (김준섭 집 PC `js-home`만 macOS Apple Silicon, Homebrew로 설치. PC별 함정은 `scripts/lib/pcs.json` `notes`). JAVA_HOME은 JDK 17 이상(Gradle 실행용, 컴파일 JDK 21은 Gradle이 자동으로 받는다), Node 24, Docker Desktop(Testcontainers), MySQL 8.
 - 하네스 스크립트는 셸 차이를 피하려고 전부 Node(`.mjs`)로 작성되어 있다.
-- 하네스(`scripts/`·`.claude/`·hook)는 **동결** 상태다 (11-25 재동결): 버그와 작업을 막는 문제만 고치고 새 기능은 넣지 않는다. 고칠 때는 `chore(harness): ...`로 커밋한다.
+- 하네스(`scripts/`·`.claude/`·hook)는 **동결하지 않는다** (11-26 해제): 고칠 것은 고치고 필요한 기능은 넣는다. 개선 목록은 `docs/기획서.md` 7.7절. 고칠 때는 `chore(harness): ...`로 커밋한다.
 - 하네스는 제출물에 포함되며, 개발 과정의 AI 활용 사례는 `docs/산출물/08-외부API-생성형AI-활용.md`의 소재가 된다. 기록할 만한 사례(가드가 막은 실수, 리뷰어가 잡은 버그 등)는 작업로그의 `AI 활용` 줄에 적는다.
