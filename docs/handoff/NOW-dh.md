@@ -3,7 +3,7 @@
 > 김동환(A 영역: AI·분석·학습 루프) 전용. 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
 > 머리 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
-갱신: 2026-11-26 22:05 · 작업자: whans1996@naver.com · PC: dh-home · 브랜치: feature/HP-3-session-display
+갱신: 2026-11-26 22:13 · 작업자: whans1996@naver.com · PC: dh-home · 브랜치: feature/HP-3-session-display
 
 ## 현재 기능
 
@@ -17,13 +17,13 @@
 - ✅ HX-7 `peer.peerWatchBanner` → peer-watch systemMessage (사람 화면 표시는 다음 알림 때 확인)
 - ✅ HX-6 상태 표시줄 `.claude/hooks/statusline.mjs`(settings.json statusLine, 사용자 결정: 프로젝트 설정·개인 표시줄 정보 포함) + `scripts/lib/status.mjs` + `scripts/status-refresh.mjs`(백그라운드, `.harness/status.json`)
 - ✅ /pr-review: verify all·harness 통과, reviewer 반드시 0·권장 12 → 1·3~7 코드(71703dd·3176533), 2 문구·9·10 문서(76023ee), 2 실측 #228·11 통합 테스트 #229, 8은 지금 해석 유지(사용자). 표시줄 두 줄·창 안 뜸 dh-home 확인
-- PR 설명 `.harness/pr-HP-3.md` (Roadmap ✅ HP-3), push·PR 생성 전
+- **PR #230** 열림, Codex ✅ 29472ae (지적 없음), CI: FE·하네스 통과, BE 진행 중이었음
 
 ## 바로 다음 할 일
 
-1. 사용자 확인 후 `git push -u origin feature/HP-3-session-display` → `gh pr create --base develop --title "chore(HP-3): 세션 시작 시간 예산·의존성 안내·작성자 판정·상태 표시줄" --body-file .harness/pr-HP-3.md`
-2. `gh pr checks` 한 번 확인, Codex 루프 `node scripts/codex-review.mjs <PR> --request --wait --status` (백그라운드)
-3. COMPLETE·CI 초록이면 GitHub에서 머지 → HP-4 (#165·#166, H-9~12)
+1. `gh pr checks 230`으로 BE까지 초록인지 확인 → GitHub에서 머지 (develop이 앞서 있으면 `git merge origin/develop` → push → CI 다시 확인)
+2. 머지 뒤 HP-4 (#165·#166, H-9~12) — 새 세션 `/pickup`
+3. 다음 peer-watch 알림 때 사람 화면 systemMessage 표시 확인 (HX-7)
 
 ## 막힌 점 / 결정 필요
 - 사람: dh-home `git config user.name whans1996` (H-7 경고가 이제 세션 시작에 뜬다), 노션 팀원 초대, F-05b liveTest
