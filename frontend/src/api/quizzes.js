@@ -18,3 +18,12 @@ export function fetchAnalysisQuiz(analysisId) {
 export function submitQuizAttempt(quizId, answers) {
   return http.post(`/quizzes/${quizId}/attempts`, { answers }).then((res) => res.data)
 }
+
+/**
+ * 생성에 실패한(quizStatus FAILED) 내 분석의 퀴즈를 다시 만든다 (202, L-1a). 결과는 fetchAnalysisStatus의 quizStatus로 본다.
+ * 404 ANALYSIS_404, 409 QUIZ_409(DONE 아님·이미 있음·만드는 중), 429 QUIZ_429(횟수 소진).
+ * @returns {Promise<{ analysisId: number, quizStatus: 'GENERATING', quizRegenerationsLeft: number }>}
+ */
+export function regenerateQuiz(analysisId) {
+  return http.post(`/analyses/${analysisId}/quiz`).then((res) => res.data)
+}

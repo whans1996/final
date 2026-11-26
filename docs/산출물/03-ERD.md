@@ -134,6 +134,8 @@ erDiagram
         datetime deleted_at "soft delete (V2)"
         int indexed_files "인덱스 파일 수 (V12)"
         int dropped_files "상한으로 버린 수 (V12)"
+        varchar quiz_status "GENERATING·READY·FAILED (V14)"
+        int quiz_regenerations "퀴즈 재생성 요청 수 (V14)"
     }
     analysis_files {
         bigint id PK
@@ -307,7 +309,7 @@ erDiagram
 | refresh_tokens | Refresh 토큰. 원문 대신 SHA-256 해시(`token_hash` UNIQUE)와 만료 시각을 저장한다 | users 1:N | F-02 |
 | follows | 팔로우 PK `(follower_id, following_id)`, 역방향 조회용 `idx_follows_following`. 팔로우 수는 반정규화 없이 `COUNT(*)`로 센다. 팔로우 자체는 활동을 남기지 않는다 | users N:M users | F-04 |
 | activities | 공개 활동 기록(팔로우 피드의 원천). `type`은 `ANALYSIS`·`REVIEW`·`WISH`·`POST`·`CHALLENGE_JOIN`·`CHALLENGE_COMPLETE`(V2에서 챌린지를 참여·달성으로 나눔). `target_id`는 type에 따라 분석·리뷰·카드·게시글·챌린지 id를 가리키는 **다형 참조라 FK가 없다**. 대상이 지워지거나 비공개가 돼도 행은 남기고, 피드 쿼리가 대상 테이블과 `LEFT JOIN`해 보일 것만 고른다. 예외로 챌린지 참여를 취소하면 그 `CHALLENGE_JOIN` 행은 지운다(F-25) | users 1:N | F-04, F-05a, F-11, F-12, F-17, F-25 |
-| analyses | 분석 요청과 결과 개요(JSON: summary·techStack·layers·readingOrder·apis, F-06 5.3절), 상태·진행률·실패 사유(error_code·error_message, V3), 인덱스 수치(`indexed_files`·`dropped_files`, V12), 공개 여부, 제목·메모, 삭제 시각(soft delete, V2). 삭제하면 서비스가 파일·흐름·개념 연결을 지우고 `deleted_at`을 채운다. 퀴즈·풀이는 남는다(통계·챌린지·일일 한도가 읽음) | users 1:N | F-05a, F-06, F-19 |
+| analyses | 분석 요청과 결과 개요(JSON: summary·techStack·layers·readingOrder·apis, F-06 5.3절), 상태·진행률·실패 사유(error_code·error_message, V3), 인덱스 수치(`indexed_files`·`dropped_files`, V12), 퀴즈 상태·재생성 수(`quiz_status`·`quiz_regenerations`, V14), 공개 여부, 제목·메모, 삭제 시각(soft delete, V2). 삭제하면 서비스가 파일·흐름·개념 연결을 지우고 `deleted_at`을 채운다. 퀴즈·풀이는 남는다(통계·챌린지·일일 한도가 읽음) | users 1:N | F-05a, F-06, F-19, L-1a |
 | analysis_files | 저장소 인덱스 전체(코드·test·migration·doc, 최대 2,000개, 키 마스킹된 content). 그중 설명 대상으로 고른 최대 30개만 `selected = TRUE`(중요도 `importance`, V12)이고 설명·개념·퀴즈·흐름·구조·파일 API는 이 행만 본다. 한 줄 역할(role, V4)과 설명(summary) | analyses 1:N | F-05a, F-06, F-26a |
 | analysis_flows | API 실행 흐름(endpoint `"{METHOD} {path}"`, 분석 안에서 UNIQUE, 상태 PENDING·DONE·FAILED, 요약·단계 JSON 캐시·실패 코드, V5) | analyses 1:N | F-07 |
 | concepts | 개념 카드 (상태 DRAFT/PUBLISHED/HIDDEN, 출처 SEED/AI/ADMIN — ADMIN은 관리자가 직접 만든 카드, V7). AI 초안은 분석의 EXTRACTING 단계가 `DRAFT·AI`로 만들고 예제 코드·출처는 비워 둔다(관리자 검수 F-13에서 채움). `name` UNIQUE라 같은 이름이면 기존 카드를 쓴다. 관리자는 DRAFT만 삭제할 수 있고(연결은 FK CASCADE), 시드 재적용(`R__seed_concepts.sql`)은 내용만 덮어쓰고 상태·`wish_count`·`avg_rating`은 유지한다 | - | F-08~13 |
@@ -345,6 +347,7 @@ erDiagram
 | V11 | `analysis_flows.endpoint` collation `utf8mb4_0900_bin` (대소문자 구분) | F-07 (#26) |
 | V12 | `analysis_files.selected`·`importance`, `analyses.indexed_files`·`dropped_files` (기존 행은 `selected = TRUE`) | F-26a |
 | V13 | `llm_usage_logs.provider`, 인덱스 `idx_llm_usage_logs_analysis(analysis_id)` (V13 이전 행은 `provider` NULL) | F-27 |
+| V14 | `analyses.quiz_status`·`quiz_regenerations` (기존 행: 퀴즈가 있으면 READY, 없고 DONE이면 FAILED, 나머지 NULL) | L-1a |
 | R | `R__seed_concepts.sql` 시드 카드 (반복 적용, 내용만 덮어씀, DS-05) | F-09 |
 
 ## 정규화 메모

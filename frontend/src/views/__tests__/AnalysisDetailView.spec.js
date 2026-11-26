@@ -754,3 +754,114 @@ describe('AnalysisDetailView 분석 관리·공개 분석 (F-19)', () => {
     expect(wrapper.find('[data-message="failed"]').exists()).toBe(true)
   })
 })
+
+describe('AnalysisDetailView 실패 분석 재실행 (L-1a AC9)', () => {
+  const failedStatus = (partial) =>
+    status({
+      status: 'FAILED',
+      progress: 40,
+      errorCode: 'LLM_503',
+      errorMessage: 'AI 응답 실패',
+      ...partial,
+    })
+  const failedUrl = () =>
+    detail({
+      status: 'FAILED',
+      overview: null,
+      sourceType: 'URL',
+      sourceUrl: 'https://github.com/octo/todo-app',
+    })
+
+  beforeEach(() => {
+    vi.resetAllMocks()
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.restoreAllMocks()
+  })
+
+  it('AC9 URL 분석이면 "같은 설정으로 다시 실행"을 누르면 새 분석으로 바꿔 진행 상태를 다시 폴링한다', async () => {
+    analysesApi.fetchAnalysisStatus.mockImplementation(async (id) =>
+      id === 57 ? status({ analysisId: 57, status: 'FETCHING', progress: 5 }) : failedStatus(),
+    )
+    analysesApi.fetchAnalysis.mockImplementation(async (id) =>
+      id === 57 ? detail({ id: 57, status: 'FETCHING', overview: null }) : failedUrl(),
+    )
+    analysesApi.rerunAnalysis.mockResolvedValue({ analysisId: 57, status: 'FETCHING' })
+
+    const { wrapper, router } = await mountDetail()
+    const replace = vi.spyOn(router, 'replace')
+    const button = wrapper.find('[data-action="rerun"]')
+    expect(button.text()).toBe('같은 설정으로 다시 실행')
+    expect(wrapper.find('[data-message="zip-rerun"]').exists()).toBe(false)
+
+    await button.trigger('click')
+    await flushPromises()
+
+    expect(analysesApi.rerunAnalysis).toHaveBeenCalledWith(42)
+    expect(replace).toHaveBeenCalledWith({ name: 'analysis-detail', params: { id: '57' } })
+    expect(router.currentRoute.value.path).toBe('/analyses/57')
+    expect(analysesApi.fetchAnalysisStatus).toHaveBeenLastCalledWith(57)
+    expect(wrapper.text()).toContain('코드 수집 중')
+    expect(wrapper.find('[data-action="rerun"]').exists()).toBe(false)
+
+    await advance(2000)
+    expect(analysesApi.fetchAnalysisStatus).toHaveBeenLastCalledWith(57)
+    wrapper.unmount()
+  })
+
+  it('AC9 요청 중에는 버튼이 비활성이다', async () => {
+    analysesApi.fetchAnalysisStatus.mockResolvedValue(failedStatus())
+    analysesApi.fetchAnalysis.mockResolvedValue(failedUrl())
+    analysesApi.rerunAnalysis.mockReturnValue(new Promise(() => {}))
+
+    const { wrapper } = await mountDetail()
+    await wrapper.find('[data-action="rerun"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[data-action="rerun"]').attributes('disabled')).toBeDefined()
+    expect(analysesApi.rerunAnalysis).toHaveBeenCalledTimes(1)
+  })
+
+  it('AC9 429·409·404면 버튼 아래에 서버 메시지를 보이고 화면은 그대로다', async () => {
+    analysesApi.fetchAnalysisStatus.mockResolvedValue(failedStatus())
+    analysesApi.fetchAnalysis.mockResolvedValue(failedUrl())
+    const message = '오늘 분석 요청 횟수(5회)를 모두 썼습니다.'
+    analysesApi.rerunAnalysis.mockRejectedValue(apiError(429, { code: 'ANALYSIS_429', message }))
+
+    const { wrapper, router } = await mountDetail()
+    await wrapper.find('[data-action="rerun"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[data-error="rerun"]').text()).toBe(message)
+    expect(router.currentRoute.value.path).toBe('/analyses/42')
+    expect(wrapper.find('[data-action="rerun"]').attributes('disabled')).toBeUndefined()
+    expect(wrapper.find('[data-message="failed"]').text()).toContain('AI 응답 실패')
+  })
+
+  it('AC9 ZIP 분석이면 ZIP을 다시 올리라고 안내하고 요청 화면 링크를 보여 준다', async () => {
+    analysesApi.fetchAnalysisStatus.mockResolvedValue(failedStatus())
+    analysesApi.fetchAnalysis.mockResolvedValue(detail({ status: 'FAILED', overview: null }))
+
+    const { wrapper } = await mountDetail()
+
+    expect(wrapper.find('[data-message="zip-rerun"]').text()).toBe(
+      'ZIP 분석은 원본을 보관하지 않습니다. ZIP 파일을 다시 올려 주세요.',
+    )
+    expect(wrapper.find('a[data-action="retry"]').attributes('href')).toBe('/analyses/new')
+    expect(wrapper.find('[data-action="rerun"]').exists()).toBe(false)
+  })
+
+  it('AC9 상세를 아직 못 불러왔으면 기존 "다시 요청하기" 링크를 보인다', async () => {
+    analysesApi.fetchAnalysisStatus.mockResolvedValue(failedStatus())
+    analysesApi.fetchAnalysis.mockRejectedValue(apiError(500, { code: 'COMMON_500', message: 'x' }))
+
+    const { wrapper } = await mountDetail()
+
+    expect(wrapper.find('a[data-action="retry"]').text()).toBe('다시 요청하기')
+    expect(wrapper.find('[data-action="rerun"]').exists()).toBe(false)
+    expect(wrapper.find('[data-message="zip-rerun"]').exists()).toBe(false)
+  })
+})

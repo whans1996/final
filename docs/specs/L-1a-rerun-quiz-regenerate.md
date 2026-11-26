@@ -164,15 +164,15 @@ SET quiz_status = CASE
 
 `/implement`가 진행하며 체크한다.
 
-- [ ] 브랜치 `feature/L-1a-rerun-quiz-regen`
-- [ ] Flyway `V14__analysis_quiz_status.sql`
-- [ ] AC별 실패 테스트 작성 (red 확인)
-- [ ] BE 구현 (green): `AnalysisService.rerun`, `QuizRegenerationService`·런처(`AnalysisExecutorConfig.EXECUTOR`), `QuizSaveService` 상태 기록, `AnalysisRecovery`, `ErrorCode` ANALYSIS_008·QUIZ_409·QUIZ_429, `quiz.max-regenerations: 3`
-- [ ] FE 구현 (green)
-- [ ] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
+- [x] 브랜치 `feature/L-1a-rerun-quiz-regen`
+- [x] Flyway `V14__analysis_quiz_status.sql`
+- [x] AC별 실패 테스트 작성 (red 확인)
+- [x] BE 구현 (green): `AnalysisService.rerun`, `QuizRegenerationService`·런처(`AnalysisExecutorConfig.EXECUTOR`), `QuizSaveService` 상태 기록, `AnalysisRecovery`, `ErrorCode` ANALYSIS_008·QUIZ_409·QUIZ_429, `quiz.max-regenerations: 3`
+- [x] FE 구현 (green)
+- [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
 - [ ] contract-checker 통과
 - [ ] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일). 로그인이 필요한 FAILED·퀴즈 없음 화면은 연결된 Chrome으로 확인
 - [ ] reviewer 지적 사항 반영
-- [ ] 산출물 반영: 화면 설계서 SC-07(재실행·재생성), ERD `analyses` 두 열, 요구사항 정의서 F-14 행(생성 실패 시 재생성)
+- [x] 산출물 반영: 화면 설계서 SC-07(재실행·재생성), ERD `analyses` 두 열, 요구사항 정의서 F-14 행(생성 실패 시 재생성)
 - [ ] PR CI 초록
 - [ ] 상태 DONE (PR 머지 후)
