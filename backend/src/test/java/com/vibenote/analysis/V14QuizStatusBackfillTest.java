@@ -1,4 +1,4 @@
-package com.vibenote.db;
+package com.vibenote.analysis;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

@@ -139,7 +139,7 @@ SET quiz_status = CASE
 |---|---|---|
 | AC1~AC3 | `analysis/AnalysisRerunApiTest#AC1_…`~`AC3_…` (새 행 열 복사, 원본 soft delete·자식 삭제, 이벤트로 파이프라인 시작은 `@MockitoBean AnalysisPipeline` 호출 확인, 한도 429 롤백, 404·409, `CountDownLatch` 동시 요청 2개) | MockMvc 통합 |
 | AC4 | `analysis/AnalysisQuizPipelineTest`에 `quiz_status` READY·FAILED 기대값 추가, `AnalysisControllerTest`(상태)·`AnalysisResultApiTest`(상세)에 `quizStatus`·`quizRegenerationsLeft` | 통합 |
-| AC4 (V14 채우기) | `db/V14QuizStatusBackfillTest`: 별도 스키마에 Flyway `target=13`으로 만들고 DONE+퀴즈·DONE·FAILED 행을 넣은 뒤 V14 적용 | 통합 (Testcontainers) |
+| AC4 (V14 채우기) | `analysis/V14QuizStatusBackfillTest`: 별도 스키마에 Flyway `target=13`으로 만들고 DONE+퀴즈·DONE·FAILED 행을 넣은 뒤 V14 적용 | 통합 (Testcontainers) |
 | AC5, AC7 | `quiz/QuizRegenerateApiTest` (202·열 갱신·실행 후 GET 200·usage 로그, 409·429·404, 동시 요청 2개 → LLM 1회) | MockMvc 통합 |
 | AC6, AC8 | `quiz/QuizRegenerationRunnerTest` (빈 결과·저장 예외·실행기 거절 → FAILED, 삭제·탈퇴 뒤 저장 0행), `analysis/AnalysisRecoveryTest`에 GENERATING → FAILED | 통합 |
 | AC9 | `src/views/__tests__/AnalysisDetailView.spec.js` (URL·ZIP 분기, 재실행 → `router.replace`·폴링 재시작, 429 메시지, 요청 중 비활성) | Vitest |
