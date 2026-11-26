@@ -4,7 +4,7 @@
 //   - PR·CI와 로드맵은 캐시(.harness/status.json)를 읽는다. 오래되면 scripts/status-refresh.mjs를 백그라운드로 띄워 gh로 채운다
 //   - Codex 판정은 codex-loop hook이 남긴 .harness/codex-loop.json을 읽는다
 // 세션 시작 hook도 로드맵 캐시를 채운다 (이미 계산한 보기를 재사용).
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { ROOT } from './common.mjs';
 import { daysBetween, nextHandoff, nextItem, shortDate } from './roadmap.mjs';
@@ -30,14 +30,47 @@ function readJson(path) {
 
 export const readStatus = (path = STATUS_FILE) => readJson(path) ?? {};
 
-/** 캐시의 일부를 바꿔 쓴다. 다른 프로세스(세션 시작 hook·새로 고침)가 쓴 나머지 키는 그대로 둔다 */
+/**
+ * 캐시의 일부를 바꿔 쓴다. 다른 프로세스(세션 시작 hook·새로 고침·표시줄)가 쓴 나머지 키는 그대로 둔다.
+ * 임시 파일에 쓴 뒤 바꿔 넣어, 동시에 읽는 쪽이 반쯤 쓴 파일을 {}로 읽고 그걸 바탕으로 덮어써 다른 키를 지우지 않게 한다 (reviewer).
+ * Windows에서 읽는 중이라 바꿔 넣지 못하면 바로 쓴다
+ */
 export function writeStatus(patch, path = STATUS_FILE) {
   try {
     mkdirSync(dirname(path), { recursive: true });
-    writeFileSync(path, JSON.stringify({ ...readStatus(path), ...patch }) + '\n');
+    const data = JSON.stringify({ ...readStatus(path), ...patch }) + '\n';
+    const tmp = `${path}.${process.pid}.tmp`;
+    try {
+      writeFileSync(tmp, data);
+      renameSync(tmp, path);
+    } catch {
+      rmSync(tmp, { force: true });
+      writeFileSync(path, data);
+    }
   } catch {
     // 표시용 캐시라 못 써도 다음에 다시 받는다
   }
+}
+
+/**
+ * 새로 고침 결과 → 캐시에 쓸 patch (순수 함수, scripts/status-refresh.mjs).
+ * - pr: 지금 브랜치 PR { number, state, head, ci } | { number: null }(PR 없음) | null(조회 실패).
+ *   실패하면 같은 브랜치의 직전 값을 두고, 없으면 모름(error)으로 쓴다 ("PR 없음"으로 잘못 보이지 않게)
+ * - roadmap: 요약을 만드는 함수(던질 수 있다) | null(조회하지 않았거나 실패). 실패하면 직전 값을 두고, 없으면 빈 요약을 남긴다.
+ *   어느 쪽이든 시각을 바꿔 바로 다시 부르지 않는다
+ */
+export function refreshPatch({ prev = {}, branch, key, at, pr, roadmapStale = false, roadmap = null }) {
+  const patch = { refreshingAt: null };
+  patch.pr = pr ? { branch, at, ...pr } : prev.pr?.branch === branch ? { ...prev.pr, at } : { branch, at, error: true };
+  let snap = null;
+  try {
+    snap = roadmap ? roadmap() : null;
+  } catch {
+    snap = null;
+  }
+  if (snap) patch.roadmap = { at, ...snap };
+  else if (roadmapStale) patch.roadmap = prev.roadmap ? { ...prev.roadmap, at, branch } : { at, key, branch, next: null, handoff: null, error: true };
+  return patch;
 }
 
 /**
@@ -137,7 +170,8 @@ export function statusLines({ input = {}, pc, branch, cache = {}, codex = null, 
     const cx = CODEX_ICON[codex?.verdict] ? ` Codex ${fresh ? CODEX_ICON[codex.verdict] : '?'}` : '';
     second.push(`🔀 PR #${pr.number}${pr.state && pr.state !== 'OPEN' ? ` ${pr.state === 'MERGED' ? '머지됨' : '닫힘'}` : ''}${ci}${cx}`);
   } else if (pr && /^(feature|fix)\//.test(branch ?? '')) {
-    second.push('🔀 PR 없음');
+    // 조회 실패(gh 토큰 만료·네트워크)는 모름으로 보인다
+    second.push(pr.error ? '🔀 PR ?' : '🔀 PR 없음');
   }
   // 다른 사람으로 등록했던 캐시(PC 재등록)는 보이지 않는다
   const rm = cache.roadmap && (!pc?.key || cache.roadmap.key === pc.key) ? cache.roadmap : null;

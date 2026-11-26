@@ -1,11 +1,11 @@
 // 상태 표시줄 (HX-6): 브랜치 읽기, CI 판정, 컨텍스트, 새로 고침 판정, 표시 문구 (gh·git 호출 없는 부분)
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, test } from 'node:test';
 import { parseRoadmap, roadmapStatus, roadmapView } from '../lib/roadmap.mjs';
-import { PR_REFRESH_MS, REFRESH_LOCK_MS, ciState, contextInfo, gitBranchAt, needsRefresh, readStatus, roadmapSnapshot, statusLines, writeStatus } from '../lib/status.mjs';
+import { PR_REFRESH_MS, REFRESH_LOCK_MS, ROADMAP_REFRESH_MS, ciState, contextInfo, gitBranchAt, needsRefresh, readStatus, refreshPatch, roadmapSnapshot, statusLines, writeStatus } from '../lib/status.mjs';
 
 const tmp = mkdtempSync(join(tmpdir(), 'vibenote-status-'));
 after(() => rmSync(tmp, { recursive: true, force: true }));
@@ -95,6 +95,53 @@ test('캐시는 일부만 바꿔 쓰고 나머지 키를 지키며, 깨진 파�
   assert.deepEqual(readStatus(file), { pr: { number: 1 }, roadmap: { key: 'dh' } });
   writeFileSync(file, '{깨짐');
   assert.deepEqual(readStatus(file), {});
+});
+
+test('캐시는 임시 파일에 쓴 뒤 바꿔 넣어, 읽는 쪽이 반쯤 쓴 파일을 보지 않고 임시 파일도 남지 않는다 (reviewer)', () => {
+  const dir = join(tmp, 'atomic');
+  const file = join(dir, 'status.json');
+  writeStatus({ pr: { number: 1 } }, file);
+  writeStatus({ roadmap: { key: 'dh' } }, file);
+  assert.deepEqual(readdirSync(dir), ['status.json']);
+  assert.deepEqual(JSON.parse(readFileSync(file, 'utf8')), { pr: { number: 1 }, roadmap: { key: 'dh' } });
+});
+
+test('새로 고침 결과: gh 실패는 "PR 없음"이 아니라 모름, 로드맵 계산이 던져도 PR은 쓰고 바로 다시 부르지 않는다 (reviewer)', () => {
+  const at = 50_000_000;
+  const branch = 'feature/HP-3-session-display';
+  // gh 실패 + 같은 브랜치의 직전 값 없음 → 모름(error)
+  const failed = refreshPatch({ prev: {}, branch, key: 'dh', at, pr: null, roadmapStale: false, roadmap: null });
+  assert.deepEqual(failed.pr, { branch, at, error: true });
+  assert.equal(failed.refreshingAt, null);
+  const [, line] = statusLines({ pc: { id: 'dh-home', owner: '김동환', key: 'dh' }, branch, cache: failed, today: '2026-11-26' });
+  assert.equal(line, '🔀 PR ?');
+  // 같은 브랜치의 직전 값은 두고 시각만 바꾼다
+  const prevPr = { branch, at: 1, number: 230, ci: 'pass' };
+  assert.deepEqual(refreshPatch({ prev: { pr: prevPr }, branch, key: 'dh', at, pr: null }).pr, { ...prevPr, at });
+  // PR 없음은 그대로
+  assert.deepEqual(refreshPatch({ prev: {}, branch, key: 'dh', at, pr: { number: null } }).pr, { branch, at, number: null });
+
+  // 로드맵 계산이 던지면 직전 값을 두고 시각만 바꾼다
+  const boom = () => {
+    throw new Error('형식 오류');
+  };
+  const prevRm = { at: 1, key: 'dh', branch, next: { id: 'HP-3' } };
+  const kept = refreshPatch({ prev: { roadmap: prevRm }, branch, key: 'dh', at, pr: { number: 230 }, roadmapStale: true, roadmap: boom });
+  assert.equal(kept.pr.number, 230);
+  assert.deepEqual(kept.roadmap, { ...prevRm, at });
+  // 직전 값도 없으면 빈 요약을 남겨 10분 동안 다시 부르지 않는다 (표시줄은 로드맵 칸을 비운다)
+  const empty = refreshPatch({ prev: {}, branch, key: 'dh', at, pr: { number: 230 }, roadmapStale: true, roadmap: boom });
+  assert.deepEqual(empty.roadmap, { at, key: 'dh', branch, next: null, handoff: null, error: true });
+  assert.equal(needsRefresh({ ...empty }, branch, at + PR_REFRESH_MS - 1), false);
+  assert.equal(needsRefresh({ ...empty, pr: { ...empty.pr, at: at + ROADMAP_REFRESH_MS } }, branch, at + ROADMAP_REFRESH_MS + 1), true);
+  // 계산에 성공하면 새 요약
+  assert.deepEqual(refreshPatch({ prev: {}, branch, key: 'dh', at, pr: { number: 230 }, roadmapStale: true, roadmap: () => ({ key: 'dh', branch, next: null }) }).roadmap, { at, key: 'dh', branch, next: null });
+});
+
+test('새로 고침은 표시줄과 같은 방식(.git/HEAD)으로 브랜치를 읽는다: detached에서 매번 다시 뜨지 않게 (reviewer)', () => {
+  const src = readFileSync(new URL('../status-refresh.mjs', import.meta.url), 'utf8');
+  assert.match(src, /gitBranchAt\(ROOT\)/);
+  assert.doesNotMatch(src, /currentBranch\(/);
 });
 
 test('로드맵 요약: 지금 브랜치 항목과 가장 이른 넘겨주는 시점', () => {
