@@ -15,7 +15,7 @@ const ME = {
   bio: '스프링 공부 중',
   level: 'BEGINNER',
   role: 'USER',
-  createdAt: '2026-11-18T10:30:00',
+  createdAt: '2026-11-18T10:30:00+09:00',
 }
 
 const SERVER_ERROR = '서버에서 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.'

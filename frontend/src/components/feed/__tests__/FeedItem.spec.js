@@ -4,13 +4,13 @@ import { createMemoryHistory, createRouter } from 'vue-router'
 import { routes } from '@/router'
 import FeedItem from '@/components/feed/FeedItem.vue'
 
-const NOW = new Date('2026-11-20T15:00:00')
+const NOW = new Date('2026-11-20T15:00:00+09:00')
 
 function item(type, target, extra = {}) {
   return {
     id: 91,
     type,
-    createdAt: '2026-11-20T14:55:00',
+    createdAt: '2026-11-20T14:55:00+09:00',
     actor: { id: 7, nickname: 'java러버' },
     target: { rating: null, ...target },
     ...extra,
@@ -33,7 +33,7 @@ describe('FeedItem (F-04 AC11)', () => {
     expect(actor.text()).toBe('java러버')
     expect(actor.attributes('href')).toBe('/users/7')
     expect(wrapper.find('time').text()).toBe('5분 전')
-    expect(wrapper.find('time').attributes('datetime')).toBe('2026-11-20T14:55:00')
+    expect(wrapper.find('time').attributes('datetime')).toBe('2026-11-20T14:55:00+09:00')
   })
 
   it.each([

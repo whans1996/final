@@ -71,7 +71,7 @@
   "bio": "AI로 만든 Spring 프로젝트를 공부하고 있어요.",
   "level": "BEGINNER",
   "role": "USER",
-  "createdAt": "2026-11-18T10:30:00"
+  "createdAt": "2026-11-18T10:30:00+09:00"
 }
 ```
 
@@ -121,7 +121,7 @@
 - 응답 `200`
 
 ```json
-{ "id": 1, "nickname": "코딩초보", "bio": "AI로 만든 Spring 프로젝트를 공부하고 있어요.", "level": "BEGINNER", "createdAt": "2026-11-18T10:30:00" }
+{ "id": 1, "nickname": "코딩초보", "bio": "AI로 만든 Spring 프로젝트를 공부하고 있어요.", "level": "BEGINNER", "createdAt": "2026-11-18T10:30:00+09:00" }
 ```
 
 - 에러

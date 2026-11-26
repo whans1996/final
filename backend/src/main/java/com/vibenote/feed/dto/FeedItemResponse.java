@@ -1,9 +1,10 @@
 package com.vibenote.feed.dto;
 
+import com.vibenote.common.config.ClockConfig;
 import com.vibenote.feed.ActivityType;
 import com.vibenote.feed.domain.FeedRow;
 import io.swagger.v3.oas.annotations.media.Schema;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 /** 피드 항목 (F-04 AC6). */
 @Schema(description = "피드 항목 (활동 하나)")
@@ -18,8 +19,8 @@ public record FeedItemResponse(
         @Schema(
                         requiredMode = Schema.RequiredMode.REQUIRED,
                         description = "활동 시각",
-                        example = "2026-11-20T13:40:00")
-                LocalDateTime createdAt,
+                        example = "2026-11-20T13:40:00+09:00")
+                OffsetDateTime createdAt,
         @Schema(requiredMode = Schema.RequiredMode.REQUIRED) FeedActorResponse actor,
         @Schema(requiredMode = Schema.RequiredMode.REQUIRED) FeedTargetResponse target) {
 
@@ -33,7 +34,7 @@ public record FeedItemResponse(
         return new FeedItemResponse(
                 row.getId(),
                 row.getType(),
-                row.getCreatedAt(),
+                row.getCreatedAt().atZone(ClockConfig.ZONE).toOffsetDateTime(),
                 new FeedActorResponse(row.getActorId(), row.getActorNickname()),
                 new FeedTargetResponse(row.getTargetId(), title, row.getTargetRating()));
     }
