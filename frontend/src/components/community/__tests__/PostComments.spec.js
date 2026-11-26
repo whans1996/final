@@ -135,6 +135,26 @@ describe('PostComments (F-18 AC11~AC13)', () => {
     expect(ids(wrapper)).toEqual([5])
   })
 
+  it('AC12 #210 목록을 받을 때마다 댓글 수를 count로 알리고, 실패하면 알리지 않는다', async () => {
+    postsApi.fetchComments
+      .mockResolvedValueOnce({ items: [], total: 0 })
+      .mockResolvedValueOnce({ items: [comment(5)], total: 1 })
+      .mockRejectedValueOnce(apiError(500, { message: '서버 오류입니다.' }))
+    postsApi.createComment.mockResolvedValue(comment(5))
+    const wrapper = await mountComments({ userId: 9 })
+    expect(wrapper.emitted('count')).toEqual([[0]])
+
+    await wrapper.find('textarea').setValue('답')
+    await wrapper.find('form').trigger('submit')
+    await flushPromises()
+    expect(wrapper.emitted('count')).toEqual([[0], [1]])
+
+    await wrapper.find('textarea').setValue('또')
+    await wrapper.find('form').trigger('submit')
+    await flushPromises()
+    expect(wrapper.emitted('count')).toEqual([[0], [1]])
+  })
+
   it('AC12 작성이 400이면 details.content를, 그 밖의 실패는 서버 message를 보여 주고 입력은 남긴다', async () => {
     postsApi.fetchComments.mockResolvedValue({ items: [], total: 0 })
     postsApi.createComment

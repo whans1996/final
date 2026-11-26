@@ -67,6 +67,22 @@ class PostDetailApiTest extends PostApiTestBase {
     }
 
     @Test
+    void AC4_issue209_countView가_false면_조회수를_올리지_않고_지금_값을_응답한다() throws Exception {
+        long post = insertPost(author, "FREE", "수정할 글", "본문", null, null, 7, BASE);
+
+        perform(get(POST, post).param("countView", "false"), bearer(author))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.title").value("수정할 글"))
+                .andExpect(jsonPath("$.viewCount").value(7));
+        assertThat(postRow(post).get("view_count")).isEqualTo(7);
+
+        // 없는 글이면 countView=false여도 404
+        perform(get(POST, 999_999_999L).param("countView", "false"), null)
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("POST_404"));
+    }
+
+    @Test
     void AC4_없는_글이면_404이고_어떤_글의_조회수도_바뀌지_않는다() throws Exception {
         long post = insertPost(author, "FREE", "있는 글", "본문", null, null, 7, BASE);
         int before = count("SELECT COALESCE(SUM(view_count), 0) FROM posts");

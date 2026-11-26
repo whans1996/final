@@ -65,8 +65,9 @@ abstract class PostApiTestBase extends IntegrationTestBase {
         return lastId();
     }
 
+    /** 첨부할 수 있는 분석: 공개·DONE·삭제 안 됨 (비공개는 첨부할 수 없다, #206). */
     protected long doneAnalysis(long userId) {
-        return insertAnalysis(userId, "DONE", false, false);
+        return insertAnalysis(userId, "DONE", true, false);
     }
 
     protected long insertConcept(String status) {

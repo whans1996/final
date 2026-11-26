@@ -83,11 +83,18 @@
         SELECT user_id FROM posts WHERE id = #{id} FOR UPDATE
     </select>
 
-    <!-- 첨부 검증 (F-17 AC8). 남의 분석·DONE 아님·삭제됨·없는 id를 구분하지 않는다 -->
+    <select id="findAnalysisId" resultType="java.lang.Long">
+        SELECT analysis_id FROM posts WHERE id = #{id}
+    </select>
+
+    <!-- 첨부 검증 (F-17 AC8). 남의 분석·DONE 아님·삭제됨·없는 id를 구분하지 않는다.
+         내 공개·DONE·삭제 안 된 분석만 첨부할 수 있다. 비공개는 독자에게 "볼 수 없는 분석"이 되므로 막는다 (#206).
+         수정 때 기존 첨부를 그대로 두면 requirePublic=false (첨부 뒤 비공개로 바꾼 글도 저장할 수 있게) -->
     <select id="existsAttachableAnalysis" resultType="boolean">
         SELECT EXISTS (
             SELECT 1 FROM analyses
-            WHERE id = #{analysisId} AND user_id = #{userId} AND status = 'DONE' AND deleted_at IS NULL)
+            WHERE id = #{analysisId} AND user_id = #{userId} AND status = 'DONE' AND deleted_at IS NULL
+              <if test="requirePublic">AND is_public = TRUE</if>)
     </select>
 
     <select id="existsPublishedConcept" resultType="boolean">

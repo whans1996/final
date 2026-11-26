@@ -1,7 +1,7 @@
 <script setup>
-// SC-16 첨부 고르기 (F-17 AC17). 없음 / 내 분석 / 개념 카드 중 하나만 고른다.
+// SC-16 첨부 고르기 (F-17 AC17). 없음 / 내 분석(공개만, #206) / 개념 카드 중 하나만 고른다.
 // v-model 값은 null 또는 { type: 'ANALYSIS'|'CONCEPT', id, label } (label은 미리보기 칩에만 쓴다).
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { fetchAnalyses } from '@/api/analyses'
 import { fetchConcepts } from '@/api/concepts'
 import { errorMessage } from '@/api/http'
@@ -32,6 +32,10 @@ const keyword = ref('')
 const concepts = ref(null)
 const conceptsError = ref('')
 const searching = ref(false)
+// 비공개 분석은 독자에게 "볼 수 없는 분석"이 되므로 BE가 거절한다(POST_001). 고를 수 없게 보여 주고 안내한다 (#206)
+const PRIVATE_HINT =
+  '비공개 분석은 첨부할 수 없습니다. 분석 화면에서 공개로 바꾸면 첨부할 수 있습니다.'
+const hasPrivate = computed(() => analyses.value?.some((a) => !a.isPublic) ?? false)
 
 // 미리 채우기·수정 화면처럼 밖에서 첨부가 들어오면 그 종류로 맞춘다
 watch(
@@ -69,7 +73,8 @@ async function loadAnalyses() {
 function onAnalysisChange(event) {
   const id = Number(event.target.value)
   const analysis = analyses.value?.find((a) => a.id === id)
-  if (analysis) emit('update:modelValue', { type: 'ANALYSIS', id, label: analysisLabel(analysis) })
+  if (analysis?.isPublic)
+    emit('update:modelValue', { type: 'ANALYSIS', id, label: analysisLabel(analysis) })
 }
 
 // Enter는 "찾기" 버튼의 disabled를 거치지 않아 검색이 겹칠 수 있다. 마지막 검색의 응답만 반영한다 (#172)
@@ -133,10 +138,16 @@ function clear() {
       </p>
       <select v-else name="analysisId" aria-label="첨부할 분석" @change="onAnalysisChange">
         <option value="">분석을 고르세요</option>
-        <option v-for="analysis in analyses" :key="analysis.id" :value="analysis.id">
-          {{ analysisLabel(analysis) }}
+        <option
+          v-for="analysis in analyses"
+          :key="analysis.id"
+          :value="analysis.id"
+          :disabled="!analysis.isPublic"
+        >
+          {{ analysisLabel(analysis) }}{{ analysis.isPublic ? '' : ' (비공개)' }}
         </option>
       </select>
+      <p v-if="hasPrivate" class="hint" data-role="private-hint">{{ PRIVATE_HINT }}</p>
     </div>
 
     <div v-else-if="mode === 'concept'" class="choose">
