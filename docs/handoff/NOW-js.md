@@ -1,13 +1,13 @@
 # NOW — 김준섭 현재 작업 스냅샷
 
 > 김준섭(B 영역: 카드·소셜) 전용. 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
-갱신: 2026-11-26 14:12 · 작업자: JoonseobKim · PC: js-home · 브랜치: feature/issue-169-concept-updated-at
+갱신: 2026-11-26 14:17 · 작업자: JoonseobKim · PC: js-home · 브랜치: feature/issue-169-concept-updated-at
 
 ---
 
 ## 현재 기능
 
-**V-1 MVP 감사 (B 몫, 앞당겨 11-26)** — reviewer 3개(팀 / 커뮤니티·팔로우·피드 / 개념 카드)로 B 코드 전체 감사: P1·P2 0건, P3 5건 코드 확인 후 이슈 #168~#172(area:B). #171·#172는 PR #194로 머지·닫힘(11-26). 지금 #169 `feature/issue-169-concept-updated-at`: 수정·테스트 커밋 078f99f, verify be ✅, push·PR 전. V-2(DS-03·04)는 생성·검수 끝, 12/03 고정만 남음 (private `JoonseobKim/vibenote-eval`, 로컬 `data/raw/eval/`)
+**V-1 MVP 감사 (B 몫, 앞당겨 11-26)** — reviewer 3개(팀 / 커뮤니티·팔로우·피드 / 개념 카드)로 B 코드 전체 감사: P1·P2 0건, P3 5건 코드 확인 후 이슈 #168~#172(area:B). #171·#172는 PR #194로 머지·닫힘(11-26). 지금 #169 `feature/issue-169-concept-updated-at`: PR #197 (078f99f 수정·테스트), verify all ✅, Codex ✅ 0f54249, 머지 대기. V-2(DS-03·04)는 생성·검수 끝, 12/03 고정만 남음 (private `JoonseobKim/vibenote-eval`, 로컬 `data/raw/eval/`)
 
 ## 진행
 
@@ -18,7 +18,7 @@
 
 ## 바로 다음 할 일
 
-1. #169 (이 브랜치): `/pr-review` → PR(`Closes #169`, 공통 mapper/concept라 본문에 @whans1996) → CI·Codex COMPLETE → 사람 머지
+1. PR #197: Backend CI 초록 확인 → 사람이 GitHub에서 머지 → `/pickup`에서 develop pull, #169 닫힘 확인
 2. 김동환에게: 이전 원격 브랜치 `feature/common-ds03-labels` 열람 여부 확인(라벨 내용은 말하지 않음), #170 user DTO 오프셋 변경 합의
 3. 11/27 Figma 공동 세션(F-29) → 새 세션(Opus/high) `/spec F-29` (`node scripts/branches.mjs F-29` 먼저). 12/03 eval `sets.json` `frozenAt`
 
