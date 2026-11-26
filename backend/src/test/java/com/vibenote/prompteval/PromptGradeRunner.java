@@ -70,6 +70,7 @@ class PromptGradeRunner {
 
         EvalGrader grader = new EvalGrader(judge, seed);
         List<Map<String, Object>> grades = new ArrayList<>();
+        int failed = 0;
         for (Path report : reports) {
             JsonNode node = JSON.readTree(report.toFile());
             if (!node.has("units")) {
@@ -77,7 +78,17 @@ class PromptGradeRunner {
                 continue;
             }
             JsonNode label = label(labels, node.path("fixture").asString(""));
-            Map<String, Object> grade = grader.grade(node, label);
+            Map<String, Object> grade;
+            try {
+                grade = grader.grade(node, label);
+            } catch (RuntimeException e) {
+                // 보고서 하나(예: fixtureZip을 못 찾음) 때문에 폴더 채점 전체가 멈추지 않게 한다
+                failed++;
+                System.out.printf(
+                        "[prompt-grade] 채점 실패로 건너뜀: %s (%s)%n",
+                        report.getFileName(), e.getMessage());
+                continue;
+            }
             grades.add(grade);
             Path out =
                     report.resolveSibling(
@@ -90,6 +101,9 @@ class PromptGradeRunner {
                     grade.get("split"),
                     label != null,
                     JSON.writeValueAsString(grade.get("scores")));
+        }
+        if (failed > 0) {
+            System.out.printf("[prompt-grade] 채점 실패 %d개 (요약에서 빠짐)%n", failed);
         }
         if (Files.isDirectory(target) && !grades.isEmpty()) {
             String summary = EvalSummary.markdown(grades);

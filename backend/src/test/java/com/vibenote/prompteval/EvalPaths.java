@@ -1,5 +1,6 @@
 package com.vibenote.prompteval;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Locale;
 import org.springframework.boot.context.config.ConfigDataEnvironmentPostProcessor;
@@ -46,6 +47,22 @@ final class EvalPaths {
         String contamination =
                 entry == null ? "unknown" : entry.path("contamination").asString("unknown");
         return new EvalFixture(id, zip, id, split, contamination);
+    }
+
+    /**
+     * 보고서의 {@code fixtureZip}. 러너를 돌린 PC의 절대 경로라 다른 PC에서 채점하면 없을 수 있으므로, 없으면 {@code repos}(러너 캐시
+     * {@code .harness/prompt-eval/repos/})에서 같은 파일 이름을 찾는다. 둘 다 없으면 null.
+     */
+    static Path locateZip(String recorded, Path repos) {
+        if (recorded == null || recorded.isBlank()) {
+            return null;
+        }
+        Path path = Path.of(recorded);
+        if (Files.exists(path)) {
+            return path;
+        }
+        Path cached = repos.resolve(path.getFileName().toString());
+        return Files.exists(cached) ? cached : null;
     }
 
     /** 앱과 같은 방식(application.yml + ../.env)으로 설정을 읽는다. */

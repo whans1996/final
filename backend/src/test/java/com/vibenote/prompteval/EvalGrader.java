@@ -7,7 +7,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -427,15 +426,15 @@ final class EvalGrader {
 
     /** {@code fixtureZip}을 앱과 같은 규칙으로 다시 읽은 파일 본문 (경로 → 본문). */
     private static Map<String, String> sources(JsonNode report) {
-        String zip = report.path("fixtureZip").asString("");
-        if (zip.isBlank() || !Files.exists(Path.of(zip))) {
-            throw new IllegalArgumentException("보고서의 fixtureZip이 없습니다: " + zip);
+        String recorded = report.path("fixtureZip").asString("");
+        Path zip = EvalPaths.locateZip(recorded, EvalPaths.OUT.resolve("repos"));
+        if (zip == null) {
+            throw new IllegalArgumentException(
+                    "보고서의 fixtureZip이 없습니다 (.harness/prompt-eval/repos/에도 없음): " + recorded);
         }
         Map<String, String> sources = new HashMap<>();
         for (SourceFile f :
-                new ZipArchiveReader(EvalSettings.defaults().analysis())
-                        .read(Path.of(zip))
-                        .files()) {
+                new ZipArchiveReader(EvalSettings.defaults().analysis()).read(zip).files()) {
             sources.put(f.path(), f.content());
         }
         return sources;

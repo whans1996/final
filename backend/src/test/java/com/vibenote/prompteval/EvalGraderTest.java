@@ -4,6 +4,10 @@ import static com.vibenote.prompteval.GradeFixtures.JSON;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
 
+import com.vibenote.llm.LlmClient;
+import com.vibenote.llm.LlmResponse;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.Optional;
@@ -13,7 +17,7 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.ObjectNode;
 
-/** E-1 AC5·AC6·AC9: 합성 보고서(dev DS-02-01)를 기계 지표로 채점한다. 판정 LLM은 부르지 않는다. */
+/** E-1 AC5·AC6·AC7·AC9: 합성 보고서(dev DS-02-01)를 채점한다. 판정 LLM은 가짜 클라이언트만 쓴다. */
 class EvalGraderTest {
 
     @TempDir Path dir;
@@ -127,5 +131,52 @@ class EvalGraderTest {
         assertThat(node.path("fixture").asString()).isEqualTo(GradeFixtures.FIXTURE);
         assertThat(node.path("split").asString()).isEqualTo("dev");
         assertThat(node.path("contamination").asString()).isEqualTo("high");
+    }
+
+    @Test
+    void AC5_fixtureZip이_없으면_러너_캐시에서_같은_이름을_찾는다() throws IOException {
+        Path repos = Files.createDirectories(dir.resolve("repos"));
+        Path cached = Files.writeString(repos.resolve("DS-02-01.zip"), "");
+        String elsewhere = dir.resolve("other-pc/repos/DS-02-01.zip").toString();
+
+        assertThat(EvalPaths.locateZip(cached.toString(), repos)).isEqualTo(cached);
+        assertThat(EvalPaths.locateZip(elsewhere, repos)).isEqualTo(cached);
+        assertThat(EvalPaths.locateZip(dir.resolve("x/DS-02-02.zip").toString(), repos)).isNull();
+        assertThat(EvalPaths.locateZip("", repos)).isNull();
+    }
+
+    @Test
+    void AC7_판정을_켜면_D와_E_정답_유일률과_금지_사실이_채워진다() {
+        // 판정 프롬프트 첫 줄로 세 판정을 구분해 답한다 (수준은 맞히고, 정답은 answerIndex와 같은 하나, 금지 사실은 1번 주장)
+        LlmClient judge =
+                request -> {
+                    String p = request.prompt();
+                    String content;
+                    if (p.startsWith("너는 코드 설명의 대상 수준")) {
+                        content = LevelJudgeTest.correctAnswer(p);
+                    } else if (p.startsWith("너는 객관식 퀴즈 문항")) {
+                        content = p.contains("예외가") ? "{\"correct\":[1]}" : "{\"correct\":[0]}";
+                    } else {
+                        content = "{\"made\":[1]}";
+                    }
+                    return new LlmResponse(content, "gemini-test", 1, 1);
+                };
+
+        JsonNode scores =
+                JSON.valueToTree(
+                                new EvalGrader(Optional.of(judge), 42)
+                                        .grade(
+                                                GradeFixtures.report(GradeFixtures.zip(dir)),
+                                                GradeFixtures.label()))
+                        .path("scores");
+
+        assertThat(scores.path("D").path("accuracy").asDouble()).isEqualTo(1.0);
+        assertThat(scores.path("D").path("judged").asInt()).isEqualTo(12);
+        assertThat(scores.path("E").path("uniqueAnswer").asDouble()).isEqualTo(1.0);
+        // 수준 3개 × 1건, 판정 수는 수준 3개 × 라벨 금지 문장 2개
+        assertThat(scores.path("B").path("forbiddenHits").asInt()).isEqualTo(3);
+        assertThat(scores.path("B").path("forbiddenChecked").asInt()).isEqualTo(6);
+        // 기계 지표는 판정과 무관하게 그대로
+        assertThat(scores.path("B").path("unknownPath").asDouble()).isCloseTo(2.0 / 9, within(EPS));
     }
 }
