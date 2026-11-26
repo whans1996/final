@@ -28,10 +28,10 @@ jobs:
         env:
           TITLE: ${{ github.event.pull_request.title }}
         run: |
-          if echo "$TITLE" | grep -Eq '^((feat|fix|refactor|test|wip)\((F-[0-9]{2}[a-z]?|common|harness)\)|(docs|chore)(\((F-[0-9]{2}[a-z]?|common|harness)\))?): .+'; then
+          if echo "$TITLE" | grep -Eq '^((feat|fix|refactor|test|wip)\((F-[0-9]{2}[a-z]?|[A-Z]{1,4}-[0-9]{1,2}[a-z0-9]{0,2}|common|harness)\)|(docs|chore)(\((F-[0-9]{2}[a-z]?|[A-Z]{1,4}-[0-9]{1,2}[a-z0-9]{0,2}|common|harness)\))?): .+'; then
             echo "OK: $TITLE"
           else
-            echo "::error::PR 제목은 '타입(F-xx): 요약' 형식이어야 합니다 (docs/conventions.md 6절). 현재: $TITLE"
+            echo "::error::PR 제목은 '타입(F-xx 또는 로드맵 ID): 요약' 형식이어야 합니다 (docs/conventions.md 6절). 현재: $TITLE"
             exit 1
           fi
 

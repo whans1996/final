@@ -20,7 +20,7 @@ description: develop에 합치기 전 현재 feature 브랜치를 verifier·revi
    - 이번 PR에서 하지 않기로 한 지적과 spec 범위 밖 후속 작업은 GitHub 이슈로 남긴다: `gh issue create --label follow-up --label area:<A|B|common> --assignee @me --title "<F-xx> 요약" --body "<배경, 출처 PR·지적 링크, 제안, 영향 범위>"` (본문 형식은 `.github/ISSUE_TEMPLATE/follow-up.md`. 영역은 내 영역이면 `node scripts/stamp.mjs --area` 출력(김동환 `area:A`, 김준섭 `area:B`), 하네스·공통 코드면 `area:common`). 누군가의 작업을 막는 이슈(상대 커밋이 hook에 막힘, 머지·다음 기능 선행 조건)면 `--label blocker`도 단다. PR 설명 "후속 작업"과 내 NOW 파일에는 이슈 번호만 적는다 (`docs/conventions.md` 7절).
    - 이 PR이 열린 follow-up 이슈를 해결하면 PR 설명 "해결 이슈"에 `Closes #n`을 이슈마다 적는다. develop에 머지되면 `close-issues` 워크플로가 닫는다.
 5. **PR 설명 생성**: `.github/pull_request_template.md` 형식으로 채워 `.harness/pr-F-xx.md`에 저장하고 요약을 보여 준다.
-   - `Roadmap:` 줄: 이 PR이 끝내는 `docs/로드맵.md` 항목 ID. 브랜치가 `feature/<ID>-slug`면 그 ID를 쓴다(`Roadmap: K-3a`, 여러 개는 쉼표, 항목의 일부만이면 `Roadmap: T-1 (일부)`). 머지되면 그 항목이 ✅로 계산되고 다음 항목이 배너에 올라온다. 로드맵 밖 작업(issue 브랜치 등)이면 줄을 지운다. 어느 항목인지 모르겠으면 `node scripts/roadmap.mjs`로 내 남은 항목을 보고 사용자에게 묻는다
+   - `Roadmap:` 줄: 이 PR이 끝내는 `docs/로드맵.md` 항목 ID. 브랜치가 `feature/<ID>-slug`면 그 ID를 쓴다(`Roadmap: K-3a`, 여러 개는 쉼표, 항목의 일부만이면 `Roadmap: T-1 (일부)`). 머지되면 그 항목이 ✅로 계산되고 다음 항목이 배너에 올라온다. 로드맵 밖 작업(issue 브랜치 등)이면 줄을 지운다. 어느 항목인지 모르겠으면 `node scripts/roadmap.mjs`로 내 남은 항목을 보고 사용자에게 묻는다. 설명 파일을 저장한 뒤 `node scripts/roadmap.mjs --check-body .harness/pr-<...>.md`로 형식·없는 ID를 검사한다 (틀린 줄은 상태 계산에서 조용히 빠진다). 커밋·PR 제목 범위에도 그 ID를 쓸 수 있다 (`feat(K-3a): …`)
    - 수용 기준 표: AC별 테스트 이름과 결과
    - FE 변경이 있으면 스크린샷을 **직접 첨부한다** (사람에게 넘기지 않는다):
      1. ui-verifier가 남긴 `.harness/screens/*.png` 중 이 기능 화면을 `docs/산출물/screens/SC-xx-이름-{desktop,mobile}.png`로 복사하고, `06-화면설계서.md`의 해당 SC 절에 `<img>`로 넣어 커밋한다 (산출물 준비를 겸한다)

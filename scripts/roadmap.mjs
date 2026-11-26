@@ -3,10 +3,11 @@
 //   node scripts/roadmap.mjs                 /pickup 로드맵 블록 (지금 할 일·내 남은 항목·상대·넘겨주는 시점·공통 일정)
 //   node scripts/roadmap.mjs --next [--after <ID>]   /handoff·PR 머지 뒤 "다음 항목" 한 줄 (--after: 방금 끝낸 항목과 같은 트랙에서)
 //   node scripts/roadmap.mjs --check         표 형식만 검사 (오류면 종료 코드 1)
+//   node scripts/roadmap.mjs --check-body <PR 설명 파일>   /pr-review: Roadmap: 줄 형식·없는 ID 검사 (문제면 종료 코드 1)
 //   node scripts/roadmap.mjs --overdue-since <sha>   Actions(roadmap.yml): 그 커밋 날 뒤 새로 지난 넘겨주는 시점 → Mattermost 본문 JSON (없으면 출력 없음)
 //   --who dh|js  사람 지정 (기본: 이 PC 등록)
 import { currentBranch, git, localPcId, ownerKey, readText } from './lib/common.mjs';
-import { ROADMAP_FILE, bannerLines, fetchRoadmapPrs, loadView, newlyOverdue, nextItem, nextItemLine, overdueMessage, parseRoadmap, roadmapBlock, seoulToday } from './lib/roadmap.mjs';
+import { ROADMAP_FILE, bannerLines, fetchRoadmapPrs, loadView, nextItem, nextItemLine, overduePayload, parseRoadmap, roadmapBlock, roadmapRefIssues, roadmapRefs } from './lib/roadmap.mjs';
 
 const args = process.argv.slice(2);
 const opt = (name) => {
@@ -17,6 +18,24 @@ const md = readText(ROADMAP_FILE);
 if (!md) {
   console.error(`로드맵 파일이 없습니다: ${ROADMAP_FILE}`);
   process.exit(1);
+}
+
+if (args.includes('--check-body')) {
+  const file = opt('--check-body');
+  const body = file ? readText(file) : null;
+  if (body === null) {
+    console.error(`PR 본문 파일을 읽을 수 없습니다: ${file ?? '(경로 없음)'}`);
+    process.exit(1);
+  }
+  const ids = parseRoadmap(md).items.map((i) => i.id);
+  const refs = roadmapRefs(body);
+  const issues = roadmapRefIssues(body, ids);
+  if (issues.length) {
+    console.error(`Roadmap: 줄 문제 ${issues.length}건:\n${issues.map((e) => `- ${e}`).join('\n')}`);
+    process.exit(1);
+  }
+  console.log(refs.length ? `Roadmap ✅ ${refs.map((r) => `${r.id}${r.partial ? ' (일부)' : ''}`).join(', ')}` : 'Roadmap: 줄 없음 (로드맵 밖 작업이면 괜찮다)');
+  process.exit(0);
 }
 
 if (args.includes('--check')) {
@@ -35,9 +54,9 @@ if (args.includes('--overdue-since')) {
   const sha = opt('--overdue-since');
   // 새 브랜치 push(before가 0)이거나 커밋을 못 읽으면 알리지 않는다
   const at = sha && !/^0+$/.test(sha) ? git(['show', '-s', '--format=%cI', sha]).out : '';
-  if (!at) process.exit(0);
-  const { view } = loadView(md, prsRes, { branches: [] });
-  const text = overdueMessage(newlyOverdue(view, seoulToday(new Date(at))));
+  const { text, reason } = overduePayload(md, prsRes, at);
+  // 알리지 않은 이유는 Actions 로그(stderr)에 남긴다
+  if (reason) console.error(`알림 없음: ${reason}`);
   if (text) process.stdout.write(JSON.stringify({ text }));
   process.exit(0);
 }

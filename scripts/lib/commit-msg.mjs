@@ -3,7 +3,8 @@ import { PROTECTED_BRANCHES } from './common.mjs';
 
 // git이 자동으로 만드는 메시지 (형식 검사·빠른 검사 생략). "Merge …"는 merge 진행 중일 때만 (손으로 쓴 제목으로 빠른 검사를 건너뛰지 않게)
 const AUTO = /^(Revert "|fixup! |squash! |amend! )/;
-const SCOPE = '(F-\\d{2}[a-z]?|common|harness)';
+// 범위: 기능 ID F-xx, 로드맵 항목 ID(docs/로드맵.md, roadmap.mjs ROADMAP_ID와 같은 형식: K-3a·P-1a·HP-3·F-26b2), common, harness
+const SCOPE = '(F-\\d{2}[a-z]?|[A-Z]{1,4}-\\d{1,2}[a-z0-9]{0,2}|common|harness)';
 const SCOPED = new RegExp(`^(feat|fix|refactor|test|wip)\\(${SCOPE}\\): \\S.*$`);
 const OPTIONAL = new RegExp(`^(docs|chore)(\\(${SCOPE}\\))?: \\S.*$`);
 
@@ -25,7 +26,7 @@ export function commitVerdict({ subject, branch, hasCommits, merging }) {
         `커밋 메시지 형식이 맞지 않습니다: "${subject}"`,
         `형식: 타입(범위): 요약`,
         `  타입: feat fix refactor test wip (범위 필수) / docs chore (범위 생략 가능)`,
-        `  범위: F-xx(분할 spec은 F-05a) | common | harness`,
+        `  범위: F-xx(분할 spec은 F-05a) | 로드맵 항목 ID(K-3a, P-1a, HP-3) | common | harness`,
         `예: feat(F-05): 분석 요청 API 추가 / wip(F-05): 중간 저장 / docs: README 수정`,
       ],
       verify: false,

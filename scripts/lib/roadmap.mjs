@@ -14,6 +14,9 @@ const OWNER_OF = { A: 'dh', B: 'js' };
 const LABEL_OF = { dh: 'A', js: 'B' };
 const ICON = { done: '✅', doing: '🔨', todo: '⬜', unknown: '❔' };
 const DAY_MS = 24 * 60 * 60 * 1000;
+/** 항목 ID 형식. 커밋·PR 제목 범위(scripts/lib/commit-msg.mjs SCOPE, ci.yml pr-title)도 이 형식을 받는다 */
+export const ROADMAP_ID = '[A-Z]{1,4}-\\d{1,2}[a-z0-9]{0,2}';
+const ID_RE = new RegExp(`^${ROADMAP_ID}$`);
 
 /** 서울 날짜 YYYY-MM-DD (Actions는 UTC라 로컬 시간대를 쓰지 않는다) */
 export function seoulToday(d = new Date()) {
@@ -78,7 +81,7 @@ export function parseRoadmap(md) {
     }
     const [id, owner, track, s, e, deps, task, model] = cells;
     const where = `항목 ${id}`;
-    if (!/^[A-Z][A-Za-z0-9]*-[A-Za-z0-9]+$/.test(id)) errors.push(`${where}: ID 형식 오류 (예: P-1a, HP-2)`);
+    if (!ID_RE.test(id)) errors.push(`${where}: ID 형식 오류 (대문자 1~4자-숫자 1~2자리-소문자·숫자 0~2자, 예: P-1a, HP-2, F-26b2)`);
     if (items.some((i) => i.id === id)) errors.push(`${where}: ID 중복`);
     const owners = ownersOf(owner);
     if (!owners) errors.push(`${where}: 담당은 A, B, A·B 중 하나`);
@@ -127,16 +130,28 @@ export function parseRoadmap(md) {
   return { year, items, handoffs, events, errors };
 }
 
+// PR 본문 Roadmap: 줄. HTML 주석(PR 템플릿 안내문)과 펜스 코드 블록(사용 예시)은 빼고 본다
+const REF_LINE = /^[ \t]*(?:[-*][ \t]+)?Roadmap:[ \t]*(.*)$/gim;
+const REF_PART = new RegExp(`^\\s*\`?(${ROADMAP_ID})\`?\\s*(\\((?:일부|partial)\\))?\\s*$`, 'i');
+const refLines = (body) =>
+  [
+    ...String(body ?? '')
+      .replace(/<!--[\s\S]*?-->/g, '')
+      .replace(/^[ \t]*```[\s\S]*?^[ \t]*```[^\n]*$/gm, '')
+      .matchAll(REF_LINE),
+  ]
+    .map((m) => m[1].trim())
+    .filter(Boolean);
+
 /**
  * PR 본문의 `Roadmap: <ID>[ (일부)], <ID>…` 줄 → [{ id, partial }].
- * HTML 주석(PR 템플릿 안내문)은 빼고 본다. 같은 ID가 완료·일부로 둘 다 있으면 완료로 본다.
+ * 같은 ID가 완료·일부로 둘 다 있으면 완료로 본다. 형식이 틀린 조각은 건너뛴다 (roadmapRefIssues가 알린다)
  */
 export function roadmapRefs(body) {
-  const text = String(body ?? '').replace(/<!--[\s\S]*?-->/g, '');
   const refs = new Map();
-  for (const m of text.matchAll(/^[ \t]*(?:[-*][ \t]+)?Roadmap:[ \t]*(.+)$/gim)) {
-    for (const part of m[1].split(/[,·]/)) {
-      const r = /^\s*`?([A-Z][A-Za-z0-9]*-[A-Za-z0-9]+)`?\s*(\((?:일부|partial)\))?\s*$/i.exec(part);
+  for (const line of refLines(body)) {
+    for (const part of line.split(/[,·]/)) {
+      const r = REF_PART.exec(part);
       if (!r) continue;
       const id = r[1];
       const partial = Boolean(r[2]);
@@ -144,6 +159,28 @@ export function roadmapRefs(body) {
     }
   }
   return [...refs].map(([id, partial]) => ({ id, partial }));
+}
+
+/**
+ * PR 본문 Roadmap: 줄의 문제 (형식 오류, 로드맵에 없는 ID, 대소문자 다름) → 설명 목록. 빈 배열이면 정상.
+ * 틀린 줄은 상태 계산에서 조용히 빠져 항목이 ⬜·⚠️로 남으므로 /pr-review가 `node scripts/roadmap.mjs --check-body`로 본다
+ */
+export function roadmapRefIssues(body, ids) {
+  const issues = [];
+  for (const line of refLines(body)) {
+    for (const part of line.split(/[,·]/)) {
+      const r = REF_PART.exec(part);
+      if (!r) {
+        issues.push(`형식 오류 "${part.trim()}" (예: Roadmap: HP-2, T-1 (일부))`);
+        continue;
+      }
+      const exact = ids.includes(r[1]);
+      const loose = ids.find((id) => id.toLowerCase() === r[1].toLowerCase());
+      if (!exact && loose) issues.push(`대소문자가 다름 "${r[1]}" → ${loose}`);
+      else if (!exact) issues.push(`로드맵에 없는 ID "${r[1]}" (docs/로드맵.md 항목 표)`);
+    }
+  }
+  return issues;
 }
 
 /** 브랜치 이름의 한 부분이 `<ID>`이거나 `<ID>-`로 시작하면 그 항목 브랜치다 (feature/K-3a-seed → K-3a, F-26b2와 F-26b는 구별) */
@@ -170,7 +207,7 @@ export function roadmapStatus(items, { prs = [], branches = [] } = {}) {
     const mine = { state: prs ? 'todo' : 'unknown', prs: [], branches: branches.filter((b) => branchMatches(b, item.id)) };
     for (const pr of prs ?? []) {
       if (pr.state === 'CLOSED') continue;
-      const ref = roadmapRefs(pr.body).find((r) => r.id === item.id);
+      const ref = roadmapRefs(pr.body).find((r) => r.id.toLowerCase() === item.id.toLowerCase());
       const named = pr.state === 'OPEN' && branchMatches(pr.headRefName, item.id);
       if (!ref && !named) continue;
       mine.prs.push(pr.number);
@@ -209,13 +246,14 @@ const dn = (days) => (days === 0 ? 'D-day' : days > 0 ? `D-${days}` : `${-days}�
  * → { item, why: 'branch'|'track'|'ready'|'waiting', waiting: [의존 ID] }
  */
 export function nextItem(view, key, { branch = null, after = null } = {}) {
-  const open = openItems(view, key);
+  // 방금 끝낸 항목(after)은 아직 ✅로 안 보여도(일부 머지·조회 지연) 다시 고르지 않는다
+  const open = openItems(view, key).filter((i) => i.id !== after);
   const pick = (item, why) => (item ? { item, why, waiting: depsWaiting(view, item) } : null);
   const onBranch = branch && open.find((i) => branchMatches(branch, i.id));
   if (onBranch) return pick(onBranch, 'branch');
   const track = after && view.byId.get(after)?.track;
   if (track) {
-    const same = open.find((i) => i.track === track && i.id !== after);
+    const same = open.find((i) => i.track === track);
     if (same) return pick(same, 'track');
   }
   return pick(open.find((i) => !depsWaiting(view, i).length), 'ready') ?? pick(open[0], 'waiting');
@@ -231,9 +269,18 @@ export function nextItemLine(next) {
   return `➡️ 다음 항목: ${item.id} ${item.task} (트랙 ${item.track}, ${shortDate(item.start)}~${shortDate(item.end)}) · 추천 ${item.model}${note}${late}${wait}`;
 }
 
-/** 넘겨주는 시점 중 key가 주거나 받는 것, 아직 끝나지 않은 것 (날짜순) */
-const myHandoffs = (view, key) =>
-  view.handoffs.filter((h) => h.state !== 'done' && (h.fromKeys.includes(key) || h.toKeys.includes(key))).sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''));
+/**
+ * 넘겨주는 시점 중 key가 주거나 받는 것, 아직 끝나지 않은 것 (날짜순).
+ * 상태를 모르면(조회 실패) 지난 것은 끝났는지 알 수 없어 빼고 stalePast로만 센다 (전부 "지남"으로 보이지 않게)
+ */
+function myHandoffs(view, key) {
+  const mine = view.handoffs
+    .filter((h) => h.state !== 'done' && (h.fromKeys.includes(key) || h.toKeys.includes(key)))
+    .sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''));
+  if (view.statusOk) return { list: mine, stalePast: 0 };
+  const list = mine.filter((h) => h.days === null || h.days >= 0);
+  return { list, stalePast: mine.length - list.length };
+}
 
 function handoffText(h) {
   return `${shortDate(h.date)} ${h.from}→${h.to} ${h.item} ${h.what}`;
@@ -257,14 +304,13 @@ export function bannerLines(view, key) {
     });
     lines.push(`🗺️ 로드맵: ${parts.join(' · ')}`);
   }
-  const pending = myHandoffs(view, key).filter((h) => h.days !== null);
+  const { list, stalePast } = myHandoffs(view, key);
+  const pending = list.filter((h) => h.days !== null);
   const urgent = pending.filter((h) => h.days <= HANDOFF_NOTICE_DAYS);
-  for (const h of urgent) {
-    const unknown = view.statusOk ? '' : ' (상태 미확인)';
-    lines.push(h.days < 0 && view.statusOk ? `⚠️ 넘겨주기 ${dn(h.days)}: ${cut(handoffText(h), 70)}` : `🤝 넘겨주기 ${dn(h.days)}: ${cut(handoffText(h), 70)}${unknown}`);
-  }
-  if (!urgent.length && pending.length) lines.push(`📅 다음 넘겨주기 ${dn(pending[0].days)}: ${cut(handoffText(pending[0]), 70)}`);
-  if (!view.statusOk) lines.push(`❔ 로드맵 상태 조회 실패 (${view.reason ?? '?'}) → node scripts/roadmap.mjs`);
+  const unknown = view.statusOk ? '' : ' (상태 미확인)';
+  for (const h of urgent) lines.push(`${h.days < 0 ? '⚠️' : '🤝'} 넘겨주기 ${dn(h.days)}: ${cut(handoffText(h), 70)}${unknown}`);
+  if (!urgent.length && pending.length) lines.push(`📅 다음 넘겨주기 ${dn(pending[0].days)}: ${cut(handoffText(pending[0]), 70)}${unknown}`);
+  if (!view.statusOk) lines.push(`❔ 로드맵 상태 조회 실패 (${view.reason ?? '?'}${stalePast ? `, 지난 넘겨주기 ${stalePast}건 확인 못 함` : ''}) → node scripts/roadmap.mjs`);
   return lines;
 }
 
@@ -292,10 +338,10 @@ export function roadmapBlock(view, key, { branch = null, after = null, limit = 1
     out.push(`- ${peerName}(${LABEL_OF[other]}) 이번 기간:`);
     for (const i of theirs.slice(0, limit)) out.push(`  - ${itemLine(view, i)}`);
   }
-  const hand = myHandoffs(view, key).slice(0, 5);
+  const hand = myHandoffs(view, key).list.slice(0, 5);
   if (hand.length) {
     out.push('- 넘겨주는 시점 (나와 관련, 남은 것):');
-    for (const h of hand) out.push(`  - ${h.days !== null && h.days < 0 && view.statusOk ? '⚠️' : '🤝'} ${shortDate(h.date)} (${dn(h.days)}) ${h.from}→${h.to} ${h.item} ${h.what} → ${h.unlocks} (항목 ${ICON[h.state]})`);
+    for (const h of hand) out.push(`  - ${h.days !== null && h.days < 0 ? '⚠️' : '🤝'} ${shortDate(h.date)} (${dn(h.days)}) ${h.from}→${h.to} ${h.item} ${h.what} → ${h.unlocks} (항목 ${ICON[h.state]})`);
   }
   const events = view.events.filter((e) => e.date && e.date >= view.today).slice(0, 4);
   if (events.length) out.push(`- 공통 일정: ${events.map((e) => `${shortDate(e.date)} (${dn(daysBetween(view.today, e.date))}) ${e.text}`).join(' · ')}`);
@@ -320,14 +366,26 @@ export function overdueMessage(overdue) {
 }
 
 /**
- * 상태 계산에 쓸 PR 목록 → { ok: true, prs } | { ok: false, reason }. 세션 시작을 막지 않도록 비동기·제한 시간 (issues.mjs와 같은 방식).
- * 본문에 Roadmap이 든 PR(템플릿 덕에 대부분)과 열린 PR을 함께 본다. 동기 git이 끝난 뒤 부른다 (#67).
+ * Actions(roadmap.yml)용: 직전 develop 끝 커밋 시각(sinceIso) 뒤 새로 지난 넘겨주는 시점 → { text | null, reason | null }.
+ * 상태 조회가 실패하면 알리지 않고 이유를 돌려준다 (로그에 남겨 알림이 왜 빠졌는지 보이게)
  */
-export function fetchRoadmapPrs({ timeout = 4000, exec = execFile, limit = 300 } = {}) {
+export function overduePayload(md, prsRes, sinceIso, { today = seoulToday() } = {}) {
+  if (!sinceIso) return { text: null, reason: '직전 커밋 시각 없음' };
+  const { view } = loadView(md, prsRes, { today, branches: [] });
+  if (!view.statusOk) return { text: null, reason: `상태 조회 실패: ${view.reason ?? '?'}` };
+  return { text: overdueMessage(newlyOverdue(view, seoulToday(new Date(sinceIso)))), reason: null };
+}
+
+/**
+ * 상태 계산에 쓸 PR 목록 → { ok: true, prs } | { ok: false, reason }. 세션 시작을 막지 않도록 비동기·제한 시간 (issues.mjs와 같은 방식).
+ * `--search`는 GitHub 검색 색인을 써서 방금 머지·수정한 PR이 늦게 보인다(그날 한 번뿐인 Mattermost 알림이 거짓이 된다) → 전체 목록을 받는다.
+ * 11-26 기준 192개·약 500KB·1.6초. 동기 git이 끝난 뒤 부른다 (#67).
+ */
+export function fetchRoadmapPrs({ timeout = 4000, exec = execFile, limit = 500 } = {}) {
   return new Promise((resolve) => {
     exec(
       'gh',
-      ['pr', 'list', '--state', 'all', '--search', 'Roadmap in:body', '--limit', String(limit), '--json', 'number,state,body,headRefName'],
+      ['pr', 'list', '--state', 'all', '--limit', String(limit), '--json', 'number,state,body,headRefName'],
       { cwd: ROOT, encoding: 'utf8', windowsHide: true, timeout, maxBuffer: 32 * 1024 * 1024 },
       (err, stdout, stderr) => {
         if (err?.code === 'ENOENT') return resolve({ ok: false, reason: 'gh 없음' });
