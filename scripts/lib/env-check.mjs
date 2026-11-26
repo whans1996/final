@@ -74,6 +74,17 @@ const javaMajorOf = (version) => {
 };
 
 /**
+ * git 사용자 점검 → { status, detail }. 순수 함수.
+ * 같은 사람의 PC마다 user.name이 다르면 작업로그·NOW의 작업자와 커밋 작성자가 PC마다 달라진다 (H-7: dh-home만 이메일이 이름이었다).
+ * 이름은 그 PC의 GitHub 계정(pcs.json github)으로 맞춘다. 이메일은 PC마다 달라도 된다 (저장소가 public이라 등록부에 적지 않는다)
+ */
+export function gitUserRow({ name, email, github }) {
+  if (!name || !email) return { status: 'warn', detail: 'git config user.name / user.email 설정 필요' };
+  if (github && name !== github) return { status: 'warn', detail: `이름 ${name} ≠ 이 PC 계정 ${github} → git config user.name ${github} (PC마다 같게, H-7)` };
+  return { status: 'ok', detail: `${name} <${email}>` };
+}
+
+/**
  * 환경 점검. 결과 행은 { status: 'ok'|'warn'|'fail', item, detail }.
  * fast: 세션 시작용. 프로세스를 거의 띄우지 않고 외부 명령은 병렬·3초 제한 (SessionStart hook timeout 15초 안)
  */
@@ -100,9 +111,8 @@ export async function runChecks({ fast = false } = {}) {
   } else {
     const hooks = git(['config', 'core.hooksPath']).out === '.githooks';
     add(hooks ? 'ok' : 'fail', 'git hooks', hooks ? 'core.hooksPath = .githooks' : '미연결 → node scripts/setup.mjs');
-    const name = git(['config', 'user.name']).out;
-    const email = git(['config', 'user.email']).out;
-    add(name && email ? 'ok' : 'warn', 'git 사용자', name && email ? `${name} <${email}>` : 'git config user.name / user.email 설정 필요');
+    const u = gitUserRow({ name: git(['config', 'user.name']).out, email: git(['config', 'user.email']).out, github: pc.github });
+    add(u.status, 'git 사용자', u.detail);
     // eval 블라인드 (HX-2): 김동환 PC의 fetch는 eval 기록 브랜치(eval/…)를 받지 않는다. setup.mjs가 refspec을 넣는다
     if (evalBlockedFor(ownerKey(pc.id))) {
       const excluded = evalFetchExcluded(git(['config', '--get-all', 'remote.origin.fetch']).out.split(/\r?\n/));

@@ -13,6 +13,11 @@ const DEVELOP_TARGET = /^(feature|fix)\//;
 
 // hook 제한(15초) 안에서 fetch와 함께 끝나야 한다. 로컬 병합은 보통 1초 안이다
 const MERGE_TIMEOUT = 6000;
+/** 병합 한 번을 시작하려면 남아 있어야 하는 시간 (H-5): 병합 제한 시간 + 뒤따르는 git 조회 여유 */
+export const AUTO_SYNC_MIN_MS = MERGE_TIMEOUT + 2000;
+// 세션 시작·peer-watch가 같이 쓴다. 병합과 로컬 develop·main 최신화 중 어느 것을 건너뛰어도 한 번만 알린다
+const BUDGET_LINE =
+  '- ⏸️ hook 시간 예산이 모자라 자동 동기화(병합·로컬 develop·main 최신화)를 건너뛰었습니다 (H-5). 10분 안에 peer-watch가 다시 확인합니다. 바로 받으려면 `git merge origin/develop`.';
 
 // git의 불리언 해석을 그대로 쓴다: false·no·off·0(대소문자 무관)이면 끈다. 없거나 불리언이 아닌 값이면 켜 둔다 (#44)
 export function autoSyncEnabled(cwd = ROOT) {
@@ -42,12 +47,27 @@ export function syncPlan({ branch, merging, dirty = [], upstream, developBehind 
   return { actions, blocked: null };
 }
 
-/** 이번 병합으로 들어온 파일 중 알릴 것 (새 마이그레이션, openapi.json) */
+// 병합으로 들어오면 사람이 할 일이 생기는 의존성·빌드 설정 파일 (H-6)
+const FE_DEPS_RE = /^frontend\/package(-lock)?\.json$/;
+const BE_BUILD_RE = /^backend\/(build\.gradle|settings\.gradle|gradle\.properties|gradle\/.+)$/;
+
+/** 이번 병합으로 들어온 파일 중 알릴 것 (새 마이그레이션, openapi.json, FE 의존성, BE 빌드 설정) */
 export function mergeNotes(files) {
   const migrations = files.filter((f) => /db\/migration\/V[^/]*\.sql$/.test(f)).map((f) => f.split('/').at(-1));
-  return [migrations.length ? `새 마이그레이션 ${migrations.join(', ')}` : '', files.includes('docs/api/openapi.json') ? 'openapi.json 변경' : ''].filter(
-    Boolean,
-  );
+  return [
+    migrations.length ? `새 마이그레이션 ${migrations.join(', ')}` : '',
+    files.includes('docs/api/openapi.json') ? 'openapi.json 변경' : '',
+    files.some((f) => FE_DEPS_RE.test(f)) ? 'FE 의존성 변경' : '',
+    files.some((f) => BE_BUILD_RE.test(f)) ? 'BE 빌드 설정 변경' : '',
+  ].filter(Boolean);
+}
+
+/** 병합으로 들어온 의존성·빌드 설정 파일에 따라 할 일 줄 (H-6). 세션 배너에 보이도록 ⚠️로 시작한다 */
+export function dependencyActions(files) {
+  const lines = [];
+  if (files.some((f) => FE_DEPS_RE.test(f))) lines.push('- ⚠️ FE 의존성(package.json·package-lock.json)이 바뀌었습니다 → `cd frontend && npm ci` 후 dev 서버를 다시 시작');
+  if (files.some((f) => BE_BUILD_RE.test(f))) lines.push('- ⚠️ BE 빌드 설정(build.gradle 등)이 바뀌었습니다 → 실행 중인 bootRun을 다시 시작하고 IDE는 Gradle 새로고침');
+  return lines;
 }
 
 /**
@@ -107,6 +127,7 @@ function mergeOne({ ref, label, ffOnly }, cwd) {
       ok: true,
       mergeCommit,
       union,
+      files,
       line: `- ✅ ${label}의 새 커밋 ${count}개를 자동으로 합쳤습니다${notes.length ? ` (${notes.join(', ')})` : ''}.`,
     };
   }
@@ -191,13 +212,23 @@ function syncLocalRefs(cwd) {
 /**
  * fetch 뒤에 부른다. 알릴 줄 목록을 돌려준다 (할 일이 없으면 빈 배열). 어떤 오류도 던지지 않는다.
  * 지금 브랜치를 합친 뒤 체크아웃 안 된 로컬 develop·main도 fast-forward한다.
+ * timeLeft: hook 시간 예산의 남은 ms를 돌려주는 함수 (H-5). 병합·로컬 브랜치 갱신을 시작하기 전에 AUTO_SYNC_MIN_MS보다 적으면 건너뛴다.
  * @returns {string[]}
  */
-export function autoSync({ cwd = ROOT } = {}) {
+export function autoSync({ cwd = ROOT, timeLeft = null } = {}) {
+  const short = () => timeLeft !== null && timeLeft() < AUTO_SYNC_MIN_MS;
+  let budgetNoted = false;
+  const budgetLine = () => {
+    if (budgetNoted) return [];
+    budgetNoted = true;
+    return [BUDGET_LINE];
+  };
   try {
     if (!autoSyncEnabled(cwd)) return [];
     const plan = syncPlan(readState(cwd));
     const localLines = () => {
+      // 건너뛴 것도 알린다 (말없이 넘어가면 로컬 develop이 뒤처진 줄 모른다, reviewer)
+      if (short()) return budgetLine();
       try {
         return syncLocalRefs(cwd);
       } catch {
@@ -210,16 +241,23 @@ export function autoSync({ cwd = ROOT } = {}) {
     const lines = [];
     let mergeCommit = false;
     const union = new Set();
+    const merged = new Set();
     for (const action of plan.actions) {
+      if (short()) {
+        lines.push(...budgetLine());
+        break;
+      }
       const result = mergeOne(action, cwd);
       if (result.line) lines.push(result.line);
       mergeCommit ||= Boolean(result.mergeCommit);
       for (const f of result.union ?? []) union.add(f);
+      for (const f of result.files ?? []) merged.add(f);
       if (!result.ok) break;
     }
     if (lines.some((l) => l.includes('마이그레이션') || l.includes('openapi.json'))) {
       lines.push('- 마이그레이션·openapi.json이 들어왔으면 `node scripts/verify.mjs be`로 확인하세요.');
     }
+    lines.push(...dependencyActions([...merged]));
     if (union.size) {
       lines.push(
         // 세션 배너는 110자에서 자르므로 할 일(git push)을 앞에 둔다

@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { after, test } from 'node:test';
 import { nowStamp } from '../lib/common.mjs';
-import { developChanges, featureOnRemotes, latestPeerNow, myBranchLines, myBranchNows, nowHeadline, peerDigest, pickLatestNow } from '../lib/peer.mjs';
+import { developChanges, featureOnRemotes, latestPeerNow, myBranchLines, myBranchNows, nowHeadline, peerDigest, peerWatchBanner, pickLatestNow } from '../lib/peer.mjs';
 
 // git hook(커밋 테스트 게이트) 안에서 돌면 GIT_DIR 등이 실제 저장소를 가리킨다 → 임시 저장소용 git이 실제 저장소를 건드리지 않게 지운다 (sync.test.mjs와 같음)
 for (const key of Object.keys(process.env)) if (key.startsWith('GIT_')) delete process.env[key];
@@ -141,10 +141,10 @@ function branchWith(work, branch, file, content, author = 't') {
   commit(work, file, content, `docs: ${branch}`, author);
   sh(work, 'push', '-q', '-f', 'origin', branch);
 }
-function mergeToDevelop(work, branch) {
+function mergeToDevelop(work, branch, merger = 't') {
   sh(work, 'fetch', '-q');
   sh(work, 'switch', '-q', '-C', 'develop', 'origin/develop');
-  sh(work, '-c', 'user.name=t', '-c', 'user.email=t@t', 'merge', '-q', '--no-ff', '-m', `Merge ${branch}`, `origin/${branch}`);
+  sh(work, '-c', `user.name=${merger}`, '-c', 'user.email=t@t', 'merge', '-q', '--no-ff', '-m', `Merge ${branch}`, `origin/${branch}`);
   sh(work, 'push', '-q', 'origin', 'develop');
 }
 /** 세션을 여는 내 clone (develop 체크아웃) */
@@ -278,6 +278,9 @@ test('상대 NOW는 원격 브랜치마다 보고 갱신 시각이 늦은 것을
   const picked = latestPeerNow('js', { cwd: me });
   assert.equal(picked.source, 'origin/feature/F-09-cards');
   assert.match(picked.text, /F-09 카드 목록/);
+  // 세션 시작 예산이 바닥나면(timeoutMs 0) git을 부르지 않고 작업 트리의 NOW만 본다 (H-5, reviewer)
+  const local = latestPeerNow('js', { cwd: me, timeoutMs: 0 });
+  assert.ok(!local || local.source === '작업 트리', local?.source);
 });
 
 test('develop 변화는 10개로 자르지 않고 작성자를 전부 본다 (#32-2)', () => {
@@ -291,4 +294,39 @@ test('develop 변화는 10개로 자르지 않고 작성자를 전부 본다 (#3
   assert.equal(dev.commits.length, 12);
   const [line] = peerDigest(BASE, { ...BASE, develop: dev }, { myNames: ['whans1996'] });
   assert.match(line, /새 커밋 12개 \(새 마이그레이션 V9__x\.sql\)/);
+});
+
+test('내 다른 PC의 git 이름이 달라도 develop 병합 커밋(GitHub 계정)이 내 것이면 알리지 않는다 (H-7)', () => {
+  const { work } = setup();
+  const start = sh(work, 'rev-parse', 'origin/develop');
+  // dh-home은 user.name이 GitHub 계정과 달랐다. 머지 커밋은 GitHub이 계정 이름으로 만든다
+  branchWith(work, 'feature/L-1a-x', 'a.txt', 'x', 'whans1996@naver.com');
+  mergeToDevelop(work, 'feature/L-1a-x', 'whans1996');
+  const mine = sh(work, 'rev-parse', 'origin/develop');
+  const dev = developChanges(start, mine, { cwd: work });
+  assert.equal(dev.commits.length, 2);
+  assert.deepEqual(peerDigest(BASE, { ...BASE, develop: dev }, { myNames: ['whans1996'] }), []);
+
+  // 상대가 머지한 PR은 알린다
+  branchWith(work, 'feature/F-20-y', 'b.txt', 'y', 'JoonseobKim');
+  mergeToDevelop(work, 'feature/F-20-y', 'JoonseobKim');
+  const peerDev = developChanges(mine, sh(work, 'rev-parse', 'origin/develop'), { cwd: work });
+  assert.match(peerDigest(BASE, { ...BASE, develop: peerDev }, { myNames: ['whans1996'] })[0], /새 커밋 2개/);
+});
+
+test('peer-watch 사람용 알림: 상대 변화와 자동 동기화 결과를 짧게 보이고, 없으면 null (HX-7)', () => {
+  assert.equal(peerWatchBanner([], []), null);
+  // 자동 동기화의 부가 안내(✅·⚠️·⏸️로 시작하지 않는 줄)는 사람 화면에 넣지 않는다
+  assert.equal(peerWatchBanner([], ['- 병합 커밋은 아직 push하지 않았습니다.']), null);
+  const long = `- 김준섭 PR #230 ${'가'.repeat(200)}`;
+  const text = peerWatchBanner([long, '- 김준섭 NOW 갱신 (origin/x): F-20 / 다음: y'], ['- ✅ origin/develop의 새 커밋 2개를 자동으로 합쳤습니다.']);
+  const lines = text.split('\n');
+  assert.match(lines[0], /^\[바이브노트\] 📣 상대 작업 변화/);
+  assert.match(lines[1], /^📣 김준섭 PR #230 가+…$/);
+  assert.ok(lines[1].length <= 113);
+  assert.match(lines[2], /^📣 김준섭 NOW 갱신/);
+  assert.match(lines[3], /^🔄 ✅ origin\/develop/);
+  // 많으면 앞의 몇 줄만 보이고 나머지 수를 알린다
+  const many = peerWatchBanner(Array.from({ length: 9 }, (_, i) => `- 변화 ${i}`), []);
+  assert.match(many.split('\n').at(-1), /외 4건/);
 });

@@ -30,3 +30,12 @@ test('settings.json의 hook 스크립트가 실제로 있다', () => {
     assert.doesNotThrow(() => readFileSync(join(ROOT, rel)), rel);
   }
 });
+
+test('statusLine 스크립트가 실제로 있고 git·gh 없이 그린다 (HX-6)', () => {
+  const rel = /\}\/([^"]+)/.exec(settings.statusLine?.command ?? '')?.[1];
+  assert.ok(rel, settings.statusLine?.command);
+  assert.doesNotThrow(() => readFileSync(join(ROOT, rel)), rel);
+  // 표시줄은 assistant 메시지마다 돈다. 외부 명령을 띄우는 것은 백그라운드 새로 고침뿐이다
+  const src = readFileSync(join(ROOT, rel), 'utf8');
+  assert.doesNotMatch(src, /spawnSync|execSync|execFileSync|\bgit\(/);
+});

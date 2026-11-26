@@ -1,7 +1,7 @@
 // 환경 점검의 외부 명령 실행 (세션 시작 3초 제한)
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { run } from '../lib/env-check.mjs';
+import { gitUserRow, run } from '../lib/env-check.mjs';
 
 const node = (code) => `"${process.execPath}" -e "${code}"`;
 
@@ -29,4 +29,14 @@ test('제한 시간 안에 끝나면 출력과 성공을 돌려준다', async ()
   const bad = await run(node('process.exit(3)'), 5000);
   assert.equal(bad.ok, false);
   assert.equal(bad.timedOut, false);
+});
+
+test('git 이름이 이 PC의 GitHub 계정과 다르면 맞추라고 알린다 (H-7)', () => {
+  const diff = gitUserRow({ name: 'someone@example.com', email: 'someone@example.com', github: 'whans1996' });
+  assert.equal(diff.status, 'warn');
+  assert.match(diff.detail, /git config user\.name whans1996/);
+  assert.equal(gitUserRow({ name: 'whans1996', email: 'a@b', github: 'whans1996' }).status, 'ok');
+  // 계정을 모르는 PC(github null)는 이름만 있으면 된다
+  assert.equal(gitUserRow({ name: 'x', email: 'a@b', github: null }).status, 'ok');
+  assert.equal(gitUserRow({ name: '', email: 'a@b', github: 'whans1996' }).status, 'warn');
 });

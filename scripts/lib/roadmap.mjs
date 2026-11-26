@@ -289,6 +289,12 @@ function handoffText(h) {
   return `${shortDate(h.date)} ${h.from}→${h.to} ${h.item} ${h.what}`;
 }
 
+/** 내가 주거나 받는 넘겨주는 시점 중 가장 이른 미완료 것 { date, text } | null (상태 표시줄, HX-6). 날짜 없는 것은 뺀다 */
+export function nextHandoff(view, key) {
+  const h = myHandoffs(view, key).list.find((x) => x.date && x.days !== null);
+  return h ? { date: h.date, text: handoffText(h) } : null;
+}
+
 /**
  * 세션 시작 배너 줄. 순수 함수.
  * ① 🗺️ 트랙마다 지금 기간의 다음 항목 (시작한 미완료 항목 중 가장 이른 것) ② 넘겨주는 시점: D-2 안이면 🤝, 날짜가 지났으면 ⚠️, 그 밖에는 가장 가까운 것 하나 📅
@@ -409,8 +415,8 @@ export function fetchRoadmapPrs({ timeout = 4000, exec = execFile, limit = 500 }
 }
 
 /** develop에 아직 안 합쳐진 원격 브랜치 이름 (origin/ 뗌). squash 머지로 남은 브랜치는 PR의 ✅가 이긴다 */
-export function unmergedRemoteBranches({ cwd = ROOT, base = 'origin/develop' } = {}) {
-  const r = git(['for-each-ref', '--format=%(refname:short)', '--no-merged', base, 'refs/remotes/origin'], { cwd, timeout: 3000 });
+export function unmergedRemoteBranches({ cwd = ROOT, base = 'origin/develop', timeout = 3000 } = {}) {
+  const r = git(['for-each-ref', '--format=%(refname:short)', '--no-merged', base, 'refs/remotes/origin'], { cwd, timeout: Math.max(1, timeout) });
   return r.ok ? r.out.split('\n').filter(Boolean).map((b) => b.replace(/^origin\//, '')).filter((b) => b !== 'HEAD' && b !== 'origin') : [];
 }
 

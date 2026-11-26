@@ -336,7 +336,7 @@ test('fetchRoadmapPrs는 실패를 이유와 함께 돌려준다', async () => {
 
 test('session-start는 로드맵 PR 조회를 autoSync 뒤에 시작하고 배너에 로드맵 줄을 넘긴다 (#67)', () => {
   const src = readFileSync(new URL('../../.claude/hooks/session-start.mjs', import.meta.url), 'utf8');
-  const syncAt = src.indexOf('autoSync()');
+  const syncAt = src.indexOf('autoSync({');
   assert.ok(syncAt > 0 && src.indexOf('fetchRoadmapPrs(') > syncAt);
   assert.match(src, /roadmapLines,/);
   const banner = sessionBanner({ pc: { id: 'dh-ssafy', owner: '김동환', label: '김동환 교육장' }, branch: 'b', roadmapLines: ['🗺️ 로드맵: x'], myFeature: 'f' });
