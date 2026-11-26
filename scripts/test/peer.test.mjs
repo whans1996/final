@@ -206,6 +206,9 @@ test('/spec 가드: develop 밖에서 같은 기능을 진행 중인 원격 브�
   // F-1·F-140은 F-14가 아니다. develop에 이미 있는 spec(다른 브랜치가 물려받은 것)도 아니다
   branchWith(work, 'feature/F-1-x', 'docs/specs/F-140-y.md', '# F-140');
   branchWith(work, 'feature/F-05a-zip', 'docs/specs/F-05a-zip.md', '# F-05a');
+  // 로드맵 ID도 같은 규칙 (#213): 브랜치 이름·spec 파일 모두. E-10은 E-1이 아니다
+  branchWith(work, 'feature/E-1-eval-runner', 'docs/specs/E-1-eval.md', '# E-1');
+  branchWith(work, 'feature/E-10-other', 'docs/specs/E-10-other.md', '# E-10');
   // squash 머지됐는데 원격 브랜치가 남은 F-20: spec이 develop과 같으면 "머지됨"으로 표시만 한다 (reviewer R5)
   branchWith(work, 'feature/F-20-done', 'docs/specs/F-20-done.md', '# F-20 DONE');
   squashToDevelop(work, 'feature/F-20-done');
@@ -227,6 +230,7 @@ test('/spec 가드: develop 밖에서 같은 기능을 진행 중인 원격 브�
   assert.deepEqual(featureOnRemotes('F-05a', { cwd: me }), [{ branch: 'origin/feature/F-05a-zip', specs: ['docs/specs/F-05a-zip.md'], here: false, merged: false }]);
   assert.deepEqual(featureOnRemotes('F-05', { cwd: me }), []);
   assert.deepEqual(featureOnRemotes('F-99', { cwd: me }), []);
+  assert.deepEqual(featureOnRemotes('E-1', { cwd: me }), [{ branch: 'origin/feature/E-1-eval-runner', specs: ['docs/specs/E-1-eval.md'], here: false, merged: false }]);
   assert.deepEqual(featureOnRemotes('F-20', { cwd: me }), [
     { branch: 'origin/feature/issue-71-w', specs: ['docs/specs/F-20-done.md'], here: false, merged: false },
     { branch: 'origin/feature/F-20-done', specs: [], here: false, merged: true },

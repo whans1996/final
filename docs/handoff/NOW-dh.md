@@ -3,33 +3,31 @@
 > 김동환(A 영역: AI·분석·학습 루프) 전용. 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
 > 머리 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
-갱신: 2026-11-26 22:13 · 작업자: whans1996@naver.com · PC: dh-home · 브랜치: feature/HP-3-session-display
+갱신: 2026-11-26 22:58 · 작업자: whans1996@naver.com · PC: dh-home · 브랜치: feature/issue-179-harness-quick-fixes
 
 ## 현재 기능
 
-**HP-3 하네스 PR ③ 세션 시작·표시** (H-5~7, HX-6·7, 범위는 `docs/기획서.md` 7.7절, 하네스라 spec 없음, `Roadmap: HP-3`). L-1a PR #227은 머지됨
+**이슈 정리 ① 하네스 빠른 수정** (#179·#182·#213·#231, `feature/issue-179-harness-quick-fixes`, 로드맵 항목 없음). HP-3 PR #230 머지됨
 
 ## 진행
 
-- ✅ H-5 시간 예산 `scripts/lib/budget.mjs` (11초, 모자라면 fetch·자동 병합·gh 대기·내 브랜치 조회 건너뜀, `autoSync({ timeLeft })`, peer-watch도). 예산 0초로도 NOW 주입 확인
-- ✅ H-6 `sync.mjs` `dependencyActions`·`mergeNotes`: package*.json·Gradle 설정 병합 시 ⚠️ npm ci·bootRun 재시작
-- ✅ H-7 `peerDigest`가 develop 첫 부모(PR 병합 커밋, GitHub 계정) 작성자로 판정, `env-check` `gitUserRow`가 user.name ≠ pcs.json github이면 ⚠️
-- ✅ HX-7 `peer.peerWatchBanner` → peer-watch systemMessage (사람 화면 표시는 다음 알림 때 확인)
-- ✅ HX-6 상태 표시줄 `.claude/hooks/statusline.mjs`(settings.json statusLine, 사용자 결정: 프로젝트 설정·개인 표시줄 정보 포함) + `scripts/lib/status.mjs` + `scripts/status-refresh.mjs`(백그라운드, `.harness/status.json`)
-- ✅ /pr-review: verify all·harness 통과, reviewer 반드시 0·권장 12 → 1·3~7 코드(71703dd·3176533), 2 문구·9·10 문서(76023ee), 2 실측 #228·11 통합 테스트 #229, 8은 지금 해석 유지(사용자). 표시줄 두 줄·창 안 뜸 dh-home 확인
-- **PR #230** 열림, Codex ✅ 29472ae (지적 없음), CI: FE·하네스 통과, BE 진행 중이었음
+- ✅ #179 `issues.mjs` `ISSUE_LIMIT` 200(+1로 잘림 판정)·배너/목록 경고 · #213 `roadmap.mjs` `normalizeItemId` → `branches.mjs` 로드맵 ID · #182 브랜치 보호 문구 · #231 `records.mjs` `undoMsysPathConv`(stamp·handoff, 작업 중 발견해 이 PR에서)
+- ✅ /pr-review: verify all·harness 통과, reviewer 반드시 0·권장 5 + 무시 가능 2 반영. **PR #233** (Closes #179·#182·#213·#231), Codex ✅ d28266d (첫 리뷰 failed → 재요청 뒤 지적 없음), CI: FE·하네스·제목 통과, BE 진행 중이었음
+
+## 이슈 정리 순서 (11-26 사용자 승인)
+
+① 지금 PR → K-3a 시드 검수(~11/28) → ② E-1 러너 #218·#219·#221·#223 (12/01 EV-1 전) → HP-4에 ④ #133·#134·#178·#196·#198·#224 흡수 → ③ A 버그 #168(500 먼저)·#200~#203·#155·#156·#150·#121, ⑤ 가드 우회 #188~#191·#193 한 PR. #163→F-27b, #204→K-1, #137→HP-5
 
 ## 바로 다음 할 일
 
-1. `gh pr checks 230`으로 BE까지 초록인지 확인 → GitHub에서 머지 (develop이 앞서 있으면 `git merge origin/develop` → push → CI 다시 확인)
-2. 머지 뒤 HP-4 (#165·#166, H-9~12) — 새 세션 `/pickup`
-3. 다음 peer-watch 알림 때 사람 화면 systemMessage 표시 확인 (HX-7)
+1. `gh pr checks 233`으로 BE까지 초록 확인 → GitHub에서 머지 (develop이 앞서 있으면 `git merge origin/develop` → push → CI 다시) → #179·#182·#213·#231 닫힘 확인
+2. 머지 뒤 `feature/K-3a-seed-check` 만들고 K-3a 시드 검수 스크립트 ①형식 ②예제 실행 (`/spec K-3a`부터, Opus/high)
 
 ## 막힌 점 / 결정 필요
-- 사람: dh-home `git config user.name whans1996` (H-7 경고가 이제 세션 시작에 뜬다), 노션 팀원 초대, F-05b liveTest
-- 로드맵에 E-2(D·E 기준표·쌍 비교, 12/09 전) 행 추가 필요 · `branches.mjs` 로드맵 ID 거부는 #213
+- 사람: dh-home `git config user.name whans1996`, 노션 팀원 초대, F-05b liveTest
+- 로드맵에 E-2(D·E 기준표·쌍 비교, 12/09 전) 행 추가 필요
 
 ## 주의
-- 이 PC는 git 1회가 약 0.1초라 세션 시작이 8.4초 (예산 11초 안). 하네스 테스트도 느림(sync·peer 2분+)
-- Bash heredoc 안의 `\\`가 `\`로 줄어든다 → 역슬래시가 든 치환은 Edit 도구로
+- Bash heredoc·`node -e` 안의 `\`가 줄어든다 → 역슬래시가 든 치환은 Edit 도구로 (이번에도 두 번 걸림)
+- 새 follow-up은 되도록 지금 PR에서 해결 (이슈 정리 중 새 이슈를 늘리지 않는다, 11-26 사용자)
 - 다음 마이그레이션은 V15

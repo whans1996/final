@@ -18,6 +18,15 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 export const ROADMAP_ID = '[A-Z]{1,4}-\\d{1,2}[a-z0-9]{0,2}';
 const ID_RE = new RegExp(`^${ROADMAP_ID}$`);
 
+/**
+ * 사람이 친 항목·기능 ID(대소문자 무관) → 표준 표기 (접두사 대문자·꼬리 소문자: e-1 → E-1, l-1A → L-1a, f-05a → F-05a).
+ * 형식(ROADMAP_ID)이 아니면 null. branches.mjs의 /spec 가드가 F-xx뿐 아니라 로드맵 ID도 받게 한다 (#213)
+ */
+export function normalizeItemId(arg) {
+  const m = /^([a-z]{1,4})-(\d{1,2}[a-z0-9]{0,2})$/i.exec(String(arg ?? '').trim());
+  return m ? `${m[1].toUpperCase()}-${m[2].toLowerCase()}` : null;
+}
+
 /** 서울 날짜 YYYY-MM-DD (Actions는 UTC라 로컬 시간대를 쓰지 않는다) */
 export function seoulToday(d = new Date()) {
   return new Date(d.getTime() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);

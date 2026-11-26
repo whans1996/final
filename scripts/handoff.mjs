@@ -25,12 +25,13 @@ import {
   recordStamp,
 } from './lib/common.mjs';
 import { currentPc } from './lib/env-check.mjs';
-import { touchNowHeader } from './lib/records.mjs';
+import { touchNowHeader, undoMsysPathConv } from './lib/records.mjs';
 
 const args = process.argv.slice(2);
 const noPush = args.includes('--no-push');
 const mIdx = args.indexOf('-m');
-const memo = mIdx >= 0 ? args[mIdx + 1] || '' : '';
+// Git Bash가 '/명령'으로 시작하는 메모를 Git 설치 경로로 바꾼 것을 되돌린다 (#231)
+const memo = mIdx >= 0 ? undoMsysPathConv(args[mIdx + 1] || '') : '';
 
 // 새 파일은 이 폴더 아래 것만 커밋한다 (같은 작업 트리의 임시 파일·다른 세션 산출물이 섞이지 않게)
 const NEW_FILE_DIRS = /^(backend|frontend|docs|scripts|data|\.claude|\.githooks|\.github)\//;
