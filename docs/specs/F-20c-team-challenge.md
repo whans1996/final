@@ -5,7 +5,7 @@
 | 상태 | DONE (PR #98) <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
 | 기능 ID | F-20c (F-20 팀 챌린지의 3/3. 팀·초대 F-20a(DONE), 공동 분석 이해도 F-20b(DONE)) |
 | 우선순위 | P2 |
-| 영역 오너 | B 김준섭 (카드·소셜) |
+| 영역 오너 | B 김준섭 (카드·소셜) → **11-26부터 A 김동환** (팀 이관, 기획서 7.5절) |
 | 관련 필수 요구사항 | ⑫ 확장 (팀 챌린지. 필수 ⑫는 F-14·F-15·F-24·F-25가 충족) |
 | 의존 spec | F-20a 팀(`TeamService`·`team_members`·`TEAM_403`), F-20b 공유 분석(`team_analyses`·`TeamAnalysisService`·SC-23 `TeamAnalysisList`·SC-24 `TeamUnderstandingView`), F-14 퀴즈(`quiz_attempts`). **A 영역 변경 없음** (`quiz_attempts`·`quizzes`·`analyses`는 읽기만) |
 | 관련 이슈 | #89 (SC-24 제목이 없을 때 SC-23과 다른 대체 문구) → AC10·AC13. 구현 PR에 `Closes #89` |
