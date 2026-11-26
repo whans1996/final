@@ -3,6 +3,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 import AttachmentPicker from '@/components/community/AttachmentPicker.vue'
 import * as analysesApi from '@/api/analyses'
 import * as conceptsApi from '@/api/concepts'
+import { apiError } from '@/views/__tests__/viewTestUtils'
 
 vi.mock('@/api/analyses')
 vi.mock('@/api/concepts')
@@ -101,6 +102,81 @@ describe('AttachmentPicker (F-17 AC17)', () => {
     expect(options).toHaveLength(2)
     await options[1].trigger('click')
     expect(emitted(wrapper)).toEqual({ type: 'CONCEPT', id: 13, label: 'JWT 서명' })
+  })
+
+  it('AC17 #172 Enter로 연달아 찾으면 늦게 온 이전 결과가 마지막 검색 결과를 덮지 않는다', async () => {
+    const pending = []
+    conceptsApi.fetchConcepts.mockImplementation(
+      () => new Promise((resolve, reject) => pending.push({ resolve, reject })),
+    )
+    const wrapper = mountPicker()
+    await chooseMode(wrapper, 'concept')
+    const input = wrapper.find('input[name="conceptKeyword"]')
+
+    await input.setValue('jwt')
+    await input.trigger('keydown', { key: 'Enter' })
+    await input.setValue('spring')
+    await input.trigger('keydown', { key: 'Enter' })
+    expect(pending).toHaveLength(2)
+
+    pending[1].resolve({ items: [concept({ id: 20, name: 'Spring Bean' })], total: 1 })
+    await flushPromises()
+    pending[0].resolve({ items: [concept()], total: 1 })
+    await flushPromises()
+
+    const names = wrapper.findAll('[data-concept-option]').map((o) => o.text())
+    expect(names).toHaveLength(1)
+    expect(names[0]).toContain('Spring Bean')
+    expect(wrapper.find('[data-action="search-concepts"]').element.disabled).toBe(false)
+  })
+
+  it('AC17 #172 늦게 실패한 이전 검색은 마지막 검색 결과와 검색 중 상태를 바꾸지 않는다', async () => {
+    const pending = []
+    conceptsApi.fetchConcepts.mockImplementation(
+      () => new Promise((resolve, reject) => pending.push({ resolve, reject })),
+    )
+    const wrapper = mountPicker()
+    await chooseMode(wrapper, 'concept')
+    const input = wrapper.find('input[name="conceptKeyword"]')
+
+    await input.setValue('jwt')
+    await input.trigger('keydown', { key: 'Enter' })
+    await input.setValue('spring')
+    await input.trigger('keydown', { key: 'Enter' })
+
+    pending[0].reject(new Error('network'))
+    await flushPromises()
+    expect(wrapper.find('[data-action="search-concepts"]').element.disabled).toBe(true)
+
+    pending[1].resolve({ items: [concept({ id: 20, name: 'Spring Bean' })], total: 1 })
+    await flushPromises()
+    expect(wrapper.find('.error').exists()).toBe(false)
+    expect(wrapper.findAll('[data-concept-option]')).toHaveLength(1)
+    expect(wrapper.find('[data-action="search-concepts"]').element.disabled).toBe(false)
+  })
+
+  it('AC17 #172 마지막 검색이 실패하면 늦게 성공한 이전 결과가 실패 안내를 덮지 않는다', async () => {
+    const pending = []
+    conceptsApi.fetchConcepts.mockImplementation(
+      () => new Promise((resolve, reject) => pending.push({ resolve, reject })),
+    )
+    const wrapper = mountPicker()
+    await chooseMode(wrapper, 'concept')
+    const input = wrapper.find('input[name="conceptKeyword"]')
+
+    await input.setValue('jwt')
+    await input.trigger('keydown', { key: 'Enter' })
+    await input.setValue('spring')
+    await input.trigger('keydown', { key: 'Enter' })
+
+    pending[1].reject(apiError(500, { code: 'COMMON_500', message: '잠시 후 다시 시도해 주세요.' }))
+    await flushPromises()
+    pending[0].resolve({ items: [concept()], total: 1 })
+    await flushPromises()
+
+    expect(wrapper.find('.error').text()).toBe('잠시 후 다시 시도해 주세요.')
+    expect(wrapper.findAll('[data-concept-option]')).toHaveLength(0)
+    expect(wrapper.find('[data-action="search-concepts"]').element.disabled).toBe(false)
   })
 
   it('AC17 고른 첨부는 미리보기 칩으로 보이고 ✕를 누르면 해제한다', async () => {

@@ -27,13 +27,23 @@ const isMine = computed(() => post.value?.authorId != null && post.value.authorI
 
 let lastRequest = 0
 
+// edit 화면이 history state로 넘긴 안내를 꺼내고 그 항목에서 지운다 (#171).
+// 브라우저는 새로고침·뒤로 가기에도 history.state를 유지하므로 지우지 않으면 그때마다 다시 뜬다.
+function takeNotice() {
+  const history = router.options.history
+  const message = history.state?.notice
+  if (!message) return ''
+  history.replace(history.location, { ...history.state, notice: null })
+  return message
+}
+
 async function load(id) {
   const request = ++lastRequest
   loading.value = true
   notFound.value = false
   loadError.value = ''
   actionError.value = ''
-  notice.value = router.options.history.state?.notice ?? ''
+  notice.value = takeNotice()
   try {
     const result = await fetchPost(id)
     if (request !== lastRequest) return

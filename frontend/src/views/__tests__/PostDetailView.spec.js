@@ -1,5 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { flushPromises } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
+import { createPinia, setActivePinia } from 'pinia'
+import { createMemoryHistory, createRouter } from 'vue-router'
+import { routes } from '@/router'
 import PostDetailView from '@/views/community/PostDetailView.vue'
 import * as postsApi from '@/api/posts'
 import { useAuthStore } from '@/stores/auth'
@@ -37,7 +40,7 @@ async function mountDetail(path = '/community/42', options) {
   return mounted
 }
 
-describe('PostDetailView (F-17 AC15·AC16)', () => {
+describe('PostDetailView (F-17 AC15·AC16·AC18)', () => {
   beforeEach(() => {
     vi.resetAllMocks()
     // F-18 댓글 절이 함께 뜬다. 댓글 테스트는 PostComments.spec.js에 있다
@@ -192,5 +195,44 @@ describe('PostDetailView (F-17 AC15·AC16)', () => {
 
     expect(wrapper.find('[data-role="comments"]').exists()).toBe(false)
     expect(postsApi.fetchComments).not.toHaveBeenCalled()
+  })
+
+  it('AC18 #171 edit에서 넘긴 안내는 한 번만 보이고 history state에서 지워 새로고침 때 다시 뜨지 않는다', async () => {
+    postsApi.fetchPost.mockResolvedValue(detail())
+    const { wrapper, router } = await mountDetail('/community/41')
+
+    await router.replace({
+      path: '/community/42',
+      state: { notice: '본인이 쓴 글만 수정할 수 있습니다.' },
+    })
+    await flushPromises()
+
+    expect(wrapper.find('[role="status"]').text()).toBe('본인이 쓴 글만 수정할 수 있습니다.')
+    expect(router.options.history.state.notice).toBeFalsy()
+    expect(router.options.history.location).toBe('/community/42')
+
+    // 새로고침: 같은 history 항목에서 화면을 다시 띄운다
+    wrapper.unmount()
+    const reloaded = mount(PostDetailView, { global: { plugins: [createPinia(), router] } })
+    await flushPromises()
+    expect(reloaded.find('[role="status"]').exists()).toBe(false)
+  })
+
+  it('AC18 #171 edit이 replace로 보내 상세가 새로 마운트될 때도 안내를 한 번 보이고 state에서 지운다', async () => {
+    postsApi.fetchPost.mockResolvedValue(detail())
+    setActivePinia(createPinia())
+    const router = createRouter({ history: createMemoryHistory(), routes })
+    await router.push('/community/42/edit')
+    await router.replace({
+      path: '/community/42',
+      state: { notice: '본인이 쓴 글만 수정할 수 있습니다.' },
+    })
+    await router.isReady()
+
+    const wrapper = mount(PostDetailView, { global: { plugins: [createPinia(), router] } })
+    await flushPromises()
+
+    expect(wrapper.find('[role="status"]').text()).toBe('본인이 쓴 글만 수정할 수 있습니다.')
+    expect(router.options.history.state.notice).toBeFalsy()
   })
 })
