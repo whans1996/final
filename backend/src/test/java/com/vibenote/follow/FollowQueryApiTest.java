@@ -137,7 +137,7 @@ class FollowQueryApiTest extends IntegrationTestBase {
                 .andExpect(jsonPath("$.items[*].id").value(contains((int) a, (int) c, (int) b)))
                 .andExpect(jsonPath("$.items[0].nickname").exists())
                 .andExpect(jsonPath("$.items[0].level").value("JUNIOR"))
-                .andExpect(jsonPath("$.items[0].followedAt").value("2026-01-01T11:00:00"))
+                .andExpect(jsonPath("$.items[0].followedAt").value("2026-01-01T11:00:00+09:00"))
                 .andExpect(jsonPath("$.page").value(1))
                 .andExpect(jsonPath("$.size").value(20))
                 .andExpect(jsonPath("$.total").value(3));

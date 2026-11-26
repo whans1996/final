@@ -17,7 +17,7 @@ const person = (id, nickname = `회원${id}`, level = 'BEGINNER') => ({
   id,
   nickname,
   level,
-  followedAt: '2026-11-20T10:00:00',
+  followedAt: '2026-11-20T10:00:00+09:00',
 })
 
 function page(items, { page = 1, total = items.length } = {}) {

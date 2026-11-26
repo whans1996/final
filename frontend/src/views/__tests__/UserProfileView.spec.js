@@ -19,7 +19,7 @@ const PROFILE = {
   nickname: '코딩초보',
   bio: '스프링 공부 중',
   level: 'JUNIOR',
-  createdAt: '2026-11-18T10:30:00',
+  createdAt: '2026-11-18T10:30:00+09:00',
 }
 
 function login(id) {

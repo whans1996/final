@@ -27,7 +27,7 @@ const accuracy = computed(() =>
   stats.value?.quizAccuracy == null ? '-' : `${stats.value.quizAccuracy}%`,
 )
 
-/** '2026-11-18T10:30:00' → '2026.11.18' */
+/** '2026-11-18T10:30:00+09:00' → '2026.11.18' (서버 서울 날짜) */
 function formatDate(value) {
   return value ? value.slice(0, 10).replaceAll('-', '.') : ''
 }
