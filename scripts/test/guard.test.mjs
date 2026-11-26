@@ -348,6 +348,23 @@ test('리뷰 반영: PowerShell·cmd 괄호는 서브셸이 아니다, 옵션 �
   // graphql 값이 @로 시작하는 것은 -F(파일 읽기)일 때만 막는다
 });
 
+// PR #192 Codex P2: 값을 붙인 curl 짧은 옵션, GNU grep 긴 옵션 축약
+test('Codex 반영: curl -d{…}·-XPUT 붙여 쓰기, grep --reg= 축약', () => {
+  for (const cmd of [
+    `curl -d'{"base":"develop","head":"feature/x"}' https://api.github.com/repos/o/r/merges`,
+    'curl -XPUT https://api.github.com/repos/o/r/pulls/1/merge',
+    'curl -sXPUT https://api.github.com/repos/o/r/pulls/1/merge',
+    'curl -sd@body.json https://api.github.com/repos/o/r/merges',
+    'grep --reg=KEY .env',
+    'grep --rege KEY .env',
+    'grep --fil=pats.txt .env',
+    'rg --regex=KEY backend/.env.local',
+  ])
+    no(cmd);
+  for (const cmd of ['curl -s https://api.github.com/repos/o/r', 'curl -sH "Accept: application/json" https://api.github.com/repos/o/r/pulls/1/merge', 'grep --ignore-case "\\.env" src', 'grep --reg="\\.env" src'])
+    ok(cmd);
+});
+
 test('리뷰 반영: 김동환 PC에서 메시지 속 eval 글자는 막지 않는다', () => {
   const ev = { evalDir: '/repo/data/raw/eval' };
   for (const cmd of [

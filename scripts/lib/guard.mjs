@@ -402,11 +402,15 @@ function readTargets(name, args) {
       break;
     }
     if (a.startsWith('--')) {
-      const [n, ...v] = a.split('=');
-      const value = v.length ? v.join('=') : GREP_LONG_VALUE.has(n) ? args[++k] : undefined;
-      if (n === '--regexp' || n === '--expression') pattern = true;
+      const [raw, ...v] = a.split('=');
+      // GNU grep은 모호하지 않은 긴 옵션 축약(--reg=)을 받는다. 후보 중 하나라도 패턴·값 옵션이면 그렇게 본다 (보수적으로)
+      const candidates = GREP_LONG_VALUE.has(raw) ? [raw] : [...GREP_LONG_VALUE].filter((o) => raw.length >= 4 && o.startsWith(raw));
+      const takesValue = candidates.length > 0;
+      const value = v.length ? v.join('=') : takesValue ? args[++k] : undefined;
+      const patternOpt = candidates.some((o) => o === '--regexp' || o === '--expression');
+      if (patternOpt) pattern = true;
       else if (value !== undefined) files.push(value); // --file(패턴 파일)·--glob 등. 값도 파일 이름일 수 있다
-      if (n === '--file') pattern = true;
+      if (candidates.includes('--file')) pattern = true;
     } else if (a.startsWith('-') && a.length > 1) {
       for (let j = 1; j < a.length; j++) {
         if (!spec.value.includes(a[j])) continue;
@@ -613,6 +617,9 @@ function checkGh(args) {
   return null;
 }
 
+// curl의 값을 받는 짧은 옵션 (-d 본문, -F 폼, -T 업로드, -X 메서드, -H 헤더, -u 계정 등)
+const CURL_SHORT_VALUE = 'dFTXHuoAebcKmrwxECQyYz';
+
 /** curl·wget·Invoke-RestMethod로 GitHub API를 직접 부르는 경우 (#130) */
 function checkHttp(args) {
   const url = args.find((a) => /^https?:\/\/api\.github\.com\//i.test(a));
@@ -621,9 +628,18 @@ function checkHttp(args) {
   let body = false;
   for (let k = 0; k < args.length; k++) {
     const a = args[k];
-    if (a === '-X' || a === '--request' || /^-method$/i.test(a)) method = String(args[++k] || '').toUpperCase();
-    else if (/^-X./.test(a)) method = a.slice(2).toUpperCase();
-    else if (/^(-d|--data.*|--json|-F|--form|-T|--upload-file|-body|--post-data|--body-data)$/i.test(a.split('=')[0])) body = true;
+    if (a === '--request' || /^-method$/i.test(a)) method = String(args[++k] || '').toUpperCase();
+    else if (/^(--data.*|--json|--form.*|--upload-file|-body|--post-data|--body-data)$/i.test(a.split('=')[0])) body = true;
+    else if (/^-[A-Za-z]/.test(a) && !a.startsWith('--')) {
+      // curl 짧은 옵션 묶음: 값을 받는 글자에서 나머지(없으면 다음 단어)가 값이다 (-sXPUT, -d'{…}', -sd@f)
+      for (let j = 1; j < a.length; j++) {
+        if (!CURL_SHORT_VALUE.includes(a[j])) continue;
+        const value = a.slice(j + 1) || args[++k] || '';
+        if (a[j] === 'X') method = value.toUpperCase();
+        if ('dFT'.includes(a[j])) body = true;
+        break;
+      }
+    }
   }
   return githubWrite(apiPath(url), method || (body ? 'POST' : 'GET'), args.join(' ')) ? R.ghApi : null;
 }
