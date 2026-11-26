@@ -44,9 +44,11 @@
     </select>
 
     <update id="refreshAvgRating">
+        <!-- updated_at = updated_at: 반정규화 갱신이 ON UPDATE로 카드 수정일을 바꾸지 않게 한다 (#169) -->
         UPDATE concepts
         SET avg_rating = COALESCE(
-            (SELECT ROUND(AVG(rating), 1) FROM concept_reviews WHERE concept_id = #{conceptId}), 0.0)
+            (SELECT ROUND(AVG(rating), 1) FROM concept_reviews WHERE concept_id = #{conceptId}), 0.0),
+            updated_at = updated_at
         WHERE id = #{conceptId}
     </update>
 
