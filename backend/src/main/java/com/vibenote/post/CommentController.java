@@ -40,7 +40,8 @@ public class CommentController {
     @Operation(
             summary = "댓글 목록",
             description =
-                    "한 글의 댓글을 오래된순(작성 시각, id 오름차순)으로 최대 200개 돌려준다. total은 전체 댓글 수. 비로그인도 쓸 수 있다.")
+                    "한 글의 댓글 중 가장 최근 200개를 오래된순(작성 시각, id 오름차순)으로 돌려준다. total은 전체 댓글 수. 비로그인도 쓸 수"
+                            + " 있다.")
     @SecurityRequirements
     @ApiResponse(responseCode = "200", description = "조회 성공")
     @ApiResponse(

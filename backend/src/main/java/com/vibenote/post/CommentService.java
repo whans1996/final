@@ -26,7 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class CommentService {
 
-    /** 목록 응답 크기 안전장치 (spec AC2). 더 많으면 total로만 알린다. */
+    /** 목록 응답 크기 안전장치 (spec AC2). 더 많으면 최근 것만 보내고 total로 알린다 (#208: 새 댓글이 보여야 한다). */
     static final int MAX_COMMENTS = 200;
 
     private final CommentMapper commentMapper;

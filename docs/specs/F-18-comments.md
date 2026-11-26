@@ -8,13 +8,13 @@
 | 영역 오너 | B 김준섭 (카드·소셜) |
 | 관련 필수 요구사항 | ④ 커뮤니티 댓글 (명세서 "추가 · 커뮤니티: 댓글 CRUD") |
 | 의존 spec | F-17 (게시글·SC-15 상세 화면, develop에 머지됨), F-02 (로그인). 탈퇴 회원 차단은 `UserService.getActiveMember`(F-11·F-17과 같음), 탈퇴 작성자 표시는 F-17과 같은 방식 |
-| 관련 이슈 | 없음 |
+| 관련 이슈 | #208 (200개를 넘으면 새 댓글이 안 보임 → 최신 200개 표시, 11-26) |
 | 승인 | 김준섭 2026-11-20 |
 
 ## 1. 목적
 
 커뮤니티 글(특히 코드 이해 Q&A)에 다른 학습자가 **댓글로 답한다**. 누구나 댓글을 읽고, 회원은 댓글을 쓰며 자기 댓글을 수정·삭제한다 (UC41).
-댓글은 대화 순서대로(오래된 것부터) 게시글 상세(SC-15) 아래에 한 번에 보인다. 피드 활동은 남기지 않는다.
+댓글은 대화 순서대로(오래된 것부터) 게시글 상세(SC-15) 아래에 한 번에 보인다. 200개를 넘으면 가장 최근 200개만 보인다 (#208). 피드 활동은 남기지 않는다.
 
 ## 2. 수용 기준 (Acceptance Criteria)
 
@@ -26,7 +26,7 @@
 | ID | Given | When | Then |
 |---|---|---|---|
 | AC1 | 글 P에 댓글 3개(C1·C2·C3 순서로 작성)가 있을 때 | 누구나(비로그인) `GET /api/posts/{P}/comments`를 요청하면 | 200과 `{items, total: 3}`을 받는다. `items`는 `created_at ASC, id ASC` 순서(C1, C2, C3)이고 항목은 3절 `CommentResponse`다. 다른 글의 댓글은 섞이지 않는다. 댓글이 없으면 `items: []`·`total: 0`이다 |
-| AC2 | P에 댓글이 201개 있을 때 | 목록을 요청하면 | `items`는 오래된 200개, `total`은 201이다 (응답 크기 안전장치, 상수 `MAX_COMMENTS = 200`) |
+| AC2 | P에 댓글이 201개 있을 때 | 목록을 요청하면 | `items`는 **가장 최근 200개**(가장 오래된 1개 제외)를 오래된순으로 담고, `total`은 201이다 (응답 크기 안전장치, 상수 `MAX_COMMENTS = 200`). 그래서 새로 쓴 댓글은 몇 개째든 목록 끝에 보인다 (#208, 11-26) |
 | AC3 | 작성자가 탈퇴한(`users.status = 'WITHDRAWN'`) 댓글이 있을 때 / 수정한 댓글이 있을 때 | 목록을 요청하면 | 탈퇴 작성자의 댓글도 목록·`total`에 그대로 나오고 `authorId`는 `null`, `authorNickname`은 `"탈퇴한 사용자"`다. 활성 회원의 댓글은 `authorId`와 현재 닉네임을 담는다. `edited`는 `updatedAt`이 `createdAt`보다 뒤일 때만 `true`다 |
 | AC4 | 없는 글(`999999`)이거나 지워진 글일 때 | 목록·작성·수정·삭제를 요청하면 | 404 `POST_404` "게시글을 찾을 수 없습니다."이고 아무것도 바뀌지 않는다 |
 | AC5 | 로그인 회원 U가 | `POST /api/posts/{P}/comments` `{content:"  같은 클래스 안 호출은 프록시를 거치지 않아서예요.  "}`를 보내면 | 201과 생성된 댓글의 `CommentResponse`(`authorId: U`, `edited: false`)를 받는다. 저장된 `content`는 앞뒤 공백을 뺀 값이다. `activities`에는 행이 생기지 않는다. 이후 글 상세·목록의 `commentCount`가 1 오른다. 남의 글·자기 글 모두 쓸 수 있다 |
@@ -40,7 +40,7 @@
 
 | ID | Given | When | Then |
 |---|---|---|---|
-| AC11 | 누구나 | SC-15 `/community/:id`를 열면 | 본문·첨부 아래 "댓글 N"(목록 `total`) 절에 댓글이 오래된순으로 보인다. 각 댓글은 닉네임(`/users/{authorId}` 링크, `authorId`가 `null`이면 링크 없는 "탈퇴한 사용자"), 작성일(`YYYY-MM-DD HH:mm`), `edited`이면 "(수정됨)", 내용이다. 내용은 **글자 그대로**(줄바꿈 유지, HTML이 태그로 해석되지 않음) 보인다. 0건이면 "첫 댓글을 남겨 주세요", 불러오기 실패는 댓글 절 안에 서버 `message`(본문은 그대로 보인다). `total`이 `items` 수보다 크면 목록 아래 "댓글이 많아 처음 200개만 보입니다". 글이 404면 댓글 절을 보여 주지 않는다 |
+| AC11 | 누구나 | SC-15 `/community/:id`를 열면 | 본문·첨부 아래 "댓글 N"(목록 `total`) 절에 댓글이 오래된순으로 보인다. 각 댓글은 닉네임(`/users/{authorId}` 링크, `authorId`가 `null`이면 링크 없는 "탈퇴한 사용자"), 작성일(`YYYY-MM-DD HH:mm`), `edited`이면 "(수정됨)", 내용이다. 내용은 **글자 그대로**(줄바꿈 유지, HTML이 태그로 해석되지 않음) 보인다. 0건이면 "첫 댓글을 남겨 주세요", 불러오기 실패는 댓글 절 안에 서버 `message`(본문은 그대로 보인다). `total`이 `items` 수보다 크면 목록 **위**에 "이전 댓글 n개는 보이지 않습니다"(n = `total` − `items` 수, #208). 글이 404면 댓글 절을 보여 주지 않는다 |
 | AC12 | SC-15에서 | 비로그인이면 / 로그인 회원이면 | 비로그인은 작성 폼 대신 "로그인하고 댓글 남기기" 링크(`/login?redirect=/community/{id}`)를 본다. 회원은 입력창과 "등록"을 본다: 공백뿐이면 "등록"이 비활성, 500자에서 더 입력되지 않고 아래 "n/500"이 보인다. "등록"을 누르면 `createComment` 후 입력창을 비우고 댓글 목록만 다시 불러온다(헤더 "댓글 N"도 갱신). 저장 중에는 버튼이 비활성이다. 400이면 `details.content`를 입력창 아래에, 그 밖의 실패는 서버 `message`를 보여 주고 입력은 남긴다 |
 | AC13 | SC-15에서 | 로그인 회원이 자기 댓글(`authorId === auth.user.id`)을 보면 / 남의 댓글이나 비로그인이면 | 자기 댓글에만 머리 줄에 "수정"·"삭제" 글자 버튼이 보인다(375px에서도 같은 배치). "수정"은 그 자리를 값이 채워진 입력창("저장"·"취소", "n/500")으로 바꾸고, 한 번에 한 댓글만 수정 중이다. "저장"은 공백뿐이면 비활성이고 `updateComment` 후 목록을 다시 불러오며, "취소"는 요청 없이 원래 내용으로 돌아간다. "삭제"는 확인 대화상자에서 확인하면 `deleteComment` 후 목록을 다시 불러오고, 취소하면 아무 요청도 보내지 않는다. 수정·삭제가 400이면 입력창 아래 `details.content`, 403·404면 서버 `message`를 그 댓글 아래에 보여 준다. 삭제가 404 `POST_003`(이미 지워진 댓글)이면 목록도 다시 불러온다 (PR 전 리뷰 반영). SC-15는 375px 폭에서 가로 스크롤이 없다 (NF-02) |
 
@@ -51,7 +51,7 @@
 ### `GET /api/posts/{postId}/comments`
 
 - 권한: 공개. `SecurityConfig.PUBLIC_GET_PATHS`의 POST 블록에 `"/api/posts/{id:\\d+}/comments"`를 추가한다 (공통 파일 → PR에서 @whans1996 멘션)
-- 페이지 없음. 오래된순(`created_at ASC, id ASC`)으로 최대 200개, `total`은 그 글의 전체 댓글 수
+- 페이지 없음. 가장 최근 200개를 오래된순(`created_at ASC, id ASC`)으로, `total`은 그 글의 전체 댓글 수 (#208: 오래된 200개였다가 새 댓글이 안 보여 바꿈)
 - 응답 `200` (`CommentListResponse`)
 
 ```json
@@ -121,7 +121,7 @@
 
 - Flyway: 없음. V1의 `comments`(`post_id` FK `ON DELETE CASCADE`, `user_id`, `content VARCHAR(1000)`, `created_at`, `updated_at ON UPDATE CURRENT_TIMESTAMP`, `idx_comments_post_created (post_id, created_at)`)를 그대로 쓴다. 500자는 애플리케이션 검증이다
 - 사용 테이블: `comments`(읽기·쓰기), `posts`(존재 확인), `users`(닉네임·status)
-- 목록: `WHERE post_id = ? ORDER BY created_at, id LIMIT 200` + `COUNT(*)`. 인덱스 `idx_comments_post_created`를 탄다
+- 목록: `WHERE post_id = ? ORDER BY created_at DESC, id DESC LIMIT 200`을 서브쿼리로 받아 바깥에서 `ORDER BY created_at, id`로 뒤집는다 + `COUNT(*)`. 인덱스 `idx_comments_post_created`를 거꾸로 탄다 (#208)
 - 수정: 서비스가 다듬은 내용을 저장된 내용과 비교해 **다를 때만** `UPDATE comments SET content = ?, updated_at = ? WHERE id = ?`를 부르고, `updated_at`은 앱 `Clock`(서울 시각)으로 넣는다. 같은 내용이면 UPDATE를 생략해 `updated_at`이 그대로다 → AC7 "같은 내용이면 `edited` 유지". `ON UPDATE CURRENT_TIMESTAMP`에 맡기지 않는 것은 `created_at`(앱 Clock)과 DB 세션 시간대가 어긋나면 `edited` 판정이 틀어지기 때문이다 (#17, 구현 중 결정). `DATETIME`이 초 단위라 작성 후 1초 안에 고치면 `edited`가 `false`로 남는다 (허용)
 - 활동: 기록하지 않는다 (`ActivityType` 변경 없음, 11-20 결정)
 - 탈퇴 회원의 댓글은 남고 작성자를 "탈퇴한 사용자"로 표시한다 (기획서 ERD 주석, F-17과 같은 방식). 글을 지우면 FK CASCADE로 댓글도 지워진다 (F-17 AC10에서 이미 확인)
@@ -146,7 +146,7 @@
 
 | AC | 테스트 위치 | 종류 |
 |---|---|---|
-| AC1~AC3 | `CommentListApiTest#AC1_...`~`#AC3_...` (오래된순·다른 글 제외·0건, 201개 중 200개·total, 탈퇴 작성자·edited) | MockMvc + Testcontainers 통합 |
+| AC1~AC3 | `CommentListApiTest#AC1_...`~`#AC3_...` (오래된순·다른 글 제외·0건, 201개 중 최근 200개(가장 오래된 1개 제외)·total·같은 시각 동점은 id로, 탈퇴 작성자·edited) | MockMvc + Testcontainers 통합 |
 | AC4 | `CommentListApiTest#AC4_...`, `CommentWriteApiTest#AC4_...` (없는 글에 목록·작성·수정·삭제) | MockMvc 통합 |
 | AC5~AC9 | `CommentWriteApiTest#AC5_...`~`#AC9_...` (trim·활동 없음·commentCount, 경계 500·501·공백·null, 수정 edited·같은 내용, 삭제, 403·404·다른 글 댓글·403이 400보다 먼저·글 작성자도 403) | MockMvc 통합 |
 | AC10 | `CommentAuthApiTest#AC10_...` (토큰 없음·만료·형식 오류·탈퇴 회원 토큰, 공개 목록에 깨진 토큰) | MockMvc 통합 |
@@ -157,7 +157,7 @@
 ## 8. 범위 밖
 
 - 대댓글(답글)·멘션, 댓글 좋아요, 채택(Q&A 답변 채택)
-- 댓글 페이지·"더 보기" (200개 상한만 둔다)
+- 댓글 페이지·"이전 댓글 더 보기" (최신 200개 상한만 둔다. #208에서 커서 더 보기 대신 최신 200개로 정함, 11-26)
 - 관리자나 글 작성자의 남의 댓글 삭제, 신고
 - 피드 활동(`COMMENT`) 기록과 알림
 - 프로필(SC-18)의 "내가 쓴 댓글" 목록

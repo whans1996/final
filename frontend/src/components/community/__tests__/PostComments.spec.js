@@ -87,15 +87,19 @@ describe('PostComments (F-18 AC11~AC13)', () => {
     expect(wrapper.find('[data-comment-id]').exists()).toBe(false)
   })
 
-  it('AC11 total이 items 수보다 크면 "처음 200개만 보입니다" 안내를 붙인다', async () => {
-    postsApi.fetchComments.mockResolvedValue({ items: [comment(1), comment(2)], total: 201 })
+  it('AC11 #208 total이 items 수보다 크면 목록 위에 "이전 댓글 n개는 보이지 않습니다"를 붙인다', async () => {
+    postsApi.fetchComments.mockResolvedValue({ items: [comment(13), comment(14)], total: 14 })
 
     const wrapper = await mountComments()
 
-    expect(wrapper.find('h2').text()).toBe('댓글 201')
-    expect(wrapper.find('[data-role="comments-truncated"]').text()).toBe(
-      '댓글이 많아 처음 200개만 보입니다',
-    )
+    expect(wrapper.find('h2').text()).toBe('댓글 14')
+    const notice = wrapper.find('[data-role="comments-truncated"]')
+    expect(notice.text()).toBe('이전 댓글 12개는 보이지 않습니다')
+    // 숨은 것은 오래된 댓글이라 목록 앞에 둔다
+    const list = wrapper.find('ul.list')
+    expect(
+      notice.element.compareDocumentPosition(list.element) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
   })
 
   it('AC12 비로그인은 입력창 대신 "로그인하고 댓글 남기기" 링크를 본다', async () => {

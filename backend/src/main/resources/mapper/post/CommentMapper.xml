@@ -16,14 +16,18 @@
         SELECT COUNT(*) FROM posts WHERE id = #{postId} FOR SHARE
     </select>
 
-    <!-- idx_comments_post_created (post_id, created_at)를 탄다 -->
+    <!-- 가장 최근 limit개를 골라 오래된순으로 돌려준다 (#208). 안쪽은 idx_comments_post_created (post_id, created_at)를 거꾸로 탄다 -->
     <select id="findByPost" resultType="com.vibenote.post.domain.Comment">
         SELECT <include refid="columns"/>
-        FROM comments c
+        FROM (
+            SELECT id FROM comments
+            WHERE post_id = #{postId}
+            ORDER BY created_at DESC, id DESC
+            LIMIT #{limit}
+        ) recent
+        JOIN comments c ON c.id = recent.id
         JOIN users u ON u.id = c.user_id
-        WHERE c.post_id = #{postId}
         ORDER BY c.created_at, c.id
-        LIMIT #{limit}
     </select>
 
     <select id="countByPost" resultType="long">
