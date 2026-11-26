@@ -1,10 +1,11 @@
 <script setup>
 // SC-08 퀴즈 풀이 (F-14 AC10). 퀴즈를 불러와 모든 문항에 답하면 제출하고, 채점 결과·해설·복습 추가 안내를 보여 준다.
-// 같은 퀴즈는 여러 번 풀 수 있다 ("다시 풀기"는 답을 비운다).
+// 같은 퀴즈는 여러 번 풀 수 있다 ("다시 풀기"는 답을 비운다). 채점 결과에는 진행 중인 퀴즈 챌린지 달성도를 함께 보인다 (#211).
 import { computed, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { fetchAnalysisQuiz, submitQuizAttempt } from '@/api/quizzes'
 import { errorCode, errorMessage } from '@/api/http'
+import ChallengeProgressNotice from '@/components/challenge/ChallengeProgressNotice.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import QuizQuestion from '@/components/quiz/QuizQuestion.vue'
 import { planDateLabel } from '@/utils/quizFormat'
@@ -131,6 +132,7 @@ watch(
           data-action="review-plans"
           >복습 계획 보기</RouterLink
         >
+        <ChallengeProgressNotice goal-type="QUIZ_COUNT" :refresh-key="attempt.attemptId" />
       </div>
       <p v-else class="hint" data-message="progress">
         {{ answeredCount }}/{{ quiz.questions.length }} 답함

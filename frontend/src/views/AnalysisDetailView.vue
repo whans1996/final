@@ -4,7 +4,7 @@
 // DONE: 상세를 1회 불러와 "개요"·"구조"·"파일"·"실행 흐름"·"개념"·"퀴즈" 탭을 보여 준다. 탭과 선택 파일은 쿼리(?tab=files&file=123)에 둔다
 // (F-06 AC13~AC15, F-21a AC14, F-07 AC14, F-08 AC8, F-14 AC9).
 // FAILED도 상세를 1회 불러와 주인에게 관리 영역(삭제)을 보여 준다. 남의 공개 분석은 읽기 전용이다: 관리·메모·퀴즈 탭이 없고
-// 실행 흐름은 카드만 보인다 (F-19 AC13·AC14).
+// 실행 흐름은 카드만 보인다 (F-19 AC13·AC14). 내 분석이 DONE이면 진행 중인 분석 챌린지 달성도를 보인다 (#211).
 import { computed, nextTick, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { fetchAnalysis, fetchAnalysisStatus } from '@/api/analyses'
@@ -19,6 +19,7 @@ import AnalysisFlowsTab from '@/components/analysis/AnalysisFlowsTab.vue'
 import AnalysisConceptsTab from '@/components/analysis/AnalysisConceptsTab.vue'
 import AnalysisQuizTab from '@/components/analysis/AnalysisQuizTab.vue'
 import AnalysisManagePanel from '@/components/analysis/AnalysisManagePanel.vue'
+import ChallengeProgressNotice from '@/components/challenge/ChallengeProgressNotice.vue'
 import { LEVELS } from '@/utils/authValidation'
 
 const POLL_INTERVAL_MS = 2000
@@ -209,6 +210,7 @@ watch(
         커뮤니티에 질문하기
       </RouterLink>
     </div>
+    <ChallengeProgressNotice v-if="mine && isDone" goal-type="ANALYSIS_COUNT" class="challenges" />
 
     <p v-if="notFound" class="form-error" data-message="not-found">분석을 찾을 수 없습니다.</p>
     <p v-else-if="loading" class="hint">불러오는 중…</p>
@@ -430,6 +432,10 @@ watch(
 
 .ask {
   font-weight: 600;
+}
+
+.challenges {
+  margin-bottom: var(--space-4);
 }
 
 .source-link {

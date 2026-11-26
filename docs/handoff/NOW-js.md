@@ -1,25 +1,27 @@
 # NOW — 김준섭 현재 작업 스냅샷
 
 > 김준섭(B 영역: 카드·소셜) 전용. 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
-갱신: 2026-11-26 16:11 · 작업자: JoonseobKim · PC: js-home · 브랜치: feature/V-2-eval-freeze
+갱신: 2026-11-26 16:32 · 작업자: JoonseobKim · PC: js-home · 브랜치: feature/issue-211-challenge-actions
 
 ---
 
 ## 현재 기능
 
-**V-2 평가 세트 DS-03·04 고정** (`feature/V-2-eval-freeze`, 로드맵 11/26~11/28) — eval 저장소 `sets.json` `frozenAt: 2026-11-26` 커밋 `3ab0db0` push 완료. 메인 저장소는 메타데이터만(datasets.json DS-03·04 status, 09-데이터셋.md 수집 일자·변경 이력)
+**#211 챌린지 행동 버튼·완료 화면 진행** — `feature/issue-211-challenge-actions` (FE만, A 영역 파일 → PR에 @whans1996 멘션). V-2는 PR #217로 머지 완료(eval 3ab0db0)
 
 ## 진행
 
-- ✅ eval 고정 커밋 3ab0db0 (9개 세트 라벨 9/9 reviewed)
-- ✅ `data/datasets.json`, `docs/산출물/09-데이터셋.md` 갱신 → docs PR(`Roadmap: V-2`) 열기
+- ✅ 상세 행동 링크: `ChallengeJoinPanel` 참여·진행 중·미달성이면 `labels.js` `goalAction`(분석 요청/내 분석/복습 계획)
+- ✅ 완료 화면 진행: 새 `ChallengeProgressNotice`(ONGOING 내 챌린지 중 같은 goalType, 실패·없음은 숨김) → QuizView 채점 결과·ReviewPlanView 체크 성공 후·AnalysisDetailView 내 DONE
+- ✅ verify fe 통과 (테스트 이름 `#211 …`)
 
 ## 바로 다음 할 일
 
-1. V-2 docs PR CI·Codex COMPLETE → 사람이 GitHub에서 머지. 머지 뒤 김동환에게 "평가 세트 고정(3ab0db0)" 알림 (11/28 B→A 넘김)
-2. 11/27 Figma 공동 세션 → F-29 `/spec` (11/29~)
-3. EV-1 기준선 (11/29~, E-1 머지 후)
-4. /progress 때: 기획서 579·WBS 4.1의 DS 12/03 → 11/26 고정으로
+1. 커밋 `feat(F-25): …` → `/pr-review` (ui-verifier로 SC-13·SC-08·SC-11 화면 확인, PR 설명 `.harness/pr-issue-211.md`, `Closes #211`, @whans1996 멘션)
+2. 김동환에게 "평가 세트 고정(3ab0db0)" 알림 확인 (11/28 B→A 넘김)
+3. 11/27 Figma 공동 세션 → 새 세션 `/spec F-29` (11/29~, Opus/high)
+4. EV-1 기준선 (11/29~12/01, E-1 PR #220 머지 대기)
+5. /progress 때: 기획서 579·WBS 4.1의 DS 12/03 → 11/26 고정으로
 
 ## 막힌 점 / 결정 필요
 
@@ -29,4 +31,3 @@
 
 - **NOW·작업로그·PR·커밋 메시지에 eval 라벨 내용(개념 tier·개수, 결함, forbidden, 채점 기준)을 적지 않는다.** 진행률·eval 커밋 SHA만
 - **Figma는 공동 세션 전까지 건드리지 않는다** (김동환 요청)
-- #211(F-25 A 영역 화면)은 V-1b에서 뺌, B 여유 작업과 함께

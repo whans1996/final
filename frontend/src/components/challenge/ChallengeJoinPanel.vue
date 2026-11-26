@@ -1,11 +1,13 @@
 <script setup>
 // SC-13 챌린지 참여 영역 (F-25 AC13). 참여·취소 결과(ParticipationResponse)는 change로 올려 상세 화면이 반영한다.
+// 참여 중인 진행 중 챌린지를 아직 달성하지 않았으면 목표를 채우러 갈 링크를 함께 보인다 (#211).
 // 취소는 브라우저 confirm 대신 화면 안 대화상자로 확인한다. 409(종료·달성)와 그 밖의 에러는 버튼 아래에 서버 메시지를 보인다.
 import { computed, nextTick, ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { cancelChallenge, joinChallenge } from '@/api/challenges'
 import { errorMessage } from '@/api/http'
 import ChallengeProgressBar from '@/components/challenge/ChallengeProgressBar.vue'
+import { goalAction } from '@/components/challenge/labels'
 import { useAuthStore } from '@/stores/auth'
 
 const props = defineProps({
@@ -27,6 +29,11 @@ const closeButton = ref(null)
 
 const participation = computed(() => props.challenge.participation)
 const ended = computed(() => props.challenge.status === 'ENDED')
+const action = computed(() =>
+  props.challenge.status === 'ONGOING' && participation.value && !participation.value.completedAt
+    ? goalAction(props.challenge.goalType)
+    : null,
+)
 
 /** '2026-11-24T10:15:00+09:00' → '11월 24일' (서버가 준 서울 날짜 그대로) */
 function monthDay(value) {
@@ -83,8 +90,11 @@ async function confirmCancel() {
         달성 완료 · {{ monthDay(participation.completedAt) }}
       </span>
       <p v-else-if="ended" class="hint">종료된 챌린지입니다.</p>
+      <RouterLink v-if="action" :to="action.to" class="primary go-goal" data-action="go-goal">
+        {{ action.label }}
+      </RouterLink>
       <button
-        v-else
+        v-if="!participation.completedAt && !ended"
         type="button"
         class="outline"
         data-action="cancel"
@@ -168,6 +178,13 @@ button:disabled {
 
 .outline {
   align-self: flex-start;
+}
+
+.go-goal {
+  align-self: flex-start;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius);
+  text-decoration: none;
 }
 
 .completed {

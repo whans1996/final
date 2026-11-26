@@ -7,10 +7,26 @@ export const CHALLENGE_STATUSES = [
 ]
 
 // icon은 이미지가 없는 챌린지의 기본 그림이다 (AC11)
+// action은 챌린지 상세에서 목표를 채우러 가는 링크다 (#211). 퀴즈는 분석마다 있어 내 분석 목록으로 보낸다
 export const GOAL_TYPES = [
-  { value: 'REVIEW_COUNT', label: '개념 복습', icon: '📚' },
-  { value: 'QUIZ_COUNT', label: '퀴즈', icon: '📝' },
-  { value: 'ANALYSIS_COUNT', label: '분석', icon: '🔍' },
+  {
+    value: 'REVIEW_COUNT',
+    label: '개념 복습',
+    icon: '📚',
+    action: { label: '복습하러 가기', to: { name: 'review-plans' } },
+  },
+  {
+    value: 'QUIZ_COUNT',
+    label: '퀴즈',
+    icon: '📝',
+    action: { label: '퀴즈 풀러 가기', to: { name: 'analyses' } },
+  },
+  {
+    value: 'ANALYSIS_COUNT',
+    label: '분석',
+    icon: '🔍',
+    action: { label: '분석 요청하기', to: { name: 'analysis-new' } },
+  },
 ]
 
 const find = (list, value) => list.find((item) => item.value === value)
@@ -18,6 +34,7 @@ const find = (list, value) => list.find((item) => item.value === value)
 export const statusLabel = (value) => find(CHALLENGE_STATUSES, value)?.label ?? value
 export const goalTypeLabel = (value) => find(GOAL_TYPES, value)?.label ?? value
 export const goalIcon = (value) => find(GOAL_TYPES, value)?.icon ?? '🏁'
+export const goalAction = (value) => find(GOAL_TYPES, value)?.action ?? null
 
 /** "퀴즈 10회" */
 export const goalLabel = (goalType, goalValue) =>

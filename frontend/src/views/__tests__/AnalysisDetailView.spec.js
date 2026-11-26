@@ -3,12 +3,15 @@ import { flushPromises } from '@vue/test-utils'
 import AnalysisDetailView from '@/views/AnalysisDetailView.vue'
 import * as analysesApi from '@/api/analyses'
 import * as quizzesApi from '@/api/quizzes'
+import * as challengesApi from '@/api/challenges'
+import { myChallenge, page } from '@/components/challenge/__tests__/fixtures'
 import { useAuthStore } from '@/stores/auth'
 import { authGuard, routes } from '@/router'
 import { apiError, mountAt } from './viewTestUtils'
 
 vi.mock('@/api/analyses')
 vi.mock('@/api/quizzes')
+vi.mock('@/api/challenges')
 const mermaid = vi.hoisted(() => ({ initialize: vi.fn(), render: vi.fn() }))
 vi.mock('mermaid', () => ({ default: mermaid }))
 
@@ -589,6 +592,34 @@ describe('AnalysisDetailView 분석 관리·공개 분석 (F-19)', () => {
     const ask = wrapper.find('[data-action="ask-community"]')
     expect(ask.text()).toBe('커뮤니티에 질문하기')
     expect(ask.attributes('href')).toBe('/community/write?analysisId=42')
+  })
+
+  it('#211 내 분석이 DONE이면 진행 중인 분석 챌린지 달성도를 보여 준다', async () => {
+    analysesApi.fetchAnalysisStatus.mockResolvedValue(status({ status: 'DONE', progress: 100 }))
+    analysesApi.fetchAnalysis.mockResolvedValue(detail())
+    challengesApi.fetchMyChallenges.mockResolvedValue(
+      page([myChallenge(5, { goalType: 'ANALYSIS_COUNT', goalValue: 3, progress: 2 })]),
+    )
+
+    const { wrapper } = await mountDetail()
+
+    expect(wrapper.find('[data-challenge-id="5"]').text()).toContain('2 / 3회')
+  })
+
+  it('#211 남의 분석이거나 진행 중이면 챌린지 달성도를 부르지 않는다', async () => {
+    analysesApi.fetchAnalysisStatus.mockResolvedValue(status({ status: 'DONE', progress: 100 }))
+    analysesApi.fetchAnalysis.mockResolvedValue(
+      detail({ mine: false, owner: { id: 7, nickname: 'vibecoder' } }),
+    )
+    await mountDetail()
+
+    analysesApi.fetchAnalysisStatus.mockResolvedValue(
+      status({ status: 'EXPLAINING', progress: 45 }),
+    )
+    analysesApi.fetchAnalysis.mockResolvedValue(detail({ status: 'EXPLAINING', overview: null }))
+    await mountDetail()
+
+    expect(challengesApi.fetchMyChallenges).not.toHaveBeenCalled()
   })
 
   it('AC13 FAILED면 관리 영역(삭제)은 있고 질문 링크는 없다', async () => {

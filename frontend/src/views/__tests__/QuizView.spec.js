@@ -2,9 +2,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
 import QuizView from '@/views/QuizView.vue'
 import * as quizzesApi from '@/api/quizzes'
+import * as challengesApi from '@/api/challenges'
+import { myChallenge, page } from '@/components/challenge/__tests__/fixtures'
 import { apiError, mountAt } from './viewTestUtils'
 
 vi.mock('@/api/quizzes')
+vi.mock('@/api/challenges')
 
 const QUESTIONS = [
   { id: 21, no: 1, question: '첫 질문\n둘째 줄', choices: ['a1', 'b1', 'c1', 'd1'] },
@@ -136,6 +139,33 @@ describe('QuizView (F-14 SC-08)', () => {
     // F-15 AC12: 문구 뒤에 복습 계획 링크
     expect(wrapper.find('[data-action="review-plans"]').attributes('href')).toBe('/review-plans')
     expect(wrapper.find('input[type="radio"]').exists()).toBe(false)
+  })
+
+  it('#211 제출하면 결과 위에 진행 중인 퀴즈 챌린지 달성도를 보여 주고, 다시 제출하면 다시 부른다', async () => {
+    quizzesApi.fetchAnalysisQuiz.mockResolvedValue(quiz())
+    quizzesApi.submitQuizAttempt.mockResolvedValue(attempt())
+    challengesApi.fetchMyChallenges.mockResolvedValue(page([myChallenge(1, { progress: 4 })]))
+    const { wrapper } = await mountQuiz()
+    expect(challengesApi.fetchMyChallenges).not.toHaveBeenCalled()
+
+    await choose(wrapper, 21, 0)
+    await choose(wrapper, 22, 1)
+    await submitButton(wrapper).trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[data-challenge-id="1"]').text()).toContain('4 / 10회')
+
+    quizzesApi.submitQuizAttempt.mockResolvedValue(attempt({ attemptId: 17 }))
+    challengesApi.fetchMyChallenges.mockResolvedValue(page([myChallenge(1, { progress: 5 })]))
+    await wrapper.find('[data-action="retry-quiz"]').trigger('click')
+    expect(wrapper.find('[data-section="challenge-progress"]').exists()).toBe(false)
+    await choose(wrapper, 21, 0)
+    await choose(wrapper, 22, 1)
+    await submitButton(wrapper).trigger('click')
+    await flushPromises()
+
+    expect(challengesApi.fetchMyChallenges).toHaveBeenCalledTimes(2)
+    expect(wrapper.find('[data-challenge-id="1"]').text()).toContain('5 / 10회')
   })
 
   it('AC10 reviewAdded가 비면 복습 안내를 보여 주지 않는다', async () => {
