@@ -3,11 +3,14 @@ import { flushPromises } from '@vue/test-utils'
 import ReviewPlanView from '@/views/reviewplan/ReviewPlanView.vue'
 import * as reviewPlansApi from '@/api/reviewPlans'
 import * as recommendationsApi from '@/api/recommendations'
+import * as challengesApi from '@/api/challenges'
+import { myChallenge, page } from '@/components/challenge/__tests__/fixtures'
 import { recommendation } from '@/components/recommendation/__tests__/fixtures'
 import { apiError, mountAt } from './viewTestUtils'
 
 vi.mock('@/api/reviewPlans')
 vi.mock('@/api/recommendations')
+vi.mock('@/api/challenges')
 
 function concept(id, name) {
   return {
@@ -209,6 +212,71 @@ describe('ReviewPlanView (F-15 SC-11)', () => {
 
     expect(item(wrapper, 1).exists()).toBe(false)
     expect(wrapper.find('[data-section="overdue"] h2').text()).toBe('밀린 복습 1개')
+  })
+
+  it('#211 완료를 체크하면 진행 중인 복습 챌린지 달성도를 보여 주고, 체크할 때마다 다시 부른다', async () => {
+    reviewPlansApi.fetchReviewPlans.mockResolvedValue(response())
+    challengesApi.fetchMyChallenges.mockResolvedValue(
+      page([myChallenge(2, { goalType: 'REVIEW_COUNT', goalValue: 5, progress: 1 })]),
+    )
+    const { wrapper } = await mountView()
+    expect(challengesApi.fetchMyChallenges).not.toHaveBeenCalled()
+
+    reviewPlansApi.updateReviewPlanStatus.mockResolvedValue(
+      plan(4, '2026-11-20', {
+        reason: 'WISH',
+        status: 'DONE',
+        doneAt: '2026-11-20T10:00:00+09:00',
+      }),
+    )
+    await item(wrapper, 4).find('input[type="checkbox"]').setValue(true)
+    await flushPromises()
+    expect(wrapper.find('[data-challenge-id="2"]').text()).toContain('1 / 5회')
+
+    challengesApi.fetchMyChallenges.mockResolvedValue(
+      page([myChallenge(2, { goalType: 'REVIEW_COUNT', goalValue: 5, progress: 2 })]),
+    )
+    reviewPlansApi.updateReviewPlanStatus.mockResolvedValue(
+      plan(5, '2026-11-22', { status: 'DONE', doneAt: '2026-11-20T10:05:00+09:00' }),
+    )
+    await item(wrapper, 5).find('input[type="checkbox"]').setValue(true)
+    await flushPromises()
+
+    expect(challengesApi.fetchMyChallenges).toHaveBeenCalledTimes(2)
+    expect(wrapper.find('[data-challenge-id="2"]').text()).toContain('2 / 5회')
+  })
+
+  it('#211 DONE 계획을 지우면 달성도를 다시 부르고, TODO 계획을 지우면 부르지 않는다', async () => {
+    reviewPlansApi.fetchReviewPlans.mockResolvedValue(response())
+    reviewPlansApi.deleteReviewPlan.mockResolvedValue(undefined)
+    challengesApi.fetchMyChallenges.mockResolvedValue(
+      page([myChallenge(2, { goalType: 'REVIEW_COUNT', goalValue: 5, progress: 1 })]),
+    )
+    const { wrapper } = await mountView()
+
+    await item(wrapper, 4).find('[data-action="remove"]').trigger('click')
+    await flushPromises()
+    expect(challengesApi.fetchMyChallenges).not.toHaveBeenCalled()
+
+    await item(wrapper, 3).find('[data-action="remove"]').trigger('click')
+    await flushPromises()
+    expect(challengesApi.fetchMyChallenges).toHaveBeenCalledTimes(1)
+    const notice = wrapper.find('[data-section="challenge-progress"]')
+    expect(notice.attributes('role')).toBe('status')
+    // 목록을 밀지 않게 복습 목록 뒤에 둔다
+    const sections = wrapper.findAll('section.day, [data-section="challenge-progress"]')
+    expect(sections.at(-1).attributes('data-section')).toBe('challenge-progress')
+  })
+
+  it('#211 체크가 실패하면 챌린지 달성도를 부르지 않는다', async () => {
+    reviewPlansApi.fetchReviewPlans.mockResolvedValue(response())
+    reviewPlansApi.updateReviewPlanStatus.mockRejectedValue(apiError(500, { message: '오류' }))
+    const { wrapper } = await mountView()
+
+    await item(wrapper, 4).find('input[type="checkbox"]').setValue(true)
+    await flushPromises()
+
+    expect(challengesApi.fetchMyChallenges).not.toHaveBeenCalled()
   })
 
   it('AC10 기간 안의 DONE을 풀면 TODO로 바뀐다', async () => {

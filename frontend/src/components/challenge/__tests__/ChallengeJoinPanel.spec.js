@@ -160,4 +160,37 @@ describe('ChallengeJoinPanel (F-25 AC13)', () => {
       '달성한 챌린지는 참여를 취소할 수 없습니다.',
     )
   })
+
+  it.each([
+    ['ANALYSIS_COUNT', '분석 요청하기', '/analyses/new'],
+    ['QUIZ_COUNT', '퀴즈 풀러 가기', '/analyses'],
+    ['REVIEW_COUNT', '복습하러 가기', '/review-plans'],
+  ])(
+    '#211 참여 중인 진행 중 %s 챌린지는 목표를 채우러 갈 링크를 보여 준다',
+    async (goalType, label, href) => {
+      const { wrapper } = await mountPanel(
+        challengeDetail(7, { goalType, participation: participation() }),
+      )
+
+      const link = find(wrapper, 'go-goal')
+      expect(link.text()).toBe(label)
+      expect(link.attributes('href')).toBe(href)
+    },
+  )
+
+  it('#211 참여하지 않았거나, 예정·종료이거나, 달성했으면 목표 링크를 보여 주지 않는다', async () => {
+    const cases = [
+      challengeDetail(7),
+      challengeDetail(7, { status: 'UPCOMING', participation: participation({ progress: 0 }) }),
+      challengeDetail(7, { status: 'ENDED', participation: participation() }),
+      challengeDetail(7, {
+        participation: participation({ progress: 10, completedAt: '2026-11-25T10:00:00+09:00' }),
+      }),
+    ]
+    for (const challenge of cases) {
+      const { wrapper } = await mountPanel(challenge)
+      expect(find(wrapper, 'go-goal').exists()).toBe(false)
+      wrapper.unmount()
+    }
+  })
 })

@@ -1,11 +1,12 @@
 <script setup>
 // SC-11 복습 계획 (F-15 AC9·AC10). 오늘부터 7일의 복습 카드와 밀린 복습을 보고 완료를 체크한다.
 // 기간 이동은 서버가 준 today·from을 기준으로 ±7일을 계산한다 (브라우저 시계를 쓰지 않는다).
-// 빈 상태 아래에는 맞춤 추천 3개를 보여 준다 (F-16 AC10).
+// 빈 상태 아래에는 맞춤 추천 3개를 보여 준다 (F-16 AC10). 체크나 DONE 삭제에 성공하면 진행 중인 복습 챌린지 달성도를 목록 뒤에 보인다 (#211).
 import { computed, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { deleteReviewPlan, fetchReviewPlans, updateReviewPlanStatus } from '@/api/reviewPlans'
 import { errorMessage } from '@/api/http'
+import ChallengeProgressNotice from '@/components/challenge/ChallengeProgressNotice.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import ReviewPlanItem from '@/components/reviewplan/ReviewPlanItem.vue'
 import RecommendationList from '@/components/recommendation/RecommendationList.vue'
@@ -23,6 +24,8 @@ const pendingChecked = ref({})
 const busy = ref({})
 /** 계획 id → 항목 아래 에러 */
 const itemErrors = ref({})
+/** 체크·DONE 삭제에 성공할 때마다 올린다. 0이면 챌린지 달성도를 숨긴다 (#211) */
+const statusChanges = ref(0)
 
 function toUtc(date) {
   const [y, m, d] = date.split('-').map(Number)
@@ -133,7 +136,14 @@ async function run(item, request, onSuccess) {
 
 async function toggle(item, checked) {
   pendingChecked.value = { ...pendingChecked.value, [item.id]: checked }
-  await run(item, () => updateReviewPlanStatus(item.id, checked ? 'DONE' : 'TODO'), replace)
+  await run(
+    item,
+    () => updateReviewPlanStatus(item.id, checked ? 'DONE' : 'TODO'),
+    (updated) => {
+      replace(updated)
+      statusChanges.value += 1
+    },
+  )
   const rest = { ...pendingChecked.value }
   delete rest[item.id]
   pendingChecked.value = rest
@@ -143,7 +153,11 @@ function remove(item) {
   return run(
     item,
     () => deleteReviewPlan(item.id),
-    () => removeFromLists(item.id),
+    () => {
+      removeFromLists(item.id)
+      // DONE 계획을 지우면 서버 달성도가 줄어든다 (F-25 AC5)
+      if (item.status === 'DONE') statusChanges.value += 1
+    },
   )
 }
 
@@ -223,6 +237,14 @@ load()
       </section>
     </template>
 
+    <!-- 체크하던 목록을 밀지 않게 목록 뒤에 둔다 (#211) -->
+    <ChallengeProgressNotice
+      v-if="statusChanges > 0"
+      class="challenges"
+      goal-type="REVIEW_COUNT"
+      :refresh-key="statusChanges"
+    />
+
     <div
       v-if="recommendationsStarted"
       v-show="showingEmpty"
@@ -238,6 +260,10 @@ load()
 .review-plans {
   max-width: 760px;
   margin: 0 auto;
+}
+
+.challenges {
+  margin-top: var(--space-6);
 }
 
 h1 {
