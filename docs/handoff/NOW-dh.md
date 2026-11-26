@@ -3,33 +3,27 @@
 > 김동환(A 영역: AI·분석·학습 루프) 전용. 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
 > 머리 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
-갱신: 2026-11-26 14:18 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/HP-2-roadmap
+갱신: 2026-11-26 14:36 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/FU-1-followups
 
 ## 현재 기능
 
-**HP-2 트랙 4 PR ② 로드맵 R-1** (기획서 7.7절) — **PR #195** CI 초록·Codex COMPLETE(1ed7132), **사람 머지 대기**. 사용자 지시(트랙 4): 머지 직전까지 자동, 머지는 사람이 GitHub에서
+**FU-1 2차 점검 발견 사항 follow-up 등록** (`docs/점검/2026-11-26-2차점검.md` 4절) — 이슈 12건 등록, 4절 "처리" 칸 기입. docs PR을 열고 CI 초록·Codex 확인 뒤 사람이 머지
 
 ## 진행
 
-- ✅ PR ① #192 머지(11-26 13:30), #130·#135·#136·#139 닫힘. #192·#175 본문에 `Roadmap: HP-1`·`D-1` 추가
-- ✅ `docs/로드맵.md` 정본(항목 47·넘겨주는 시점 10·공통 일정 4, 점검 2절에서 옮김)
-- ✅ `scripts/lib/roadmap.mjs`(파싱·상태 계산·배너·블록·nextItem·newlyOverdue) + `scripts/roadmap.mjs` CLI + `roadmap.test.mjs` 21개
-- ✅ SessionStart 배너 🗺️·🤝·⚠️·📅 + 컨텍스트 "## 로드맵" 블록, `related.mjs` 로드맵 문서 → 하네스 영역
-- ✅ `.github/workflows/roadmap.yml`: develop push 때 새로 지난 넘겨주기를 Mattermost로 한 번 (schedule은 기본 브랜치 main만 돌아 못 씀)
-- ✅ PR 템플릿 `Roadmap:` 줄, /pr-review·/pickup·/handoff·conventions(브랜치 `feature/<ID>-slug`)·CLAUDE.md
-- ✅ reviewer 반드시 수정 1(커밋·PR 제목 범위에 로드맵 ID: commit-msg SCOPE·ci.yml) + 권장 1~9(펜스 코드 무시, --search 제거, 조회 실패 때 지난 넘겨주기 접기, ID 대소문자, nextItem after, --check-body, 백필 안내, EV-1 뒤 머지 표기)
-- ✅ 일정·하네스 관리 주도 = 김동환 (결정로그, CODEOWNERS `/docs/로드맵.md`), V-2 고정 11/28
-- ✅ **Codex ✅ 1ed7132** (재리뷰 3회: P2 3건 수정 — ~~~ 펜스·대소문자 병합·검증 캐시, 1건 → #196)
+- ✅ HP-2 PR #195 머지(11-26). 로컬 `feature/HP-2-roadmap`의 미push NOW 커밋 91942d5는 버림(내용이 머지 대기라 낡음)
+- ✅ 이슈: A #200(J2-08)·#201(D-12)·#202(A-6)·#203(E-2·D-8) · 공통 #204(J3-08, K-1 흡수)·#205(A-5·F-4) · B #206(C-1, A·B)·#207(C-7)·#208(C-8)·#209(C-9)·#210(C-16)·#211(챌린지 행동 버튼 E-1·E-4)
+- ✅ 로드맵 항목에 이미 들어간 것(K-1·L-1a/b/c·O-1·F-29·LP-1·F-26b·U-1)과 기존 #108·#112·#155·#156은 이슈를 새로 만들지 않고 처리 칸에 적음. "발표 뒤로"는 이슈 만들지 않음
+- ✅ #170(B, 응답 시각 오프셋): A 쪽 영향 없음 확인 (challenge DTO는 이미 OffsetDateTime, UserProfileView는 `new Date`로 해석) → 합의 댓글 초안 작성, 사람 확인 뒤 게시
 
 ## 바로 다음 할 일
 
-1. PR #195: **사람이 GitHub에서 머지** (그 전 develop에 새 커밋이 있으면 `git merge origin/develop` → push → CI 재확인). 머지 뒤 `git switch develop && git pull`
-2. 머지 뒤 `node scripts/roadmap.mjs --next --after HP-2` → HP-3 세션 시작·표시 (H-5~7, HX-6·7, reviewer 권장 10: roadmap `unmergedRemoteBranches` 동기 git을 H-5 시간 예산에 포함)
-3. dh-home에서 `node scripts/setup.mjs` 한 번 (eval fetch 제외 refspec)
+1. FU-1 PR 머지 뒤 새 세션(Opus/high)에서 **E-1** 평가 러너 flow·concept·quiz + DS-04 채점기 + 수준 구분 지표 (11/29 B에 넘김. 블라인드 분업: dev 합성 라벨로 테스트, eval 열지 않음) 또는 **HP-3**(H-5~7, HX-6·7, reviewer 권장 10)
+2. dh-home에서 `node scripts/setup.mjs` 한 번 (eval fetch 제외 refspec)
 
 ## 막힌 점 / 결정 필요
 - 사람: dh-home git `user.name` 통일(H-7), 노션 팀원 초대, F-05b liveTest · eval 기록 브랜치 `eval/` 접두사를 김준섭에게 알리기 · 김준섭 NOW의 V-2 "12/03 고정"이 로드맵(7.5절 합의 11/28)과 다름 → 확인
 
 ## 주의
-- 다음 마이그레이션은 V14 · node heredoc으로 파일 고치면 `$'`·`\r` 이스케이프가 깨짐 → Edit 도구 · 이 PC에 python 없음
+- 다음 마이그레이션은 V14 · node heredoc으로 파일 고치면 `$'`·`$&`·`\r` 이스케이프가 깨짐(11-26 또 겪음) → Edit 도구 · 이 PC에 python 없음
 - 로드맵 상태는 `gh pr list --state all`(검색 색인 안 씀)로 계산한다. 커밋 범위에 로드맵 ID 사용 가능(`feat(K-3a): …`)
