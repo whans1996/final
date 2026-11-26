@@ -1,9 +1,10 @@
 package com.vibenote.user.dto;
 
 import com.vibenote.common.Level;
+import com.vibenote.common.config.ClockConfig;
 import com.vibenote.user.domain.User;
 import io.swagger.v3.oas.annotations.media.Schema;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 /** 내 프로필 (F-03). 본인에게만 주므로 email·role을 포함한다. */
 @Schema(description = "내 프로필")
@@ -36,8 +37,8 @@ public record MyProfileResponse(
         @Schema(
                         requiredMode = Schema.RequiredMode.REQUIRED,
                         description = "가입 시각",
-                        example = "2026-11-18T10:30:00")
-                LocalDateTime createdAt) {
+                        example = "2026-11-18T10:30:00+09:00")
+                OffsetDateTime createdAt) {
 
     public static MyProfileResponse from(User user) {
         return new MyProfileResponse(
@@ -47,6 +48,6 @@ public record MyProfileResponse(
                 user.getBio(),
                 user.getLevel(),
                 user.getRole(),
-                user.getCreatedAt());
+                user.getCreatedAt().atZone(ClockConfig.ZONE).toOffsetDateTime());
     }
 }

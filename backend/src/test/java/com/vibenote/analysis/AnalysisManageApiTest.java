@@ -195,7 +195,7 @@ class AnalysisManageApiTest extends AnalysisTestSupport {
         mockMvc.perform(get("/api/feed").header(HttpHeaders.AUTHORIZATION, bearer(f)))
                 .andExpect(jsonPath("$.items[0].type").value("ANALYSIS"))
                 .andExpect(jsonPath("$.items[0].target.id").value(id))
-                .andExpect(jsonPath("$.items[0].createdAt").value("2026-11-20T10:00:00"));
+                .andExpect(jsonPath("$.items[0].createdAt").value("2026-11-20T10:00:00+09:00"));
         assertThat(count("SELECT COUNT(*) FROM activities WHERE user_id = ?", u)).isEqualTo(1);
 
         patchVisibility(u, id, "{\"isPublic\":false}")

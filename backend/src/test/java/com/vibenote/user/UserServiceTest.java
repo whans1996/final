@@ -16,6 +16,7 @@ import com.vibenote.common.exception.ErrorCode;
 import com.vibenote.user.domain.User;
 import com.vibenote.user.dto.SignupRequest;
 import com.vibenote.user.dto.UpdateProfileRequest;
+import java.time.LocalDateTime;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -117,6 +118,7 @@ class UserServiceTest {
         // Codex 리뷰: 읽은 값으로 세 컬럼을 모두 쓰면 동시에 온 다른 필드 수정이 사라진다
         User user = User.newMember("user@example.com", "hashed", "코딩초보", Level.BEGINNER);
         user.setId(1L);
+        user.setCreatedAt(LocalDateTime.of(2026, 1, 1, 9, 0)); // DB는 NOT NULL (응답이 오프셋으로 바꾼다)
         given(userMapper.findById(1L)).willReturn(Optional.of(user));
         given(userMapper.updateProfile(anyLong(), any(), any(), any())).willReturn(1);
 

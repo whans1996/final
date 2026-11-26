@@ -32,7 +32,10 @@ class UserProfileApiTest extends UserTestSupport {
     @Test
     void AC1_로그인하면_내_프로필을_email까지_받는다() throws Exception {
         long id = createUser("user@example.com", "코딩초보");
-        jdbc.update("UPDATE users SET bio = '스프링 공부 중' WHERE id = ?", id);
+        jdbc.update(
+                "UPDATE users SET bio = '스프링 공부 중', created_at = '2026-01-01 09:00:00' WHERE id ="
+                        + " ?",
+                id);
 
         mockMvc.perform(get("/api/users/me").header("Authorization", bearer(id)))
                 .andExpect(status().isOk())
@@ -42,7 +45,7 @@ class UserProfileApiTest extends UserTestSupport {
                 .andExpect(jsonPath("$.bio").value("스프링 공부 중"))
                 .andExpect(jsonPath("$.level").value("BEGINNER"))
                 .andExpect(jsonPath("$.role").value("USER"))
-                .andExpect(jsonPath("$.createdAt").isString())
+                .andExpect(jsonPath("$.createdAt").value("2026-01-01T09:00:00+09:00"))
                 .andExpect(jsonPath("$.passwordHash").doesNotExist())
                 .andExpect(jsonPath("$.status").doesNotExist());
     }
@@ -57,6 +60,7 @@ class UserProfileApiTest extends UserTestSupport {
     @Test
     void AC2_비로그인도_공개_프로필을_받고_email과_role은_없다() throws Exception {
         long id = createUser("user@example.com", "코딩초보");
+        jdbc.update("UPDATE users SET created_at = '2026-01-01 09:00:00' WHERE id = ?", id);
 
         mockMvc.perform(get("/api/users/{id}", id))
                 .andExpect(status().isOk())
@@ -64,7 +68,7 @@ class UserProfileApiTest extends UserTestSupport {
                 .andExpect(jsonPath("$.nickname").value("코딩초보"))
                 .andExpect(jsonPath("$.bio").isEmpty())
                 .andExpect(jsonPath("$.level").value("BEGINNER"))
-                .andExpect(jsonPath("$.createdAt").isString())
+                .andExpect(jsonPath("$.createdAt").value("2026-01-01T09:00:00+09:00"))
                 .andExpect(jsonPath("$.email").doesNotExist())
                 .andExpect(jsonPath("$.role").doesNotExist());
     }

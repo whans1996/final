@@ -182,7 +182,7 @@ class FeedApiTest extends IntegrationTestBase {
                 .andExpect(jsonPath("$.size").value(20))
                 .andExpect(jsonPath("$.total").value(3))
                 .andExpect(jsonPath("$.items[1].type").value("REVIEW"))
-                .andExpect(jsonPath("$.items[1].createdAt").value("2026-01-01T10:00:00"))
+                .andExpect(jsonPath("$.items[1].createdAt").value("2026-01-01T10:00:00+09:00"))
                 .andExpect(jsonPath("$.items[1].actor.id").value(c))
                 .andExpect(jsonPath("$.items[1].actor.nickname").value(nickname(c)))
                 .andExpect(jsonPath("$.items[1].target.id").value(card)) // 리뷰 id가 아니라 카드 id
@@ -305,7 +305,7 @@ class FeedApiTest extends IntegrationTestBase {
 
         feed(me).andExpect(status().isOk())
                 .andExpect(jsonPath("$.items[*].id").value(contains((int) cWish, (int) bWish)))
-                .andExpect(jsonPath("$.items[0].createdAt").value("2026-01-01T09:01:00"))
+                .andExpect(jsonPath("$.items[0].createdAt").value("2026-01-01T09:01:00+09:00"))
                 .andExpect(jsonPath("$.total").value(2));
     }
 

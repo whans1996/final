@@ -94,7 +94,7 @@ AC11 종류별 문장 (SC-17):
 ```json
 {
   "items": [
-    { "id": 7, "nickname": "java러버", "level": "JUNIOR", "followedAt": "2026-11-20T15:02:11" }
+    { "id": 7, "nickname": "java러버", "level": "JUNIOR", "followedAt": "2026-11-20T15:02:11+09:00" }
   ],
   "page": 1, "size": 20, "total": 12
 }
@@ -111,12 +111,12 @@ AC11 종류별 문장 (SC-17):
 {
   "items": [
     {
-      "id": 91, "type": "REVIEW", "createdAt": "2026-11-20T13:40:00",
+      "id": 91, "type": "REVIEW", "createdAt": "2026-11-20T13:40:00+09:00",
       "actor": { "id": 7, "nickname": "java러버" },
       "target": { "id": 12, "title": "JWT 기반 인증", "rating": 5 }
     },
     {
-      "id": 88, "type": "POST", "createdAt": "2026-11-20T11:05:00",
+      "id": 88, "type": "POST", "createdAt": "2026-11-20T11:05:00+09:00",
       "actor": { "id": 3, "nickname": "코딩초보" },
       "target": { "id": 40, "title": "@Transactional이 안 먹어요", "rating": null }
     }

@@ -1600,7 +1600,7 @@
           },
           "createdAt" : {
             "description" : "활동 시각",
-            "example" : "2026-11-20T13:40:00",
+            "example" : "2026-11-20T13:40:00+09:00",
             "format" : "date-time",
             "type" : "string"
           },
@@ -1798,7 +1798,7 @@
         "properties" : {
           "followedAt" : {
             "description" : "팔로우한 시각 (follows.created_at)",
-            "example" : "2026-11-20T15:02:11",
+            "example" : "2026-11-20T15:02:11+09:00",
             "format" : "date-time",
             "type" : "string"
           },
@@ -2146,7 +2146,7 @@
           },
           "createdAt" : {
             "description" : "가입 시각",
-            "example" : "2026-11-18T10:30:00",
+            "example" : "2026-11-18T10:30:00+09:00",
             "format" : "date-time",
             "type" : "string"
           },
@@ -3887,7 +3887,7 @@
           },
           "createdAt" : {
             "description" : "가입 시각",
-            "example" : "2026-11-18T10:30:00",
+            "example" : "2026-11-18T10:30:00+09:00",
             "format" : "date-time",
             "type" : "string"
           },
