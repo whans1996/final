@@ -64,7 +64,7 @@ class PostWriteApiTest extends PostApiTestBase {
 
     @Test
     void AC6_분석을_첨부해_글을_쓰면_201과_id를_받고_다듬은_값과_활동이_저장된다() throws Exception {
-        long analysis = doneAnalysis(me); // 비공개여도 첨부할 수 있다
+        long analysis = doneAnalysis(me);
 
         ResultActions result =
                 create(
@@ -170,13 +170,14 @@ class PostWriteApiTest extends PostApiTestBase {
     @Test
     void AC8_첨부할_수_없는_분석이면_POST_001이고_글이_생기지_않는다() throws Exception {
         long othersDone = doneAnalysis(other);
-        long myFailed = insertAnalysis(me, "FAILED", false, false);
-        long myRunning = insertAnalysis(me, "EXPLAINING", false, false);
-        long myDeleted = insertAnalysis(me, "DONE", false, true);
+        long myFailed = insertAnalysis(me, "FAILED", true, false);
+        long myRunning = insertAnalysis(me, "EXPLAINING", true, false);
+        long myDeleted = insertAnalysis(me, "DONE", true, true);
+        long myPrivate = insertAnalysis(me, "DONE", false, false); // 비공개는 독자가 볼 수 없다 (#206)
         int before = postCount();
 
         for (long analysis :
-                new long[] {othersDone, myFailed, myRunning, myDeleted, 999_999_999L}) {
+                new long[] {othersDone, myFailed, myRunning, myDeleted, myPrivate, 999_999_999L}) {
             create(me, body("QNA", "질문", "본문", analysis, null))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.code").value("POST_001"))
@@ -248,6 +249,9 @@ class PostWriteApiTest extends PostApiTestBase {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.details.conceptId").isString());
         update(me, post, body("QNA", "제목", "본문", doneAnalysis(other), null))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("POST_001"));
+        update(me, post, body("QNA", "제목", "본문", insertAnalysis(me, "DONE", false, false), null))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("POST_001"));
         update(me, post, body("QNA", "제목", "본문", null, insertConcept("DRAFT")))

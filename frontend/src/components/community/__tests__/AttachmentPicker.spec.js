@@ -16,7 +16,7 @@ function analysis(partial) {
     status: 'DONE',
     level: 'JUNIOR',
     progress: 100,
-    isPublic: false,
+    isPublic: true,
     sourceType: 'ZIP',
     createdAt: '2026-11-20T10:00:00+09:00',
     ...partial,
@@ -81,6 +81,41 @@ describe('AttachmentPicker (F-17 AC17)', () => {
     expect(options.map((o) => o.element.value)).toEqual(['15', '17'])
     await wrapper.find('select[name="analysisId"]').setValue('17')
     expect(emitted(wrapper)).toEqual({ type: 'ANALYSIS', id: 17, label: 'shop-backend' })
+  })
+
+  it('AC17 #206 비공개 분석은 "(비공개)"를 붙여 고를 수 없게 두고 공개로 바꾸라고 안내한다', async () => {
+    analysesApi.fetchAnalyses.mockResolvedValue({
+      items: [analysis(), analysis({ id: 18, title: '비밀 과제', isPublic: false })],
+      page: 1,
+      size: 100,
+      total: 2,
+    })
+    const wrapper = mountPicker()
+
+    await chooseMode(wrapper, 'analysis')
+
+    const option = wrapper.find('select[name="analysisId"] option[value="18"]')
+    expect(option.text()).toBe('비밀 과제 (비공개)')
+    expect(option.element.disabled).toBe(true)
+    expect(wrapper.find('[data-role="private-hint"]').text()).toBe(
+      '비공개 분석은 첨부할 수 없습니다. 분석 화면에서 공개로 바꾸면 첨부할 수 있습니다.',
+    )
+    await wrapper.find('select[name="analysisId"]').setValue('18')
+    expect(emitted(wrapper)).toBeUndefined()
+  })
+
+  it('AC17 #206 비공개 분석이 없으면 안내를 보여 주지 않는다', async () => {
+    analysesApi.fetchAnalyses.mockResolvedValue({
+      items: [analysis()],
+      page: 1,
+      size: 100,
+      total: 1,
+    })
+    const wrapper = mountPicker()
+
+    await chooseMode(wrapper, 'analysis')
+
+    expect(wrapper.find('[data-role="private-hint"]').exists()).toBe(false)
   })
 
   it('AC17 개념 카드는 검색어로 10개를 찾아 고른다', async () => {

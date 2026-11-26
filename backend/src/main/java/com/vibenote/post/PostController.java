@@ -87,8 +87,8 @@ public class PostController {
     @Operation(
             summary = "게시글 작성",
             description =
-                    "게시판·제목(앞뒤 공백 제외 1~100자)·본문(1~5000자)으로 글을 쓴다. 내 DONE 분석이나 공개 개념 카드 중 하나를 첨부할 수"
-                            + " 있다. 팔로워 피드용 POST 활동을 함께 남긴다.")
+                    "게시판·제목(앞뒤 공백 제외 1~100자)·본문(1~5000자)으로 글을 쓴다. 내 공개 DONE 분석이나 공개 개념 카드 중 하나를 첨부할"
+                            + " 수 있다. 팔로워 피드용 POST 활동을 함께 남긴다.")
     @ApiResponse(responseCode = "201", description = "작성 성공")
     @ApiResponse(
             responseCode = "400",

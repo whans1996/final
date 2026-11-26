@@ -110,7 +110,9 @@ describe('PostWriteView (F-17 AC17·AC18)', () => {
 
   it('AC17 고른 첨부를 보내고 저장 중에는 버튼이 비활성이다', async () => {
     analysesApi.fetchAnalyses.mockResolvedValue({
-      items: [{ id: 15, title: '쇼핑몰 과제', projectName: 'shop', status: 'DONE' }],
+      items: [
+        { id: 15, title: '쇼핑몰 과제', projectName: 'shop', status: 'DONE', isPublic: true },
+      ],
       page: 1,
       size: 100,
       total: 1,
@@ -198,6 +200,7 @@ describe('PostWriteView (F-17 AC17·AC18)', () => {
       title: '쇼핑몰 과제',
       projectName: 'shop',
       status: 'DONE',
+      isPublic: true,
       mine: true,
     })
     const withAnalysis = await mountWrite('/community/write?analysisId=15')
@@ -224,6 +227,21 @@ describe('PostWriteView (F-17 AC17·AC18)', () => {
     await fillForm(wrapper)
     await submitForm(wrapper)
     expect(postsApi.createPost.mock.calls[0][0]).toMatchObject({ analysisId: null })
+  })
+
+  it('AC18 #206 ?analysisId=가 내 비공개 분석이면 첨부하지 않고 안내한다', async () => {
+    analysesApi.fetchAnalysis.mockResolvedValue({
+      id: 15,
+      title: '비밀 과제',
+      projectName: 'shop',
+      status: 'DONE',
+      isPublic: false,
+      mine: true,
+    })
+    const { wrapper } = await mountWrite('/community/write?analysisId=15')
+
+    expect(wrapper.text()).toContain('첨부할 수 없는 항목이라 빼고 열었습니다')
+    expect(wrapper.find('[data-role="attachment-chip"]').exists()).toBe(false)
   })
 
   it('AC17·AC18 미리 채울 첨부를 불러오는 동안은 폼을 열지 않아 입력이 기준 상태에 묻히지 않는다', async () => {

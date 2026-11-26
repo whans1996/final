@@ -1,7 +1,7 @@
 # NOW — 김준섭 현재 작업 스냅샷
 
 > 김준섭(B 영역: 카드·소셜) 전용. 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
-갱신: 2026-11-26 15:27 · 작업자: JoonseobKim · PC: js-home · 브랜치: feature/V-1b-f17-fixes
+갱신: 2026-11-26 15:33 · 작업자: JoonseobKim · PC: js-home · 브랜치: feature/V-1b-f17-fixes
 
 ---
 
@@ -14,13 +14,14 @@
 - ✅ #210 삭제 확인에 "댓글 n개도 함께 삭제됩니다": `PostComments`가 목록 받을 때 `count` emit → `PostDetailView.liveCommentCount ?? post.commentCount`. 테스트 `PostDetailView.spec.js` AC16 #210 3건, `PostComments.spec.js` AC12 #210
 - ✅ #207 `PostWriteView.prefillAttachment`가 `analysis.mine !== true`면 빼고 "첨부할 수 없는 항목이라 빼고 열었습니다"(spec AC18 문구). 테스트 `PostWriteView.spec.js` AC18 #207
 - ✅ #209 `GET /api/posts/{id}?countView=false`(기본 true, AC4 유지) → `PostService.getDetail(…, countView)`, FE `fetchPost(id, { countView: false })`를 `PostWriteView.loadPost`가 씀. spec F-17 3절·openapi 갱신. 테스트 `PostDetailApiTest#AC4_issue209_…`, `posts.spec.js` AC18 #209
-- PR #214(#170) 머지·#170 닫힘 (11-26)
+- ✅ #206 (a) `PostMapper.existsAttachableAnalysis`에 `is_public = TRUE`, `AttachmentPicker` 비공개는 disabled "(비공개)"+`private-hint`, `PostWriteView` 미리 채우기도 `isPublic` 확인. spec AC6·AC8·AC17·AC18, 화면설계서 SC-15·16, 결정로그 1줄. verify be·fe ✅
 
 ## 바로 다음 할 일
 
-1. #206 (a): `PostMapper.xml:87-91` `checkAttachments`에 공개 조건, `PostService.java:149-162`, `AttachmentPicker.vue:21,61-62` 비활성·안내 → PR(`Roadmap: V-1b (일부)`, Closes #206 #207 #209 #210, @whans1996)
-2. V-2 DS-03·04 고정 **11/28** (결정로그 11-26 R-1): eval `sets.json` `frozenAt` 기록·push → 메타데이터 docs PR(`Roadmap: V-2`). 라벨 9/9 reviewed
-3. 11/27 Figma 공동 세션 → F-29 `/spec` (11/29~)
+1. `/pr-review` → PR (`Roadmap: V-1b (일부)`, Closes #206 #207 #209 #210, @whans1996: #206 비공개 첨부 금지는 F-19 공개 규칙과 맞물림·`GET /api/posts/{id}?countView` 추가). 남는 엣지: 첨부 뒤 비공개로 바꾼 글을 수정·저장하면 POST_001(첨부 해제 필요) → PR 본문에 적음
+2. #208 F-18 댓글 200개 초과: 새 브랜치 `feature/issue-208-comment-page`
+3. V-2 DS-03·04 고정 **11/28** (결정로그 11-26 R-1): eval `sets.json` `frozenAt` 기록·push → 메타데이터 docs PR(`Roadmap: V-2`). 라벨 9/9 reviewed
+4. 11/27 Figma 공동 세션 → F-29 `/spec` (11/29~)
 
 ## 막힌 점 / 결정 필요
 
