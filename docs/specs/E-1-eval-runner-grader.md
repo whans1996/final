@@ -142,8 +142,8 @@ LLM_PROVIDER=gms ./gradlew promptEval -Pstage=all -Plevel=all -Pfixture=<id|zip>
 
 - [x] 브랜치 `feature/E-1-eval-runner`
 - [ ] Flyway 마이그레이션 (없음)
-- [ ] `FlowGenerator`에서 DB 없이 부르는 메서드 분리 (F-07 테스트 green 유지)
-- [ ] `PromptEvalRunner` 핵심을 `EvalPipeline`으로 옮기고 flow·concept·quiz·all 추가 (AC1~AC4)
+- [x] `FlowGenerator`에서 DB 없이 부르는 메서드 분리 (`create(FlowSource, ApiEndpoint, files)`, F-07 테스트 green 유지)
+- [x] `PromptEvalRunner` 핵심을 `EvalPipeline`으로 옮기고 flow·concept·quiz·all 추가 (AC1~AC4). 파일 단위 `key`는 묶음의 경로를 `,`로 이은 값, 러너는 시드 카탈로그 때문에 `IntegrationTestBase` 상속(Docker 필요)
 - [ ] 채점기 `EvalGrader`·`LevelJudge`·`QuizCheck`·`EvalSummary` + `promptGrade` Gradle 작업 (AC5~AC10)
 - [ ] 합성 라벨 fixture (DS-02-01, AC11)
 - [ ] AC별 실패 테스트 작성 (red 확인)

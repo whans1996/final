@@ -90,7 +90,8 @@ tasks.register('liveTest', Test) {
 
 // 프롬프트 평가 하네스 (prompt-evaluator 에이전트가 사용). 사람이 요청할 때만 실행한다 (GMS 크레딧·Gemini 무료 한도를 쓴다).
 // 공급자는 LLM_PROVIDER=gms|gemini|ollama 하나만 폴백 없이 부른다 (F-27 AC13). 예: LLM_PROVIDER=gms ./gradlew promptEval ...
-// ./gradlew promptEval -Pstage=overview|file -Plevel=beginner|junior|senior|all -Pfixture=DS-02-01 [-Pbatches=1] [-PpauseMs=4000]
+// ./gradlew promptEval -Pstage=overview|file|flow|concept|quiz|all -Plevel=beginner|junior|senior|all -Pfixture=DS-02-01 [-Pbatches=N] [-Pflows=3] [-PpauseMs=4000]
+// 개념 카탈로그(시드 카드)를 Testcontainers DB에서 읽으므로 Docker가 필요하다 (E-1 AC2)
 // 결과: ../.harness/prompt-eval/<시각>-<fixture>-<stage>.json
 tasks.register('promptEval', Test) {
     description = '프롬프트를 실제 LLM(LLM_PROVIDER)으로 실행해 결과를 .harness/prompt-eval/에 저장한다 (@Tag("prompt-eval")).'
@@ -100,7 +101,7 @@ tasks.register('promptEval', Test) {
     useJUnitPlatform {
         includeTags 'prompt-eval'
     }
-    ['stage', 'level', 'fixture', 'batches', 'pauseMs'].each { name ->
+    ['stage', 'level', 'fixture', 'batches', 'flows', 'pauseMs'].each { name ->
         if (project.hasProperty(name)) {
             systemProperty "promptEval.${name}", project.property(name)
         }
