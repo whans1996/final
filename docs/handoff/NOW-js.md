@@ -1,7 +1,7 @@
 # NOW — 김준섭 현재 작업 스냅샷
 
 > 김준섭(B 영역: 카드·소셜) 전용. 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
-갱신: 2026-11-26 16:00 · 작업자: JoonseobKim · PC: js-home · 브랜치: feature/issue-208-comment-page
+갱신: 2026-11-26 16:02 · 작업자: JoonseobKim · PC: js-home · 브랜치: feature/issue-208-comment-page
 
 ---
 
@@ -14,11 +14,11 @@
 - ✅ BE `CommentMapper.xml#findByPost`: 서브쿼리 `ORDER BY created_at DESC, id DESC LIMIT 200` → 바깥 `ORDER BY created_at, id`. 테스트 `CommentListApiTest#AC2_issue208_…` 2건(시각 다름·같은 시각 동점)
 - ✅ FE `PostComments.vue` `hiddenCount`로 목록 **위** "이전 댓글 n개는 보이지 않습니다". 테스트 `PostComments.spec.js` AC11 #208
 - ✅ spec F-18, 화면설계서 SC-15, 유스케이스 UC41, 결정로그 1줄, openapi 설명. verify all ✅, reviewer 반드시 0·권장 3 반영(ea2eab6), contract 0건
-- 🔀 **PR #216** (`Roadmap: V-1b`, `Closes #208`, @whans1996 멘션) — CI 대기, Codex 대기 (`node scripts/codex-review.mjs 216`)
+- 🔀 **PR #216** (`Roadmap: V-1b`, `Closes #208`, @whans1996 멘션) — **Codex ✅ ea2eab6**, CI Backend 대기 (나머지 초록)
 
 ## 바로 다음 할 일
 
-1. PR #216 Codex 루프: FINDINGS면 `/pr-review` 8단계. COMPLETE·CI 초록이면 **사람이 GitHub에서 머지** → `git switch develop && git pull`, #208 닫힘 확인 (spec은 이미 DONE이라 10단계 완료 표시 없음)
+1. PR #216 CI Backend 초록이면 **사람이 GitHub에서 머지** (그 전 develop 새 커밋이면 `git merge origin/develop` → push) → `git switch develop && git pull`, #208 닫힘 확인 (spec은 이미 DONE이라 10단계 완료 표시 없음)
 2. V-2 DS-03·04 고정 **11/28** (결정로그 11-26 R-1): eval `sets.json` `frozenAt` 기록·push → 메타데이터 docs PR(`Roadmap: V-2`). 라벨 9/9 reviewed
 3. 11/27 Figma 공동 세션 → F-29 `/spec` (11/29~)
 
