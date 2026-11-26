@@ -3,7 +3,7 @@
 > 김동환(A 영역: AI·분석·학습 루프) 전용. 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
 > 머리 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
-갱신: 2026-11-26 22:47 · 작업자: whans1996@naver.com · PC: dh-home · 브랜치: feature/issue-179-harness-quick-fixes
+갱신: 2026-11-26 22:58 · 작업자: whans1996@naver.com · PC: dh-home · 브랜치: feature/issue-179-harness-quick-fixes
 
 ## 현재 기능
 
@@ -12,7 +12,7 @@
 ## 진행
 
 - ✅ #179 `issues.mjs` `ISSUE_LIMIT` 200(+1로 잘림 판정)·배너/목록 경고 · #213 `roadmap.mjs` `normalizeItemId` → `branches.mjs` 로드맵 ID · #182 브랜치 보호 문구 · #231 `records.mjs` `undoMsysPathConv`(stamp·handoff, 작업 중 발견해 이 PR에서)
-- ✅ /pr-review: verify all·harness 통과, reviewer 반드시 0·권장 5 + 무시 가능 2 반영. PR 설명 `.harness/pr-issue-179.md` (Closes 4개), 아직 push 전
+- ✅ /pr-review: verify all·harness 통과, reviewer 반드시 0·권장 5 + 무시 가능 2 반영. **PR #233** (Closes #179·#182·#213·#231), Codex ✅ d28266d (첫 리뷰 failed → 재요청 뒤 지적 없음), CI: FE·하네스·제목 통과, BE 진행 중이었음
 
 ## 이슈 정리 순서 (11-26 사용자 승인)
 
@@ -20,7 +20,7 @@
 
 ## 바로 다음 할 일
 
-1. push → `gh pr create --base develop --title "fix(harness): 이슈 정리 ① 조회 잘림·로드맵 ID·Git Bash 경로 변환·브랜치 보호 문구" --body-file .harness/pr-issue-179.md` → Codex 루프 → CI·Codex COMPLETE → 머지
+1. `gh pr checks 233`으로 BE까지 초록 확인 → GitHub에서 머지 (develop이 앞서 있으면 `git merge origin/develop` → push → CI 다시) → #179·#182·#213·#231 닫힘 확인
 2. 머지 뒤 `feature/K-3a-seed-check` 만들고 K-3a 시드 검수 스크립트 ①형식 ②예제 실행 (`/spec K-3a`부터, Opus/high)
 
 ## 막힌 점 / 결정 필요
