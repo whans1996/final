@@ -100,7 +100,8 @@ async function prefillAttachment() {
       attachment.value = { type: 'CONCEPT', id: concept.id, label: concept.name }
     } else {
       const analysis = await fetchAnalysis(analysisId)
-      if (analysis.status !== 'DONE') throw new Error('not attachable')
+      // BE는 내 분석만 첨부를 받는다 (POST_001). 남의 공개 분석을 채워 두면 제출 때야 거절된다 (#207)
+      if (analysis.status !== 'DONE' || analysis.mine !== true) throw new Error('not attachable')
       attachment.value = { type: 'ANALYSIS', id: analysis.id, label: analysisLabel(analysis) }
     }
   } catch {

@@ -198,12 +198,32 @@ describe('PostWriteView (F-17 AC17·AC18)', () => {
       title: '쇼핑몰 과제',
       projectName: 'shop',
       status: 'DONE',
+      mine: true,
     })
     const withAnalysis = await mountWrite('/community/write?analysisId=15')
     expect(analysesApi.fetchAnalysis).toHaveBeenCalledWith(15)
     expect(withAnalysis.wrapper.find('[data-role="attachment-chip"]').text()).toContain(
       '쇼핑몰 과제',
     )
+  })
+
+  it('AC18 #207 ?analysisId=가 남의 분석이면 공개여도 첨부하지 않고 안내한다', async () => {
+    analysesApi.fetchAnalysis.mockResolvedValue({
+      id: 15,
+      title: '남의 과제',
+      projectName: 'shop',
+      status: 'DONE',
+      isPublic: true,
+      mine: false,
+    })
+    postsApi.createPost.mockResolvedValue({ id: 50 })
+    const { wrapper } = await mountWrite('/community/write?analysisId=15')
+
+    expect(wrapper.text()).toContain('첨부할 수 없는 항목이라 빼고 열었습니다')
+    expect(wrapper.find('[data-role="attachment-chip"]').exists()).toBe(false)
+    await fillForm(wrapper)
+    await submitForm(wrapper)
+    expect(postsApi.createPost.mock.calls[0][0]).toMatchObject({ analysisId: null })
   })
 
   it('AC17·AC18 미리 채울 첨부를 불러오는 동안은 폼을 열지 않아 입력이 기준 상태에 묻히지 않는다', async () => {
