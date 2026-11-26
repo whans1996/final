@@ -46,7 +46,13 @@ final class EvalGrader {
 
     private static final List<String> STAGES =
             List.of("overview", "file", "flow", "concept", "quiz");
-    private static final Set<String> FE_LAYERS = Set.of("vue", "js");
+
+    /**
+     * FE 파일 layer. 라벨({@code LABEL_SCHEMA.md}: view·component·store·api·router)과 앱 index(vue·js)
+     * 이름을 모두 받는다.
+     */
+    private static final Set<String> FE_LAYERS =
+            Set.of("view", "component", "store", "api", "router", "vue", "js");
 
     /** 출력 텍스트로 보지 않는 필드 (경로·메타·호출 원문). 금지 사실 패턴을 찾을 때 뺀다. */
     private static final Set<String> NOT_TEXT =
@@ -251,7 +257,7 @@ final class EvalGrader {
         Map<String, Set<String>> evidence = new HashMap<>();
         for (JsonNode c : label.path("concepts")) {
             String name = normalize(c.path("name").asString());
-            grades.put(name, c.path("grade").asString().toLowerCase(Locale.ROOT));
+            grades.put(name, c.path("tier").asString().toLowerCase(Locale.ROOT));
             Set<String> files = new HashSet<>();
             c.path("evidence").forEach(e -> files.add(e.asString()));
             evidence.put(name, files);
@@ -388,7 +394,10 @@ final class EvalGrader {
         return apis;
     }
 
-    /** B 금지 사실: 수준마다 출력 텍스트에 패턴(대소문자 무시)이 하나라도 나온 사실 수의 합. */
+    /**
+     * B 금지 사실: 수준마다 출력 텍스트에 라벨 {@code forbidden[]} 문자열이 그대로(대소문자 무시) 나온 항목 수의 합. 문자열을 패턴으로 보고 부분
+     * 일치만 센다 (문장 단위 사실성 판정은 범위 밖, spec 8절).
+     */
     private static int forbidden(JsonNode report, JsonNode label, Map<String, Object> details) {
         int hits = 0;
         List<String> found = new ArrayList<>();
@@ -397,14 +406,10 @@ final class EvalGrader {
             collectText(level.getValue(), text);
             String haystack = text.toString().toLowerCase(Locale.ROOT);
             for (JsonNode fact : label.path("forbidden")) {
-                boolean hit = false;
-                for (JsonNode pattern : fact.path("patterns")) {
-                    String p = pattern.asString().toLowerCase(Locale.ROOT);
-                    hit |= !p.isBlank() && haystack.contains(p);
-                }
-                if (hit) {
+                String pattern = fact.asString("").strip().toLowerCase(Locale.ROOT);
+                if (!pattern.isEmpty() && haystack.contains(pattern)) {
                     hits++;
-                    found.add(level.getKey() + ": " + fact.path("fact").asString());
+                    found.add(level.getKey() + ": " + fact.asString());
                 }
             }
         }

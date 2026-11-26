@@ -3,7 +3,7 @@
 > 김동환(A 영역: AI·분석·학습 루프) 전용. 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
 > 머리 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
-갱신: 2026-11-26 15:30 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/E-1-eval-runner
+갱신: 2026-11-26 15:36 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/E-1-eval-runner
 
 ## 현재 기능
 
@@ -19,11 +19,11 @@
 ## 바로 다음 할 일
 
 1. `node scripts/verify.mjs be`로 BE 전체 확인 → `/pr-review` (PR 본문 `Roadmap: E-1`, 11/29 B 넘김. 판정 모델 Gemini 실호출 확인은 사람 요청 시 prompt-evaluator로 dev DS-02-01만)
-2. 라벨 형식(김준섭 `LABEL_SCHEMA.md` 구조)을 받으면 `EvalGrader.concepts/coverage/forbidden`의 필드 이름만 맞춘다
+2. 김준섭에게 확인: `forbidden[]` 문자열이 출력에 그대로 나올 표현(패턴)인지 사실 문장인지 (채점기는 부분 일치로 센다, spec 9절 1)
 3. dh-home에서 `node scripts/setup.mjs` 한 번 (eval fetch 제외 refspec)
 
 ## 막힌 점 / 결정 필요
-- 김준섭 답 대기 (11-26 Mattermost로 요청함): `LABEL_SCHEMA.md` 필드 구조만 (spec 9절 1) · V-2 고정 11/28 확인. eval 기록 브랜치 `eval/` 접두사 알리기는 남음
+- ✅ `LABEL_SCHEMA.md` 구조 받아 반영 (`id`·`tier`·`forbidden: string[]`, FE layer view·component·store·api·router) · V-2 고정 11/28 확인. eval 기록 브랜치 `eval/` 접두사 알리기는 남음
 - 사람: dh-home git `user.name` 통일(H-7), 노션 팀원 초대, F-05b liveTest
 - 로드맵에 E-2(D·E 기준표·쌍 비교, 12/09 전) 행 추가 필요 · `branches.mjs` 로드맵 ID 거부는 #213
 

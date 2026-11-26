@@ -74,17 +74,24 @@ LLM_PROVIDER=gms ./gradlew promptEval -Pstage=all -Plevel=all -Pfixture=<id|zip>
 }
 ```
 
-라벨 형식 (**초안**: `docs/산출물/09-데이터셋.md` DS-04 설명 기준. 김준섭의 `LABEL_SCHEMA.md` 구조를 받으면 그대로 맞춘다, 9절):
+라벨 형식 (김준섭 `LABEL_SCHEMA.md`의 필드 구조, 11-26 받음. 값은 합성 예시. `source`·`labeledBy`·`labeledAt`·`why`·`new`·`notes`는 채점에 쓰지 않는다):
 
 ```json
 {
-  "fixture": "DS-02-01",
+  "id": "DS-02-01",
+  "source": { "commit": "<고정 SHA>", "paths": ["/"] },
+  "labeledBy": "…", "labeledAt": "YYYY-MM-DD",
   "files": [{ "path": "src/main/java/io/spring/api/ArticlesApi.java", "layer": "controller", "role": "게시글 목록·작성 API" }],
   "apis": [{ "method": "POST", "path": "/articles" }],
-  "concepts": [{ "name": "@Transactional", "grade": "must", "evidence": ["src/main/java/io/spring/application/article/ArticleCommandService.java"] }],
-  "forbidden": [{ "fact": "JPA를 쓴다", "patterns": ["JPA", "@Entity"] }]
+  "concepts": [{ "name": "@Transactional", "tier": "must", "evidence": ["src/main/java/io/spring/application/article/ArticleCommandService.java"], "why": "…", "new": false }],
+  "forbidden": ["JPA"],
+  "notes": "…"
 }
 ```
+
+- `layer`: controller | service | mapper | domain | config | view | component | store | api | router | util | other. FE 커버리지는 view·component·store·api·router (앱 index의 vue·js도 FE로 본다)
+- `forbidden[]`: 문자열마다 출력 텍스트(경로·layer·메타 제외)에 대소문자 무시 부분 일치로 나오면 1건 (수준마다 센다)
+- `evidence`: `tier=must`이면 1개 이상. must 근거 파일 일치율은 evidence가 있는 must만 센다
 
 ## 4. DB 변경
 
@@ -134,7 +141,7 @@ LLM_PROVIDER=gms ./gradlew promptEval -Pstage=all -Plevel=all -Pfixture=<id|zip>
 
 ## 9. 결정 필요
 
-1. **라벨 형식**: 김준섭에게 `LABEL_SCHEMA.md`의 필드 구조만(내용·예시 값 없이) 받아 3절 초안을 맞춘다 (사용자 결정 11-26). 특히 `forbidden`이 문자열 패턴인지 문장인지, `files`가 전체인지 핵심 파일만인지. 받기 전에는 초안으로 구현한다
+1. ~~라벨 형식~~ → 11-26 김준섭에게 `LABEL_SCHEMA.md` 필드 구조를 받아 3절에 맞췄다 (`id`·`tier`·`forbidden: string[]`). 남은 확인: `forbidden` 문자열이 출력에 그대로 나올 표현(패턴)인지 사실 문장인지. 채점기는 부분 일치 패턴으로 센다
 
 ## 10. 구현 체크리스트
 

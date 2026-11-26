@@ -84,14 +84,14 @@ class EvalGraderTest {
         // 재현한 must 2개 중 근거 파일이 맞는 것은 @Transactional 하나 (DI는 ArticlesApi를 가리킴)
         assertThat(c.path("mustEvidenceMatch").asDouble()).isCloseTo(0.5, within(EPS));
 
-        // 커버리지: 라벨 파일 4개 중 선별 2개, FE(js) 1개 중 0개. API 라벨 2개·탐지 2개 중 1개 일치
+        // 커버리지: 라벨 파일 4개 중 선별 2개, FE(api layer) 1개 중 0개. API 라벨 2개·탐지 2개 중 1개 일치
         JsonNode coverage = scores.path("coverage");
         assertThat(coverage.path("labelFiles").asDouble()).isCloseTo(0.5, within(EPS));
         assertThat(coverage.path("labelFeFiles").asDouble()).isEqualTo(0.0);
         assertThat(coverage.path("apiRecall").asDouble()).isCloseTo(0.5, within(EPS));
         assertThat(coverage.path("apiPrecision").asDouble()).isCloseTo(0.5, within(EPS));
 
-        // 금지 사실 "JPA를 쓴다"가 세 수준 출력(개념 이름)에 나온다. Redis는 없다
+        // 금지 문자열 "JPA"가 세 수준 출력(개념 이름)에 나온다. Redis는 없다
         assertThat(scores.path("B").path("forbiddenHits").asInt()).isEqualTo(3);
     }
 

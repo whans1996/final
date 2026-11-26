@@ -39,11 +39,19 @@ class EvalFixturesTest {
         assertThat(files).isNotEmpty();
         for (Path file : files) {
             JsonNode json = GradeFixtures.JSON.readTree(file.toFile());
-            String id = json.path("fixture").asString();
+            // 보고서는 fixture, 라벨(LABEL_SCHEMA.md)은 id
+            String id =
+                    json.has("id") ? json.path("id").asString() : json.path("fixture").asString();
             assertThat(splitOf(id)).as(file + "의 fixture " + id).isEqualTo("dev");
             assertThat(file.getFileName().toString()).as(file.toString()).startsWith(id);
             if (json.has("split")) {
                 assertThat(json.path("split").asString()).as(file.toString()).isEqualTo("dev");
+            }
+            if (json.has("source")) {
+                // 라벨은 datasets.json의 고정 커밋으로 만든 것이다
+                assertThat(json.path("source").path("commit").asString())
+                        .as(file.toString())
+                        .isEqualTo(PromptEvalRunner.dataset(id).path("commit").asString());
             }
         }
     }
