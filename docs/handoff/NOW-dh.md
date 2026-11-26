@@ -3,27 +3,30 @@
 > 김동환(A 영역: AI·분석·학습 루프) 전용. 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
 > 머리 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
-갱신: 2026-11-26 14:36 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/FU-1-followups
+갱신: 2026-11-26 17:05 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/E-1-eval-runner
 
 ## 현재 기능
 
-**FU-1 2차 점검 발견 사항 follow-up 등록** (`docs/점검/2026-11-26-2차점검.md` 4절) — 이슈 12건 등록, 4절 "처리" 칸 기입. docs PR을 열고 CI 초록·Codex 확인 뒤 사람이 머지
+**E-1 평가 러너 전 단계 + DS-04 채점기 + 수준 구분 지표** (`docs/specs/E-1-eval-runner-grader.md`, DONE) — **PR #220 머지 대기** (`Roadmap: E-1`), 11/29 B에 넘김 → EV-1 기준선. 블라인드: dev(DS-02-01) 합성 라벨로만 테스트
 
 ## 진행
 
-- ✅ HP-2 PR #195 머지(11-26). 로컬 `feature/HP-2-roadmap`의 미push NOW 커밋 91942d5는 버림(내용이 머지 대기라 낡음)
-- ✅ 이슈: A #200(J2-08)·#201(D-12)·#202(A-6)·#203(E-2·D-8) · 공통 #204(J3-08, K-1 흡수)·#205(A-5·F-4) · B #206(C-1, A·B)·#207(C-7)·#208(C-8)·#209(C-9)·#210(C-16)·#211(챌린지 행동 버튼 E-1·E-4)
-- ✅ 로드맵 항목에 이미 들어간 것(K-1·L-1a/b/c·O-1·F-29·LP-1·F-26b·U-1)과 기존 #108·#112·#155·#156은 이슈를 새로 만들지 않고 처리 칸에 적음. "발표 뒤로"는 이슈 만들지 않음
-- ✅ #170(B, 응답 시각 오프셋): A 쪽 영향 없음 확인 (challenge DTO는 이미 OffsetDateTime, UserProfileView는 `new Date`로 해석) → 합의 댓글 초안 작성, 사람 확인 뒤 게시
+- ✅ AC1~AC11 green (prompteval 26개), verify all 통과(BE 1316·FE 732), pre-push 통과
+- ✅ /pr-review reviewer 반영: ZIP fixture는 파일 이름을 id로 datasets.json split·오염 조회(`EvalPaths.zipFixture`, DS-03-01 → DS-03), 요약을 공급자 × 단계 × 분할 × 오염·재채점은 최신만(`EvalSummary`), 채점기 Docker 의존 제거(`EvalPaths`), 폴더 채점 실패 보고서만 건너뜀·`fixtureZip`은 `.harness/prompt-eval/repos/`에서 재탐색(`EvalPaths.locateZip`), 판정 켠 grade 연결 테스트
+- 후속 이슈: #218 개념 실패 수준의 C 분모(E-2 spec에서 결정), #219 퀴즈 해설 위치 언급 정규식 오탐(EV-1 전 권장), #221 재시도 빈 목록, #223 수준 구성 재실행 중복
+- ✅ PR #220: CI 초록, **Codex ✅ ac9109b** (재리뷰 4회, prompt-evaluator eval 실행 전 확인 추가 포함, P2 이관 #219 #221 #223), spec DONE 표시 커밋. **머지 대기 (사람이 GitHub에서)**
 
 ## 바로 다음 할 일
 
-1. FU-1 PR 머지 뒤 새 세션(Opus/high)에서 **E-1** 평가 러너 flow·concept·quiz + DS-04 채점기 + 수준 구분 지표 (11/29 B에 넘김. 블라인드 분업: dev 합성 라벨로 테스트, eval 열지 않음) 또는 **HP-3**(H-5~7, HX-6·7, reviewer 권장 10)
-2. dh-home에서 `node scripts/setup.mjs` 한 번 (eval fetch 제외 refspec)
+1. PR #220을 GitHub에서 머지 (머지 전 develop에 새 커밋이 있으면 `git merge origin/develop` → push → CI 초록 재확인)
+2. 리뷰 회차 규칙(결정로그 11-26: 2회차부터 P2는 이관 후 --resolve)을 HP-4에서 `.claude/skills/pr-review/SKILL.md` 8-3·`docs/conventions.md` 7절에 반영, `verify all`에 harness 포함도 HP-4
+3. ✅ 김준섭에게 EV-1 실행 전 알림 댓글 (PR #220, 11-26): ZIP·라벨 이름 = id, 금지 사실 Gemini, level=all 보고서만, `eval/` 접두사
+4. dh-home에서 `node scripts/setup.mjs` 한 번 (eval fetch 제외 refspec)
 
 ## 막힌 점 / 결정 필요
-- 사람: dh-home git `user.name` 통일(H-7), 노션 팀원 초대, F-05b liveTest · eval 기록 브랜치 `eval/` 접두사를 김준섭에게 알리기 · 김준섭 NOW의 V-2 "12/03 고정"이 로드맵(7.5절 합의 11/28)과 다름 → 확인
+- 사람: dh-home git `user.name` 통일(H-7), 노션 팀원 초대, F-05b liveTest
+- 로드맵에 E-2(D·E 기준표·쌍 비교, 12/09 전) 행 추가 필요 · `branches.mjs` 로드맵 ID 거부는 #213
 
 ## 주의
-- 다음 마이그레이션은 V14 · node heredoc으로 파일 고치면 `$'`·`$&`·`\r` 이스케이프가 깨짐(11-26 또 겪음) → Edit 도구 · 이 PC에 python 없음
-- 로드맵 상태는 `gh pr list --state all`(검색 색인 안 씀)로 계산한다. 커밋 범위에 로드맵 ID 사용 가능(`feat(K-3a): …`)
+- 다음 마이그레이션은 V14 · node heredoc으로 파일 고치면 `$'`·`$&`·`\r`·`\\` 이스케이프가 깨짐 → Edit 도구 · 이 PC에 python 없음
+- 금지 사실 판정은 실호출 미확인 (B의 eval 실행이 첫 확인)

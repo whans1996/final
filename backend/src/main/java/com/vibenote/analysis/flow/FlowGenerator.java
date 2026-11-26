@@ -8,6 +8,7 @@ import com.vibenote.analysis.explain.ExplainPrompts;
 import com.vibenote.analysis.explain.ExplainProperties;
 import com.vibenote.analysis.explain.LlmJsonCall;
 import com.vibenote.analysis.explain.PromptTemplates;
+import com.vibenote.common.Level;
 import com.vibenote.common.exception.BusinessException;
 import com.vibenote.common.exception.ErrorCode;
 import com.vibenote.llm.LlmClient;
@@ -99,7 +100,26 @@ public class FlowGenerator {
                         .filter(a -> FlowService.key(a).equals(flow.getEndpoint()))
                         .findFirst()
                         .orElseThrow(() -> new IllegalStateException("개요에 없는 API"));
-        List<AnalysisFile> files = analysisService.findFiles(analysis.getId());
+        return create(
+                new FlowSource(
+                        analysis.getProjectName(),
+                        analysis.getLevel(),
+                        analysis.getOverview().summary(),
+                        analysis.getUserId(),
+                        analysis.getId()),
+                api,
+                analysisService.findFiles(analysis.getId()));
+    }
+
+    /**
+     * 흐름 하나를 DB 없이 만든다: 입력 파일 추적 → 프롬프트 → LLM 1회(형식 오류 시 1회 재시도) → 검증. 평가 러너도 앱과 같은 경로로 부른다 (E-1
+     * AC1).
+     *
+     * @param files 분석의 선별 파일 (id 오름차순)
+     * @return 형식 오류가 두 번 나면 empty
+     */
+    public Optional<FlowResult> create(
+            FlowSource source, ApiEndpoint api, List<AnalysisFile> files) {
         List<AnalysisFile> input =
                 FlowContextBuilder.inputFiles(files, api.fileId(), properties.maxFiles());
         if (input.isEmpty()) {
@@ -108,15 +128,15 @@ public class FlowGenerator {
         String prompt =
                 templates.render(
                         LlmStage.FLOW,
-                        analysis.getLevel(),
+                        source.level(),
                         Map.of(
                                 "projectName",
-                                        ExplainPrompts.escapeDelimiters(analysis.getProjectName()),
-                                "endpoint", ExplainPrompts.escapeDelimiters(flow.getEndpoint()),
+                                        ExplainPrompts.escapeDelimiters(source.projectName()),
+                                "endpoint", ExplainPrompts.escapeDelimiters(FlowService.key(api)),
                                 "overviewSummary",
                                         ExplainPrompts.escapeDelimiters(
                                                 Objects.requireNonNullElse(
-                                                        analysis.getOverview().summary(), "")),
+                                                        source.overviewSummary(), "")),
                                 "files",
                                         FlowContextBuilder.render(
                                                 input,
@@ -125,11 +145,19 @@ public class FlowGenerator {
         LlmRequest request =
                 new LlmRequest(
                         LlmStage.FLOW,
-                        analysis.getLevel(),
+                        source.level(),
                         prompt,
-                        analysis.getUserId(),
-                        analysis.getId());
+                        source.userId(),
+                        source.analysisId());
         return LlmJsonCall.call(
                 llm, request, root -> FlowResponseParser.parse(root, files, properties.maxSteps()));
     }
+
+    /** 흐름 프롬프트에 들어가는 분석 정보. 평가 러너는 {@code userId}·{@code analysisId}를 null로 둔다. */
+    public record FlowSource(
+            String projectName,
+            Level level,
+            String overviewSummary,
+            Long userId,
+            Long analysisId) {}
 }

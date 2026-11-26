@@ -1,0 +1,77 @@
+{
+  "id": "DS-02-01",
+  "source": {
+    "commit": "ee17e31aafe733d98c4853c8b9a74d7f2f6c924a",
+    "paths": [
+      "/"
+    ]
+  },
+  "labeledBy": "E-1 채점기 테스트 (합성)",
+  "labeledAt": "2026-11-26",
+  "files": [
+    {
+      "path": "src/main/java/io/spring/api/ArticlesApi.java",
+      "layer": "controller",
+      "role": "게시글 API"
+    },
+    {
+      "path": "src/main/java/io/spring/application/article/ArticleCommandService.java",
+      "layer": "service",
+      "role": "게시글 작성"
+    },
+    {
+      "path": "src/main/java/io/spring/JacksonCustomizations.java",
+      "layer": "config",
+      "role": "JSON 설정"
+    },
+    {
+      "path": "frontend/src/api/article.js",
+      "layer": "api",
+      "role": "게시글 API 호출"
+    }
+  ],
+  "apis": [
+    {
+      "method": "POST",
+      "path": "/articles"
+    },
+    {
+      "method": "GET",
+      "path": "/articles/{slug}"
+    }
+  ],
+  "concepts": [
+    {
+      "name": "@Transactional",
+      "tier": "must",
+      "evidence": [
+        "src/main/java/io/spring/application/article/ArticleCommandService.java"
+      ]
+    },
+    {
+      "name": "의존성 주입(DI)",
+      "tier": "must",
+      "evidence": [
+        "src/main/java/io/spring/application/article/ArticleCommandService.java"
+      ]
+    },
+    {
+      "name": "MyBatis 매퍼",
+      "tier": "must",
+      "evidence": [
+        "src/main/java/io/spring/infrastructure/mybatis/mapper/ArticleMapper.java"
+      ],
+      "why": "합성 값"
+    },
+    {
+      "name": "JPA 엔티티",
+      "tier": "wrong",
+      "new": true
+    }
+  ],
+  "forbidden": [
+    "JPA 엔티티로 게시글을 저장한다고 설명하면 틀림 (영속성은 MyBatis 매퍼만 쓴다)",
+    "Redis 캐시에서 게시글을 읽는다고 설명하면 틀림 (캐시 설정이 없다)"
+  ],
+  "notes": "E-1 채점기 테스트용 합성 라벨. dev 분할(DS-02-01)의 경로 이름만 빌려 손으로 만든 값이다 (AC11). 형식은 LABEL_SCHEMA.md 구조(11-26 김준섭 제공)."
+}
