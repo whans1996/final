@@ -19,14 +19,15 @@ import { userInfo } from 'node:os';
 import { join } from 'node:path';
 import { ROOT, WORKLOG_FILE, currentBranch, git, localPcId, nowFileOf, nowRelPath, nowStamp, ownerKey, readText, recordStamp } from './lib/common.mjs';
 import { AREA_OF } from './lib/issues.mjs';
-import { lastEntryAt, logEntry, touchNowHeader, verifiedLine } from './lib/records.mjs';
+import { lastEntryAt, logEntry, touchNowHeader, undoMsysPathConv, verifiedLine } from './lib/records.mjs';
 import { areasOf } from './lib/related.mjs';
 
 const args = process.argv.slice(2);
 const has = (f) => args.includes(f);
 const value = (f) => {
   const i = args.indexOf(f);
-  return i >= 0 ? (args[i + 1] ?? '') : '';
+  // Git Bash가 '/pr-review …'를 'C:/Program Files/Git/pr-review …'로 바꿔 넘긴 것을 되돌린다 (#231)
+  return i >= 0 ? undoMsysPathConv(args[i + 1] ?? '') : '';
 };
 const pcId = localPcId();
 const author = git(['config', 'user.name']).out || userInfo().username;

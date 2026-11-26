@@ -3,6 +3,23 @@
 // 파일·git 호출 없는 부분이다 (scripts/test/records.test.mjs).
 import { lastWorklogEntryOf, worklogEntries } from './common.mjs';
 
+/**
+ * Git Bash(MSYS)가 경로로 보고 바꾼 메모 인자를 되돌린다 (#231).
+ * `--next "/pr-review → …"`처럼 `/`로 시작하는 인자를 MSYS가 `C:/Program Files/Git/pr-review → …`로 바꿔 넘긴다.
+ * MSYS 아래(env.MSYSTEM)에서만, Git 설치 경로(EXEPATH의 상위, 없으면 기본 설치 경로)로 시작할 때만 그 접두사를 `/`로 되돌린다.
+ */
+export function undoMsysPathConv(value, env = process.env) {
+  if (typeof value !== 'string' || !env?.MSYSTEM) return value;
+  const roots = [];
+  if (env.EXEPATH) roots.push(env.EXEPATH.replace(/\\/g, '/').replace(/\/+$/, '').replace(/\/(usr\/)?bin$/i, ''));
+  roots.push('C:/Program Files/Git');
+  for (const root of roots) {
+    const prefix = `${root}/`;
+    if (value.slice(0, prefix.length).toLowerCase() === prefix.toLowerCase()) return `/${value.slice(prefix.length)}`;
+  }
+  return value;
+}
+
 /** NOW 파일의 "갱신:" 줄을 바꾼다. 없으면 맨 위에 넣는다 */
 export function touchNowHeader(md, head) {
   return /^갱신:.*$/m.test(md) ? md.replace(/^갱신:.*$/m, head) : `${head}\n\n${md}`;
