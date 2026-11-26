@@ -4,6 +4,7 @@ import com.vibenote.analysis.domain.Analysis;
 import com.vibenote.analysis.domain.AnalysisDetail;
 import com.vibenote.analysis.domain.AnalysisFile;
 import com.vibenote.analysis.explain.AnalysisOverview;
+import com.vibenote.quiz.QuizStatus;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -94,6 +95,25 @@ public interface AnalysisMapper {
     /** 내 미삭제 DONE·FAILED 분석에 deleted_at을 채운다 (F-19 AC6·AC7). 바꾼 행 수. */
     int softDelete(
             @Param("id") long id, @Param("userId") long userId, @Param("now") LocalDateTime now);
+
+    /** 내 미삭제 FAILED URL 분석에 deleted_at을 채운다 (L-1a AC1·AC3). 바꾼 행 수. */
+    int softDeleteFailedUrl(
+            @Param("id") long id, @Param("userId") long userId, @Param("now") LocalDateTime now);
+
+    /** QUIZ 단계의 퀴즈 상태 (L-1a AC4). */
+    void updateQuizStatus(@Param("id") long id, @Param("quizStatus") QuizStatus quizStatus);
+
+    /**
+     * 내 미삭제 DONE 분석의 퀴즈가 FAILED이고 재생성 횟수가 max 미만이면 GENERATING으로 바꾸고 횟수를 1 늘린다 (L-1a AC5). 바꾼 행 수.
+     */
+    int startQuizRegeneration(
+            @Param("id") long id, @Param("userId") long userId, @Param("max") int max);
+
+    /** 재생성 중(GENERATING)이고 삭제되지 않은 분석의 퀴즈 상태를 바꾼다 (L-1a AC5·AC6·AC8). 바꾼 행 수. */
+    int finishQuizRegeneration(@Param("id") long id, @Param("quizStatus") QuizStatus quizStatus);
+
+    /** GENERATING인 퀴즈를 모두 FAILED로 바꾼다 (재시작 복구, L-1a AC8). */
+    int failInterruptedQuizRegenerations();
 
     /** 진행 중이고 삭제되지 않은 분석이면 행을 잠그고 id를 돌려준다 (#91). */
     Optional<Long> lockInProgress(long id);

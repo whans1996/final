@@ -22,6 +22,8 @@ import com.vibenote.common.page.PageQuery;
 import com.vibenote.common.page.PageResponse;
 import com.vibenote.feed.ActivityService;
 import com.vibenote.feed.ActivityType;
+import com.vibenote.quiz.QuizProperties;
+import com.vibenote.quiz.QuizStatus;
 import com.vibenote.user.UserService;
 import com.vibenote.user.domain.User;
 import java.time.Clock;
@@ -30,14 +32,15 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 분석 요청 접수, 내 분석 목록, 진행 상태 (F-05a), 결과 조회 (F-06), 수정·공개·삭제와 공개 분석 열람 (F-19). 파이프라인 실행은
- * AnalysisPipeline이 한다.
+ * 분석 요청 접수, 내 분석 목록, 진행 상태 (F-05a), 결과 조회 (F-06), 수정·공개·삭제와 공개 분석 열람 (F-19), 실패 분석 재실행과 퀴즈 상태
+ * (L-1a). 파이프라인 실행은 AnalysisPipeline이 한다.
  */
 @Service
 public class AnalysisService {
@@ -67,6 +70,7 @@ public class AnalysisService {
     private final AnalysisProperties properties;
     private final ApplicationEventPublisher events;
     private final ActivityService activityService;
+    private final QuizProperties quizProperties;
     private final Clock clock;
 
     public AnalysisService(
@@ -76,6 +80,7 @@ public class AnalysisService {
             AnalysisProperties properties,
             ApplicationEventPublisher events,
             ActivityService activityService,
+            QuizProperties quizProperties,
             Clock clock) {
         this.analysisMapper = analysisMapper;
         this.userService = userService;
@@ -83,6 +88,7 @@ public class AnalysisService {
         this.properties = properties;
         this.events = events;
         this.activityService = activityService;
+        this.quizProperties = quizProperties;
         this.clock = clock;
     }
 
@@ -95,13 +101,7 @@ public class AnalysisService {
     public CreateAnalysisResponse request(long userId, CreateAnalysisRequest request) {
         User user = userService.lockActiveMember(userId);
         LocalDateTime now = now();
-        int limit = properties.dailyLimit();
-        if (analysisMapper.countRequestedSince(userId, now.toLocalDate().atStartOfDay()) >= limit) {
-            throw new BusinessException(
-                    ErrorCode.ANALYSIS_429,
-                    ErrorCode.ANALYSIS_429.message().replace("{limit}", String.valueOf(limit)),
-                    null);
-        }
+        checkDailyLimit(userId, now);
 
         Level level = request.level() != null ? request.level() : user.getLevel();
         Analysis analysis =
@@ -118,6 +118,40 @@ public class AnalysisService {
         }
         events.publishEvent(new AnalysisRequestedEvent(analysis.getId()));
         return new CreateAnalysisResponse(analysis.getId(), analysis.getStatus());
+    }
+
+    /**
+     * 실패한 내 URL 분석을 같은 설정으로 다시 실행한다 (L-1a AC1~AC3). 원본 soft delete와 새 분석 INSERT를 한 트랜잭션으로 하고, 커밋된 뒤
+     * 새 분석의 파이프라인이 시작된다. 회원 행을 잠가 같은 분석의 동시 재실행은 차례로 판단되고, 뒤의 요청은 원본이 이미 삭제되어 404가 된다. 한도를 넘으면 원본
+     * 삭제까지 롤백된다.
+     */
+    @Transactional
+    public CreateAnalysisResponse rerun(long userId, long analysisId) {
+        userService.lockActiveMember(userId);
+        LocalDateTime now = now();
+        if (analysisMapper.softDeleteFailedUrl(analysisId, userId, now) != 1) {
+            analysisMapper
+                    .findOwned(analysisId, userId)
+                    .orElseThrow(() -> new BusinessException(ErrorCode.ANALYSIS_404));
+            throw new BusinessException(ErrorCode.ANALYSIS_008);
+        }
+        checkDailyLimit(userId, now);
+        Analysis analysis = Analysis.rerunOf(findForPipeline(analysisId), now);
+        analysisMapper.insert(analysis);
+        deleteChildren(analysisId);
+        events.publishEvent(new AnalysisRequestedEvent(analysis.getId()));
+        return new CreateAnalysisResponse(analysis.getId(), analysis.getStatus());
+    }
+
+    /** 오늘(Asia/Seoul) FAILED가 아닌 분석이 한도만큼이면 ANALYSIS_429. 호출자가 회원 행을 잠근 뒤 부른다. */
+    private void checkDailyLimit(long userId, LocalDateTime now) {
+        int limit = properties.dailyLimit();
+        if (analysisMapper.countRequestedSince(userId, now.toLocalDate().atStartOfDay()) >= limit) {
+            throw new BusinessException(
+                    ErrorCode.ANALYSIS_429,
+                    ErrorCode.ANALYSIS_429.message().replace("{limit}", String.valueOf(limit)),
+                    null);
+        }
     }
 
     @Transactional(readOnly = true)
@@ -142,6 +176,11 @@ public class AnalysisService {
         return analysisMapper
                 .findViewable(analysisId, userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ANALYSIS_404));
+    }
+
+    /** 내 미삭제 분석. 없거나 남의 것이거나 삭제됐으면 empty (L-1a 재생성 거절 사유). */
+    public Optional<Analysis> findOwned(long userId, long analysisId) {
+        return analysisMapper.findOwned(analysisId, userId);
     }
 
     /** 내 미삭제 분석인지 확인한다. 없거나 남의 것이거나 삭제됐으면 ANALYSIS_404 (F-14 퀴즈 조회). */
@@ -250,7 +289,7 @@ public class AnalysisService {
     public AnalysisDetailResponse getDetail(long userId, long analysisId) {
         return analysisMapper
                 .findViewableDetail(analysisId, userId)
-                .map(d -> AnalysisDetailResponse.from(d, userId))
+                .map(d -> AnalysisDetailResponse.from(d, userId, quizProperties.maxRegenerations()))
                 .orElseThrow(() -> new BusinessException(ErrorCode.ANALYSIS_404));
     }
 
@@ -370,6 +409,36 @@ public class AnalysisService {
         events.publishEvent(
                 new AnalysisCompletedEvent(
                         analysisId, analysis.getUserId(), analysis.getCreatedAt().toLocalDate()));
+    }
+
+    /** QUIZ 단계의 퀴즈 상태를 기록한다 (L-1a AC4). 퀴즈 저장 트랜잭션에 참여한다. */
+    @Transactional
+    public void updateQuizStatus(long analysisId, QuizStatus status) {
+        analysisMapper.updateQuizStatus(analysisId, status);
+    }
+
+    /**
+     * 퀴즈 재생성을 시작한다 (L-1a AC5·AC7). 내 미삭제 DONE 분석의 퀴즈가 FAILED이고 횟수가 max 미만이면 GENERATING으로 바꾸고 횟수를 1
+     * 늘린 뒤 true. 판단과 갱신이 UPDATE 한 문장이라 동시 요청 중 하나만 true다.
+     */
+    @Transactional
+    public boolean startQuizRegeneration(long userId, long analysisId, int max) {
+        return analysisMapper.startQuizRegeneration(analysisId, userId, max) == 1;
+    }
+
+    /**
+     * 재생성 결과를 기록한다 (L-1a AC5·AC6). 아직 GENERATING이고 삭제되지 않았을 때만 바꾸고 true. 그사이 삭제·탈퇴했으면 false (AC8).
+     * 퀴즈 저장 트랜잭션에 참여한다.
+     */
+    @Transactional
+    public boolean finishQuizRegeneration(long analysisId, QuizStatus status) {
+        return analysisMapper.finishQuizRegeneration(analysisId, status) == 1;
+    }
+
+    /** 재생성 중이던 퀴즈를 모두 FAILED로 바꾼다 (서버 재시작, L-1a AC8). 바꾼 수를 돌려준다. */
+    @Transactional
+    public int failInterruptedQuizRegenerations() {
+        return analysisMapper.failInterruptedQuizRegenerations();
     }
 
     /** 진행 중이던 미삭제 분석을 모두 FAILED·ANALYSIS_500으로 바꾼다 (서버 재시작, AC11). 바꾼 수를 돌려준다. */

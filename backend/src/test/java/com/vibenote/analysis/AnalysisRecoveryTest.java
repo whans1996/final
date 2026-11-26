@@ -91,6 +91,27 @@ class AnalysisRecoveryTest extends AnalysisTestSupport {
         assertThat(flows.get(1).get("error_code")).isNull();
     }
 
+    /** L-1a AC8: 재생성 중(GENERATING)이던 퀴즈를 모두 FAILED로 바꾼다. 다른 퀴즈 상태와 분석 상태는 그대로다. */
+    @Test
+    void L1a_AC8_GENERATING_퀴즈를_FAILED로_바꾼다() {
+        long userId = createUser("l1aac8r", "JUNIOR");
+        long generating = insertAnalysis(userId, "DONE", null, false, "generating");
+        long deleted = insertAnalysis(userId, "DONE", null, true, "deleted");
+        long ready = insertAnalysis(userId, "DONE", null, false, "ready");
+        jdbc.update(
+                "UPDATE analyses SET quiz_status = 'GENERATING' WHERE id IN (?, ?)",
+                generating,
+                deleted);
+        jdbc.update("UPDATE analyses SET quiz_status = 'READY' WHERE id = ?", ready);
+
+        recovery.recover();
+
+        assertThat(analysisRow(generating).get("quiz_status")).isEqualTo("FAILED");
+        assertThat(analysisRow(generating).get("status")).isEqualTo("DONE");
+        assertThat(analysisRow(deleted).get("quiz_status")).isEqualTo("FAILED");
+        assertThat(analysisRow(ready).get("quiz_status")).isEqualTo("READY");
+    }
+
     /**
      * ApplicationReadyEvent는 웹 서버가 요청을 받기 시작한 뒤에 오므로, 그 사이에 들어온 새 분석까지 "재시작"으로 FAILED 처리하고 임시 ZIP을
      * 지울 수 있다. 모든 싱글톤이 만들어진 직후(웹 서버 시작 전)에 실행되어야 한다.

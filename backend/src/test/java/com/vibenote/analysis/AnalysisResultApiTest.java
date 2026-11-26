@@ -121,6 +121,37 @@ class AnalysisResultApiTest extends AnalysisTestSupport {
                 .andExpect(jsonPath("$.overview.apis[0].fileId").value(controller));
     }
 
+    /** L-1a AC4: 상세에 퀴즈 상태와 남은 재생성 횟수(3 − 사용, 최소 0)를 준다. */
+    @Test
+    void L1a_AC4_상세에_quizStatus와_남은_재생성_횟수를_준다() throws Exception {
+        long userId = createUser("l1aac4d", "JUNIOR");
+        long failed = doneAnalysis(userId);
+        jdbc.update(
+                "UPDATE analyses SET quiz_status = 'FAILED', quiz_regenerations = 1 WHERE id = ?",
+                failed);
+        long exhausted = doneAnalysis(userId);
+        jdbc.update(
+                "UPDATE analyses SET quiz_status = 'FAILED', quiz_regenerations = 5 WHERE id = ?",
+                exhausted);
+        long running = insertAnalysis(userId, "EXPLAINING", null, false, "running");
+
+        mockMvc.perform(
+                        get("/api/analyses/{id}", failed)
+                                .header(HttpHeaders.AUTHORIZATION, bearer(userId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.quizStatus").value("FAILED"))
+                .andExpect(jsonPath("$.quizRegenerationsLeft").value(2));
+        mockMvc.perform(
+                        get("/api/analyses/{id}", exhausted)
+                                .header(HttpHeaders.AUTHORIZATION, bearer(userId)))
+                .andExpect(jsonPath("$.quizRegenerationsLeft").value(0));
+        mockMvc.perform(
+                        get("/api/analyses/{id}", running)
+                                .header(HttpHeaders.AUTHORIZATION, bearer(userId)))
+                .andExpect(jsonPath("$.quizStatus").value(nullValue()))
+                .andExpect(jsonPath("$.quizRegenerationsLeft").value(3));
+    }
+
     @Test
     void AC9_진행_중이면_overview가_null이다() throws Exception {
         long userId = createUser("f06ac9run", "JUNIOR");

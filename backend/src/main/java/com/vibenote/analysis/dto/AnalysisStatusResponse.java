@@ -3,6 +3,7 @@ package com.vibenote.analysis.dto;
 import com.vibenote.analysis.AnalysisStatus;
 import com.vibenote.analysis.domain.Analysis;
 import com.vibenote.common.config.ClockConfig;
+import com.vibenote.quiz.QuizStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.OffsetDateTime;
 
@@ -54,7 +55,14 @@ public record AnalysisStatusResponse(
                         requiredMode = Schema.RequiredMode.REQUIRED,
                         description = "마지막 상태 변경 시각",
                         example = "2026-11-24T14:20:01+09:00")
-                OffsetDateTime updatedAt) {
+                OffsetDateTime updatedAt,
+        @Schema(
+                        description =
+                                "퀴즈 상태. GENERATING 재생성 중, READY 퀴즈 있음, FAILED 생성 실패(다시 만들 수 있음)."
+                                        + " QUIZ 단계를 끝내기 전이면 null (L-1a)",
+                        example = "READY",
+                        nullable = true)
+                QuizStatus quizStatus) {
 
     public static AnalysisStatusResponse from(Analysis analysis) {
         return new AnalysisStatusResponse(
@@ -64,6 +72,7 @@ public record AnalysisStatusResponse(
                 analysis.getErrorCode(),
                 analysis.getErrorMessage(),
                 analysis.getSourceUrl(),
-                analysis.getUpdatedAt().atZone(ClockConfig.ZONE).toOffsetDateTime());
+                analysis.getUpdatedAt().atZone(ClockConfig.ZONE).toOffsetDateTime(),
+                analysis.getQuizStatus());
     }
 }

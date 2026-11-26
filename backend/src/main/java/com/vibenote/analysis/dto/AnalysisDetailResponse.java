@@ -6,6 +6,7 @@ import com.vibenote.analysis.domain.AnalysisDetail;
 import com.vibenote.analysis.explain.AnalysisOverview;
 import com.vibenote.common.Level;
 import com.vibenote.common.config.ClockConfig;
+import com.vibenote.quiz.QuizStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.OffsetDateTime;
 
@@ -81,10 +82,28 @@ public record AnalysisDetailResponse(
                         example = "false")
                 boolean liteMode,
         // $ref에 nullable=true를 붙이면 springdoc(OAS 3.1)이 "type": "null"을 함께 써서 "항상 null"로 읽힌다
-        @Schema(description = "프로젝트 개요. 개요 생성 전·실패 시 null") AnalysisOverview overview) {
+        @Schema(description = "프로젝트 개요. 개요 생성 전·실패 시 null") AnalysisOverview overview,
+        @Schema(
+                        description =
+                                "퀴즈 상태. GENERATING 재생성 중, READY 퀴즈 있음, FAILED 생성 실패(다시 만들 수 있음)."
+                                        + " QUIZ 단계를 끝내기 전이면 null (L-1a)",
+                        example = "READY",
+                        nullable = true)
+                QuizStatus quizStatus,
+        @Schema(
+                        requiredMode = Schema.RequiredMode.REQUIRED,
+                        description = "퀴즈 다시 만들기 남은 횟수 (분석당 3회 − 사용, 최소 0, L-1a)",
+                        example = "2",
+                        minimum = "0")
+                int quizRegenerationsLeft) {
 
-    /** viewerId가 주인이 아니면 메모를 숨긴다 (F-19 AC9). */
-    public static AnalysisDetailResponse from(AnalysisDetail a, long viewerId) {
+    /**
+     * viewerId가 주인이 아니면 메모를 숨긴다 (F-19 AC9).
+     *
+     * @param maxRegenerations 분석당 퀴즈 재생성 상한 ({@code quiz.max-regenerations})
+     */
+    public static AnalysisDetailResponse from(
+            AnalysisDetail a, long viewerId, int maxRegenerations) {
         boolean mine = a.getUserId() == viewerId;
         return new AnalysisDetailResponse(
                 a.getId(),
@@ -105,6 +124,8 @@ public record AnalysisDetailResponse(
                 a.getFileCount(),
                 a.getExplainedFileCount(),
                 a.isLiteMode(),
-                a.getOverview());
+                a.getOverview(),
+                a.getQuizStatus(),
+                Math.max(0, maxRegenerations - a.getQuizRegenerations()));
     }
 }

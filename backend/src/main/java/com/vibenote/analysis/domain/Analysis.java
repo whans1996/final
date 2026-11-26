@@ -4,6 +4,7 @@ import com.vibenote.analysis.AnalysisStatus;
 import com.vibenote.analysis.SourceType;
 import com.vibenote.analysis.fetch.RepositoryUrl;
 import com.vibenote.common.Level;
+import com.vibenote.quiz.QuizStatus;
 import java.time.LocalDateTime;
 
 /** analyses 행 (overview 제외). Controller 응답으로 직접 내보내지 않는다 (DTO로 변환). */
@@ -25,6 +26,12 @@ public class Analysis {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
+    /** 퀴즈 상태. QUIZ 단계를 끝내기 전에는 null (L-1a AC4). */
+    private QuizStatus quizStatus;
+
+    /** 퀴즈 재생성 요청 수 (L-1a AC5). */
+    private int quizRegenerations;
+
     /** 막 접수된 ZIP 분석 (FETCHING, progress 0, 비공개). 제목은 프로젝트 이름으로 시작한다. */
     public static Analysis newZip(
             long userId, String projectName, Level level, LocalDateTime createdAt) {
@@ -45,6 +52,16 @@ public class Analysis {
         Analysis analysis = newZip(userId, repository.name(), level, createdAt);
         analysis.sourceType = SourceType.URL;
         analysis.sourceUrl = repository.normalized();
+        return analysis;
+    }
+
+    /** 실패한 URL 분석을 같은 설정으로 다시 실행할 새 분석 (L-1a AC1). 주소·이름·수준·제목·메모를 그대로 쓰고 비공개·FETCHING으로 시작한다. */
+    public static Analysis rerunOf(Analysis failed, LocalDateTime createdAt) {
+        Analysis analysis = newZip(failed.userId, failed.projectName, failed.level, createdAt);
+        analysis.sourceType = SourceType.URL;
+        analysis.sourceUrl = failed.sourceUrl;
+        analysis.title = failed.title;
+        analysis.memo = failed.memo;
         return analysis;
     }
 
@@ -166,5 +183,21 @@ public class Analysis {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public QuizStatus getQuizStatus() {
+        return quizStatus;
+    }
+
+    public void setQuizStatus(QuizStatus quizStatus) {
+        this.quizStatus = quizStatus;
+    }
+
+    public int getQuizRegenerations() {
+        return quizRegenerations;
+    }
+
+    public void setQuizRegenerations(int quizRegenerations) {
+        this.quizRegenerations = quizRegenerations;
     }
 }

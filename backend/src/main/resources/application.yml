@@ -122,6 +122,8 @@ quiz:
   concept-list-max-chars: 3000
   max-file-chars: 3000
   max-chars: 24000
+  # 분석 하나의 퀴즈 재생성 요청 상한 (docs/specs/L-1a-rerun-quiz-regenerate.md AC7)
+  max-regenerations: 3
 
 # LlmConfig가 provider별로 LlmClient 하나를 조립한다 (docs/specs/F-00-llm-client.md, F-27-gms-provider.md).
 # mock | gms | ollama | gemini. gms는 실패(4xx·5xx·타임아웃·거부·잘림·형식 오류)하면 재시도 없이 ollama(간이 모드)로 폴백한다.

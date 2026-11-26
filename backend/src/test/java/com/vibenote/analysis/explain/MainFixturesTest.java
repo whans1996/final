@@ -149,7 +149,7 @@ class MainFixturesTest {
                 QuizPrompts.input(
                         concepts,
                         List.of(file(1, "src/F1.java", "service", "class F1 {}")),
-                        new QuizProperties(5, 10, 3000, 3000, 24000));
+                        new QuizProperties(5, 10, 3000, 3000, 24000, 3));
         // QuizGenerator와 같은 방식으로 템플릿 전체를 채운다
         String prompt =
                 new PromptTemplates()
