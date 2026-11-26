@@ -3,26 +3,30 @@
 > 김동환(A 영역: AI·분석·학습 루프) 전용. 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
 > 머리 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
-갱신: 2026-11-26 11:42 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/common-harness-plan-1126
+갱신: 2026-11-26 13:25 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/common-harness-guard-1126
 
 ## 현재 기능
 
-**하네스 동결 해제·로드맵·개선 계획 (기획서 7.7절)** — 인터뷰 끝, docs PR 생성 단계. PR #176(합의·운영) 머지됨. GitHub secret scanning·push protection 켬(11:40)
+**트랙 4 PR ① 보안·가드** (기획서 7.7절, H-1~4·HX-1~3 + #130·#135·#136·#139) — **PR #192** CI 초록·Codex COMPLETE(6c2c91a), **사람 머지 대기**. 사용자 지시: 머지 직전까지 자동, 머지는 사람이 GitHub에서
 
 ## 진행
 
-- ✅ 결정: 동결 해제 · 로드맵 R-1(`docs/로드맵.md` 정본, 배너·`/pickup`·`/handoff` 표시, 상태는 PR 본문 `Roadmap: <ID>`로 계산, 넘겨주는 시점 D-2 알림) · HX-1~10 · 점검 추가 H-1~7·H-9~12(H-8·H-13~16 보류)
-- ✅ CLAUDE.md: 동결 해제 문구, 진행 보고 규칙 · A 트랙 4(하네스) 11/26~29, PR 5개
+- ✅ 새 lib: `protect.mjs`(비밀값 패턴·비밀 파일·eval 경로), `file-guard.mjs`(파일 도구 판정), `commit-msg.mjs`(메시지 판정, #136) + 테스트 각각
+- ✅ `guard.mjs`: `checkTool`(MCP start_process·interact_with_process), H-3 checkout -f·switch -f·디렉터리 restore·stash drop/clear, H-4 grep 패턴 제외, HX-1 `node -e`·`python -c`·`--env-file`·코드 속 셸 명령, HX-2 eval 경로·clone, #130 `gh api`·curl 쓰기, #139 서브셸 cwd 범위
+- ✅ hook: guard-bash(원문 미기록 #135)·guard-files(MCP·Read·Grep·Glob)·commit-msg(비밀값 검사) · settings.json matcher + `settings.test.mjs` · CODEOWNERS test llm-fixtures + `codeowners.test.mjs`(HX-3)
+- ✅ setup·env-check: 김동환 PC fetch에 `^refs/heads/eval/*` (dh-ssafy 적용됨). 결정로그·09-데이터셋 5절 반영
+- ✅ reviewer: 반드시 수정 3(PowerShell 괄호 범위 퇴행, `gh api -XPUT`, `node -pe`)·권장 다수 반영(4f3c2c4), 넘긴 것 #188~#191
+- ✅ **Codex ✅ 6c2c91a** (재리뷰 3회: 1·2회차 P2 5건 수정, 3회차 P2 3건 → #189·#193 이관, `--resolve`). CI 첫 BE 실패는 spotless 일시 오류(재실행 통과)
+- 보류 이슈 #178~#182 (중복 #183~#187은 닫음)
 
 ## 바로 다음 할 일
 
-1. 이 docs PR: 커밋 → push → `gh pr create --base develop` → CI 초록이면 머지. 보류 H-8·H-13~16은 follow-up 이슈(area:common)로 등록
-2. 트랙 4 PR ① 보안·가드 (`feature/common-harness-guard-1126`): `.claude/settings.json` PreToolUse matcher에 MCP `start_process|interact_with_process|write_file|edit_block|move_file` 연결(H-1), `guard.mjs` checkout -f·switch --discard-changes·restore·stash drop/clear 차단(H-3)·grep/rg 패턴 오탐(H-4), `node -e`·`python -c` `.env` 읽기 차단 + guard.jsonl 원문 제거(HX-1·#135), `guard-files.mjs` github_pat_·웹훅·GMS 키 패턴 + 커밋 hook 비밀값 검사(H-2), eval 가드(HX-2), CODEOWNERS 주인 없는 파일 테스트(HX-3, 스크래치 `unowned.mjs` 로직). 테스트 먼저
-3. 트랙 4 PR ② 로드맵 R-1: `docs/로드맵.md`(점검 문서 2절 표 + 넘겨주는 시점 + 7.5·7.6·7.7 반영) + `scripts/lib/roadmap.mjs` + SessionStart·`/pickup`·`/handoff` 표시 → ③ → ④ → ⑤ (기획서 7.7절)
-4. 트랙 1 E-1: `PromptEvalRunner.java:98` stage 확장 + 채점기 (새 세션 Opus/high) · 11/27 Figma 뒤 인터뷰 5단계 UI
+1. PR #192: CI 초록 + Codex COMPLETE → **사람이 GitHub에서 머지** (머지 전 develop에 새 커밋이 있으면 `git merge origin/develop` → push → CI 재확인). 머지 뒤 `git switch develop && git pull`
+2. dh-home에서 `node scripts/setup.mjs` 한 번 (eval fetch 제외 refspec)
+3. 트랙 4 PR ② 로드맵 R-1: `docs/로드맵.md` + `scripts/lib/roadmap.mjs` + SessionStart·`/pickup`·`/handoff` 표시 → ③ → ④ → ⑤ (기획서 7.7절)
 
 ## 막힌 점 / 결정 필요
-- 사람: dh-home git `user.name`을 `whans1996`로 통일(H-7, 일부 커밋 작성자가 `whans1996@naver.com`), 노션 팀원 초대, F-05b liveTest
+- 사람: dh-home git `user.name` 통일(H-7), 노션 팀원 초대, F-05b liveTest · eval 기록 브랜치 `eval/` 접두사를 김준섭에게 알리기
 
 ## 주의
-- 다음 마이그레이션은 V14 · 브랜치 보호 관리자 포함 · node 스크립트로 Java 편집 시 백슬래시 깨짐 → Edit 도구 · 이 PC에 python 없음
+- 다음 마이그레이션은 V14 · node heredoc으로 파일 고치면 `$'`·`\r` 이스케이프가 깨짐 → Edit 도구 · 이 PC에 python 없음

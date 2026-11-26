@@ -115,7 +115,7 @@
     ],
     "PreToolUse": [
       {
-        "matcher": "Bash|PowerShell",
+        "matcher": "Bash|PowerShell|mcp__.*desktop-commander__(start_process|interact_with_process)",
         "hooks": [
           {
             "type": "command",
@@ -125,7 +125,7 @@
         ]
       },
       {
-        "matcher": "Edit|Write|MultiEdit",
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit|Read|Grep|Glob|mcp__.*desktop-commander__(write_file|write_pdf|edit_block|move_file|read_file|read_multiple_files|start_search|list_directory|get_file_info)",
         "hooks": [
           {
             "type": "command",

@@ -4,6 +4,7 @@
 # - 하네스: scripts/lib/owners.mjs가 읽어 상대 영역·공통 파일을 수정하면 Claude에게 알리고(area-notice hook),
 #   `node scripts/owners.mjs --diff origin/develop`이 PR 설명에 @멘션할 대상을 뽑는다.
 # - 새 도메인 패키지·FE 폴더를 만들면 같은 PR에서 이 파일에 한 줄 추가한다. FE views·components는 도메인 폴더(views/quiz/ 등)에 둔다.
+#   backend/src·frontend/src·하네스 경로에 주인 없는 파일이 생기면 하네스 테스트(scripts/test/codeowners.test.mjs)가 CI에서 실패한다.
 # - FE 파일 규칙은 `**/`로 같은 이름의 __tests__ 파일까지 맞춘다 (api/**/auth.* = api/auth.js와 api/__tests__/auth.spec.js).
 
 # ── 공통 (둘 다) ─────────────────────────────────────────
@@ -75,6 +76,7 @@
 /backend/src/main/resources/mapper/challenge/ @whans1996
 /backend/src/main/resources/prompts/         @whans1996
 /backend/src/main/resources/llm-fixtures/    @whans1996
+/backend/src/test/resources/llm-fixtures/    @whans1996
 /backend/src/main/resources/llm-schemas/     @whans1996
 /frontend/src/api/**/analyses.*              @whans1996
 /frontend/src/api/**/quizzes.*               @whans1996
