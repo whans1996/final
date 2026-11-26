@@ -4,6 +4,8 @@ import http from '@/api/http'
 // 목록·상세·회원별 목록은 공개, 참여·취소·내 목록은 로그인이 필요하다.
 
 export const CHALLENGE_PAGE_SIZE = 12
+/** 참여 챌린지 목록(/users/{me|id}/challenges)의 size 상한. BE JoinedChallengeSearchRequest @Max(50) */
+export const JOINED_CHALLENGE_MAX_SIZE = 50
 
 const isEmpty = (value) => value === undefined || value === null || value === ''
 
