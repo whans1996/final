@@ -232,6 +232,31 @@ describe('AnalysisQuizTab 퀴즈 다시 만들기 (L-1a AC10)', () => {
     expect(analysesApi.fetchAnalysisStatus).toHaveBeenCalledTimes(1)
   })
 
+  it('AC10 6분(180회) 넘게 GENERATING이면 폴링을 멈추고 "상태 다시 확인"으로 다시 조회한다', async () => {
+    quizzesApi.fetchAnalysisQuiz.mockResolvedValue(quiz())
+    analysesApi.fetchAnalysisStatus.mockResolvedValue(quizStatus('GENERATING'))
+
+    const wrapper = await mountWith({ quizStatus: 'GENERATING', regenerationsLeft: 2 })
+    await advance(2000 * 179)
+    expect(analysesApi.fetchAnalysisStatus).toHaveBeenCalledTimes(179)
+    expect(wrapper.find('[data-message="generating-slow"]').exists()).toBe(false)
+
+    await advance(2000)
+    expect(analysesApi.fetchAnalysisStatus).toHaveBeenCalledTimes(180)
+    expect(wrapper.find('[data-message="generating-slow"]').text()).toBe(
+      '퀴즈를 만드는 데 예상보다 오래 걸리고 있습니다. 잠시 뒤 상태를 다시 확인해 주세요.',
+    )
+    await advance(10000)
+    expect(analysesApi.fetchAnalysisStatus).toHaveBeenCalledTimes(180)
+
+    analysesApi.fetchAnalysisStatus.mockResolvedValue(quizStatus('READY'))
+    await wrapper.find('[data-action="recheck"]').trigger('click')
+    await flushPromises()
+
+    expect(analysesApi.fetchAnalysisStatus).toHaveBeenCalledTimes(181)
+    expect(wrapper.find('[data-message="count"]').text()).toBe('객관식 6문항')
+  })
+
   it('AC10 429·409·404면 서버 메시지를 보인다', async () => {
     quizzesApi.fetchAnalysisQuiz.mockRejectedValue(missing())
     const message = '이 분석의 퀴즈 다시 만들기 횟수(3회)를 모두 썼습니다.'

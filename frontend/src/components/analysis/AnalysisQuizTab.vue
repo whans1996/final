@@ -12,6 +12,8 @@ import EmptyState from '@/components/common/EmptyState.vue'
 import { attemptTime } from '@/utils/quizFormat'
 
 const POLL_INTERVAL_MS = 2000
+// 6분. LLM 응답 상한(180초) × 형식 오류 재시도 1회보다 길다. 넘으면 서버가 멈춘 것으로 보고 조회를 멈춘다
+const MAX_POLLS = 180
 
 const props = defineProps({
   analysisId: { type: Number, required: true },
@@ -29,6 +31,8 @@ const status = ref(props.quizStatus)
 const left = ref(props.regenerationsLeft)
 const requesting = ref(false)
 const regenerateError = ref('')
+const slow = ref(false)
+let polls = 0
 
 async function load() {
   loading.value = true
@@ -45,11 +49,17 @@ async function load() {
 }
 
 async function poll(isCurrent) {
+  polls += 1
+  // 조회를 더 하지 않을 때는 "오래 걸린다" 안내와 다시 확인 버튼을 보인다
+  const giveUp = () => {
+    slow.value = true
+    return false
+  }
   try {
     const result = await fetchAnalysisStatus(props.analysisId)
     if (!isCurrent()) return false
     regenerateError.value = ''
-    if (result.quizStatus === 'GENERATING') return true
+    if (result.quizStatus === 'GENERATING') return polls < MAX_POLLS || giveUp()
     status.value = result.quizStatus
     if (result.quizStatus === 'READY') load()
     else missing.value = true
@@ -58,18 +68,24 @@ async function poll(isCurrent) {
     if (!isCurrent()) return false
     // 일시적인 오류일 수 있으니 메시지를 보여 주고 다음 주기에 다시 조회한다
     regenerateError.value = errorMessage(error)
-    return true
+    return polls < MAX_POLLS || giveUp()
   }
 }
 
 const polling = usePolling(poll, { interval: POLL_INTERVAL_MS })
+
+function startPolling(options) {
+  polls = 0
+  slow.value = false
+  polling.start(options)
+}
 
 function startGenerating() {
   status.value = 'GENERATING'
   loading.value = false
   missing.value = true
   // 방금 GENERATING이 되었으므로 첫 조회도 한 주기 뒤에 한다
-  polling.start({ delay: POLL_INTERVAL_MS })
+  startPolling({ delay: POLL_INTERVAL_MS })
 }
 
 async function regenerate() {
@@ -95,6 +111,15 @@ onMounted(() => {
 <template>
   <div class="quiz-tab">
     <p v-if="loading" class="hint">퀴즈를 불러오는 중…</p>
+
+    <div v-else-if="status === 'GENERATING' && slow" class="error-box">
+      <p data-message="generating-slow">
+        퀴즈를 만드는 데 예상보다 오래 걸리고 있습니다. 잠시 뒤 상태를 다시 확인해 주세요.
+      </p>
+      <button type="button" class="retry-button" data-action="recheck" @click="startPolling()">
+        상태 다시 확인
+      </button>
+    </div>
 
     <p v-else-if="status === 'GENERATING'" class="hint" role="status" data-message="generating">
       퀴즈를 만드는 중입니다…
