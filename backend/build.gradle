@@ -101,7 +101,33 @@ tasks.register('promptEval', Test) {
     useJUnitPlatform {
         includeTags 'prompt-eval'
     }
+    filter { includeTestsMatching '*.PromptEvalRunner' }
     ['stage', 'level', 'fixture', 'batches', 'flows', 'pauseMs'].each { name ->
+        if (project.hasProperty(name)) {
+            systemProperty "promptEval.${name}", project.property(name)
+        }
+    }
+    outputs.upToDateWhen { false }
+    testLogging {
+        events 'passed', 'skipped', 'failed'
+        showStandardStreams = true
+        exceptionFormat 'full'
+    }
+}
+
+// 평가 보고서 채점 (E-1). 판정(D 수준 구분·E 정답 유일)만 Gemini를 부르고 나머지는 기계 지표다. 사람이 요청할 때만 실행한다.
+// ./gradlew promptGrade -Preport=../.harness/prompt-eval/<파일|폴더> [-Plabels=<폴더>] [-Pjudge=gemini|none] [-Pseed=42] [-PpauseMs=4000]
+// 결과: 보고서 옆 <보고서>-grade.json, 폴더면 summary.md (점수·개수만)
+tasks.register('promptGrade', Test) {
+    description = '러너 보고서를 DS-04 라벨과 대조해 지표 A~E·커버리지·근거 유효율을 계산한다 (@Tag("prompt-eval")).'
+    group = 'verification'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform {
+        includeTags 'prompt-eval'
+    }
+    filter { includeTestsMatching '*.PromptGradeRunner' }
+    ['report', 'labels', 'judge', 'seed', 'pauseMs'].each { name ->
         if (project.hasProperty(name)) {
             systemProperty "promptEval.${name}", project.property(name)
         }

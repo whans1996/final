@@ -144,11 +144,11 @@ LLM_PROVIDER=gms ./gradlew promptEval -Pstage=all -Plevel=all -Pfixture=<id|zip>
 - [ ] Flyway 마이그레이션 (없음)
 - [x] `FlowGenerator`에서 DB 없이 부르는 메서드 분리 (`create(FlowSource, ApiEndpoint, files)`, F-07 테스트 green 유지)
 - [x] `PromptEvalRunner` 핵심을 `EvalPipeline`으로 옮기고 flow·concept·quiz·all 추가 (AC1~AC4). 파일 단위 `key`는 묶음의 경로를 `,`로 이은 값, 러너는 시드 카탈로그 때문에 `IntegrationTestBase` 상속(Docker 필요)
-- [ ] 채점기 `EvalGrader`·`LevelJudge`·`QuizCheck`·`EvalSummary` + `promptGrade` Gradle 작업 (AC5~AC10)
-- [ ] 합성 라벨 fixture (DS-02-01, AC11)
-- [ ] AC별 실패 테스트 작성 (red 확인)
-- [ ] BE 구현 (green)
-- [ ] `prompt-evaluator` 에이전트(지원 단계·`promptGrade`), `docs/산출물/09-데이터셋.md` DS-04 "사용 기능" 갱신
+- [x] 채점기 `EvalGrader`·`LevelJudge`·`QuizCheck`·`EvalSummary` + `promptGrade` Gradle 작업 (AC5~AC10). 실행은 `PromptGradeRunner`, 판정 프롬프트 `src/test/resources/prompt-eval/judge/`
+- [x] 합성 라벨 fixture (DS-02-01, AC11). `src/test/resources/prompt-eval/synthetic/`에 둔다 (평가 종료 뒤 실제 라벨이 `prompt-eval/`로 옮겨 와도 AC11 검사 범위와 섞이지 않게)
+- [x] AC별 실패 테스트 작성 (red 확인)
+- [x] BE 구현 (green)
+- [x] `prompt-evaluator` 에이전트(지원 단계·`promptGrade`), `docs/산출물/09-데이터셋.md` DS-04 "사용 기능" 갱신
 - [ ] dev 실호출 1회 확인 (사람 요청 시, DS-02-01 `all` × GMS, 판정 Gemini)
 - [ ] reviewer 지적 사항 반영
 - [ ] PR CI 초록
