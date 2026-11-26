@@ -1,5 +1,7 @@
 package com.vibenote.prompteval;
 
+import static com.vibenote.prompteval.EvalPaths.option;
+import static com.vibenote.prompteval.EvalPaths.safe;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import com.vibenote.common.IntegrationTestBase;
@@ -31,9 +33,7 @@ import java.util.zip.ZipOutputStream;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.context.config.ConfigDataEnvironmentPostProcessor;
 import org.springframework.boot.context.properties.bind.Binder;
-import org.springframework.core.env.StandardEnvironment;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
@@ -52,7 +52,8 @@ import tools.jackson.databind.json.JsonMapper;
  *
  * <ul>
  *   <li>{@code fixture}: {@code data/datasets.json}의 저장소 id(예: DS-02-01. 고정 커밋을 codeload에서 받아 캐시)
- *       또는 ZIP 경로
+ *       또는 ZIP 경로. ZIP은 파일 이름을 id로 쓴다 ({@code DS-03-01.zip} → 라벨 {@code DS-03-01.json}, split·오염은
+ *       datasets.json의 {@code DS-03-01} 또는 {@code DS-03})
  *   <li>{@code stage}: {@code overview}(개요) · {@code file}(개요 + 파일) · {@code flow}(개요 + 흐름) ·
  *       {@code concept}(개념) · {@code quiz}(개념 + 퀴즈) · {@code all}(다섯 단계)
  *   <li>{@code level}: {@code beginner|junior|senior|all}
@@ -67,8 +68,8 @@ import tools.jackson.databind.json.JsonMapper;
 @Tag("prompt-eval")
 class PromptEvalRunner extends IntegrationTestBase {
 
-    static final Path ROOT = Path.of("..").toAbsolutePath().normalize();
-    static final Path OUT = ROOT.resolve(".harness/prompt-eval");
+    private static final Path ROOT = EvalPaths.ROOT;
+    private static final Path OUT = EvalPaths.OUT;
     private static final ObjectMapper JSON = JsonMapper.builder().build();
 
     @Autowired ConceptDraftService conceptDraftService;
@@ -91,7 +92,7 @@ class PromptEvalRunner extends IntegrationTestBase {
                         : List.of(Level.valueOf(levelOption));
         EvalPipeline.Options options = new EvalPipeline.Options(stage, levels, batches, flows);
 
-        Binder binder = binder();
+        Binder binder = EvalPaths.binder();
         LlmProperties llmProps = binder.bindOrCreate("llm", LlmProperties.class);
         // F-27 AC13: LLM_PROVIDER(gms|gemini|ollama)의 공급자 하나만 폴백 없이 부른다
         Optional<LlmClient> live = LiveLlmClients.single(llmProps);
@@ -118,14 +119,16 @@ class PromptEvalRunner extends IntegrationTestBase {
         System.out.printf("[prompt-eval] result=%s%n", ROOT.relativize(out));
     }
 
-    /** ZIP 경로면 그대로, 데이터셋 id면 고정 커밋 아카이브를 받아 {@code paths}만 남긴 ZIP을 만든다 (캐시). */
+    /**
+     * ZIP 경로면 파일 이름을 id로 쓰고({@link EvalPaths#zipFixture}), 데이터셋 id면 고정 커밋 아카이브를 받아 {@code paths}만
+     * 남긴 ZIP을 만든다 (캐시).
+     */
     static EvalFixture fixture(String fixture) throws IOException, InterruptedException {
         Path asPath = ROOT.resolve(fixture);
-        if (fixture.toLowerCase(Locale.ROOT).endsWith(".zip") && Files.exists(asPath)) {
-            String name = asPath.getFileName().toString().replaceFirst("\\.zip$", "");
-            return new EvalFixture(fixture, asPath, name, "unknown", "unknown");
+        if (EvalPaths.isZip(fixture) && Files.exists(asPath)) {
+            return EvalPaths.zipFixture(asPath);
         }
-        JsonNode repo = dataset(fixture);
+        JsonNode repo = EvalPaths.dataset(fixture);
         if (repo == null) {
             throw new IllegalArgumentException("data/datasets.json에 없는 fixture: " + fixture);
         }
@@ -169,24 +172,6 @@ class PromptEvalRunner extends IntegrationTestBase {
                 repo.path("contamination").asString("unknown"));
     }
 
-    /** {@code data/datasets.json}에서 id가 같은 항목. 없으면 null. */
-    static JsonNode dataset(String id) {
-        return findDataset(JSON.readTree(ROOT.resolve("data/datasets.json").toFile()), id);
-    }
-
-    private static JsonNode findDataset(JsonNode node, String id) {
-        if (node.isObject() && id.equals(node.path("id").asString(null))) {
-            return node;
-        }
-        for (JsonNode child : node) {
-            JsonNode found = findDataset(child, id);
-            if (found != null) {
-                return found;
-            }
-        }
-        return null;
-    }
-
     /** 아카이브 최상위 폴더 아래에서 {@code paths}(빈 문자열이면 전체)에 속한 항목만 복사한다. */
     private static void filter(Path archive, Path target, List<String> paths) throws IOException {
         try (ZipFile zip = new ZipFile(archive.toFile());
@@ -212,21 +197,5 @@ class PromptEvalRunner extends IntegrationTestBase {
                 out.closeEntry();
             }
         }
-    }
-
-    /** 앱과 같은 방식(application.yml + ../.env)으로 설정을 읽는다. */
-    static Binder binder() {
-        StandardEnvironment environment = new StandardEnvironment();
-        ConfigDataEnvironmentPostProcessor.applyTo(environment);
-        return Binder.get(environment);
-    }
-
-    static String option(String name, String fallback) {
-        String value = System.getProperty("promptEval." + name);
-        return value == null || value.isBlank() ? fallback : value;
-    }
-
-    static String safe(String value) {
-        return value.replaceAll("[^A-Za-z0-9._-]", "_");
     }
 }

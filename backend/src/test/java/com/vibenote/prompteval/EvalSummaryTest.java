@@ -17,8 +17,15 @@ class EvalSummaryTest {
     @TempDir Path dir;
 
     Map<String, Object> graded(String provider, String contamination) {
+        return graded(provider, "eval", contamination, GradeFixtures.FIXTURE);
+    }
+
+    /** 합성 보고서를 채점한 결과. 그룹 키(분할·오염)와 중복 판단용 fixture id만 바꾼다. */
+    Map<String, Object> graded(String provider, String split, String contamination, String id) {
         ObjectNode report = GradeFixtures.report(GradeFixtures.zip(dir));
+        report.put("fixture", id);
         report.put("provider", provider);
+        report.put("split", split);
         report.put("contamination", contamination);
         return new EvalGrader(Optional.empty(), 42).grade(report, GradeFixtures.label());
     }
@@ -34,6 +41,7 @@ class EvalSummaryTest {
         Map<String, Object> grade = new LinkedHashMap<>();
         grade.put("fixture", "DS-02-01");
         grade.put("provider", provider);
+        grade.put("split", "eval");
         grade.put("contamination", contamination);
         grade.put("scores", scores);
         return grade;
@@ -44,24 +52,43 @@ class EvalSummaryTest {
         String md =
                 EvalSummary.markdown(
                         List.of(
-                                graded("gms", "high"),
+                                graded("gms", "eval", "high", "DS-02-01"),
                                 graded("ollama", "low"),
-                                graded("gms", "high"),
+                                graded("gms", "eval", "high", "DS-02-02"),
                                 passing("gms", "none")));
 
-        int none = md.indexOf("| gms | none | 1 |");
-        int high = md.indexOf("| gms | high | 2 |");
-        int ollama = md.indexOf("| ollama | low | 1 |");
+        int none = md.indexOf("| gms | eval | none | 1 |");
+        int high = md.indexOf("| gms | eval | high | 2 |");
+        int ollama = md.indexOf("| ollama | eval | low | 1 |");
         assertThat(none).as(md).isPositive();
         // 공급자 이름순, 같은 공급자 안에서는 none → low → high
         assertThat(high).isGreaterThan(none);
         assertThat(ollama).isGreaterThan(high);
 
         // v2 하한: 통과 그룹은 ✅, 합성 보고서 그룹(퀴즈 최종 통과 2/3, 근거 57%)은 ❌, 판정 건너뜀은 -
-        String passLine = line(md, "| gms | none |", 1);
+        String passLine = line(md, "| gms | eval | none |", 1);
         assertThat(passLine).doesNotContain("❌").contains("✅");
-        String failLine = line(md, "| gms | high |", 1);
+        String failLine = line(md, "| gms | eval | high |", 1);
         assertThat(failLine).contains("❌").contains("-");
+    }
+
+    @Test
+    void AC10_dev_결과는_eval_그룹에_섞이지_않고_다시_채점한_것은_최신만_센다() {
+        String md =
+                EvalSummary.markdown(
+                        List.of(
+                                passing("gms", "high"),
+                                graded("gms", "dev", "high", "DS-02-01"),
+                                graded("gms", "dev", "high", "DS-02-01")));
+
+        // 같은 오염 high라도 dev는 eval과 다른 줄이고, eval 줄이 먼저 나온다
+        int eval = md.indexOf("| gms | eval | high | 1 |");
+        int dev = md.indexOf("| gms | dev | high | 1 |");
+        assertThat(eval).as(md).isPositive();
+        assertThat(dev).as(md).isGreaterThan(eval);
+        // eval 줄의 하한은 dev 합성 결과(❌)에 끌려 내려가지 않는다
+        assertThat(line(md, "| gms | eval | high |", 1)).doesNotContain("❌");
+        assertThat(md).contains("최신 것으로 바꿔 셌다");
     }
 
     @Test

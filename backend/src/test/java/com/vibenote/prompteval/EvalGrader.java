@@ -56,7 +56,7 @@ final class EvalGrader {
 
     /** 출력 텍스트로 보지 않는 필드 (경로·메타·호출 원문). 금지 사실 패턴을 찾을 때 뺀다. */
     private static final Set<String> NOT_TEXT =
-            Set.of("path", "layer", "fileId", "endpoint", "calls", "skipped", "errors");
+            Set.of("path", "layer", "fileId", "endpoint", "calls", "skipped", "errors", "error");
 
     private static final Pattern LINE_HINT = Pattern.compile("L(\\d+)(?:\\s*-\\s*L?(\\d+))?");
 

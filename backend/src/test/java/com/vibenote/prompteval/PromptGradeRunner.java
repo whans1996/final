@@ -1,6 +1,6 @@
 package com.vibenote.prompteval;
 
-import static com.vibenote.prompteval.PromptEvalRunner.option;
+import static com.vibenote.prompteval.EvalPaths.option;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import com.vibenote.llm.LiveLlmClients;
@@ -98,7 +98,7 @@ class PromptGradeRunner {
         }
     }
 
-    /** 판정 LLM. {@code none}이거나 Gemini 키가 없으면 empty (D·정답 유일률을 건너뛴다). */
+    /** 판정 LLM. {@code none}이거나 Gemini 키가 없으면 empty (D·E 정답 유일률·B 금지 사실을 건너뛴다). */
     private static Optional<LlmClient> judge(String option, long pauseMs) {
         switch (option.toLowerCase(Locale.ROOT)) {
             case "none" -> {
@@ -106,7 +106,7 @@ class PromptGradeRunner {
             }
             case "gemini" -> {
                 LlmProperties.Gemini props =
-                        PromptEvalRunner.binder().bindOrCreate("llm", LlmProperties.class).gemini();
+                        EvalPaths.binder().bindOrCreate("llm", LlmProperties.class).gemini();
                 if (props.apiKey() == null || props.apiKey().isBlank()) {
                     System.out.println("[prompt-grade] GEMINI_API_KEY가 없어 판정을 건너뜀");
                     return Optional.empty();
