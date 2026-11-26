@@ -157,6 +157,6 @@ LLM_PROVIDER=gms ./gradlew promptEval -Pstage=all -Plevel=all -Pfixture=<id|zip>
 - [x] BE 구현 (green)
 - [x] `prompt-evaluator` 에이전트(지원 단계·`promptGrade`), `docs/산출물/09-데이터셋.md` DS-04 "사용 기능" 갱신
 - [x] dev 실호출 1회 확인 (11-26, DS-02-01 `all` `-Pbatches=1` × GMS gpt-4.1-mini 21회, 판정 Gemini 27회, 개발용 참고): 오류·건너뜀 없음, A 전 단계 100%, B 없는 경로·심볼 0, 근거 유효율 100%(72), D 100%(27, 1묶음 제외), E 기계 86%(해설 위치 언급 3문항, 검사기 오탐 아님) · 정답 유일 100%(22). 금지 사실 판정은 이 실행 뒤 추가라 미확인
-- [ ] reviewer 지적 사항 반영
+- [x] reviewer 지적 사항 반영 (11-26: ZIP fixture는 파일 이름을 id로 datasets.json split·오염 조회, 요약 그룹에 분할 추가·같은 저장소 재채점은 최신만, 채점기 Docker 의존 제거, 폴더 채점 견고성. 후속 #218 #219)
 - [ ] PR CI 초록
 - [ ] 상태 DONE (PR 머지 후)
