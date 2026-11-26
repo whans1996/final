@@ -18,7 +18,7 @@
 ## 바로 다음 할 일
 
 1. 진행현황 PR: CI 초록이면 GitHub에서 머지 (docs만이라 Codex 루프 생략, conventions 7절) → `git switch develop && git pull` → 로컬 `feature/F-26a-index-selection`·`feature/F-27-gms-provider` `git branch -d`
-2. V-2 블라인드 점검(김준섭 요청): dh-ssafy에 ds03 브랜치 고아 커밋 7개(11-25 16:53~17:44, NOW-js·작업로그) 남음, 내용 안 열었음. 사람 승인 시 `git reflog expire --expire-unreachable=now --all && git gc --prune=now`. dh-home도 같은 점검(`git fsck --unreachable --no-reflogs` → 작성자 JoonseobKim·11-25 커밋). 김준섭에게 답장
+2. V-2 블라인드 점검(김준섭 요청): dh-ssafy는 ds03 브랜치 고아 커밋 7개(내용 미열람)를 11-26 `git reflog expire --expire-unreachable=now --all && git gc --prune=now`로 삭제 완료. **dh-home도 같은 점검**(`git fsck --unreachable --no-reflogs` → 작성자 JoonseobKim·11-25 커밋이 있으면 위 명령). 김준섭에게 답장
 3. `/clear` → `/spec F-26b` (커버리지 개편, #121·#156 흡수, 12/04 기준선 전엔 머지 안 함). 짬 나면 공통 하네스 이슈 #130·#135(보안 성격) 먼저
 4. 11/27 Figma 세션 → 11/29~ V-1 MVP 감사
 
