@@ -311,6 +311,7 @@ watch(
               :analysis-id="analysis.id"
               :quiz-status="analysis.quizStatus ?? null"
               :regenerations-left="analysis.quizRegenerationsLeft ?? 0"
+              @updated="onUpdated"
             />
           </div>
         </template>

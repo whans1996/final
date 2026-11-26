@@ -21,6 +21,8 @@ const props = defineProps({
   quizStatus: { type: String, default: null },
   regenerationsLeft: { type: Number, default: 0 },
 })
+// 탭을 떠났다 돌아오면 상세의 값으로 다시 시작하므로, 바뀐 퀴즈 상태·남은 횟수를 상세에 올린다
+const emit = defineEmits(['updated'])
 
 const quiz = ref(null)
 const loading = ref(true)
@@ -61,6 +63,7 @@ async function poll(isCurrent) {
     regenerateError.value = ''
     if (result.quizStatus === 'GENERATING') return polls < MAX_POLLS || giveUp()
     status.value = result.quizStatus
+    emit('updated', { quizStatus: result.quizStatus })
     if (result.quizStatus === 'READY') load()
     else missing.value = true
     return false
@@ -94,6 +97,10 @@ async function regenerate() {
   try {
     const result = await regenerateQuiz(props.analysisId)
     left.value = result.quizRegenerationsLeft
+    emit('updated', {
+      quizStatus: result.quizStatus,
+      quizRegenerationsLeft: result.quizRegenerationsLeft,
+    })
     startGenerating()
   } catch (error) {
     regenerateError.value = errorMessage(error)

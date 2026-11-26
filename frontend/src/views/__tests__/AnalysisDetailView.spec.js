@@ -516,6 +516,47 @@ describe('AnalysisDetailView 결과 탭 (F-06 AC13~AC15)', () => {
     expect(wrapper.find('[data-message="count"]').text()).toBe('객관식 5문항')
     expect(wrapper.find('[data-action="start-quiz"]').attributes('href')).toBe('/analyses/42/quiz')
   })
+
+  it('L-1a AC10 재생성을 시작하고 다른 탭에 갔다 돌아와도 만드는 중과 줄어든 남은 횟수를 이어 간다', async () => {
+    const done = status({ status: 'DONE', progress: 100 })
+    analysesApi.fetchAnalysisStatus
+      .mockResolvedValueOnce(done)
+      .mockResolvedValue({ ...done, quizStatus: 'GENERATING' })
+    analysesApi.fetchAnalysis.mockResolvedValue({
+      ...detail(),
+      quizStatus: 'FAILED',
+      quizRegenerationsLeft: 2,
+    })
+    quizzesApi.fetchAnalysisQuiz.mockRejectedValue(
+      apiError(404, { code: 'QUIZ_404', message: '퀴즈를 찾을 수 없습니다.' }),
+    )
+    quizzesApi.regenerateQuiz.mockResolvedValue({
+      analysisId: 42,
+      quizStatus: 'GENERATING',
+      quizRegenerationsLeft: 1,
+    })
+
+    const { wrapper } = await mountDetail('/analyses/42?tab=quiz')
+    await wrapper.find('[data-action="regenerate"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('[data-message="generating"]').exists()).toBe(true)
+
+    await wrapper.findAll('[role="tab"]')[0].trigger('click')
+    await flushPromises()
+    await wrapper.findAll('[role="tab"]')[5].trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[data-message="generating"]').exists()).toBe(true)
+    expect(wrapper.find('[data-action="regenerate"]').exists()).toBe(false)
+    const before = analysesApi.fetchAnalysisStatus.mock.calls.length
+    await advance(2000)
+    expect(analysesApi.fetchAnalysisStatus.mock.calls.length).toBe(before + 1)
+
+    // 생성이 실패로 끝나면 줄어든 남은 횟수(1회)를 보인다
+    analysesApi.fetchAnalysisStatus.mockResolvedValue({ ...done, quizStatus: 'FAILED' })
+    await advance(2000)
+    expect(wrapper.find('[data-action="regenerate"]').text()).toBe('퀴즈 다시 만들기 (남은 1회)')
+  })
 })
 
 describe('AnalysisDetailView 저장소 링크 (F-05b AC14)', () => {
