@@ -136,6 +136,8 @@
 # 두 사람이 모두 고치는 하네스 파일: PC 등록부(자기 PC 함정 추가), 이 파일(새 도메인 폴더 추가)
 /scripts/lib/pcs.json                        @whans1996 @JoonseobKim
 /.github/CODEOWNERS                          @whans1996 @JoonseobKim
+# 일정 정본: 일정·하네스 관리는 김동환이 주도한다 (11-26). B는 바꿀 일정을 A에게 요청하거나 PR로 올리고 A가 확인한다
+/docs/로드맵.md                              @whans1996
 
 # ── 사람별 NOW (상대 것은 수정 금지, guard-files가 막는다) ──
 /docs/handoff/NOW-dh.md                      @whans1996
