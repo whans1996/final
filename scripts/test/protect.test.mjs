@@ -1,7 +1,7 @@
 // 비밀값·비밀 파일·eval 경로 판정 (H-2, HX-1, HX-2). 테스트 안의 가짜 키는 조각을 이어 붙여 만든다 (커밋 hook·push protection 오탐 방지)
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { EVAL_FETCH_EXCLUDE, codeReadsSecret, evalFetchExcluded, findSecrets, isSecretFile, isWithin, scanDiffForSecrets } from '../lib/protect.mjs';
+import { EVAL_FETCH_EXCLUDE, codeReadsSecret, evalFetchExcluded, findSecrets, isSecretFile, isWithin, scanDiffForSecrets, scanMergeForSecrets } from '../lib/protect.mjs';
 
 const fake = {
   ghp: 'ghp_' + 'a'.repeat(36),
@@ -13,7 +13,8 @@ const fake = {
 };
 
 test('비밀 파일: .env 계열과 키 파일, .env.example은 제외', () => {
-  for (const f of ['.env', '.env.local', 'backend/.env.production', '.env*', 'C:\\repo\\.env', 'certs/server.pem', 'a/b.key', 'keystore.p12', '~/.ssh/id_rsa', 'id_ed25519'])
+  // NTFS는 대소문자를 무시하고 `파일::$DATA`(대체 데이터 스트림 표기)로도 같은 파일을 읽는다
+  for (const f of ['.env', '.env.local', 'backend/.env.production', '.env*', 'C:\\repo\\.env', 'certs/server.pem', 'a/b.key', 'keystore.p12', '~/.ssh/id_rsa', 'id_ed25519', '.ENV', '.Env.Local', 'C:/repo/.env::$DATA', 'ID_RSA'])
     assert.ok(isSecretFile(f), f);
   for (const f of ['.env.example', 'frontend/.env.example', 'env.md', 'README.md', 'id_rsa.pub', '.envrc.md', 'keys.json']) assert.ok(!isSecretFile(f), f);
 });
@@ -24,10 +25,19 @@ test('비밀값 패턴: 기존 + github_pat_·웹훅 URL·GMS 키 할당', () =>
   assert.deepEqual(labels(fake.pat), ['GitHub 토큰(fine-grained)']);
   assert.deepEqual(labels(fake.gemini), ['Google(Gemini) API 키']);
   for (const url of [fake.mattermost, fake.slack, fake.discord]) assert.deepEqual(labels(`url: ${url}`), ['웹훅 URL'], url);
-  assert.deepEqual(labels('GMS_API_KEY=' + 'S'.repeat(24)), ['GMS 키']);
-  assert.deepEqual(labels("gms_api_key: '" + 'k'.repeat(20) + "'"), ['GMS 키']);
-  // 빈 값·환경변수 참조·설명 글은 통과
-  for (const t of ['GMS_API_KEY=', 'GMS_API_KEY=${GMS_API_KEY}', '# GMS_API_KEY=<팀 키>', 'github_pat_[A-Za-z0-9_]{22,}', 'https://meeting.ssafy.com/hooks/', 'secret: ${JWT_SECRET:local-dev-only-jwt-secret-do-not-use-in-production}'])
+  assert.deepEqual(labels('GMS_API_KEY=' + 'S1'.repeat(12)), ['GMS 키']);
+  assert.deepEqual(labels("gms_api_key: '" + 'k9'.repeat(10) + "'"), ['GMS 키']);
+  // 빈 값·환경변수 참조·설명 글·자리표시자(숫자 없음)는 통과
+  for (const t of [
+    'GMS_API_KEY=',
+    'GMS_API_KEY=${GMS_API_KEY}',
+    '# GMS_API_KEY=<팀 키>',
+    'GMS_API_KEY=your-gms-api-key-here',
+    'const GMS_API_KEY = process.env.GMS_API_KEY',
+    'github_pat_[A-Za-z0-9_]{22,}',
+    'https://meeting.ssafy.com/hooks/',
+    'secret: ${JWT_SECRET:local-dev-only-jwt-secret-do-not-use-in-production}',
+  ])
     assert.deepEqual(labels(t), [], t);
 });
 
@@ -46,6 +56,14 @@ test('staged diff 검사: 추가된 줄만, 파일 이름과 종류만 알린다
   ].join('\n');
   assert.deepEqual(scanDiffForSecrets(diff), [{ file: 'a.yml', label: 'GitHub 토큰(fine-grained)' }]);
   assert.deepEqual(scanDiffForSecrets(''), []);
+});
+
+test('merge 커밋: 두 부모 모두에 없던 줄(충돌 해결)만 본다', () => {
+  // develop에서 들어온 줄은 ours(HEAD) 대비로는 추가지만 theirs(MERGE_HEAD) 대비로는 추가가 아니다
+  const ours = ['+++ b/a.yml', `+from-develop: ${fake.ghp}`, `+resolved: ${fake.pat}`].join('\n');
+  const theirs = ['+++ b/a.yml', `+resolved: ${fake.pat}`].join('\n');
+  assert.deepEqual(scanMergeForSecrets(ours, theirs), [{ file: 'a.yml', label: 'GitHub 토큰(fine-grained)' }]);
+  assert.deepEqual(scanMergeForSecrets(ours, ''), []);
 });
 
 test('인라인 코드가 비밀 파일을 읽는가 (node -e, python -c, REPL 입력)', () => {

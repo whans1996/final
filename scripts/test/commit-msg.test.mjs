@@ -14,7 +14,9 @@ test('보호 브랜치: merge 진행 중과 첫 커밋만 예외, 자동 메시�
 });
 
 test('형식: 자동 메시지는 형식 검사·빠른 검사 생략, wip는 빠른 검사만 생략', () => {
-  assert.deepEqual(v('Merge branch develop'), { fail: null, verify: false });
+  assert.deepEqual(v('Merge branch develop', { merging: true }), { fail: null, verify: false });
+  // merge 중이 아닌데 손으로 쓴 "Merge …" 제목은 자동 메시지로 보지 않는다 (빠른 검사 생략 우회)
+  assert.ok(v('Merge branch develop').fail);
   assert.deepEqual(v('fixup! feat(F-01): a'), { fail: null, verify: false });
   assert.deepEqual(v('wip(F-01): 중간'), { fail: null, verify: false });
   assert.deepEqual(v('feat(F-01): a'), { fail: null, verify: true });

@@ -13,8 +13,8 @@ export const SECRET_PATTERNS = [
   [/\bAKIA[0-9A-Z]{16}\b/, 'AWS 액세스 키'],
   // Mattermost(…/hooks/<26자>), Slack, Discord 웹훅. 주소만 알면 누구나 채널에 글을 쓸 수 있다
   [/https?:\/\/[^\s'"<>]+\/hooks\/[a-z0-9]{26}\b|https:\/\/hooks\.slack\.com\/services\/[A-Za-z0-9/_-]+|https:\/\/(?:canary\.|ptb\.)?discord(?:app)?\.com\/api\/webhooks\/\d+\/[\w-]+/, '웹훅 URL'],
-  // GMS 키는 형식이 공개되지 않아 변수 할당으로 잡는다. 빈 값·${…} 참조·<설명>은 통과
-  [/\bGMS_API_KEY\s*[=:]\s*['"]?(?![$<'"\s])[^\s'"#]{16,}/i, 'GMS 키'],
+  // GMS 키는 형식이 공개되지 않아 변수 할당으로 잡는다. 빈 값·${…} 참조·<설명>, 숫자가 없는 값(자리표시자·process.env.X)은 통과
+  [/\bGMS_API_KEY\s*[=:]\s*['"]?(?![$<'"\s])(?=[^\s'"#]*\d)[^\s'"#]{16,}/i, 'GMS 키'],
 ];
 
 /** 글 안의 비밀값 종류 목록 [{ label }] (같은 종류는 한 번) */
@@ -23,29 +23,53 @@ export function findSecrets(text) {
   return SECRET_PATTERNS.filter(([re]) => re.test(s)).map(([, label]) => ({ label }));
 }
 
-/** `git diff --cached` 출력에서 추가된 줄의 비밀값 → [{ file, label }] (파일·종류마다 한 번) */
-export function scanDiffForSecrets(diff) {
-  const found = [];
-  const seen = new Set();
+/** diff 출력의 추가된 줄 → [{ file, text }] */
+function addedLines(diff) {
+  const out = [];
   let file = null;
   for (const line of String(diff || '').split('\n')) {
     if (line.startsWith('+++ ')) file = line.slice(4).replace(/^b\//, '');
-    else if (line.startsWith('+') && file)
-      for (const { label } of findSecrets(line.slice(1))) {
-        const key = `${file}\0${label}`;
-        if (seen.has(key)) continue;
-        seen.add(key);
-        found.push({ file, label });
-      }
+    else if (line.startsWith('+') && file) out.push({ file, text: line.slice(1) });
   }
+  return out;
+}
+
+/** 줄 목록의 비밀값 → [{ file, label }] (파일·종류마다 한 번) */
+function secretsOf(lines) {
+  const found = [];
+  const seen = new Set();
+  for (const { file, text } of lines)
+    for (const { label } of findSecrets(text)) {
+      const key = `${file}\0${label}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      found.push({ file, label });
+    }
   return found;
 }
 
-/** 비밀 파일 이름인가: .env 계열(.env.example 제외)과 키 파일. 경로의 \와 /를 모두 구분자로 본다 */
+/** `git diff --cached` 출력에서 추가된 줄의 비밀값 → [{ file, label }] */
+export const scanDiffForSecrets = (diff) => secretsOf(addedLines(diff));
+
+/**
+ * merge 커밋: 두 부모(HEAD·MERGE_HEAD) 모두에 대해 추가인 줄(충돌 해결로 새로 쓴 줄)만 본다.
+ * develop에서 들어온 줄까지 보면 develop에 걸리는 줄이 하나만 생겨도 모든 병합이 막힌다 (풀 방법이 --no-verify뿐)
+ */
+export function scanMergeForSecrets(diffOurs, diffTheirs) {
+  const theirs = new Set(addedLines(diffTheirs).map((l) => `${l.file}\0${l.text}`));
+  return secretsOf(addedLines(diffOurs).filter((l) => theirs.has(`${l.file}\0${l.text}`)));
+}
+
+/**
+ * 비밀 파일 이름인가: .env 계열(.env.example 제외)과 키 파일. 경로의 \와 /를 모두 구분자로 본다.
+ * NTFS는 대소문자를 무시하고 `파일::$DATA`(대체 데이터 스트림)로도 같은 파일을 읽으므로 대소문자·`:` 뒤를 무시한다
+ */
 export function isSecretFile(path) {
-  const b = basename(String(path ?? '').replace(/\\/g, '/'));
+  const b = basename(String(path ?? '').replace(/\\/g, '/'))
+    .replace(/:.*$/, '')
+    .toLowerCase();
   if (/^\.env([.*][\w.*-]*)?$/.test(b)) return b !== '.env.example';
-  return /\.(pem|key|p12|pfx|jks|keystore)$/i.test(b) || /^id_(rsa|dsa|ecdsa|ed25519)$/.test(b);
+  return /\.(pem|key|p12|pfx|jks|keystore)$/.test(b) || /^id_(rsa|dsa|ecdsa|ed25519)$/.test(b);
 }
 
 /** 코드 안의 문자열 리터럴 ('…', "…", `…`). 인라인 코드(node -e·python -c·REPL 입력) 판정에 쓴다 */

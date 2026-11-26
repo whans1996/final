@@ -4,6 +4,7 @@
 // 판정은 scripts/lib/guard.mjs(셸 토큰 파서, 테스트 있음)가 한다: 따옴표·heredoc 안 글자는 무시하고,
 // `cd <경로> &&`·`git -C <경로>`·`bash -c "..."`·명령 치환·`node -e` 코드 안의 명령까지 본다.
 // MCP 셸 도구도 같은 판정을 받는다 (H-1: 예전에는 이 도구로 모든 가드를 우회할 수 있었다).
+// 단, Desktop Commander는 Claude의 cwd가 아니라 MCP 서버 쪽 위치에서 실행하므로 상대 경로 판정(보호 브랜치·eval)은 근사다.
 // 차단 시 exit 2 + stderr 메시지 → Claude에게 사유가 전달된다. 차단은 .harness/metrics/guard.jsonl에 사유만 남긴다 (주간 지표).
 // 명령 원문은 남기지 않는다: 차단된 명령에 비밀값이 들어 있을 수 있다 (#135).
 import { appendFileSync, existsSync, mkdirSync, statSync } from 'node:fs';

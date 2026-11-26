@@ -97,15 +97,15 @@ function parseList(src, start, nested, out, shell) {
     }
   };
   const substitution = (close) => {
-    // i는 여는 기호 바로 뒤
-    out.push(PUSH);
+    // i는 여는 기호 바로 뒤. 범위 표시는 bash만: PowerShell의 $( )는 같은 프로세스라 그 안의 cd가 바깥에 남는다
+    if (bash) out.push(PUSH);
     if (close === ')') i = parseList(src, i, true, out, shell);
     else {
       const end = src.indexOf('`', i);
       parseList(src.slice(i, end === -1 ? src.length : end), 0, false, out, shell);
       i = end === -1 ? src.length : end + 1;
     }
-    out.push(POP);
+    if (bash) out.push(POP);
     word = (word ?? '') + SUBST;
   };
 
@@ -142,10 +142,11 @@ function parseList(src, start, nested, out, shell) {
         i++;
       } else if (c === '|') pipeFrom = seg;
     } else if (c === '(' && word === null) {
+      // bash의 ( )만 서브셸이다. PowerShell·cmd의 ( )는 묶음일 뿐이라 cd가 바깥에 남는다
       endSegment();
-      out.push(PUSH);
+      if (bash) out.push(PUSH);
       i = parseList(src, i + 1, true, out, shell);
-      out.push(POP);
+      if (bash) out.push(POP);
     } else if (bash && (c === '>' || c === '<' || c === '&')) {
       if (word !== null && /^\d+$/.test(word)) word = null; // 2>&1 의 2
       endWord();
@@ -310,7 +311,7 @@ function parseGit(args) {
 }
 
 // git은 모호하지 않은 긴 옵션 축약(--no-verif, --forc)을 받는다. 금지 판정에 쓰는 옵션은 축약도 같은 것으로 본다
-const LONG_GUARDED = ['--no-verify', '--force', '--force-with-lease', '--force-if-includes', '--mirror', '--delete', '--hard', '--unset', '--unset-all', '--staged', '--worktree', '--repo'];
+const LONG_GUARDED = ['--no-verify', '--force', '--force-with-lease', '--force-if-includes', '--mirror', '--delete', '--hard', '--unset', '--unset-all', '--staged', '--worktree', '--repo', '--discard-changes'];
 const expand = (name, list) => list.filter((full) => full === name || (name.length >= 5 && full.startsWith(name)));
 
 /**
@@ -361,9 +362,13 @@ const GREP_LIKE = {
   egrep: { value: 'efmABCdD', pattern: 'ef' },
   fgrep: { value: 'efmABCdD', pattern: 'ef' },
   rg: { value: 'efmABCgtTjMEr', pattern: 'ef' },
+  // sed·awk도 첫 위치 인자가 스크립트다 (`sed -i 's/a/.env/' f`). -e·-f로 주면 위치 인자는 모두 파일
+  sed: { value: 'ef', pattern: 'ef' },
+  awk: { value: 'fvF', pattern: 'f' },
+  gawk: { value: 'fvF', pattern: 'f' },
 };
 const GREP_LONG_VALUE = new Set(
-  '--regexp --file --max-count --after-context --before-context --context --include --exclude --exclude-dir --exclude-from --label --binary-files --devices --directories --glob --iglob --type --type-not --threads --replace --max-depth --encoding --type-add --pre'.split(' '),
+  '--regexp --expression --file --max-count --after-context --before-context --context --include --exclude --exclude-dir --exclude-from --label --binary-files --devices --directories --glob --iglob --type --type-not --threads --replace --max-depth --encoding --type-add --pre'.split(' '),
 );
 
 /** 읽기 명령의 파일 인자. grep류는 검색 패턴을 뺀다 (`grep "\.env" src`는 .env를 읽지 않는다) */
@@ -399,7 +404,7 @@ function readTargets(name, args) {
     if (a.startsWith('--')) {
       const [n, ...v] = a.split('=');
       const value = v.length ? v.join('=') : GREP_LONG_VALUE.has(n) ? args[++k] : undefined;
-      if (n === '--regexp') pattern = true;
+      if (n === '--regexp' || n === '--expression') pattern = true;
       else if (value !== undefined) files.push(value); // --file(패턴 파일)·--glob 등. 값도 파일 이름일 수 있다
       if (n === '--file') pattern = true;
     } else if (a.startsWith('-') && a.length > 1) {
@@ -438,7 +443,8 @@ const GITHUB_WRITE_PATHS = [
   /\/environments\/[^/]+\/(secrets|variables)(\/|$)/,
   /\/releases(\/|$)/,
   /\/git\/refs(\/|$)/,
-  /\/branches\/[^/]+\/protection/,
+  /\/branches\/[^/]+\/(protection|rename)/,
+  /^repos\/[^/]+\/[^/]+\/transfer$/,
   /\/rulesets(\/|$)/,
   /\/contents\//,
   /\/collaborators(\/|$)/,
@@ -572,15 +578,29 @@ function checkGhApi(args) {
   let method = null;
   let body = false;
   let path = null;
+  let hidden = false; // graphql 본문을 파일에서 읽어 내용을 볼 수 없음 (-F query=@파일, --input)
   for (let k = 0; k < args.length; k++) {
-    const [n, ...v] = args[k].split('=');
-    const inline = args[k].startsWith('--') && v.length;
-    if (GH_API_VALUE.has(n)) {
-      const value = inline ? v.join('=') : args[++k];
-      if (n === '-X' || n === '--method') method = String(value || '').toUpperCase();
-      if (['-f', '--raw-field', '-F', '--field', '--input'].includes(n)) body = true;
-    } else if (!args[k].startsWith('-') && path === null) path = apiPath(args[k]);
+    const a = args[k];
+    let n;
+    let value;
+    if (a.startsWith('--')) {
+      const eq = a.indexOf('=');
+      n = eq === -1 ? a : a.slice(0, eq);
+      if (GH_API_VALUE.has(n)) value = eq === -1 ? args[++k] : a.slice(eq + 1);
+    } else if (/^-[A-Za-z]/.test(a)) {
+      // pflag는 짧은 옵션에 값을 붙여 쓰는 것(-XPUT, -fkey=val)을 받는다
+      n = a.slice(0, 2);
+      if (GH_API_VALUE.has(n)) value = a.length > 2 ? a.slice(2) : args[++k];
+    } else {
+      if (path === null) path = apiPath(a);
+      continue;
+    }
+    if (!GH_API_VALUE.has(n)) continue;
+    if (n === '-X' || n === '--method') method = String(value || '').toUpperCase();
+    if (['-f', '--raw-field', '-F', '--field', '--input'].includes(n)) body = true;
+    if (n === '--input' || ((n === '-F' || n === '--field') && /^[^=]*=@/.test(String(value || '')))) hidden = true;
   }
+  if (path === 'graphql' && hidden) return R.ghApi;
   return githubWrite(path, method || (body ? 'POST' : 'GET'), args.join(' ')) ? R.ghApi : null;
 }
 
@@ -611,16 +631,24 @@ function checkHttp(args) {
 // 경로가 아니라 글을 받는 명령 (eval 경로 검사에서 뺀다)
 const TEXT_ONLY = new Set(['echo', 'printf', 'write-output', 'write-host']);
 
-/** 김동환 PC에서 eval 경로를 건드리는가 (HX-2). 메시지 인자(git commit -m, gh pr create --body)는 경로로 보지 않는다 */
+// eval 저장소를 받아 오거나 여는 하위 명령 (저장소 이름 검사는 여기에만. 메시지 속 이름은 막지 않는다)
+const EVAL_REPO_GIT = new Set(['clone', 'fetch', 'pull', 'remote', 'submodule', 'ls-remote']);
+const EVAL_REPO_GH = new Set(['clone', 'view', 'fork', 'sync']);
+
+/** 김동환 PC에서 eval 경로를 건드리는가 (HX-2). 메시지 인자(git commit -m, gh pr create --body, --did "…")는 경로로 보지 않는다 */
 function checkEval(name, args, redirects, cwd, ctx) {
-  if (['git', 'gh', 'curl', 'wget'].includes(name) && args.some((a) => /vibenote-eval/i.test(a))) return R.evalRead;
+  const repo = (list) => list.some((a) => /vibenote-eval/i.test(a));
+  if (name === 'git' && EVAL_REPO_GIT.has(parseGit(args).sub) && repo(args)) return R.evalRead;
+  if (name === 'gh' && ((args[0] === 'repo' && EVAL_REPO_GH.has(args[1])) || args[0] === 'api') && repo(args)) return R.evalRead;
+  if (['curl', 'wget', 'invoke-webrequest', 'iwr', 'invoke-restmethod', 'irm'].includes(name) && repo(args)) return R.evalRead;
   if (TEXT_ONLY.has(name) || name === 'gh') return null;
   let words = args;
   if (name === 'git') {
     const g = parseGit(args);
     words = [...(g.dir ? [g.dir] : []), ...(['commit', 'tag', 'notes'].includes(g.sub) ? [] : g.rest)];
   }
-  const hit = (w) => /eval/i.test(w) && isWithin(resolvePath(cwd, w.replace(/^--?[\w-]+=/, '')), ctx.evalDir);
+  // 공백이 든 단어는 메시지로 본다 (경로에 공백을 쓰지 않는다)
+  const hit = (w) => /eval/i.test(w) && !/\s/.test(w) && isWithin(resolvePath(cwd, w.replace(/^--?[\w-]+=/, '')), ctx.evalDir);
   return [...words, ...redirects.map((r) => r.target)].some(hit) ? R.evalRead : null;
 }
 
@@ -641,8 +669,15 @@ function checkInterpreter(name, args, seg, ctx, depth) {
     const m = /^--env-file(?:-if-exists)?(?:=(.*))?$/.exec(args[k]);
     if (m && isSecretFile(m[1] ?? args[k + 1] ?? '')) return R.envRead;
   }
-  const k = args.findIndex((a) => INTERPRETERS[name].includes(a));
-  if (k !== -1) return checkCode(args[k + 1] ?? '', ctx, depth);
+  // 코드 옵션: 정확한 이름(-e, --eval), 값을 붙인 긴 옵션(--eval=…), 끝 글자가 코드 옵션인 묶음(node -pe, python -Ic)
+  const short = INTERPRETERS[name].filter((o) => /^-[A-Za-z]$/.test(o)).map((o) => o[1]);
+  const bundle = short.length ? new RegExp(`^-[A-Za-z]*[${short.join('')}]$`) : null;
+  for (let k = 0; k < args.length; k++) {
+    const a = args[k];
+    const eq = a.indexOf('=');
+    if (a.startsWith('--') && eq !== -1 && INTERPRETERS[name].includes(a.slice(0, eq))) return checkCode(a.slice(eq + 1), ctx, depth);
+    if (INTERPRETERS[name].includes(a) || bundle?.test(a)) return checkCode(args[k + 1] ?? '', ctx, depth);
+  }
   // 스크립트 파일 없이 실행(node, python -)하면 표준 입력을 코드로 읽는다
   if (!args.some((a) => !a.startsWith('-')) || args.includes('-')) {
     const code = seg.stdin ?? pipedText(seg.pipeFrom);

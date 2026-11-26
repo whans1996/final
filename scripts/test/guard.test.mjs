@@ -320,6 +320,48 @@ test('MCP 셸 도구(Desktop Commander)도 같은 판정을 받는다 (H-1)', ()
   assert.equal(tool('Read', { file_path: 'x' }), null);
 });
 
+// PR 리뷰(reviewer)가 checkCommand로 재현한 우회·오탐
+test('리뷰 반영: PowerShell·cmd 괄호는 서브셸이 아니다, 옵션 붙여 쓰기, 인라인 코드 옵션 변형', () => {
+  const commitBlocked = (cwd) => (cwd.replace(/\\/g, '/').endsWith('main-repo') ? 'develop' : null);
+  const exists = () => true;
+  assert.ok(checkCommand('(cd C:/w/main-repo); git commit -m x', { cwd: 'C:/w/feature-repo', shell: 'powershell', commitBlocked, exists }));
+  assert.ok(checkCommand('(cd C:/w/main-repo) & git commit -m x', { cwd: 'C:/w/feature-repo', shell: 'cmd', commitBlocked, exists }));
+  assert.ok(checkCommand('(cd data/raw); gc eval/labels.json', { cwd: '/repo', shell: 'powershell', evalDir: '/repo/data/raw/eval', exists }));
+  for (const cmd of [
+    'gh api -XPUT repos/o/r/pulls/1/merge',
+    'gh api repos/o/r/pulls/1/merge -fmerge_method=squash',
+    'gh api -X POST repos/o/r/branches/develop/rename -f new_name=x',
+    'gh api -X POST repos/o/r/transfer -f new_owner=x',
+    'gh api graphql -F query=@m.graphql',
+    'gh api graphql --input q.json',
+    `node -pe "require('fs').readFileSync('.env','utf8')"`,
+    `node --eval="require('fs').readFileSync('.env')"`,
+    `node --print="require('fs').readFileSync('.env')"`,
+    `python -Ic "print(open('.env').read())"`,
+    'git switch --discard develop',
+    'cat .ENV',
+    'sed -n 1p .env',
+    "awk '{print}' .env",
+  ])
+    no(cmd);
+  for (const cmd of ["sed -i 's/foo/.env/' docs/a.md", "awk '/.env/' f.txt", 'sed -e s/a/b/ -i docs/a.md', 'gh api graphql -f query=@viewer']) ok(cmd);
+  // graphql 값이 @로 시작하는 것은 -F(파일 읽기)일 때만 막는다
+});
+
+test('리뷰 반영: 김동환 PC에서 메시지 속 eval 글자는 막지 않는다', () => {
+  const ev = { evalDir: '/repo/data/raw/eval' };
+  for (const cmd of [
+    'git commit -m "vibenote-eval 정리"',
+    'gh pr create --body "vibenote-eval 언급"',
+    'gh issue comment 1 --body "JoonseobKim/vibenote-eval"',
+    'node scripts/stamp.mjs --append-log --did "data/raw/eval/ 읽기 차단"',
+    'node scripts/handoff.mjs -m "data/raw/eval/ 가드"',
+  ])
+    ok(cmd, ev);
+  for (const cmd of ['git fetch https://github.com/JoonseobKim/vibenote-eval.git', 'git remote add ev https://github.com/JoonseobKim/vibenote-eval', 'gh repo view JoonseobKim/vibenote-eval', 'curl -L https://github.com/JoonseobKim/vibenote-eval/archive/main.zip'])
+    no(cmd, ev);
+});
+
 test('cd 경로: Windows에서 Git Bash 경로를 드라이브 경로로', () => {
   assert.equal(resolvePath('C:/repo', '/c/Users/SSAFY/final', 'win32'), 'C:/Users/SSAFY/final');
   assert.equal(resolvePath('C:/repo', '/d', 'win32'), 'D:/');

@@ -27,6 +27,11 @@ test('쓰기: .env·커밋된 마이그레이션·상대 NOW (내장 도구와 M
   ok('Write', { file_path: '/repo/.env.example', content: 'GMS_API_KEY=' });
   ok(`${DC}write_file`, { path: '/repo/backend/src/main/resources/db/migration/V14__new.sql', content: 'select 1;' });
   ok(`${DC}edit_block`, { file_path: '/repo/docs/handoff/NOW-dh.md', old_string: 'a', new_string: 'b' });
+  // NTFS 대소문자 무시, PDF 쓰기 도구
+  no(`${DC}edit_block`, { file_path: 'docs/handoff/now-js.md', old_string: 'a', new_string: 'b' });
+  no(`${DC}write_pdf`, { path: '/repo/docs/handoff/NOW-js.md', content: 'x' });
+  no(`${DC}write_pdf`, { outputPath: '/repo/.env', content: 'x' });
+  no('Read', { file_path: 'C:/repo/.ENV' });
   // 상대 NOW를 모르는 PC(미등록)는 그 검사를 건너뛴다
   ok('Edit', { file_path: '/repo/docs/handoff/NOW-js.md', old_string: 'a', new_string: 'b' }, { peerNowRel: null });
 });
@@ -35,7 +40,7 @@ test('쓰기 내용의 비밀값 (H-2)', () => {
   no(`${DC}write_file`, { path: '/repo/a.yml', content: 'key: ' + 'ghp_' + 'a'.repeat(36) });
   no('Edit', { file_path: '/repo/a.md', old_string: 'x', new_string: 'https://meeting.ssafy.com/hooks/' + 'a1b2c3d4e5f6g7h8i9j0k1l2m3' });
   no('Write', { file_path: '/repo/a.txt', content: 'github_pat_' + 'A'.repeat(30) });
-  no('Write', { file_path: '/repo/.env.example', content: 'GMS_API_KEY=' + 'x'.repeat(24) });
+  no('Write', { file_path: '/repo/.env.example', content: 'GMS_API_KEY=' + 'x1'.repeat(12) });
   no(`${DC}edit_block`, { file_path: '/repo/a.md', old_string: 'x', new_string: 'AIza' + 'q'.repeat(35) });
   ok('Write', { file_path: '/repo/.env.example', content: 'GMS_API_KEY=\n# GMS_BASE_URL=https://gms.ssafy.io/gmsapi/api.openai.com/v1' });
 });

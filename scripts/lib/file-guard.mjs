@@ -57,6 +57,9 @@ export function fileTargets(tool, input = {}) {
       t.writes.push(input.file_path);
       t.texts.push(input.new_string, typeof input.content === 'string' ? input.content : input.content == null ? null : JSON.stringify(input.content));
       break;
+    case 'dc:write_pdf':
+      t.writes.push(input.path, input.outputPath);
+      break;
     case 'dc:move_file':
       // 옮기기는 원본을 지우고 대상에 쓴다: 양쪽 모두 쓰기로 본다
       t.writes.push(input.source, input.destination);
@@ -83,7 +86,8 @@ export function checkFileTool(tool, input = {}, ctx = {}) {
   if (ctx.evalDir) {
     const paths = [...t.reads, ...t.writes, ...t.lists, ...t.searches.map((s) => s.path || ctx.cwd || root)];
     if (paths.some((p) => isWithin(abs(p), ctx.evalDir))) return EVAL;
-    // MCP 검색은 .gitignore(data/raw/)를 따르지 않는다: eval 폴더가 있으면 그 상위에서 시작한 내용 검색도 막는다
+    // MCP 검색(Desktop Commander 0.3.x)은 ripgrep 부분은 .gitignore를 따르지만 Excel·DOCX 내용 검색은 폴더를 직접 훑어
+    // .gitignore(data/raw/)를 따르지 않는다. 그래서 eval 폴더가 있으면 그 상위에서 시작한 내용 검색은 막는다
     if (t.searches.some((s) => s.mcp && s.content && isWithin(ctx.evalDir, abs(s.path || ctx.cwd || root))) && ctx.exists?.(ctx.evalDir)) return EVAL;
   }
   for (const p of t.writes) {
@@ -91,7 +95,8 @@ export function checkFileTool(tool, input = {}, ctx = {}) {
     if (isSecretFile(p)) return `${r}: .env·키 파일은 AI가 수정하지 않습니다. 필요한 변수는 .env.example에 이름만 추가하고, 값은 사용자에게 직접 넣도록 안내하세요.`;
     if (/(^|\/)db\/migration\/V[^/]*\.sql$/i.test(r) && ctx.committedMigration?.(r))
       return `${r}: 이미 커밋된 Flyway 마이그레이션은 수정할 수 없습니다 (상대 PC DB와 체크섬이 어긋남). 다음 번호의 V{n}__설명.sql을 새로 만드세요.`;
-    if (ctx.peerNowRel && r === ctx.peerNowRel) return `${r}: 상대의 NOW 파일입니다. 내 상태는 내 NOW 파일에만 쓰고, 상대에게 전할 말은 PR 댓글이나 Mattermost로 남기세요.`;
+    // NTFS는 대소문자를 무시한다 (now-js.md도 같은 파일)
+    if (ctx.peerNowRel && r.toLowerCase() === ctx.peerNowRel.toLowerCase()) return `${r}: 상대의 NOW 파일입니다. 내 상태는 내 NOW 파일에만 쓰고, 상대에게 전할 말은 PR 댓글이나 Mattermost로 남기세요.`;
   }
   for (const text of t.texts) {
     const [s] = findSecrets(text);

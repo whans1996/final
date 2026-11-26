@@ -1,8 +1,8 @@
 // commit-msg hook의 메시지 판정 (테스트 있음). 실행·검사 호출은 .githooks/commit-msg.mjs가 한다
 import { PROTECTED_BRANCHES } from './common.mjs';
 
-// git이 자동으로 만드는 메시지 (형식 검사·빠른 검사 생략)
-const AUTO = /^(Merge |Revert "|fixup! |squash! |amend! )/;
+// git이 자동으로 만드는 메시지 (형식 검사·빠른 검사 생략). "Merge …"는 merge 진행 중일 때만 (손으로 쓴 제목으로 빠른 검사를 건너뛰지 않게)
+const AUTO = /^(Revert "|fixup! |squash! |amend! )/;
 const SCOPE = '(F-\\d{2}[a-z]?|common|harness)';
 const SCOPED = new RegExp(`^(feat|fix|refactor|test|wip)\\(${SCOPE}\\): \\S.*$`);
 const OPTIONAL = new RegExp(`^(docs|chore)(\\(${SCOPE}\\))?: \\S.*$`);
@@ -18,7 +18,7 @@ export function commitVerdict({ subject, branch, hasCommits, merging }) {
       verify: false,
     };
   }
-  if (AUTO.test(subject)) return { fail: null, verify: false };
+  if (AUTO.test(subject) || (merging && subject.startsWith('Merge '))) return { fail: null, verify: false };
   if (!SCOPED.test(subject) && !OPTIONAL.test(subject)) {
     return {
       fail: [
