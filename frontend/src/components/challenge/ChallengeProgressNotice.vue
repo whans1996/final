@@ -90,6 +90,20 @@ li {
   white-space: nowrap;
 }
 
+/* 좁은 화면에서는 제목을 위 줄에 두고 달성도 바·배지를 아래 줄에 둔다 */
+@media (max-width: 480px) {
+  li {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--space-1) var(--space-3);
+  }
+
+  .title {
+    grid-column: 1 / -1;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+}
+
 .completed {
   padding: 0 var(--space-2);
   border-radius: 999px;
