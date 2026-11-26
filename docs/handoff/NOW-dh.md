@@ -3,7 +3,7 @@
 > 김동환(A 영역: AI·분석·학습 루프) 전용. 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
 > 머리 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
-갱신: 2026-11-26 22:46 · 작업자: whans1996@naver.com · PC: dh-home · 브랜치: feature/issue-179-harness-quick-fixes
+갱신: 2026-11-26 22:47 · 작업자: whans1996@naver.com · PC: dh-home · 브랜치: feature/issue-179-harness-quick-fixes
 
 ## 현재 기능
 
@@ -11,12 +11,8 @@
 
 ## 진행
 
-- ✅ #179 `scripts/lib/issues.mjs` 조회 상한 50 → `ISSUE_LIMIT` 200, 상한을 채우면 `truncated` → 배너 `⚠️ 200개에서 잘림`·모델 목록 경고 (session-start가 `res.truncated` 전달)
-- ✅ #213 `roadmap.mjs` `normalizeItemId` → `branches.mjs`가 로드맵 ID(E-1·L-1a·HP-3)도 받음, `/spec` 스킬 설명 반영, peer.test E-1·E-10 경우
-- ✅ #182 `codex-review.mjs:24` 주석·기획서 510·529줄 브랜치 보호 문구 (필수 체크 5개, Codex는 팀 규칙)
-- ✅ /pr-review: verify all 통과, reviewer 반드시 0·권장 5 + 무시 가능 2 반영 (b66349b: 상한+1 판정, 상대 영역만이어도 잘림 경고, /progress·weekly 상한 1000, 기획서 33·507)
-- ✅ #231 (작업 중 발견, 사용자: 새 이슈 남기지 말고 이 PR에서) `records.mjs` `undoMsysPathConv` → stamp·handoff 메모 인자 (f682294)
-- PR 설명 `.harness/pr-issue-179.md` (Closes #179·#182·#213·#231). 다음: push → PR 생성
+- ✅ #179 `issues.mjs` `ISSUE_LIMIT` 200(+1로 잘림 판정)·배너/목록 경고 · #213 `roadmap.mjs` `normalizeItemId` → `branches.mjs` 로드맵 ID · #182 브랜치 보호 문구 · #231 `records.mjs` `undoMsysPathConv`(stamp·handoff, 작업 중 발견해 이 PR에서)
+- ✅ /pr-review: verify all·harness 통과, reviewer 반드시 0·권장 5 + 무시 가능 2 반영. PR 설명 `.harness/pr-issue-179.md` (Closes 4개), 아직 push 전
 
 ## 이슈 정리 순서 (11-26 사용자 승인)
 
