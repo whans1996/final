@@ -146,6 +146,39 @@ describe('PostDetailView (F-17 AC15·AC16·AC18)', () => {
     })
   })
 
+  it('AC16 #210 댓글이 있으면 삭제 확인에 댓글 n개도 함께 삭제된다고 알린다 (댓글 절의 최신 개수)', async () => {
+    // 상세 응답은 2개였지만 화면에서 댓글이 늘어 댓글 절이 3개를 받았다
+    postsApi.fetchPost.mockResolvedValue(detail({ commentCount: 2 }))
+    postsApi.fetchComments.mockResolvedValue({ items: [], total: 3 })
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+
+    const { wrapper } = await mountDetail('/community/42', { beforeNavigate: loginAs(7) })
+    await wrapper.find('[data-action="delete"]').trigger('click')
+
+    expect(confirm).toHaveBeenCalledWith('이 글을 삭제할까요?\n댓글 3개도 함께 삭제됩니다.')
+  })
+
+  it('AC16 #210 댓글이 없으면 삭제 확인은 글 삭제만 묻는다', async () => {
+    postsApi.fetchPost.mockResolvedValue(detail({ commentCount: 0 }))
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+
+    const { wrapper } = await mountDetail('/community/42', { beforeNavigate: loginAs(7) })
+    await wrapper.find('[data-action="delete"]').trigger('click')
+
+    expect(confirm).toHaveBeenCalledWith('이 글을 삭제할까요?')
+  })
+
+  it('AC16 #210 댓글 절이 개수를 못 받았으면 상세 응답의 commentCount로 알린다', async () => {
+    postsApi.fetchPost.mockResolvedValue(detail({ commentCount: 5 }))
+    postsApi.fetchComments.mockRejectedValue(apiError(500, { message: '서버 오류입니다.' }))
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+
+    const { wrapper } = await mountDetail('/community/42', { beforeNavigate: loginAs(7) })
+    await wrapper.find('[data-action="delete"]').trigger('click')
+
+    expect(confirm).toHaveBeenCalledWith('이 글을 삭제할까요?\n댓글 5개도 함께 삭제됩니다.')
+  })
+
   it('AC16 삭제가 403·404면 서버 message를 보여 준다', async () => {
     postsApi.fetchPost.mockResolvedValue(detail())
     postsApi.deletePost.mockRejectedValue(

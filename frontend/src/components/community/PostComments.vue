@@ -12,6 +12,8 @@ import CommentItem from '@/components/community/CommentItem.vue'
 const props = defineProps({
   postId: { type: Number, required: true },
 })
+// 목록을 받을 때마다 댓글 수를 알린다 (글 삭제 확인 문구, #210)
+const emit = defineEmits(['count'])
 
 const auth = useAuthStore()
 
@@ -46,6 +48,7 @@ async function load() {
     items.value = result.items
     total.value = result.total
     loadError.value = ''
+    emit('count', result.total)
   } catch (error) {
     if (request !== lastRequest) return
     loadError.value = errorMessage(error)
