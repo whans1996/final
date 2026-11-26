@@ -14,11 +14,11 @@ import org.springframework.web.client.RestClient;
 import tools.jackson.databind.ObjectMapper;
 
 /**
- * 실제 Gemini·Ollama 연결 확인 (F-00 AC9). <b>사람이 수동으로</b> {@code ./gradlew liveTest}로만 실행한다. {@code
- * test}(CI·git hook·verify)에서는 제외된다.
+ * 실제 GMS·Gemini·Ollama 연결 확인 (F-00 AC9, F-27 9절). <b>사람이 수동으로</b> {@code ./gradlew liveTest}로만
+ * 실행한다. {@code test}(CI·git hook·verify)에서는 제외된다.
  *
  * <p>설정은 {@code application.yml}과 저장소 루트 {@code .env}에서 읽는다. 키가 비었거나 Ollama 서버가 없으면 실패 대신 건너뛴다. 출력된
- * 모델·지연·토큰을 {@code docs/산출물/08-외부API-생성형AI-활용.md} §1.5·§2에 적는다. Gemini 무료 한도를 1회 쓴다.
+ * 모델·지연·토큰을 {@code docs/산출물/08-외부API-생성형AI-활용.md} §1.5·§2에 적는다. GMS 크레딧·Gemini 무료 한도를 쓴다.
  */
 @Tag("live")
 class LlmLiveTest {
@@ -53,7 +53,9 @@ class LlmLiveTest {
         call(
                 "Ollama",
                 new OllamaLlmClient(
-                        LlmConfig.withTimeout(RestClient.builder(), ollama.timeout()), ollama));
+                        LlmConfig.withTimeout(RestClient.builder(), ollama.timeout()),
+                        ollama,
+                        LlmSchemas.load()));
     }
 
     private void call(String provider, LlmClient client) throws Exception {
@@ -73,6 +75,40 @@ class LlmLiveTest {
                 .isNotBlank();
         assertThat(response.inputTokens()).isPositive();
         assertThat(response.outputTokens()).isPositive();
+    }
+
+    /**
+     * F-27 9절: 모델 목록 1회 + 구조화 출력 1회. 앞뒤로 {@code key-info}(크레딧)를 찍어 호출 1회의 크레딧 소모를 본다. 키 값은 출력하지
+     * 않는다. 모델은 {@code GMS_MODEL}로 바꿔 돌린다.
+     */
+    @Test
+    void gms_구조화_출력() throws Exception {
+        LlmProperties.Gms gms = properties.gms();
+        assumeTrue(gms.apiKey() != null && !gms.apiKey().isBlank(), "GMS_API_KEY가 없어 건너뜀");
+        RestClient raw =
+                LlmConfig.withTimeout(RestClient.builder(), gms.timeout())
+                        .defaultHeader("Authorization", "Bearer " + gms.apiKey())
+                        .build();
+        String keyInfo = gms.baseUrl().replaceFirst("/gmsapi/.*$", "/gmsapi/key-info");
+
+        System.out.printf("[live] GMS key-info(전)=%s%n", get(raw, keyInfo));
+        System.out.printf("[live] GMS models=%s%n", get(raw, gms.baseUrl() + "/models"));
+        call(
+                "GMS",
+                new GmsLlmClient(
+                        LlmConfig.withTimeout(RestClient.builder(), gms.timeout()),
+                        gms,
+                        LlmSchemas.load()));
+        System.out.printf("[live] GMS key-info(후)=%s%n", get(raw, keyInfo));
+    }
+
+    /** 실패해도 테스트를 멈추지 않고 상태만 돌려준다 (모델 목록을 열지 않은 게이트웨이일 수 있다). */
+    private static String get(RestClient client, String url) {
+        try {
+            return client.get().uri(url).retrieve().body(String.class);
+        } catch (RuntimeException e) {
+            return "조회 실패 " + e.getClass().getSimpleName();
+        }
     }
 
     private static boolean reachable(String baseUrl) {

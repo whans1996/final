@@ -19,7 +19,16 @@ class LlmUsageLogMapperTest extends IntegrationTestBase {
     void AC6_insert() {
         mapper.insert(
                 new LlmUsageLog(
-                        null, 42L, "overview", "gemini-test", 10, 20, 1234, false, "Gemini 429"));
+                        null,
+                        42L,
+                        "overview",
+                        "gemini",
+                        "gemini-test",
+                        10,
+                        20,
+                        1234,
+                        false,
+                        "Gemini 429"));
 
         Map<String, Object> row =
                 jdbc.queryForMap(
@@ -35,5 +44,17 @@ class LlmUsageLogMapperTest extends IntegrationTestBase {
                 .containsEntry("success", false)
                 .containsEntry("error_message", "Gemini 429");
         assertThat(row.get("created_at")).isNotNull();
+    }
+
+    @Test
+    void AC9_provider를_저장한다() {
+        mapper.insert(
+                new LlmUsageLog(null, 43L, "quiz", "gms", "gpt-ac9-only", 1, 2, 3, true, null));
+
+        assertThat(
+                        jdbc.queryForObject(
+                                "SELECT provider FROM llm_usage_logs WHERE model = 'gpt-ac9-only'",
+                                String.class))
+                .isEqualTo("gms");
     }
 }

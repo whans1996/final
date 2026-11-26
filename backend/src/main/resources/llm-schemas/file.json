@@ -1,0 +1,20 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["files"],
+  "properties": {
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["no", "role", "explanation"],
+        "properties": {
+          "no": { "type": "integer" },
+          "role": { "type": "string" },
+          "explanation": { "type": "string" }
+        }
+      }
+    }
+  }
+}

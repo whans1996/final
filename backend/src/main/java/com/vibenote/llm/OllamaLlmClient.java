@@ -7,9 +7,10 @@ import org.springframework.web.client.RestClientException;
 import tools.jackson.databind.JsonNode;
 
 /**
- * 로컬 Ollama REST API ({@code POST /api/generate}, JSON 모드, 비스트리밍). 빈이 아니라 {@link LlmConfig}가 만든다.
+ * 로컬 Ollama REST API ({@code POST /api/generate}, 구조화 출력, 비스트리밍). 빈이 아니라 {@link LlmConfig}가 만든다.
  *
- * <p>Gemini 폴백 대상이거나 provider=ollama일 때 쓴다. 실패는 {@link LlmUnavailableException}으로 바꿔 던진다.
+ * <p>GMS 폴백 대상이거나 provider=ollama일 때 쓴다. {@code format}에 단계 출력 스키마를 넘겨 형식을 강제한다 (F-27 AC6). 실패는
+ * {@link LlmUnavailableException}으로 바꿔 던진다.
  */
 public class OllamaLlmClient implements LlmClient {
 
@@ -21,13 +22,17 @@ public class OllamaLlmClient implements LlmClient {
     /** 컨텍스트 길이. 기본(약 4K 토큰)으로는 F-06 개요·묶음 프롬프트가 잘린다 (F-06 AC12). */
     private final int numCtx;
 
+    private final LlmSchemas schemas;
+
     /**
      * @param builder 타임아웃이 설정된 빌더 ({@link LlmConfig}). 테스트는 MockRestServiceServer를 묶은 빌더를 넘긴다
      */
-    public OllamaLlmClient(RestClient.Builder builder, LlmProperties.Ollama props) {
+    public OllamaLlmClient(
+            RestClient.Builder builder, LlmProperties.Ollama props, LlmSchemas schemas) {
         this.restClient = builder.baseUrl(props.baseUrl()).build();
         this.model = props.model();
         this.numCtx = props.numCtx();
+        this.schemas = schemas;
     }
 
     @Override
@@ -46,7 +51,7 @@ public class OllamaLlmClient implements LlmClient {
                                             "prompt",
                                             request.prompt(),
                                             "format",
-                                            "json",
+                                            schemas.of(request.stage()),
                                             "stream",
                                             false,
                                             "options",

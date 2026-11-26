@@ -162,6 +162,17 @@ class QuizResponseParserTest {
         assertThat(last.explanation()).isEqualTo("e");
     }
 
+    /** F-27 AC8: strict 스키마는 맞는 개념이 없을 때 conceptId를 null로 채운다. 생략했을 때와 같은 결과여야 한다. */
+    @Test
+    void F27_AC8_conceptId가_null이면_생략과_같다() {
+        List<String> nulls = valid(5);
+        List<String> omitted =
+                nulls.stream().map(s -> s.replace("\"conceptId\": null, ", "")).toList();
+
+        assertThat(omitted.get(0)).doesNotContain("conceptId");
+        assertThat(parse(questions(nulls))).isEqualTo(parse(questions(omitted))).hasSize(5);
+    }
+
     @Test
     void AC3_목록_밖이거나_정수가_아닌_conceptId는_NULL로_두고_문항은_유지한다() {
         List<GeneratedQuestion> result =

@@ -73,6 +73,13 @@ public record AnalysisDetailResponse(
                         description = "설명이 만들어진 파일 수",
                         example = "14")
                 int explainedFileCount,
+        @Schema(
+                        requiredMode = Schema.RequiredMode.REQUIRED,
+                        description =
+                                "간이 모드 여부. 성공한 LLM 호출 중 서버의 로컬 AI(Ollama)가 1건 이상이면 true."
+                                        + " 처리 중이면 그 시점까지의 기록으로 계산한다 (F-27)",
+                        example = "false")
+                boolean liteMode,
         // $ref에 nullable=true를 붙이면 springdoc(OAS 3.1)이 "type": "null"을 함께 써서 "항상 null"로 읽힌다
         @Schema(description = "프로젝트 개요. 개요 생성 전·실패 시 null") AnalysisOverview overview) {
 
@@ -97,6 +104,7 @@ public record AnalysisDetailResponse(
                 a.getCreatedAt().atZone(ClockConfig.ZONE).toOffsetDateTime(),
                 a.getFileCount(),
                 a.getExplainedFileCount(),
+                a.isLiteMode(),
                 a.getOverview());
     }
 }

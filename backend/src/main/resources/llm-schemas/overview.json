@@ -1,0 +1,33 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["summary", "techStack", "layers", "readingOrder"],
+  "properties": {
+    "summary": { "type": "string" },
+    "techStack": { "type": "array", "items": { "type": "string" } },
+    "layers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["layer", "role"],
+        "properties": {
+          "layer": { "type": "string" },
+          "role": { "type": "string" }
+        }
+      }
+    },
+    "readingOrder": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "reason"],
+        "properties": {
+          "path": { "type": "string" },
+          "reason": { "type": "string" }
+        }
+      }
+    }
+  }
+}

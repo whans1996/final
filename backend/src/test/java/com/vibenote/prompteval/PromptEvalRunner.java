@@ -44,6 +44,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipOutputStream;
@@ -57,14 +58,16 @@ import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * 프롬프트 평가 하네스. <b>사람이 요청할 때만</b> {@code ./gradlew promptEval}로 실행한다 (실제 Gemini 무료 한도를 쓴다). {@code
- * test}(CI·git hook·verify)에서는 제외된다. 결과 해석은 {@code prompt-evaluator} 에이전트가 한다.
+ * 프롬프트 평가 하네스. <b>사람이 요청할 때만</b> {@code ./gradlew promptEval}로 실행한다 (실제 GMS 크레딧·Gemini 무료 한도를 쓴다).
+ * {@code test}(CI·git hook·verify)에서는 제외된다. 결과 해석은 {@code prompt-evaluator} 에이전트가 한다.
  *
  * <p>실제 파이프라인과 같은 경로로 돈다: ZIP 읽기({@link ZipArchiveReader}) → 선별({@link FileSelector}) → 비밀
  * 가림({@link SecretRedactor}) → API 탐지 → {@link OverviewExplainer} → {@link FileExplainer}. 호출마다 원문
  * 응답·토큰·지연을 기록해 {@code .harness/prompt-eval/}에 JSON으로 남긴다.
  *
  * <p>옵션 (Gradle {@code -P}):
+ *
+ * <p>공급자는 환경변수 {@code LLM_PROVIDER}(gms|gemini|ollama)로 고르고 그 하나만 폴백 없이 부른다 (F-27 AC13).
  *
  * <ul>
  *   <li>{@code fixture}: {@code data/datasets.json}의 저장소 id(예: DS-02-01. 고정 커밋을 codeload에서 받아 캐시)
@@ -101,8 +104,10 @@ class PromptEvalRunner {
                         : List.of(Level.valueOf(levelOption));
 
         Binder binder = binder();
-        LlmProperties.Gemini gemini = binder.bindOrCreate("llm", LlmProperties.class).gemini();
-        assumeTrue(gemini.apiKey() != null && !gemini.apiKey().isBlank(), "GEMINI_API_KEY가 없어 건너뜀");
+        LlmProperties llmProps = binder.bindOrCreate("llm", LlmProperties.class);
+        // F-27 AC13: LLM_PROVIDER(gms|gemini|ollama)의 공급자 하나만 폴백 없이 부른다
+        Optional<LlmClient> live = LiveLlmClients.single(llmProps);
+        assumeTrue(live.isPresent(), llmProps.provider() + " 키가 없어 건너뜀");
         AnalysisProperties analysisProps =
                 binder.bindOrCreate("analysis", AnalysisProperties.class);
         ExplainProperties explainProps =
@@ -115,7 +120,7 @@ class PromptEvalRunner {
         List<AnalysisFile> files = index.stream().filter(AnalysisFile::isSelected).toList();
         List<ApiEndpoint> apis = ApiDetector.detect(files);
 
-        RecordingLlmClient llm = new RecordingLlmClient(LiveLlmClients.gemini(gemini), pauseMs);
+        RecordingLlmClient llm = new RecordingLlmClient(live.get(), pauseMs);
         PromptTemplates templates = new PromptTemplates();
         OverviewExplainer overviewExplainer = new OverviewExplainer(llm, templates, explainProps);
         FileExplainer fileExplainer = new FileExplainer(llm, templates, explainProps);
@@ -165,6 +170,7 @@ class PromptEvalRunner {
         }
 
         Map<String, Object> report = new LinkedHashMap<>();
+        report.put("provider", llmProps.provider());
         report.put("fixture", fixture);
         report.put("split", source.split());
         report.put("contamination", source.contamination());

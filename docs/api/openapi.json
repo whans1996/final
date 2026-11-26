@@ -580,6 +580,11 @@
             "example" : "JUNIOR",
             "type" : "string"
           },
+          "liteMode" : {
+            "description" : "간이 모드 여부. 성공한 LLM 호출 중 서버의 로컬 AI(Ollama)가 1건 이상이면 true. 처리 중이면 그 시점까지의 기록으로 계산한다 (F-27)",
+            "example" : false,
+            "type" : "boolean"
+          },
           "memo" : {
             "description" : "메모. 주인이 아니면(mine = false) 항상 null",
             "example" : "JWT 필터 순서 다시 보기",
@@ -632,7 +637,7 @@
             "type" : [ "string", "null" ]
           }
         },
-        "required" : [ "createdAt", "explainedFileCount", "fileCount", "id", "isPublic", "level", "mine", "owner", "progress", "sourceType", "status" ],
+        "required" : [ "createdAt", "explainedFileCount", "fileCount", "id", "isPublic", "level", "liteMode", "mine", "owner", "progress", "sourceType", "status" ],
         "type" : "object"
       },
       "AnalysisFileResponse" : {
@@ -4868,7 +4873,7 @@
               "schema" : {
                 "properties" : {
                   "consent" : {
-                    "description" : "Google Gemini 전송 고지 동의. true여야 한다",
+                    "description" : "SSAFY GMS를 거친 외부 AI 전송 고지 동의. true여야 한다",
                     "enum" : [ "true" ],
                     "type" : "string"
                   },

@@ -10,8 +10,8 @@ import org.slf4j.LoggerFactory;
  * 공급자를 순서대로 시도한다. 앞 공급자가 {@link LlmUnavailableException}이면 재시도 없이 다음으로 넘어가고, 모두 실패하면 {@code
  * BusinessException(LLM_503)}을 던진다 (F-00 AC4·AC5).
  *
- * <p>provider=gemini는 {@code [Gemini, Ollama]}, provider=ollama는 {@code [Ollama]}로 조립한다 ({@link
- * LlmConfig}). 그 밖의 예외(버그)는 폴백하지 않고 그대로 던진다.
+ * <p>provider=gms는 {@code [GMS, Ollama]}, provider=ollama는 {@code [Ollama]}, provider=gemini는 폴백 없이
+ * {@code [Gemini]}로 조립한다 ({@link LlmConfig}, F-27). 그 밖의 예외(버그)는 폴백하지 않고 그대로 던진다.
  */
 public class FallbackLlmClient implements LlmClient {
 

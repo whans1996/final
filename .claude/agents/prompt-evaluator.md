@@ -1,6 +1,6 @@
 ---
 name: prompt-evaluator
-description: ⚠️ 실제 Gemini 무료 한도를 소모한다. 사용자가 명시적으로 요청할 때만 사용. LLM 프롬프트 템플릿(분석 단계 × 수준 3종)을 샘플 저장소로 실제 실행해 출력 JSON 스키마 적합성, 수준별 설명 차이, 개념 추출 정확도, 토큰 사용량을 평가한다.
+description: ⚠️ 실제 LLM(GMS 크레딧·Gemini 무료 한도)을 소모한다. 사용자가 명시적으로 요청할 때만 사용. LLM 프롬프트 템플릿(분석 단계 × 수준 3종)을 샘플 저장소로 실제 실행해 출력 JSON 스키마 적합성, 수준별 설명 차이, 개념 추출 정확도, 토큰 사용량을 평가한다.
 tools: Bash, Read, Grep, Glob
 model: sonnet
 effort: medium
@@ -11,16 +11,17 @@ effort: medium
 
 ## 사전 확인
 
-- 환경변수 `GEMINI_API_KEY`가 설정되어 있는지 **존재 여부만** 확인한다 (`node -e "console.log(!!process.env.GEMINI_API_KEY)"`). 값을 출력하지 않는다. `.env`를 읽지 않는다.
+- 공급자는 환경변수 `LLM_PROVIDER`(`gms`|`gemini`|`ollama`)로 고르고, 러너는 그 하나만 폴백 없이 부른다 (F-27 AC13). 기준선은 `gms`(V-2 GMS v1)와 `ollama`(Ollama v1). 호출자가 공급자를 정하지 않았으면 묻는다.
+- 그 공급자의 키(`GMS_API_KEY` 또는 `GEMINI_API_KEY`)는 셸 환경변수에 없어도 루트 `.env`에서 읽힌다. 셸에서는 **존재 여부만** 확인한다 (`node -e "console.log(!!process.env.GMS_API_KEY)"`). 값을 출력하지 않는다. `.env`를 읽지 않는다.
 - `backend/build.gradle`에 `promptEval` 태스크가 있는지 확인한다. 없으면 "아직 평가 하네스가 없음(F-05~F-08 구현 시 추가 예정)"이라고 보고하고 끝낸다.
 
 ## 실행
 
 ```
-cd backend && gradlew.bat promptEval --console=plain -Pstage=<overview|file|flow|concept|quiz|recommend> -Plevel=<beginner|junior|senior|all> -Pfixture=<샘플 저장소 이름>
+cd backend && LLM_PROVIDER=gms ./gradlew promptEval --console=plain -Pstage=<overview|file|flow|concept|quiz|recommend> -Plevel=<beginner|junior|senior|all> -Pfixture=<샘플 저장소 이름>
 ```
 
-Windows가 아니면 `gradlew.bat` 대신 `./gradlew`를 쓴다.
+Bash 도구는 Git Bash이므로 위처럼 `변수=값 명령` 형식으로 공급자를 넘긴다 (`set LLM_PROVIDER=gms &&`는 Git Bash에서 환경변수를 바꾸지 않아 `.env`의 `mock`이 읽히고 러너가 바로 실패한다). 사람이 PowerShell에서 돌릴 때는 `$env:LLM_PROVIDER="gms"; .\gradlew.bat promptEval ...`.
 
 - 하네스: `backend/src/test/java/com/vibenote/prompteval/PromptEvalRunner.java` (`@Tag("prompt-eval")`, `test`에서 제외). 실제 파이프라인과 같은 경로(ZIP 읽기 → 선별 → 비밀 가림 → API 탐지 → 개요 → 파일 묶음)로 돈다. 키는 앱과 같이 application.yml이 import하는 루트 `.env`에서 읽으므로 셸 환경변수가 없어도 된다(없으면 skip).
 - `-Pfixture`는 `data/datasets.json`의 저장소 id(예: `DS-02-01`. 고정 커밋을 codeload에서 받아 `.harness/prompt-eval/repos/`에 캐시) 또는 ZIP 경로. `-Pstage=file`은 수준마다 개요 1회 + 파일 묶음 `-Pbatches`(기본 1)회. `-PpauseMs`(기본 4000)는 호출 사이 대기.

@@ -1,5 +1,6 @@
 package com.vibenote.llm;
 
+import java.util.function.Function;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,14 +16,30 @@ public class UsageLoggingLlmClient implements LlmClient {
     private static final int ERROR_MESSAGE_MAX = 500;
 
     private final LlmClient delegate;
-    private final String model;
+    private final String provider;
+    private final Function<LlmStage, String> model;
     private final LlmUsageLogMapper mapper;
 
     /**
+     * @param provider {@code llm_usage_logs.provider}에 적을 공급자 ({@code gms|ollama|gemini|mock}, F-27
+     *     AC9)
      * @param model 실패 행에 적을 설정 모델명 (성공 행은 응답의 모델명)
      */
-    public UsageLoggingLlmClient(LlmClient delegate, String model, LlmUsageLogMapper mapper) {
+    public UsageLoggingLlmClient(
+            LlmClient delegate, String provider, String model, LlmUsageLogMapper mapper) {
+        this(delegate, provider, stage -> model, mapper);
+    }
+
+    /**
+     * @param model 단계별 설정 모델명 (GMS {@code stage-models}, F-27 AC4). 실패 행에 적는다
+     */
+    public UsageLoggingLlmClient(
+            LlmClient delegate,
+            String provider,
+            Function<LlmStage, String> model,
+            LlmUsageLogMapper mapper) {
         this.delegate = delegate;
+        this.provider = provider;
         this.model = model;
         this.mapper = mapper;
     }
@@ -34,7 +51,7 @@ public class UsageLoggingLlmClient implements LlmClient {
         try {
             response = delegate.complete(request);
         } catch (RuntimeException e) {
-            record(request, model, 0, 0, start, false, errorMessage(e));
+            record(request, model.apply(request.stage()), 0, 0, start, false, errorMessage(e));
             throw e;
         }
         record(
@@ -63,6 +80,7 @@ public class UsageLoggingLlmClient implements LlmClient {
                             request.userId(),
                             request.analysisId(),
                             request.stage().key(),
+                            provider,
                             model,
                             inputTokens,
                             outputTokens,

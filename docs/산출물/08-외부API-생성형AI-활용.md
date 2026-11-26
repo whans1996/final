@@ -15,38 +15,51 @@
 
 ### 1.1 사용 모델과 구조
 
+11-25 결정으로 주 공급자가 Gemini 무료 등급에서 **SSAFY GMS**(OpenAI 호환 게이트웨이)로 바뀌었다 (F-27). Gemini는 평가 비교용 단독 공급자로만 남는다.
+
 | 항목 | 내용 |
 |---|---|
-| 기본 모델 | Google Gemini `gemini-3.5-flash-lite` (무료 등급 안정 모델. `GEMINI_MODEL`로 교체) |
-| 폴백 | Ollama `qwen2.5-coder:7b` (로컬 모델) — 장애·한도 초과 시 재시도 없이 즉시 전환 |
+| 기본 모델 | SSAFY GMS 경유 OpenAI `gpt-4.1-mini` (11-25 실호출로 확정, `GMS_MODEL`로 교체). 단계별로 `llm.gms.stage-models`에서 다른 모델을 줄 수 있다 |
+| 폴백 (간이 모드) | Ollama `qwen2.5-coder:7b` (서버 로컬 모델) — GMS 실패 시 재시도 없이 즉시 전환. 이렇게 만든 결과가 있으면 분석 결과 화면(SC-07)에 간이 모드 배너 |
+| 평가 비교 | Gemini `gemini-3.5-flash-lite` (provider=gemini, 폴백 없음) |
 | 개발·테스트 | Mock 클라이언트 (결정적인 fixture 응답) |
 | 추상화 | `LlmClient` 인터페이스 — 설정(`llm.provider`)만 바꿔 교체 |
+| 비용 | GMS는 팀 키 하나의 크레딧 총량과 만료일로 관리한다 (모델마다 크레딧 단가가 다름). 잔여량: `GET https://gms.ssafy.io/gmsapi/key-info` |
 
-호출 흐름 (provider=gemini, `backend/.../llm/LlmConfig.java`가 조립):
+호출 흐름 (provider=gms, `backend/.../llm/LlmConfig.java`가 조립):
 
 ```
 호출부 ─▶ FallbackLlmClient
-            ├─ 1) UsageLoggingLlmClient ─▶ GeminiLlmClient ─▶ POST /v1beta/models/{model}:generateContent
-            │      (4xx·5xx·타임아웃·연결 실패·응답 형식 오류 → LlmUnavailableException, llm_usage_logs 실패 1행)
-            └─ 2) UsageLoggingLlmClient ─▶ OllamaLlmClient ─▶ POST /api/generate (format=json)
-                   (성공·실패 모두 1행, 실패면 BusinessException(LLM_503))
+            ├─ 1) UsageLoggingLlmClient ─▶ GmsLlmClient ─▶ POST {GMS}/api.openai.com/v1/chat/completions
+            │      (4xx·5xx·타임아웃·거부(refusal)·길이 초과(finish_reason=length)·형식 오류
+            │       → LlmUnavailableException, llm_usage_logs 실패 1행(provider=gms))
+            └─ 2) UsageLoggingLlmClient ─▶ OllamaLlmClient ─▶ POST /api/generate (format=단계 스키마)
+                   (성공·실패 모두 1행(provider=ollama), 실패면 BusinessException(LLM_503))
 ```
 
 | provider | 조립 |
 |---|---|
 | `mock` (기본) | `Logging(Mock)` |
+| `gms` (서비스) | `Fallback(Logging(Gms), Logging(Ollama))` |
 | `ollama` | `Fallback(Logging(Ollama))` |
-| `gemini` | `Fallback(Logging(Gemini), Logging(Ollama))` |
+| `gemini` (평가 비교) | `Fallback(Logging(Gemini))` |
 
-- JSON 출력 강제: Gemini `generationConfig.responseMimeType=application/json`, Ollama `format: "json"`
-- 키 보호: Gemini 키는 `x-goog-api-key` 헤더로만 보내고(URL에 남지 않음), 실패 예외·로그·`error_message`에는 `"Gemini 429"`처럼 공급자와 상태만 남긴다
-- 키가 비었는데 provider=gemini면 기동이 실패한다 (원인에 `GEMINI_API_KEY` 표시)
+- 출력 형식 강제: 단계별 JSON 스키마 `llm-schemas/<stage>.json` 6개를 GMS `response_format: {type: json_schema, strict: true}`와 Ollama `format`으로 보낸다. 스키마는 OpenAI strict 규칙(모든 object `additionalProperties:false`, `required`=모든 키, 선택 필드는 `null` 허용)을 따르고, `LlmSchemasTest`가 규칙과 Mock 출력 적합성을 검사한다. Gemini는 `responseMimeType=application/json`
+- 키 보호: GMS 키는 `Authorization: Bearer` 헤더로만 보내고, 실패 예외·로그·`error_message`에는 `"GMS 429"`처럼 공급자와 상태만 남긴다 (거부 문장도 남기지 않는다). 설정 `toString()`은 키를 `***`로 가린다
+- 키가 비었는데 provider=gms면 기동이 실패한다 (원인에 `GMS_API_KEY` 표시). `stage-models`에 없는 단계 키가 있어도 기동 실패
+- 사용량 기록: 시도마다 `llm_usage_logs`에 공급자(`provider`, V13)·모델·토큰·지연·성공 여부를 남긴다. 분석 상세의 `liteMode`는 성공한 `ollama` 행이 있는지로 계산한다
 
 설정 예시 (`application.yml`, 값은 저장소 루트 `.env`의 환경변수로 바꾼다):
 
 ```yaml
 llm:
   provider: ${LLM_PROVIDER:mock}
+  gms:
+    api-key: ${GMS_API_KEY:}
+    base-url: ${GMS_BASE_URL:https://gms.ssafy.io/gmsapi/api.openai.com/v1}
+    model: ${GMS_MODEL:gpt-4.1-mini}
+    stage-models: {}
+    timeout: 60s
   gemini:
     api-key: ${GEMINI_API_KEY:}
     model: ${GEMINI_MODEL:gemini-3.5-flash-lite}
@@ -124,6 +137,15 @@ F-06(개요·파일 설명)에서 정한 구조를 이후 단계(F-07·F-08·F-1
 | Gemini | `gemini-3.5-flash-lite` | 1,572ms | 52 | 23 | `{"summary": "두 개의 숫자를 더해서 그 결과를 알려주는 메서드입니다."}` |
 | Ollama (로컬) | `qwen2.5-coder:7b` | 7,237ms | 83 | 19 | `{"summary": "두 정수를 더하는 메서드입니다."}` |
 
+GMS 실측 (2026-11-25 집 PC, 같은 입력, strict 스키마 `overview`, 키 크레딧 30,000 · 만료 2026-12-09):
+
+| 모델 (응답 모델 ID) | 지연 | 입력 토큰 | 출력 토큰 | 쓴 크레딧 |
+|---|---|---|---|---|
+| `gpt-4.1-mini` (`gpt-4.1-mini-2025-04-14`) — **기본** | 2,511ms | 162 | 95 | 2 |
+| `gpt-4o-mini` (`gpt-4o-mini-2024-07-18`) | 2,737ms | 162 | 42 | 1 |
+| `gpt-5-nano` (`gpt-5-nano-2025-08-07`) | 4,607ms | 158 | 624 (추론 포함) | 2 |
+
+- 세 모델 모두 strict 스키마를 지켰다. 크레딧은 토큰 비용에 비례한다(출력이 긴 nano가 4o-mini보다 비쌈). 기본은 지시 이행이 나은 `gpt-4.1-mini`로 두고, 단계별로 더 싼 모델을 쓸지는 eval로 정한다 (F-27b)
 - 두 공급자 모두 JSON 출력 강제가 지켜졌다. 로컬 폴백은 Gemini보다 약 4.6배 느리므로 폴백은 장애 대비용으로만 쓰고 기본은 Gemini로 둔다.
 - 같은 프롬프트라도 토크나이저가 달라 입력 토큰 수가 다르다(52 vs 83). 사용량 통계는 공급자별로 나눠 본다.
 
@@ -137,10 +159,11 @@ F-06(개요·파일 설명)에서 정한 구조를 이후 단계(F-07·F-08·F-1
 |---|---|---|---|
 | GitHub 저장소 아카이브 | 공개 저장소 기본 브랜치 코드 수집 (F-05b) | `GET https://api.github.com/repos/{owner}/{repo}/zipball` → `codeload.github.com`으로 302 → ZIP | 첫 요청은 설정의 API 주소 + 검증한 owner·repo로만 조립(사용자 입력 주소로 요청하지 않음), 리다이렉트는 같은 스킴·포트의 허용 호스트(`api.github.com`·`codeload.github.com`·`gitlab.com`)만 3회까지, 30MB·60초 상한, ZIP 시그니처 확인. 선택적 `GITHUB_TOKEN`(비인증 60회/시 → 5,000회/시)은 api 호스트 요청에만 붙인다 |
 | GitLab 저장소 아카이브 | 공개 저장소 기본 브랜치 코드 수집 (F-05b) | `GET https://gitlab.com/api/v4/projects/{URL 인코딩한 경로}/repository/archive.zip` | 동일 (토큰 없음) |
-| Gemini API | 생성형 AI | REST(JSON), `POST /v1beta/models/{model}:generateContent` | 키는 환경변수·`x-goog-api-key` 헤더, 사용량 기록, 4xx·5xx·타임아웃 시 Ollama 폴백 |
+| SSAFY GMS (OpenAI 호환) | 생성형 AI (주 공급자, F-27) | REST(JSON), `POST https://gms.ssafy.io/gmsapi/api.openai.com/v1/chat/completions` (구조화 출력 `json_schema` strict) | 키는 환경변수 `GMS_API_KEY`·`Authorization: Bearer` 헤더, 팀 키 크레딧 총량제(`/gmsapi/key-info`), 사용량 기록, 실패 시 Ollama(간이 모드) 폴백 |
+| Gemini API | 생성형 AI (평가 비교용) | REST(JSON), `POST /v1beta/models/{model}:generateContent` | 키는 환경변수·`x-goog-api-key` 헤더, 사용량 기록, 폴백 없음 |
 
 - 저장소 아카이브 응답 처리: 404·401·403·그 밖 4xx → `ANALYSIS_004`(저장소 없음·비공개), 429·`x-ratelimit-remaining: 0`인 403 → `ANALYSIS_503`(요청 한도), 5xx·연결 실패·시간 초과·ZIP 아닌 본문·허용되지 않은 리다이렉트 → `ANALYSIS_502`, 30MB 초과 → `ANALYSIS_413`. 분석은 FAILED가 되고 문구가 화면에 나온다. 테스트는 JDK `HttpServer` 가짜 서버로 하고(외부 네트워크 없음), 실제 연결은 `RepositoryArchiveFetcherLiveTest`(`@Tag("live")`, DS-02-01)로 확인한다
-- Gemini 연결은 `LlmLiveTest`(`@Tag("live")`, 일반 `test`·CI에서 제외)로 확인한다. 실측은 §1.5.
+- GMS·Gemini 연결은 `LlmLiveTest`(`@Tag("live")`, 일반 `test`·CI에서 제외)로 확인한다. GMS는 호출 앞뒤 `key-info`로 크레딧 소모를 찍는다. 실측은 §1.5.
 - 오류 처리: 4xx(키 오류 400·403, 모델 없음 404, 한도 429)·5xx·타임아웃·연결 실패·응답 형식 오류(안전 필터 차단 등) → `LlmUnavailableException` → 폴백, 모두 실패하면 `LLM_503` (§1.1). 키가 틀려도 조용히 Ollama로 넘어가므로 `llm_usage_logs`의 `error_message`(`Gemini 400` 등)로 확인한다
 
 

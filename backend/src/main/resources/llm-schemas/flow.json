@@ -1,0 +1,22 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["summary", "steps"],
+  "properties": {
+    "summary": { "type": "string" },
+    "steps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "symbol", "title", "description"],
+        "properties": {
+          "path": { "type": "string" },
+          "symbol": { "type": ["string", "null"] },
+          "title": { "type": "string" },
+          "description": { "type": "string" }
+        }
+      }
+    }
+  }
+}

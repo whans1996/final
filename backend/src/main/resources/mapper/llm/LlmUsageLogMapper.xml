@@ -4,9 +4,9 @@
 
     <insert id="insert" parameterType="com.vibenote.llm.LlmUsageLog">
         INSERT INTO llm_usage_logs
-            (user_id, analysis_id, stage, model, input_tokens, output_tokens, latency_ms, success, error_message)
+            (user_id, analysis_id, stage, provider, model, input_tokens, output_tokens, latency_ms, success, error_message)
         VALUES
-            (#{userId}, #{analysisId}, #{stage}, #{model}, #{inputTokens}, #{outputTokens}, #{latencyMs},
+            (#{userId}, #{analysisId}, #{stage}, #{provider}, #{model}, #{inputTokens}, #{outputTokens}, #{latencyMs},
              #{success}, #{errorMessage})
     </insert>
 </mapper>

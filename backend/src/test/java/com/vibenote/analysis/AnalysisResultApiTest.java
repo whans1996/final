@@ -40,6 +40,52 @@ class AnalysisResultApiTest extends AnalysisTestSupport {
         return id;
     }
 
+    private void usageLog(long analysisId, String provider, boolean success) {
+        jdbc.update(
+                "INSERT INTO llm_usage_logs (analysis_id, stage, provider, model, success)"
+                        + " VALUES (?, 'file', ?, 'm', ?)",
+                analysisId,
+                provider,
+                success);
+    }
+
+    /** F-27 AC10: 성공한 Ollama(간이 모드) 호출이 1건 이상인 분석만 liteMode. */
+    @Test
+    void F27_AC10_성공한_Ollama_호출이_있는_분석만_liteMode다() throws Exception {
+        long owner = createUser("f27ac10", "JUNIOR");
+        long other = createUser("f27ac10o", "JUNIOR");
+        long lite = doneAnalysis(owner);
+        usageLog(lite, "gms", false);
+        usageLog(lite, "ollama", true);
+        long gmsOnly = doneAnalysis(owner);
+        usageLog(gmsOnly, "gms", true);
+        usageLog(gmsOnly, "ollama", false);
+        long noLogs = doneAnalysis(owner);
+        long mock = doneAnalysis(owner);
+        usageLog(mock, "mock", true);
+        long legacy = doneAnalysis(owner);
+        usageLog(legacy, null, true); // V13 이전 행 (provider NULL)
+        jdbc.update("UPDATE analyses SET is_public = TRUE WHERE id = ?", lite);
+
+        String[][] cases = {
+            {lite + "", owner + "", "true"},
+            {lite + "", other + "", "true"},
+            {gmsOnly + "", owner + "", "false"},
+            {noLogs + "", owner + "", "false"},
+            {mock + "", owner + "", "false"},
+            {legacy + "", owner + "", "false"}
+        };
+        for (String[] c : cases) {
+            mockMvc.perform(
+                            get("/api/analyses/{id}", Long.parseLong(c[0]))
+                                    .header(
+                                            HttpHeaders.AUTHORIZATION,
+                                            bearer(Long.parseLong(c[1]))))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.liteMode").value(Boolean.parseBoolean(c[2])));
+        }
+    }
+
     @Test
     void AC9_DONE인_내_분석의_상세와_개요를_준다() throws Exception {
         long userId = createUser("f06ac9", "JUNIOR");

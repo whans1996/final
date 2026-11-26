@@ -123,10 +123,18 @@ quiz:
   max-file-chars: 3000
   max-chars: 24000
 
-# LlmConfig가 provider별로 LlmClient 하나를 조립한다 (docs/specs/F-00-llm-client.md).
-# gemini는 실패(4xx·5xx·타임아웃·연결 실패·응답 형식 오류)하면 재시도 없이 ollama로 폴백한다.
+# LlmConfig가 provider별로 LlmClient 하나를 조립한다 (docs/specs/F-00-llm-client.md, F-27-gms-provider.md).
+# mock | gms | ollama | gemini. gms는 실패(4xx·5xx·타임아웃·거부·잘림·형식 오류)하면 재시도 없이 ollama(간이 모드)로 폴백한다.
+# gemini는 평가 비교용으로 폴백하지 않는다. GMS·Ollama에는 llm-schemas/<stage>.json으로 출력 형식을 강제한다.
 llm:
   provider: ${LLM_PROVIDER:mock}
+  gms:
+    api-key: ${GMS_API_KEY:}
+    base-url: ${GMS_BASE_URL:https://gms.ssafy.io/gmsapi/api.openai.com/v1}
+    model: ${GMS_MODEL:gpt-4.1-mini}
+    # 단계별 모델 (키는 overview|file|flow|concept|quiz|recommend, 없는 키는 기동 실패). 예: quiz: gpt-4.1 (값은 F-27b)
+    stage-models: {}
+    timeout: 60s
   gemini:
     api-key: ${GEMINI_API_KEY:}
     # 2026-11 무료 등급 안정 모델 (gemini-2.5-flash는 deprecated)

@@ -104,13 +104,16 @@
         WHERE <include refid="viewable"/>
     </select>
 
-    <!-- F-06 AC9, F-19 AC9. explained_file_count는 설명(summary)이 채워진 파일 수 -->
+    <!-- F-06 AC9, F-19 AC9. explained_file_count는 설명(summary)이 채워진 파일 수.
+         lite_mode는 성공한 Ollama(간이 모드) 호출이 있는지 (F-27 AC10, idx_llm_usage_logs_analysis) -->
     <select id="findViewableDetail" resultMap="analysisDetail">
         SELECT <include refid="columns"/>, overview,
                (SELECT COUNT(*) FROM analysis_files f WHERE f.analysis_id = a.id AND f.selected = TRUE) AS file_count,
                (SELECT COUNT(*) FROM analysis_files f
                 WHERE f.analysis_id = a.id AND f.selected = TRUE AND f.summary IS NOT NULL) AS explained_file_count,
-               (SELECT u.nickname FROM users u WHERE u.id = a.user_id) AS owner_nickname
+               (SELECT u.nickname FROM users u WHERE u.id = a.user_id) AS owner_nickname,
+               EXISTS (SELECT 1 FROM llm_usage_logs l
+                       WHERE l.analysis_id = a.id AND l.provider = 'ollama' AND l.success = TRUE) AS lite_mode
         FROM analyses a
         WHERE <include refid="viewable"/>
     </select>

@@ -3,32 +3,34 @@
 > 김동환(A 영역: AI·분석·학습 루프) 전용. 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
 > "갱신:" 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
-갱신: 2026-11-25 20:20 · 작업자: whans1996@naver.com · PC: dh-home · 브랜치: feature/issue-158-config-collect
+갱신: 2026-11-26 09:08 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/F-27-gms-provider
 
 ## 현재 기능
 
-**#158·#159 F-26a 후속** PR #160 (base develop) — CI ✅ · Codex ✅ `da4ced5` (지적 없음) → **사람 머지 대기**. F-26a PR #157은 11/25 머지됨
+**F-27 GMS 공급자** — spec `docs/specs/F-27-gms-provider.md` DONE 표시, **PR #161 머지 대기** — 김준섭 APPROVE, #162와의 충돌(작업로그·결정로그)을 `git merge origin/develop`(f24baea)으로 해소, CI 전체 초록·Codex ✅ 6f90df2(이후 docs만)
 
 ## 진행
 
-- ✅ #158 `ZipArchiveReader.isSupported`: `.cjs` 확장자 대신 `*.config.cjs` 파일명만 받음 (`ZipArchiveReaderTest#AC5_지원_확장자와_파일명`에 eslint.config.cjs·lib.cjs 추가). spec 5.2절 2·결정로그 한 줄
-- ✅ #159 `ImportanceRanker.choose`: 전체 정렬 순서로 FE·BE 몫 안에서 고르고(1차) 남는 자리는 몫 무시하고 채움(2차), config는 실제 고른 것만 세어 `max-config`. 테스트 `AC7_config_상한은_FE_BE_몫_안에서_실제로_고를_때_센다`(Codex 재현, red→green)·`AC7_config_상한은_FE_BE를_합쳐_센다`
-- 리뷰 반영 `da4ced5`: `choose`를 `fill()` 두 번(몫·남는 자리)으로 분리, #159 테스트에 red 조건 주석·FE 10개 단언·js/mjs/cjs config, `FileSelectorTest`에 postcss.config.cjs. develop 옛 구현으로 돌려 의도한 2개만 red 확인
-- PR 본문 `.harness/pr-issue-158.md`에 `Closes #158`·`Closes #159`
+- ✅ AC1~AC13 구현·테스트 green, 산출물(ERD·화면 설계서·08) 반영, GMS 기본 모델 `gpt-4.1-mini` 확정
+- ✅ /pr-review: verifier 전체 통과, contract-checker 불일치 0, reviewer 반드시 수정 0 · 권장 5건 모두 반영(0ada431: GMS_MODEL·stage-models 빈 값 기동 실패 + LlmConfigTest 2개, 폴백 주석, Ollama 0.5+, prompt-evaluator Git Bash 예시, 결정로그 대안 칸)
+- ✅ 스크린샷 `docs/산출물/screens/SC-05-request-gms-*`·`SC-07-lite-mode-*` 커밋(6f90df2), PR 본문에 첨부
+- ✅ **Codex ✅ 6f90df2** (지적 없음), CI 전체 초록, spec `DONE (PR #161)` 완료 표시
+- ✅ 리뷰 제안(concept.json `category`·`difficulty` enum + `LlmSchemasTest` 일치 검사)은 follow-up **#163**(F-27b)로 미룸
 
 ## 바로 다음 할 일
 
-1. 사람이 GitHub에서 PR #160 머지 (상대가 먼저 develop에 머지했으면 `git merge origin/develop` → push → CI 재확인 후). 머지 뒤 #158·#159가 닫혔는지 확인 → `git switch develop && git pull`
-2. 머지 뒤 develop 정리 → #155는 F-28 화면 때, #156은 F-26b에서
-3. 11/27 Figma 세션 → 11/29~ V-1 MVP 감사
+1. 사람이 GitHub에서 PR #161 머지 → `git switch develop && git pull`, 로컬 `feature/F-26a-index-selection`(원격 삭제됨, develop에 다 들어감) `git branch -d`
+2. V-2 블라인드 점검(김준섭 요청): dh-ssafy에 ds03 브랜치 고아 커밋 7개(11-25 16:53~17:44, NOW-js·작업로그) 남음, 내용 안 열었음. 사람 승인 시 `git reflog expire --expire-unreachable=now --all && git gc --prune=now`. dh-home도 같은 점검(`git fsck --unreachable --no-reflogs` → 작성자 JoonseobKim·11-25 커밋). 김준섭에게 답장
+3. 진행현황·WBS·간트가 11-25 10:36 기준(F-26a #157·#160, F-27 #161, V-2 #162 미반영, WBS 6.2·6.3 ⬜) → #161 머지 뒤 `/progress`로 별도 docs PR (늦어도 11/29 일요일)
+4. 그 뒤 `/clear` → `/pickup`으로 다음 기능 (F-27b #163 흡수, V-2 기준선, 내 영역 이슈 #121·#150·#155·#156)
 
 ## 막힌 점 / 결정 필요
 
-- 사람: GMS 키 수령(12/01 전), 노션 팀원 초대, F-05b liveTest, 제출 zip 이름
+- **GMS 키 2026-12-09 18:00 만료** (발표 12-24 전) → 재발급·연장 사람 확인 필요
+- 사람: 노션 팀원 초대, F-05b liveTest, 제출 zip 이름, dh-ssafy `.env`에 GMS 키
 
 ## 주의
 
-- 다음 마이그레이션은 V13 · 이 PR은 A 영역 파일만 바꿈(공통 파일 없음)
-- dh-home: develop에 mermaid 의존성이 들어와 `cd frontend && npm ci` 필요했음 (11/25 설치함)
-- 커밋 범위는 F-xx|common|harness만 · Git Bash에서 `/pr-review` 같은 인자는 MSYS 경로 변환됨 (`MSYS_NO_PATHCONV=1`)
+- 머지 전 상대 PR이 develop에 먼저 들어가면 `git merge origin/develop` → push로 CI 재확인 (V13·openapi.json)
+- ui-verifier가 로컬 DB에 테스트 계정 `f27shot@example.com`을 만들어 둠 (로컬 전용)
 - node 스크립트로 Java 편집 시 백슬래시가 깨짐 → Edit 도구 사용 · 이 PC에 python 없음
