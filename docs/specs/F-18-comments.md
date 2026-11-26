@@ -146,7 +146,7 @@
 
 | AC | 테스트 위치 | 종류 |
 |---|---|---|
-| AC1~AC3 | `CommentListApiTest#AC1_...`~`#AC3_...` (오래된순·다른 글 제외·0건, 201개 중 200개·total, 탈퇴 작성자·edited) | MockMvc + Testcontainers 통합 |
+| AC1~AC3 | `CommentListApiTest#AC1_...`~`#AC3_...` (오래된순·다른 글 제외·0건, 201개 중 최근 200개(가장 오래된 1개 제외)·total·같은 시각 동점은 id로, 탈퇴 작성자·edited) | MockMvc + Testcontainers 통합 |
 | AC4 | `CommentListApiTest#AC4_...`, `CommentWriteApiTest#AC4_...` (없는 글에 목록·작성·수정·삭제) | MockMvc 통합 |
 | AC5~AC9 | `CommentWriteApiTest#AC5_...`~`#AC9_...` (trim·활동 없음·commentCount, 경계 500·501·공백·null, 수정 edited·같은 내용, 삭제, 403·404·다른 글 댓글·403이 400보다 먼저·글 작성자도 403) | MockMvc 통합 |
 | AC10 | `CommentAuthApiTest#AC10_...` (토큰 없음·만료·형식 오류·탈퇴 회원 토큰, 공개 목록에 깨진 토큰) | MockMvc 통합 |

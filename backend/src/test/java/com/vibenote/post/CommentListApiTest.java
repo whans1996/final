@@ -86,6 +86,26 @@ class CommentListApiTest extends PostApiTestBase {
     }
 
     @Test
+    void AC2_issue208_같은_시각_댓글_201개면_id로_최근_200개를_고른다() throws Exception {
+        // DATETIME이 초 단위라 같은 초에 여러 댓글이 생길 수 있다. 안쪽 DESC 정렬의 id 동점 처리를 본다
+        List<Object[]> rows = new ArrayList<>();
+        for (int i = 0; i < 201; i++) {
+            rows.add(new Object[] {post, reader, "댓글 " + i, BASE, BASE});
+        }
+        jdbc.batchUpdate(
+                "INSERT INTO comments (post_id, user_id, content, created_at, updated_at)"
+                        + " VALUES (?, ?, ?, ?, ?)",
+                rows);
+
+        perform(get(COMMENTS, post), null)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.total").value(201))
+                .andExpect(jsonPath("$.items", hasSize(200)))
+                .andExpect(jsonPath("$.items[0].content").value("댓글 1"))
+                .andExpect(jsonPath("$.items[199].content").value("댓글 200"));
+    }
+
+    @Test
     void AC3_탈퇴_작성자는_탈퇴한_사용자로_보이고_수정한_댓글만_edited다() throws Exception {
         long gone = insertUser("f18탈퇴");
         insertComment(post, gone, "탈퇴자 댓글", BASE);
