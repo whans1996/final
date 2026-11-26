@@ -103,6 +103,61 @@ describe('ChallengeProgressNotice (#211 완료 화면의 챌린지 진행)', () 
     expect(wrapper.findAll('[data-challenge-id]')).toHaveLength(1)
   })
 
+  it('#225 받는 사이 항목이 밀려 겹치면 한 번만 보인다', async () => {
+    const first = Array.from({ length: 50 }, (_, i) => myChallenge(i + 1))
+    challengesApi.fetchMyChallenges
+      .mockResolvedValueOnce(page(first, { size: 50, total: 51 }))
+      .mockResolvedValueOnce(page([myChallenge(50)], { page: 2, size: 50, total: 51 }))
+
+    const wrapper = await mountNotice({ goalType: 'QUIZ_COUNT' })
+
+    expect(wrapper.findAll('[data-challenge-id]')).toHaveLength(50)
+  })
+
+  it('#225 페이지는 20번까지만 이어 받는다', async () => {
+    challengesApi.fetchMyChallenges.mockImplementation(({ page: p }) =>
+      Promise.resolve(page([myChallenge(p)], { page: p, size: 50, total: 5000 })),
+    )
+
+    const wrapper = await mountNotice({ goalType: 'QUIZ_COUNT' })
+
+    expect(challengesApi.fetchMyChallenges).toHaveBeenCalledTimes(20)
+    expect(wrapper.findAll('[data-challenge-id]')).toHaveLength(20)
+  })
+
+  it('#225 중간 페이지가 실패하면 아무것도 보이지 않는다', async () => {
+    challengesApi.fetchMyChallenges
+      .mockResolvedValueOnce(page([myChallenge(1)], { size: 50, total: 60 }))
+      .mockRejectedValueOnce(apiError(500, { message: '서버 오류' }))
+
+    const wrapper = await mountNotice({ goalType: 'QUIZ_COUNT' })
+
+    expect(wrapper.find('[data-section="challenge-progress"]').exists()).toBe(false)
+  })
+
+  it('#225 여러 페이지를 받는 중에 refreshKey가 바뀌면 옛 요청 결과는 버린다', async () => {
+    let resolveOldSecond
+    challengesApi.fetchMyChallenges
+      .mockResolvedValueOnce(page([myChallenge(1, { progress: 1 })], { size: 50, total: 2 }))
+      .mockReturnValueOnce(
+        new Promise((resolve) => {
+          resolveOldSecond = resolve
+        }),
+      )
+      .mockResolvedValueOnce(page([myChallenge(1, { progress: 7 })], { size: 50, total: 1 }))
+
+    const wrapper = await mountNotice({ goalType: 'QUIZ_COUNT', refreshKey: 1 })
+    await wrapper.setProps({ refreshKey: 2 })
+    await flushPromises()
+    resolveOldSecond(page([myChallenge(2)], { page: 2, size: 50, total: 2 }))
+    await flushPromises()
+
+    expect(challengesApi.fetchMyChallenges).toHaveBeenCalledTimes(3)
+    const items = wrapper.findAll('[data-challenge-id]')
+    expect(items.map((i) => i.attributes('data-challenge-id'))).toEqual(['1'])
+    expect(items[0].text()).toContain('7 / 10회')
+  })
+
   it('#211 같은 유형의 챌린지가 없거나 조회가 실패하면 아무것도 보이지 않는다', async () => {
     challengesApi.fetchMyChallenges.mockResolvedValue(
       page([myChallenge(2, { goalType: 'REVIEW_COUNT' })]),

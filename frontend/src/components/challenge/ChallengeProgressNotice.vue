@@ -23,9 +23,13 @@ let lastRequest = 0
 /** 페이지를 이어 받는 상한 (50 × 20 = 1000개). 서버 total이 잘못되어도 끝없이 부르지 않는다 */
 const MAX_PAGES = 20
 
-/** 진행 중 참여 챌린지를 total까지 페이지를 이어 받는다 (#225). 빈 페이지가 오면 멈춘다 */
+/**
+ * 진행 중 참여 챌린지를 total까지 페이지를 이어 받는다 (#225). 빈 페이지가 오면 멈춘다.
+ * 서버는 참여 시각 역순 OFFSET이라 받는 사이에 새로 참여하면 항목이 밀려 겹칠 수 있어 id로 거른다.
+ */
 async function fetchAllOngoing(request) {
-  const all = []
+  const byId = new Map()
+  let received = 0
   for (let page = 1; page <= MAX_PAGES; page++) {
     const result = await fetchMyChallenges({
       status: 'ONGOING',
@@ -34,10 +38,11 @@ async function fetchAllOngoing(request) {
     })
     if (request !== lastRequest) return null
     const batch = result?.items ?? []
-    all.push(...batch)
-    if (batch.length === 0 || all.length >= (result?.total ?? 0)) break
+    for (const c of batch) byId.set(c.id, c)
+    received += batch.length
+    if (batch.length === 0 || received >= (result?.total ?? 0)) break
   }
-  return all
+  return [...byId.values()]
 }
 
 async function load() {
