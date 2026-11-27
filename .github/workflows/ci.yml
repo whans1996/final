@@ -85,6 +85,8 @@ jobs:
               - '.github/workflows/**'
               - 'data/seed/**'
               - 'data/datasets.json'
+              # 카드 ①형식 검사의 카테고리 목록 (K-1처럼 이것만 바꾼 PR에서도 카드 검사가 돈다)
+              - 'backend/src/main/java/com/vibenote/analysis/concept/ConceptCategories.java'
 
   backend:
     name: Backend 검증 (+ API 명세 일치)

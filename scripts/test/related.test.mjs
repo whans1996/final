@@ -29,6 +29,8 @@ test('영역: md만 바뀐 곳은 빼고 하네스 스크립트를 따로 본다
   assert.deepEqual(areasOf(['data/seed/concepts/java/record.md']), ['be', 'fe']);
   assert.deepEqual(areasOf(['data/datasets.json']), ['be', 'fe']);
   assert.deepEqual(areasOf(['data/README.md']), []);
+  // 카드 형식 검사의 카테고리 목록 → fe 카드 검사도 (CI fe 필터와 같다)
+  assert.deepEqual(areasOf(['backend/src/main/java/com/vibenote/analysis/concept/ConceptCategories.java']), ['be', 'fe']);
 });
 
 test('BE: 시드 카드는 SeedExampleTest, 생성본 R__seed_concepts.sql은 Flyway·SeedConceptsTest', () => {

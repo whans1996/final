@@ -114,6 +114,7 @@ List<Post> search(@Param("keyword") String keyword);
 - (없음) 원본 형식·검사 강도·CI 판정은 11-27 사용자 선택으로 정했다 (결정로그).
 - **구현 중 보완 (11-27, PR에서 확인 요청)**: 기존 85장을 돌려 보니 AC7 오류 18건이 모두 조각 감싸기의 한계였다. 그래서 다음을 더했다. ⓐ 생략 표기 `{ ... }`·`...` 줄은 주석으로 바꿔 파싱한다(가변 인자 제외) ⓑ 그대로 형태에서 최상위 타입의 `public`을 지운다(여러 파일을 이어 붙인 조각의 파일 이름 규칙 오류 방지) ⓒ 메서드 본문 형태에서 값을 돌려주는 `return`이 있으면 `Object run() { if (true) { … } return null; }`로 감싼다 ⓓ 같은 조각에 심볼 없음 진단이 있을 때의 `@Override` 오류(`method.does.not.override.superclass`)는 경고로 본다(import 없는 상위 타입에서 이어진 진단). 상위 타입이 해석되는 잘못된 override는 그대로 오류다.
 - **PR 리뷰 반영 (11-27)**: javac는 기본으로 속성 단계 오류(심볼 없음)가 있으면 흐름 분석을 건너뛰어 missing return·checked 예외·미초기화 오류를 놓쳤다 → `-XDshould-stop.ifError=FLOW`로 흐름 분석까지 한다. ⓓ는 "같은 조각에 심볼 없음"이 아니라 **진단을 감싼 가장 안쪽 클래스의 상위 클래스·인터페이스가 해석되지 않을 때**만 경고로 좁혔다. ⓐ는 본문 전체 `{ ... }`를 `{ throw null; }`, 그 밖의 `...`를 공백으로 바꾼다(블록 주석 안에서 주석이 겹치지 않게). ⓔ 흐름 분석에서 맥락 없음이 이어진 진단도 경고로 본다: 생성자를 생략한 final 필드(`var.not.initialized.in.default.constructor`), 타입을 못 찾은 예외(`<any>`)의 처리 누락. 85장 결과 오류 0·경고 437.
+- **PR 리뷰 권장 반영 (11-27, 사용자 선택, 결정로그)**: AC7의 심볼 없음 경고에서 **클래스패스에서 해석된 타입(위치가 패키지 있는 이름이고 카드가 선언한 타입이 아님)의 없는 메서드·필드는 오류**로 뺀다(지어낸 API). AC8 sql은 카드마다 새 연결에서 `seed_check_%` 권한만 가진 사용자로 실행하고 1051도 경고. AC4 DB 한도에 reference 500자·body·example TEXT 65,535바이트를 더한다. AC11 CI fe 필터·verify fe에 `ConceptCategories.java`를 더한다.
 - 알림: `R__seed_concepts.sql`(B 소유)이 생성 파일이 되어 손으로 고칠 수 없게 되고, `frontend/package.json`·`ci.yml`·`SeedConceptsTest`도 공통 파일이다 → PR에서 @JoonseobKim. `data/seed/`는 CODEOWNERS에 A로 추가한다.
 
 ## 10. 구현 체크리스트

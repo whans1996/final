@@ -14,6 +14,8 @@ export const LIMITS = {
   nameWarn: 60,
   summaryMax: 500,
   summaryWarn: [40, 200],
+  referenceMax: 500,
+  textMaxBytes: 65535,
   bodyWarn: [150, 2000],
   exampleLinesWarn: 60,
   similarSummary: 0.5,
@@ -32,6 +34,7 @@ export function loadRules(root = ROOT) {
 }
 
 const len = (s) => [...s].length;
+const bytes = (s) => Buffer.byteLength(s ?? '', 'utf8');
 /** MySQL utf8mb4_0900_ai_ci에서 같은 값인지 (대소문자·악센트 무시. NO PAD라 공백은 그대로) */
 export const aiCiKey = (s) => s.normalize('NFKD').replace(/\p{M}/gu, '').toLowerCase().normalize('NFC');
 /** 공백·기호까지 무시한 이름 */
@@ -94,6 +97,7 @@ function checkCard(card, rules, add) {
     const n = len(r.body);
     const [lo, hi] = LIMITS.bodyWarn;
     if (!r.body.trim()) err('body', 'body가 비어 있음');
+    else if (bytes(r.body) > LIMITS.textMaxBytes) err('body', `body ${bytes(r.body)}바이트 > ${LIMITS.textMaxBytes}바이트 (DB 한도 TEXT)`);
     else if (n < lo || n > hi) warn('body', `body ${n}자, 권장 ${lo}~${hi}자 밖`);
   }
   if (Object.hasOwn(card.sections, 'example')) {
@@ -103,6 +107,7 @@ function checkCard(card, rules, add) {
       else if (!LANGS.has(b.lang)) err('example', `${b.line}번 줄 언어 태그 "${b.lang}"는 허용 목록 밖 (${[...LANGS].join(' ')})`);
     }
     if (card.outside.length) err('example', `example 섹션의 코드 블록 밖에 텍스트가 있음 (${card.outside.join(', ')}번 줄, DB에 들어가지 않는다)`);
+    if (bytes(r.example_code) > LIMITS.textMaxBytes) err('example', `예제 ${bytes(r.example_code)}바이트 > ${LIMITS.textMaxBytes}바이트 (DB 한도 TEXT)`);
     const lines = r.example_code ? r.example_code.split('\n').length : 0;
     if (lines > LIMITS.exampleLinesWarn) warn('example', `예제 ${lines}줄 > 권장 ${LIMITS.exampleLinesWarn}줄`);
   }
@@ -113,7 +118,8 @@ function checkCard(card, rules, add) {
     } catch {
       url = null;
     }
-    if (!url || url.protocol !== 'https:') err('reference', `reference "${r.reference_url}"가 https:// 주소가 아님`);
+    if (len(r.reference_url) > LIMITS.referenceMax) err('reference', `reference ${len(r.reference_url)}자 > ${LIMITS.referenceMax}자 (DB 한도)`);
+    else if (!url || url.protocol !== 'https:') err('reference', `reference "${r.reference_url}"가 https:// 주소가 아님`);
     else if (!rules.hosts.has(url.host)) err('reference', `reference 호스트 ${url.host}는 DS-01 출처가 아님 (data/datasets.json)`);
   }
 }

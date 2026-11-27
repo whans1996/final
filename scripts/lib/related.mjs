@@ -17,13 +17,15 @@ const FE_CODE_RE = /^frontend\/(src|scripts)\/.*\.(js|mjs|vue|ts|css)$|^frontend
 /** 시드 카드 원본과 출처 목록: BE(SeedExampleTest)·FE(seed-check) 둘 다 검사한다 (K-3a AC11) */
 export const SEED_DATA_PATHS = ['data/seed', 'data/datasets.json'];
 export const isSeedData = (f) => f.startsWith('data/seed/') || f === 'data/datasets.json';
+/** 카드 ①형식 검사가 읽는 카테고리 목록. 이것만 바뀌어도 fe 카드 검사를 돌린다 (CI fe 필터와 같다) */
+export const SEED_CATEGORIES = 'backend/src/main/java/com/vibenote/analysis/concept/ConceptCategories.java';
 
 /** 바뀐 파일이 걸친 검증 영역 (verify.mjs 대상 이름). md만 바뀐 영역은 빼고, frontend/scripts의 하네스 래퍼는 fe로 본다. 시드 카드는 be·fe */
 export function areasOf(files) {
   const areas = [];
   const seed = files.some(isSeedData);
   if (seed || files.some((f) => f.startsWith('backend/') && !f.endsWith('.md'))) areas.push('be');
-  if (seed || files.some((f) => f.startsWith('frontend/') && !f.endsWith('.md'))) areas.push('fe');
+  if (seed || files.includes(SEED_CATEGORIES) || files.some((f) => f.startsWith('frontend/') && !f.endsWith('.md'))) areas.push('fe');
   if (files.some(isHarness)) areas.push('harness');
   return areas;
 }

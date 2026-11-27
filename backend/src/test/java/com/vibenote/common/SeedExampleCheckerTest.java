@@ -205,6 +205,33 @@ class SeedExampleCheckerTest {
     }
 
     @Test
+    void AC7_클래스패스에서_해석된_타입의_없는_멤버는_지어낸_API로_보고_오류() {
+        List<Issue> issues =
+                SeedExampleChecker.checkJava(
+                        card(
+                                "java",
+                                "String s = \"abc\";\nint n = s.lenght();",
+                                "Optional.of(1).orElseThroww();\nint m = String.FOO.length();",
+                                "org.springframework.http.ResponseEntity.okk();"));
+        assertThat(issues)
+                .extracting(Issue::severity)
+                .containsExactly("error", "error", "error", "error");
+        // 카드가 선언한 타입(패키지가 있어도)·감싼 클래스의 멤버를 못 찾는 것은 맥락 없음 → 경고
+        assertThat(
+                        severities(
+                                SeedExampleChecker.checkJava(
+                                        card(
+                                                "java",
+                                                "package com.example;\n\nclass User {}\n"
+                                                        + "class UseUser { void u() { new"
+                                                        + " User().getName(); } }",
+                                                "class Mine {}",
+                                                "new Mine().mm();\nuserMapper.x();"))))
+                .isNotEmpty()
+                .containsOnly("warn");
+    }
+
+    @Test
     void AC7_상위_타입이_해석되는_잘못된_override는_같은_조각에_심볼_없음이_있어도_오류() {
         List<Issue> issues =
                 SeedExampleChecker.checkJava(
@@ -260,6 +287,34 @@ class SeedExampleCheckerTest {
                         card("sql", "SELEC * FROM t;", "SELECT 1;"), conn, "seed_check_t3");
         assertThat(syntax).singleElement().extracting(Issue::severity).isEqualTo("error");
         assertThat(syntax.get(0).message()).contains("1064");
+        // 빈 스키마의 DROP TABLE(1051 Unknown table)도 테이블 없음 → 경고
+        assertThat(
+                        severities(
+                                SeedExampleChecker.checkSql(
+                                        card("sql", "DROP TABLE nope;"), conn, "seed_check_t4")))
+                .containsExactly("warn");
+    }
+
+    @Test
+    void AC8_카드_sql은_자기_스키마만_쓰는_사용자로_카드마다_새_연결에서_실행한다() throws Exception {
+        // 다른 스키마(공용 test DB)는 건드릴 수 없다
+        List<Issue> other =
+                SeedExampleChecker.checkSql(
+                        card("sql", "CREATE TABLE test.seed_leak (id INT);"),
+                        conn,
+                        "seed_check_t5");
+        assertThat(other).singleElement().extracting(Issue::severity).isEqualTo("error");
+        // 세션 상태(사용자 변수)는 다음 카드로 넘어가지 않는다
+        SeedExampleChecker.checkSql(card("sql", "SET @seed_leak = 1;"), conn, "seed_check_t6");
+        List<Issue> next =
+                SeedExampleChecker.checkSql(
+                        card(
+                                "sql",
+                                "CREATE TABLE t (id INT NOT NULL);\n"
+                                        + "INSERT INTO t VALUES (@seed_leak);"),
+                        conn,
+                        "seed_check_t7");
+        assertThat(next).singleElement().extracting(Issue::message).asString().contains("1048");
     }
 
     @Test

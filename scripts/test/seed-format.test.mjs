@@ -91,6 +91,16 @@ test('AC4_name_100자·summary_500자_초과는_오류_(DB_한도, 글자_수_�
   assert.deepEqual(items(issues(card('a', { summary: '나'.repeat(501) }), 'error')), ['summary']);
 });
 
+test('AC4_reference_500자·body·예제_TEXT_65535바이트_초과는_오류_(DB_한도)', () => {
+  const ref = 'https://docs.oracle.com/'.padEnd(501, 'a');
+  assert.deepEqual(items(issues(card('a', { reference_url: ref }), 'error')), ['reference']);
+  assert.deepEqual(items(issues(card('a', { reference_url: ref.slice(0, 500) }), 'error')), []);
+  // TEXT는 바이트 한도: 한글 1자 = utf8mb4 3바이트
+  assert.deepEqual(items(issues(card('a', { body: '가'.repeat(21846) }), 'error')), ['body']);
+  assert.deepEqual(items(issues(card('a', { body: '가'.repeat(21845) }), 'error')), []);
+  assert.deepEqual(items(issues(card('a', {}, [{ lang: 'java', code: 'a'.repeat(65536) }]), 'error')), ['example']);
+});
+
 test('AC4_본문·예제가_비어_있으면_오류', () => {
   assert.deepEqual(items(issues(card('a', { body: '' }), 'error')), ['body']);
   assert.deepEqual(items(issues(card('a', {}, []), 'error')), ['example']);
