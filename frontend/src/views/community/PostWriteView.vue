@@ -65,6 +65,8 @@ const attachmentFromPost = (post) => {
 }
 
 // 응답 전에 화면을 떠나면 늦게 온 글·첨부 응답은 버린다. 남의 글 돌려보내기 replace가 떠난 화면을 바꾸지 않게 (V-4)
+// loadPost(수정)와 prefillAttachment(새 글)는 onMounted의 isEdit 분기로 한쪽만 불리므로 인스턴스 하나를 같이 쓴다.
+// 둘을 함께 부르게 바꾸면 뒤에 begin한 쪽이 앞의 요청을 무효로 만드니 인스턴스를 나눈다
 const latest = useLatestRequest()
 
 async function loadPost() {

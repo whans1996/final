@@ -32,6 +32,8 @@ const HAND_WRITTEN_GUARDS = [
   /\bid\s*[!=]==\s*challengeId\.value/,
 ]
 
+// 한계: 이름이 last로 시작하지 않는 순번(`++seq`)이나 다른 id 비교(`id !== props.userId`)는 잡지 않는다.
+// 새 수동 가드를 막는 것은 frontend/CLAUDE.md 규칙과 리뷰이고, 이 검사는 이관한 파일이 되돌아가지 않게 하는 용도다
 const source = (path) => readFileSync(resolve('src', path), 'utf8') // vitest root = frontend
 
 describe('useLatestRequest 이관 (V-4 AC11)', () => {
@@ -39,5 +41,8 @@ describe('useLatestRequest 이관 (V-4 AC11)', () => {
     const code = source(path)
     for (const pattern of HAND_WRITTEN_GUARDS) expect(code).not.toMatch(pattern)
     expect(code).toMatch(/useLatestRequest\(\)/)
+    // 인스턴스만 만들고 쓰지 않는 경우를 거른다: 요청을 시작하고 응답에서 현재인지 확인해야 한다
+    expect(code).toMatch(/\.begin\(\)/)
+    expect(code).toMatch(/\.isCurrent\(\)/)
   })
 })
