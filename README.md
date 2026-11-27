@@ -1,6 +1,6 @@
 # 바이브노트 (VibeNote)
 
-> AI로 코딩하는 주니어와 개발자 지망생을 위해, AI가 쓴 코드를 **내 수준에 맞는 구조 설명과 개념 카드**로 풀어 주고, **퀴즈와 복습**으로 진짜 내 지식으로 만드는 코드 이해 학습 플랫폼
+> AI로 개인·팀 프로젝트를 만드는 개발자 지망생과 주니어가, AI가 쓴 코드를 **내 수준에 맞는 설명·개념 카드·퀴즈**로 진짜 내 지식으로 만들고, **(팀이라면 팀원과 함께) 내 프로젝트를 근거를 들어 설명할 수 있게** 되는 코드 이해 학습 플랫폼
 
 SSAFY Final Project (Java Track, 자율 주제) · 2026-11-17 ~ 2026-12-24
 
@@ -19,8 +19,8 @@ SSAFY Final Project (Java Track, 자율 주제) · 2026-11-17 ~ 2026-12-24
 | 구분 | 기술 |
 |---|---|
 | Back-End | Java 21, Spring Boot 4, Spring Security + JWT, MyBatis, MySQL 8, Flyway, Swagger(springdoc-openapi), JavaParser(구조 분석) |
-| Front-End | Vue 3, Vite, Pinia, Vue Router, Axios, mermaid(구조 다이어그램) |
-| AI | Gemini API (기본), Ollama (폴백), Mock (개발·테스트) |
+| Front-End | Vue 3, Vite, Pinia, Vue Router, Axios, Tailwind CSS v4, Reka UI, Lucide, mermaid(구조 다이어그램) |
+| AI | SSAFY GMS (기본, OpenAI 호환) → Ollama (간이 모드 폴백), Gemini (평가 비교용), Mock (개발·테스트) |
 | 테스트·품질 | JUnit 5, MockMvc, Testcontainers(MySQL), Vitest, Playwright, GitHub Actions |
 | 협업·개발 도구 | GitHub(개발), lab.ssafy.com GitLab(제출), Claude Code 하네스 |
 

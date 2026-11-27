@@ -1,9 +1,9 @@
 # 바이브노트 (VibeNote)
 
-AI로 코딩하는 주니어와 개발자 지망생이 **AI가 쓴 코드를 수준별 설명 → 개념 카드 → 퀴즈·복습**으로 이해하게 돕는 학습 플랫폼이다.
+AI로 개인·팀 프로젝트를 만드는 개발자 지망생과 주니어가 **AI가 쓴 코드를 수준별 설명 → 개념 카드 → 퀴즈·복습**으로 내 지식으로 만들고, 내 프로젝트를 근거를 들어 설명할 수 있게 돕는 학습 플랫폼이다 (한 줄 정의는 `docs/기획서.md` 1절, 11-26 개정).
 SSAFY 관통 프로젝트(2026-11-17 시작, 12-24 발표). Spring Boot 4 + MyBatis + MySQL 8 / Vue 3 + Pinia.
 
-2인이 **영역별로 병렬 개발**한다 (11-19부터. A 김동환 = AI·분석·학습 루프, B 김준섭 = 카드·소셜, `docs/기획서.md` 4절). 각자 PC 2대(SSAFY 교육장·집, id `dh-ssafy`·`dh-home`·`js-ssafy`·`js-home`)를 오가며 Claude Code로 작업하고, 같은 사람의 PC 사이에서는 사람별 NOW 파일로 교대한다. PC는 `setup.mjs --pc`로 등록하고, 세션 시작 hook이 PC·환경 점검·PC 전환·상대 작업 요약(원격 브랜치의 상대 NOW)을 알리고, 세션 중에는 `peer-watch` hook(10분 간격)과 Mattermost가 상대 변화를 알리고, 상태 표시줄이 PC·브랜치·컨텍스트 크기·내 PR CI/Codex·다음 로드맵 항목·넘겨주는 시점을 보인다 (`docs/환경설정.md` 0·7절, `docs/conventions.md` 9절). 세션은 토큰 소진으로 언제든 끊길 수 있다.
+2인이 **영역별로 병렬 개발**한다 (11-19부터. A 김동환 = AI·분석·학습 루프·팀·시드 카드·하네스·일정(로드맵), B 김준섭 = 카드·소셜·디자인 공통(F-29)·평가 실행, `docs/기획서.md` 4절. 11-26 합의로 팀·시드는 B→A). 각자 PC 2대(SSAFY 교육장·집, id `dh-ssafy`·`dh-home`·`js-ssafy`·`js-home`)를 오가며 Claude Code로 작업하고, 같은 사람의 PC 사이에서는 사람별 NOW 파일로 교대한다. PC는 `setup.mjs --pc`로 등록하고, 세션 시작 hook이 PC·환경 점검·PC 전환·상대 작업 요약(원격 브랜치의 상대 NOW)을 알리고, 세션 중에는 `peer-watch` hook(10분 간격)과 Mattermost가 상대 변화를 알리고, 상태 표시줄이 PC·브랜치·컨텍스트 크기·내 PR CI/Codex·다음 로드맵 항목·넘겨주는 시점을 보인다 (`docs/환경설정.md` 0·7절, `docs/conventions.md` 9절). 세션은 토큰 소진으로 언제든 끊길 수 있다.
 그래서 **상태를 파일에 남기는 일을 코드 작성만큼 중요하게** 다룬다.
 
 - 개발 저장소: **GitHub public** (`origin`, PR + Actions CI). Actions 한도 때문에 개발이 끝날 때까지 public으로 둔다 (11-26). 그래서 비밀값·eval 데이터 내용이 커밋·PR·이슈에 들어가지 않게 더 엄격히 본다. develop·main은 브랜치 보호(PR 필수, CI 5개 필수, 관리자 포함, force push·삭제 금지)
@@ -18,7 +18,8 @@ SSAFY 관통 프로젝트(2026-11-17 시작, 12-24 발표). Spring Boot 4 + MyBa
 | 일정 (기간 × 사람 × 트랙 할 일, 넘겨주는 시점, 공통 일정) | `docs/로드맵.md` (정본. 상태는 PR 본문 `Roadmap: <ID>` 줄로 계산, `node scripts/roadmap.mjs`. 세션 시작 배너 🗺️ 줄) |
 | 작업 이력 | `docs/작업로그.md` (두 사람 공용, 맨 아래 추가). 지난 주 항목은 `docs/기록/작업로그-W?.md` (주간 `/progress`가 옮긴다) |
 | 기획·운영 결정 기록 | `docs/결정로그.md` (맨 아래 추가) |
-| 기능 하나의 상세 요구사항 | `docs/specs/F-xx-*.md` |
+| 기능 하나의 상세 요구사항 | `docs/specs/<ID>-*.md` (기능 `F-xx`·로드맵 항목 `P-1a`·`K-3a` 등) |
+| Codex 리뷰 기준 (Codex가 읽음) | `AGENTS.md` |
 | 기능 목록, ERD, API 목록, 일정, 역할 분담 | `docs/기획서.md` (길다. 필요한 섹션만 읽는다) |
 | API 응답·에러 코드·네이밍·커밋·PR 규칙 | `docs/conventions.md` |
 | 현재 구현된 API (정본) | `docs/api/openapi.json` (테스트가 생성), 실행 중이면 http://localhost:8080/swagger-ui/index.html |
@@ -39,14 +40,15 @@ SSAFY 관통 프로젝트(2026-11-17 시작, 12-24 발표). Spring Boot 4 + MyBa
 
 - 새 세션은 `/pickup`으로 상태를 확인하고 시작한다. 기능은 **내 영역**에서 고른다. 상대 브랜치·상대 NOW 파일은 건드리지 않는다.
 - 상대가 develop에 머지한 것은 `git merge origin/develop`으로 받는다 (rebase·force push 금지). 세션 시작·`peer-watch` hook이 fetch 때 **자동으로 합친다** (다른 PC가 push한 내 브랜치 커밋 포함, 체크아웃 안 된 로컬 develop·main은 fast-forward). 추적 파일에 커밋 안 된 변경이 있으면 미루고, 충돌하면 되돌린 뒤 알린다. push는 하지 않는다 (`scripts/lib/sync.mjs`, 끄기: `git config vibenote.autoSync false`). 마이그레이션은 `node scripts/next-migration.mjs`로 번호를 확인하고, openapi.json 충돌은 BE 테스트로 다시 생성한다.
-- 진행현황·WBS·간트는 기능 PR에서 고치지 않는다. 주간 `/progress`가 별도 docs PR로 맞춘다.
+- **바뀌면 그 즉시 관련 문서를 모두 고친다** (11-27): 작업 중 담당·넘겨주기·일정·범위·규칙·이슈 흡수처가 바뀌면 같은 PR에서 그 사실이 적힌 곳을 grep으로 모두 찾아 고친다 (`docs/로드맵.md`, `docs/기획서.md` 4·6·7절, `docs/결정로그.md` 새 행, spec, `CLAUDE.md`·`backend/`·`frontend/CLAUDE.md`, `docs/conventions.md`, `.github/CODEOWNERS`, 산출물, 관련 이슈 본문·라벨·담당자). "후속 작업"으로 미루지 않는다. 상대 NOW 파일만 예외다.
+- **일정은 바로 반영·재조정한다** (11-27): 작업 중 **새 할 일·일정**(합의된 새 기능, 미뤄 둔 작업의 일정, 새 넘겨주기)이 생기면 그 즉시 `docs/로드맵.md`에 행(ID·담당·기간·의존)과 넘겨주는 시점을 추가하고 기획서 7.4b·결정로그·관련 이슈를 같이 고친다. 항목이 일찍 끝나거나 늦어지면 `docs/로드맵.md`의 시작·끝을 실제 날짜(끝 = 머지일 KST)로 고치고, 비게 된 기간으로 뒤 항목을 당기거나 민다(넘겨주는 시점 포함). 기능 PR은 완료 표시 커밋(`/pr-review` 10단계)에서 **자기 항목 행과 재조정한 뒤 항목**의 로드맵·WBS(04)·간트(05) 행을 고치고, 머지일이 그날과 다르면 다음 `/pickup`이 다음 브랜치 첫 커밋으로 바로잡는다. `docs/진행현황.md` 집계와 빠진 것 맞추기는 주간 `/progress`가 한다.
 - 미룬 작업은 `follow-up` 이슈(area 라벨·담당자)로 남기고, `/spec` 때 흡수하거나 기능 사이에 `feature/issue-<번호>-slug`로 처리한다. 해결 PR에 `Closes #n`을 적으면 develop 머지 때 워크플로가 닫는다.
 - 기능 구현은 상태가 `APPROVED`인 spec이 있어야 시작한다. 없으면 `/spec`부터 한다.
 - 구현은 **수용 기준(AC)별로 실패하는 테스트를 먼저** 쓰고 통과시키는 순서로 한다.
 - 테스트·빌드 결과는 긴 로그를 직접 읽지 말고 `verifier` 에이전트나 `node scripts/verify.mjs`의 요약으로 확인한다.
 - `/progress`로 필수 요구사항 13개, 2차 백로그 티어(T0~T3), 마일스톤, **제출 산출물 준비 현황**을 점검한다 (매주 일요일. 판단 기준은 12/08 중간 점검과 12/14 기능 동결, `docs/기획서.md` 7.4b).
 - 기획을 다시 정할 때(2차 기획, 재인터뷰)는 `/project-interview`로 `docs/기획서.md` 6·7절에 누적하고 결정은 결정로그에 남긴다.
-- 기능을 바꾸면 영향받는 산출물(화면 설계서, ERD, 요구사항 정의서)도 같은 PR에서 고치거나 PR "후속 작업"에 적는다.
+- 기능을 바꾸면 영향받는 산출물(화면 설계서, ERD, 요구사항 정의서)도 같은 PR에서 고친다 (위 "바뀌면 그 즉시" 규칙).
 
 ## 세션 운영 (컨텍스트·모델·토큰)
 

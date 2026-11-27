@@ -1,4 +1,4 @@
-# 영역 경계의 정본 (11-19 결정). A 김동환 @whans1996 = AI·분석·학습 루프·공통 기반·하네스, B 김준섭 @JoonseobKim = 카드·소셜.
+# 영역 경계의 정본 (11-19 결정, 11-26 팀·시드 B→A). A 김동환 @whans1996 = AI·분석·학습 루프·팀·시드 카드 원본·공통 기반·하네스, B 김준섭 @JoonseobKim = 카드·소셜·랜딩.
 # 뒤에 나온 규칙이 이긴다. 두 사람이 모두 적힌 파일은 공통이다.
 # - GitHub: 이 파일에 걸린 PR은 소유자에게 리뷰가 자동 요청된다 (승인은 필수가 아님, conventions 7절).
 # - 하네스: scripts/lib/owners.mjs가 읽어 상대 영역·공통 파일을 수정하면 Claude에게 알리고(area-notice hook),
@@ -135,6 +135,9 @@
 /frontend/src/views/**/Post*                 @JoonseobKim
 /frontend/src/components/community/          @JoonseobKim
 /frontend/src/router/routes/community.js     @JoonseobKim
+# 랜딩 SC-01 (LP-1, B). 샘플 분석 데이터 sample.json만 A가 만든다 (SD-1, 결정로그 11-27)
+/frontend/src/views/landing/                 @JoonseobKim
+/frontend/src/views/landing/sample.json      @whans1996
 
 # ── 하네스 (A가 유지보수) ─────────────────────────────────
 /.claude/                                    @whans1996
