@@ -259,6 +259,6 @@ ALTER TABLE analyses MODIFY project_id BIGINT NOT NULL;
 - [ ] contract-checker 통과
 - [ ] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일)
 - [ ] reviewer 지적 사항 반영
-- [ ] 산출물 반영 (ERD 03, 화면 설계서 06 SC-25·26, 요구사항 정의서 01 분석 관리 행)
+- [x] 산출물 반영 (ERD 03, 화면 설계서 06 SC-25·26, 요구사항 정의서 01 P-1a 행. 스크린샷은 ui-verifier 뒤)
 - [ ] PR CI 초록, 셸 내비 변경 @JoonseobKim 멘션
 - [ ] 상태 DONE (PR 머지 후)
