@@ -253,7 +253,7 @@ ALTER TABLE analyses MODIFY project_id BIGINT NOT NULL;
 - [x] 브랜치 `feature/P-1a-project-versions`
 - [x] Flyway `V15__projects.sql` + 백필 테스트
 - [ ] AC별 실패 테스트 작성 (red 확인)
-- [ ] BE 구현 (green): 요청 묶기(AC1·4·5 ✅) → FETCHING 커밋 조회·버전(AC2·3·11 ✅) → 프로젝트 API·배지(AC6~10 ✅) → AC12
+- [ ] BE 구현 (green): 요청 묶기(AC1·4·5 ✅) → FETCHING 커밋 조회·버전(AC2·3·11 ✅) → 프로젝트 API·배지(AC6~10 ✅) → AC12 ✅ (BE 끝)
 - [ ] FE 구현 (green)
 - [ ] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
 - [ ] contract-checker 통과
