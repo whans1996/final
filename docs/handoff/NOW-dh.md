@@ -3,7 +3,7 @@
 > 김동환(A 영역: AI·분석·학습 루프) 전용. 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
 > 머리 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
-갱신: 2026-11-27 19:46 · 작업자: whans1996 · PC: dh-home · 브랜치: feature/P-1a-project-versions
+갱신: 2026-11-27 20:03 · 작업자: whans1996 · PC: dh-home · 브랜치: feature/P-1a-project-versions
 
 ## 현재 기능
 
@@ -26,5 +26,5 @@
 - 없음 (사람: 노션 초대, F-05b liveTest, #251 나머지 PC `--move-env`. dh-home은 11-27 옮김)
 
 ## 주의
-- V15 (develop 미머지). 분석을 SQL로 넣는 테스트는 `TestProjects.zip/url(jdbc, …)`. 공통 변경(`ErrorCode`, `application.yml`, Flyway·ErrorCode 테스트, `post/PostApiTestBase` 등 테스트 INSERT, conventions.md 에러 표) → PR에서 @JoonseobKim 멘션
+- V15 (develop 미머지). 분석을 SQL로 넣는 테스트는 `TestProjects.zip/url(jdbc, …)`. 공통 변경(`ErrorCode`, `application.yml`, Flyway·ErrorCode 테스트, `post/PostApiTestBase` 등 테스트 INSERT, conventions.md 에러 표, `IntegrationTestBase` MySQL `--max-connections=500`(컨텍스트가 늘어 Too many connections, `950893d`)) → PR에서 @JoonseobKim 멘션
 - 커밋 조회 관련 테스트는 구현이 먼저라 red 없이 green (AC6~10은 red 17 → green 확인)
