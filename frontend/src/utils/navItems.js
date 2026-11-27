@@ -58,3 +58,17 @@ export function adminNavItems(adminRoute) {
     .sort(byOrder)
     .map(({ label, to }) => ({ label, to }))
 }
+
+/**
+ * 지금 경로에 맞는 메뉴의 `to`를 고른다 (F-29b AC2). 같거나 하위 경로(`/analyses/12` → `/analyses`)면 맞고,
+ * 여럿이 맞으면 가장 긴 것(`/analyses/new`는 `분석 요청`). 맞는 메뉴가 없으면 null.
+ */
+export function activeNavPath(path, items) {
+  let best = null
+  for (const { to } of items) {
+    if (typeof to !== 'string') continue
+    const hit = path === to || path.startsWith(to.endsWith('/') ? to : `${to}/`)
+    if (hit && (best === null || to.length > best.length)) best = to
+  }
+  return best
+}
