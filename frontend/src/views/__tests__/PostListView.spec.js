@@ -3,7 +3,7 @@ import { flushPromises } from '@vue/test-utils'
 import PostListView from '@/views/community/PostListView.vue'
 import * as postsApi from '@/api/posts'
 import { useAuthStore } from '@/stores/auth'
-import { apiError, mountAt } from './viewTestUtils'
+import { apiError, mountAt, untilAborted } from './viewTestUtils'
 
 vi.mock('@/api/posts')
 
@@ -183,5 +183,20 @@ describe('PostListView (F-17 AC13·AC14)', () => {
     await flushPromises()
 
     expect(router.currentRoute.value.fullPath).toBe('/community?page=9')
+  })
+
+  it('AC4 조건을 응답 전에 바꾸면 이전 요청은 취소되고 에러 없이 마지막 조건 결과만 보인다 (V-4)', async () => {
+    postsApi.fetchPosts
+      .mockImplementationOnce(untilAborted)
+      .mockResolvedValue(page([post({ id: 50, title: '자유 글' })]))
+    const { wrapper, router } = await mountList('/community?boardType=QNA')
+
+    await router.push('/community?boardType=FREE')
+    await flushPromises()
+
+    expect(postsApi.fetchPosts.mock.calls[0][1].signal.aborted).toBe(true)
+    expect(postsApi.fetchPosts.mock.calls[1][1].signal.aborted).toBe(false)
+    expect(wrapper.find('[role="alert"]').exists()).toBe(false)
+    expect(wrapper.text()).toContain('자유 글')
   })
 })

@@ -33,3 +33,18 @@ export async function submit(wrapper) {
 export function apiError(status, data) {
   return Object.assign(new Error(`status ${status}`), { response: { status, data } })
 }
+
+/** axios가 취소된 요청에 던지는 에러 모양 (V-4) */
+export function canceledError() {
+  return Object.assign(new Error('canceled'), { name: 'CanceledError', code: 'ERR_CANCELED' })
+}
+
+/**
+ * api mock 구현: 응답하지 않고 기다리다가 두 번째 인자의 signal이 취소되면 canceledError로 reject한다 (V-4 AC4).
+ * `fetchX.mockImplementationOnce(untilAborted)`
+ */
+export function untilAborted(_query, { signal } = {}) {
+  return new Promise((_, reject) => {
+    signal?.addEventListener('abort', () => reject(canceledError()))
+  })
+}

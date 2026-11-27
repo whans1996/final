@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
 import AdminConceptListView from '@/views/admin/concept/AdminConceptListView.vue'
 import * as adminApi from '@/api/adminConcepts'
-import { apiError, mountAt } from './viewTestUtils'
+import { apiError, mountAt, untilAborted } from './viewTestUtils'
 
 vi.mock('@/api/adminConcepts')
 
@@ -331,5 +331,20 @@ describe('AdminConceptListView (F-13 AC13)', () => {
     await flushPromises()
 
     expect(router.currentRoute.value.fullPath).toBe('/admin/concepts')
+  })
+
+  it('AC4 조건을 응답 전에 바꾸면 이전 요청은 취소되고 에러 없이 마지막 조건 결과만 보인다 (V-4)', async () => {
+    adminApi.fetchAdminConcepts
+      .mockImplementationOnce(untilAborted)
+      .mockResolvedValue(page([concept({ id: 92, name: '비관적 락' })]))
+    const { wrapper, router } = await mountList('/admin/concepts?status=DRAFT')
+
+    await router.push('/admin/concepts?status=HIDDEN')
+    await flushPromises()
+
+    expect(adminApi.fetchAdminConcepts.mock.calls[0][1].signal.aborted).toBe(true)
+    expect(adminApi.fetchAdminConcepts.mock.calls[1][1].signal.aborted).toBe(false)
+    expect(wrapper.find('[role="alert"]').exists()).toBe(false)
+    expect(wrapper.text()).toContain('비관적 락')
   })
 })
