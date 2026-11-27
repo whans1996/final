@@ -1,7 +1,7 @@
 # NOW — 김준섭 현재 작업 스냅샷
 
 > 김준섭(B 영역: 카드·소셜) 전용. 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
-갱신: 2026-11-27 14:30 · 작업자: JoonseobKim · PC: js-ssafy · 브랜치: feature/F-29-design-common
+갱신: 2026-11-27 14:51 · 작업자: JoonseobKim · PC: js-ssafy · 브랜치: feature/F-29-design-common
 
 ## 현재 기능
 
@@ -16,9 +16,8 @@
 
 ## 바로 다음 할 일
 
-1. (PR 설명 `.harness/pr-F-29a.md` 준비 완료·사용자 확인 대기) `gh pr create --base develop --title "feat(F-29a): Tailwind v4 토큰·다크 테마·공통 컴포넌트 7개" --body-file .harness/pr-F-29a.md`
-2. `gh pr checks` 확인 → `node scripts/codex-review.mjs <PR> --request --wait --status` (background)로 Codex 루프
-3. CI 초록 + Codex COMPLETE가 되면 spec 헤더 `DONE (PR #n)`과 체크리스트 마지막 칸을 고쳐 한 커밋으로 push, 머지는 사람이 함
+1. **PR #244 (F-29a) CI 초록 + Codex ✅ 281ae65 → 사람이 GitHub에서 머지** (상대 PR이 먼저 머지되면 `git merge origin/develop` → push → CI 재확인). spec DONE 표시는 이미 함
+2. 머지 뒤 develop에서 `feature/F-29b-app-shell` 생성 → `/implement F-29b` (`docs/specs/F-29b-app-shell.md` AC1부터, 옆 메뉴·하단 탭·`meta.nav.group`)
 
 ## 막힌 점 / 결정 필요
 - 없음 (로컬 테스트 계정 `ui-f29a-…@example.com`). GMS 키 만료 12/09 18:00 → EV-2(12/09~12/12) 전에 재발급·연장 확인

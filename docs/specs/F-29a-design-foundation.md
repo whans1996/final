@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 |---|---|
-| 상태 | APPROVED <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
+| 상태 | DONE (PR #244) <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
 | 기능 ID | F-29a (로드맵 `F-29`의 앞 절반. PR 본문 `Roadmap: F-29`) |
 | 우선순위 | T0 |
 | 영역 오너 | B 김준섭 (공통 FE 기반. 머지 뒤 A 김동환도 쓴다 → PR에서 @멘션) |
@@ -139,5 +139,5 @@
 - [x] ui-verifier 통과 (데스크톱·모바일, 라이트·다크)
 - [x] reviewer 지적 사항 반영 (system → 라이트 #243, h4~h6 굵기, BaseButton to+disabled, FormField required, ConfirmDialog 바깥 클릭 테스트)
 - [x] 산출물 반영: 화면 설계서 2-1절 "값은 F-29 spec" → F-29a 경로, `/dev/components` 스크린샷
-- [ ] PR CI 초록 (A @멘션: 공통 컴포넌트)
-- [ ] 상태 DONE (PR 머지 후)
+- [x] PR CI 초록 (A @멘션: 공통 컴포넌트) — PR #244, Codex ✅ 281ae65
+- [x] 상태 DONE (PR #244)
