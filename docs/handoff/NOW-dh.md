@@ -3,7 +3,7 @@
 > 김동환(A 영역: AI·분석·학습 루프) 전용. 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
 > 머리 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
-갱신: 2026-11-27 21:34 · 작업자: whans1996 · PC: dh-home · 브랜치: feature/P-1a-project-versions
+갱신: 2026-11-27 21:50 · 작업자: whans1996 · PC: dh-home · 브랜치: feature/P-1a-project-versions
 
 ## 현재 기능
 
@@ -22,8 +22,8 @@
 3. 완료 표시 커밋에서 로드맵·WBS·간트 P-1a 행 끝 날짜를 실제로, 일찍 끝나면 T-1·P-1b·I-1b·I-2 당김 (CLAUDE.md "일정은 바로 반영")
 
 ## 막힌 점 / 결정 필요
-- 남은 질문: idea 이슈 #107~#115 옛 ID 정리, #205·#226 처리 시점
-- 사람: 노션 초대, F-05b liveTest, #251 js-ssafy·js-home `--move-env`
+- 없음 (idea 이슈·#205 AM-1·#226 처리 시점 11-27 결정, PR #255)
+- 사람: 노션 초대, F-05b liveTest + #226 퀴즈 실패 화면 실제 LLM 점검(같은 GMS 세션, 12/08 전), #251 js-ssafy·js-home `--move-env`
 
 ## 주의
 - V15 develop 미머지. 공통 변경(ErrorCode·application.yml·IntegrationTestBase·PostApiTestBase 등) PR에서 @JoonseobKim
