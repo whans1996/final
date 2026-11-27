@@ -53,9 +53,11 @@ jobs:
         if: github.event_name == 'pull_request'
         run: git fetch --no-tags --depth=1 origin "+refs/heads/${BASE_REF}:refs/remotes/origin/${BASE_REF}"
       - name: 스크립트 문법 검사
-        run: for f in scripts/*.mjs scripts/lib/*.mjs .claude/hooks/*.mjs .githooks/*.mjs; do node --check "$f" || exit 1; done
+        run: for f in scripts/*.mjs scripts/lib/*.mjs scripts/lib/*/*.mjs .claude/hooks/*.mjs .githooks/*.mjs; do node --check "$f" || exit 1; done
       - name: 하네스 단위 테스트
         run: node --test "scripts/test/*.test.mjs"
+      - name: 시드 카드 생성본이 원본과 같은지 (K-3a, data/seed → R__seed_concepts.sql)
+        run: node scripts/seed-build.mjs --check
       - name: Flyway 버전 번호 (중복, base 최신 이하)
         run: node scripts/check-migrations.mjs --base "origin/${BASE_REF}"
 
@@ -75,10 +77,14 @@ jobs:
               - 'backend/**'
               - 'scripts/**'
               - '.github/workflows/**'
+              - 'data/seed/**'
+              - 'data/datasets.json'
             fe:
               - 'frontend/**'
               - 'scripts/**'
               - '.github/workflows/**'
+              - 'data/seed/**'
+              - 'data/datasets.json'
 
   backend:
     name: Backend 검증 (+ API 명세 일치)
@@ -97,7 +103,7 @@ jobs:
           distribution: temurin
           java-version: 21
       - uses: gradle/actions/setup-gradle@v6
-      - name: verify be (Spotless + 테스트, Testcontainers MySQL)
+      - name: verify be (Spotless + 테스트, Testcontainers MySQL, 시드 예제 SeedExampleTest)
         run: node scripts/verify.mjs be
       - name: openapi.json이 코드와 일치하는지 확인
         run: |
@@ -134,7 +140,8 @@ jobs:
           package-manager-cache: false
       - name: 의존성 설치
         run: if [ -f frontend/package-lock.json ]; then cd frontend && npm ci; fi
-      - name: verify fe (lint + 단위 테스트 + 빌드)
+      # 시드 카드 ①형식·②FE 예제 검사(seed-check)와 그 단위 테스트(seed-examples)도 verify fe 안에서 돈다 (K-3a AC11)
+      - name: verify fe (lint + 단위 테스트 + 빌드 + 시드 카드 검사)
         run: node scripts/verify.mjs fe
       - name: 실패 로그 업로드
         if: failure()
