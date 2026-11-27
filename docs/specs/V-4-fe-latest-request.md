@@ -163,8 +163,8 @@ async function load() {
 - [x] AC4·AC5 목록 4+1곳 이관
 - [x] AC6·AC7 상세·컴포넌트 이관
 - [x] AC8 PostWriteView, AC9 WishButton 새 가드
-- [ ] AC10 useMoreList, AC11 가드 테스트
-- [ ] `frontend/CLAUDE.md` 규칙 한 줄
+- [x] AC10 useMoreList, AC11 가드 테스트
+- [x] `frontend/CLAUDE.md` 규칙 한 줄
 - [ ] A 영역 follow-up 이슈 (`area:A`, 파일 목록·적용 예시)
 - [ ] ui-verifier 통과 (콘솔 에러만, 데스크톱)
 - [ ] reviewer 지적 사항 반영

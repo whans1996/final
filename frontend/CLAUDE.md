@@ -15,7 +15,7 @@ src/
 ├─ layouts/      AppShell.vue(회원 셸)·GuestShell.vue(비회원 셸)·SkipLink.vue (F-29b), AdminLayout.vue (/admin 공통 레이아웃)
 ├─ views/        화면 단위 컴포넌트 XxxView.vue (라우트와 1:1)
 ├─ components/   재사용 컴포넌트 (도메인별 하위 폴더, 공통 UI common/, 앱 셸 조각 shell/)
-├─ composables/  useXxx.js (폴링, 페이지네이션 등 재사용 로직)
+├─ composables/  useXxx.js (폴링, 페이지네이션, 최신 요청만 반영 useLatestRequest 등 재사용 로직)
 └─ utils/
 ```
 
@@ -36,6 +36,7 @@ src/
 - 로그인이 필요한 화면은 라우트에 `meta.requiresAuth`, 로그인·가입처럼 비로그인 전용은 `meta.guestOnly`를 붙인다. 돌아갈 주소는 `redirectTarget(route.query)`로 꺼낸다 (외부 주소 차단).
 - 폼 검증 실패는 서버 `details`를 `errorDetails(error)`로 꺼내 필드 아래에 보여 준다.
 - 에러 메시지는 `errorMessage(error)`, 분기는 `errorCode(error)`(`@/api/http`)로 꺼낸다.
+- **대상(id·검색어·쪽)이 바뀌거나 화면을 떠날 수 있는 조회는 `composables/useLatestRequest.js`로** 한다 (V-4): `const req = latest.begin()` → 응답·에러·finally에서 `if (!req.isCurrent()) return`. 이전 요청은 취소(abort)되고 컴포넌트가 사라지면 무효가 된다. `signal`은 받는 api(`fetchConcepts`·`fetchAdminConcepts`·`fetchPosts`)에만 넘긴다. `let lastRequest = 0` 같은 순번 가드를 직접 쓰지 않는다 (`latestRequestAdoption.spec.js`가 검사).
 - 분석 진행 상태는 `composables/usePolling.js`로 2~3초 간격 폴링하고, `DONE`/`FAILED`이거나 화면을 떠나면 멈춘다.
 - mermaid 렌더링(F-21)은 해당 화면에서만 동적 import한다.
 - **스타일은 Tailwind 클래스 + 토큰**으로 쓴다 (F-29a). 토큰 정본은 `src/assets/main.css`(`@theme inline`)와 `docs/specs/F-29a-design-foundation.md` 5.2절: 색 `primary`·`primary-soft`·`accent`·`highlight`·`bg`·`surface`·`surface-raised`·`text`·`text-muted`·`border`·`code-bg`·`code-text`·`on-solid`·`success|warning|info|danger`(+`-soft`), 글자 `text-xs|sm|base|lg|xl|hero`, 굵기 `font-normal|semibold|bold`, 반경 `rounded-sm|md|full`, 그림자 `shadow-1|2`, 반응형 `sm:`(640)·`lg:`(1024)만. Tailwind 기본 팔레트(`indigo-500` 등)는 지웠다. 다크는 토큰이 바꾸므로 대개 `dark:`가 필요 없다.
