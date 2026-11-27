@@ -112,7 +112,7 @@ test('HP-5 AC12 V 파일 적용이 실패하면 파일 이름과 MySQL 오류 �
   assert.match(r.error, /V3__bad\.sql/);
   assert.match(r.error, /ERROR 1146 \(42S02\) at line 1: Table 'vibenote\.nope' doesn't exist$/);
   const last = docker.calls.at(-1).args;
-  assert.deepEqual(last.slice(0, 2), ['rm', '-f']);
+  assert.deepEqual(last.slice(0, 3), ['rm', '-f', '-v'], '익명 볼륨(/var/lib/mysql)까지 지운다');
   // 비밀번호 없이, 외부 포트 없이 띄운다
   const run = docker.calls.find((c) => c.args[0] === 'run').args;
   assert.ok(run.includes('MYSQL_ALLOW_EMPTY_PASSWORD=yes'));
@@ -126,7 +126,7 @@ test('HP-5 AC12 MySQL이 준비되지 않으면 정해진 횟수 뒤 실패하�
   assert.equal(r.ok, false);
   assert.match(r.error, /준비되지 않/);
   assert.equal(docker.calls.filter((c) => c.args.includes('SELECT 1')).length, 3);
-  assert.deepEqual(docker.calls.at(-1).args.slice(0, 2), ['rm', '-f']);
+  assert.deepEqual(docker.calls.at(-1).args.slice(0, 3), ['rm', '-f', '-v']);
 });
 
 const SHOW = 'users\tCREATE TABLE `users` (\\n  `id` bigint\\n) ENGINE=InnoDB\n';
@@ -152,7 +152,7 @@ test('HP-5 AC9·AC11 성공: V 파일을 순서대로 적용하고, 만든 Schem
   // mysql·mysqldump 클라이언트는 utf8mb4로 붙는다 (빠지면 한글 COMMENT가 이중 인코딩된다, 11-27 실측)
   const clients = docker.calls.filter((c) => c.args[0] === 'exec');
   assert.ok(clients.length && clients.every((c) => c.args.includes('--default-character-set=utf8mb4')));
-  assert.deepEqual(docker.calls.at(-1).args.slice(0, 2), ['rm', '-f']);
+  assert.deepEqual(docker.calls.at(-1).args.slice(0, 3), ['rm', '-f', '-v']);
 });
 
 test('HP-5 AC11 다시 적용한 DB와 SHOW CREATE TABLE이 다르면 테이블 이름과 함께 실패한다', () => {
@@ -160,7 +160,7 @@ test('HP-5 AC11 다시 적용한 DB와 SHOW CREATE TABLE이 다르면 테이블 
   const r = exportSchema({ ...opts(docker), migrations: [migrations[0]] });
   assert.equal(r.ok, false);
   assert.match(r.error, /users/);
-  assert.deepEqual(docker.calls.at(-1).args.slice(0, 2), ['rm', '-f']);
+  assert.deepEqual(docker.calls.at(-1).args.slice(0, 3), ['rm', '-f', '-v']);
 });
 
 test('HP-5 AC10 트리거·뷰·루틴·이벤트가 있으면 Schema.sql에 빠지므로 이름과 함께 실패한다', () => {
@@ -172,5 +172,5 @@ test('HP-5 AC10 트리거·뷰·루틴·이벤트가 있으면 Schema.sql에 빠
   assert.match(r.error, /지원하지 않는 객체/);
   assert.match(r.error, /TRIGGER trg_users/);
   assert.match(r.error, /VIEW v_stats/);
-  assert.deepEqual(docker.calls.at(-1).args.slice(0, 2), ['rm', '-f']);
+  assert.deepEqual(docker.calls.at(-1).args.slice(0, 3), ['rm', '-f', '-v']);
 });

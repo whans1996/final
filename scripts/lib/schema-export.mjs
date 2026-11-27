@@ -130,6 +130,6 @@ export function exportSchema({ docker, migrations, sleep = defaultSleep, readyTr
     if (diff.length) return { ok: false, error: `만든 Schema.sql로 만든 DB가 V 파일로 만든 DB와 다릅니다: ${diff.join(', ')}` };
     return { ok: true, sql, lastVersion, tables: original.size };
   } finally {
-    docker(['rm', '-f', name]);
+    docker(['rm', '-f', '-v', name]); // -v: mysql 이미지의 익명 볼륨(/var/lib/mysql)도 지운다 (Codex 리뷰)
   }
 }
