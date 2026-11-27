@@ -4,7 +4,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { test } from 'node:test';
-import { git } from '../lib/common.mjs';
+import { git, readWorklog } from '../lib/common.mjs';
 import { branchChangedFiles, commitsLine, lastEntryAt, logEntry, nowFormatProblems, replaceNowBody, touchNowHeader, undoMsysPathConv, verifiedLine } from '../lib/records.mjs';
 
 test('NOW 갱신 줄만 바꾸고, 없으면 맨 위에 넣는다', () => {
@@ -61,6 +61,20 @@ test('내 마지막 작업로그 시각 (상대 항목은 건너뜀)', () => {
   assert.equal(lastEntryAt(log, 'dh'), '2026-11-25 09:30');
   assert.equal(lastEntryAt(log, 'js'), '2026-11-25 10:00');
   assert.equal(lastEntryAt('', 'dh'), null);
+});
+
+test('HP-5 AC5 stamp --draft 기준 시각: 이번 주에 내 항목이 없으면 보관 파일의 내 마지막 항목', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'records-worklog-'));
+  try {
+    mkdirSync(join(dir, '기록'));
+    writeFileSync(join(dir, '기록', '작업로그-W1.md'), '# 작업로그 W1\n\n## 2026-11-23 22:00 · whans1996 · dh-home · feature/a\n- 한 일: a\n');
+    writeFileSync(join(dir, '작업로그.md'), '# 작업로그\n\n## 2026-11-24 09:00 · JoonseobKim · js-home · feature/b\n- 한 일: b\n');
+    const log = readWorklog({ file: join(dir, '작업로그.md'), archiveDir: join(dir, '기록') });
+    assert.equal(lastEntryAt(log, 'dh'), '2026-11-23 22:00');
+    assert.equal(lastEntryAt(log, 'js'), '2026-11-24 09:00');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 test('작업로그 항목: 메모 3줄 + 자동 커밋 줄, 여러 줄 메모는 한 줄로', () => {

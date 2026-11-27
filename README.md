@@ -36,9 +36,9 @@ SSAFY Final Project (Java Track, 자율 주제) · 2026-11-17 ~ 2026-12-24
 | | 화면 설계서 | [docs/산출물/06-화면설계서.md](docs/산출물/06-화면설계서.md) |
 | 구현 결과물 | Back-End (Spring Boot) 소스 | [backend/](backend/) |
 | | Front-End (Vue.js) 소스 | [frontend/](frontend/) |
-| | DB Schema.sql | (제출 단계에서 생성) |
+| | DB Schema.sql | [docs/산출물/Schema.sql](docs/산출물/Schema.sql) (Flyway V 파일에서 생성, `node scripts/export-schema.mjs`) |
 | | 활용 데이터 셋 | [docs/산출물/09-데이터셋.md](docs/산출물/09-데이터셋.md) |
-| | REST API 명세 (Swagger) | [docs/산출물/07-REST-API-명세.md](docs/산출물/07-REST-API-명세.md) |
+| | REST API 명세 (Swagger) | [docs/산출물/07-REST-API-명세.md](docs/산출물/07-REST-API-명세.md) (openapi.json에서 생성, `node scripts/export-api-doc.mjs`) |
 | 결과 정리 자료 | 최종 보고서 | [docs/산출물/10-최종보고서.md](docs/산출물/10-최종보고서.md) |
 | | 발표 자료 (PPT/PDF) | (제출 단계에서 추가) |
 | | 외부 API 및 생성형 AI 활용 | [docs/산출물/08-외부API-생성형AI-활용.md](docs/산출물/08-외부API-생성형AI-활용.md) |
