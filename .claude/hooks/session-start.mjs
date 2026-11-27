@@ -10,7 +10,6 @@ import {
   NON_INTERACTIVE_GIT_ENV,
   PROTECTED_BRANCHES,
   ROOT,
-  WORKLOG_FILE,
   currentBranch,
   git,
   hasCommits,
@@ -24,6 +23,7 @@ import {
   previousPc,
   readStdinJson,
   readText,
+  readWorklog,
   sessionBanner,
   workFilesNewerThanNow,
   worklogEntries,
@@ -168,7 +168,7 @@ if (myBranches.others.length) {
       '내 NOW와 다른 일이면 /pickup에서 그 브랜치로 switch할지 확인합니다 (같은 기능을 새로 시작하지 않는다).',
   );
 }
-const myEntry = me ? lastWorklogEntryOf(worklogEntries(readText(WORKLOG_FILE)), me, loadPcs()) : null;
+const myEntry = me ? lastWorklogEntryOf(worklogEntries(readWorklog()), me, loadPcs()) : null;
 
 // 이전 세션이 체크포인트 없이 남긴 변경 (Stop hook은 이 세션이 건드린 파일만 보므로 여기서 알린다)
 const unrecorded = inRepo && me ? workFilesNewerThanNow(ROOT, nowFileOf(me), { timeout: Math.max(1, budget.timeout(1500)) }) : [];

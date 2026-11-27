@@ -20,7 +20,7 @@ import { spawnSync } from 'node:child_process';
 import { appendFileSync, readFileSync, writeFileSync } from 'node:fs';
 import { userInfo } from 'node:os';
 import { join } from 'node:path';
-import { ROOT, WORKLOG_FILE, currentBranch, git, localPcId, nowFileOf, nowRelPath, nowStamp, ownerKey, readText, recordStamp } from './lib/common.mjs';
+import { ROOT, WORKLOG_FILE, currentBranch, git, localPcId, nowFileOf, nowRelPath, nowStamp, ownerKey, readText, readWorklog, recordStamp } from './lib/common.mjs';
 import { AREA_OF } from './lib/issues.mjs';
 import { branchChangedFiles, lastEntryAt, logEntry, replaceNowBody, touchNowHeader, undoMsysPathConv, verifiedLine } from './lib/records.mjs';
 import { areasOf } from './lib/related.mjs';
@@ -48,7 +48,7 @@ const develop = () => ['origin/develop', 'develop'].find((b) => git(['rev-parse'
 
 /** 내 마지막 작업로그 항목 뒤에 이 브랜치에 쌓인 커밋 (develop에 이미 있는 것과 merge 커밋 제외) */
 function commitsSinceMyLastEntry() {
-  const since = lastEntryAt(readText(WORKLOG_FILE) || '', key);
+  const since = lastEntryAt(readWorklog(), key);
   const base = develop();
   const range = base ? [`${base}..HEAD`] : ['-15'];
   const out = git(['log', '--no-merges', '--format=%H%x09%s', ...(since ? [`--since=${since}`] : ['-15']), ...range]).out;

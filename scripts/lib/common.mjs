@@ -7,6 +7,28 @@ import { fileURLToPath } from 'node:url';
 /** 저장소 루트 (scripts/lib 기준 두 단계 위) */
 export const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 export const WORKLOG_FILE = join(ROOT, 'docs', '작업로그.md');
+/** 지난 주 작업로그 보관 폴더 (HP-5, scripts/archive-worklog.mjs). 파일은 작업로그-<주 id>.md */
+export const WORKLOG_ARCHIVE_DIR = join(ROOT, 'docs', '기록');
+
+/** 주차 (docs/기획서.md 마일스톤 표). 작업로그 보관 단위다. 버퍼는 끝이 없다 */
+export const WORKLOG_WEEKS = [
+  { id: 'W1', start: '2026-11-17', label: '11/17~11/23' },
+  { id: 'W2', start: '2026-11-24', label: '11/24~11/30' },
+  { id: 'W3', start: '2026-12-01', label: '12/01~12/07' },
+  { id: 'W4', start: '2026-12-08', label: '12/08~12/14' },
+  { id: 'W5', start: '2026-12-15', label: '12/15~12/20' },
+  { id: '버퍼', start: '2026-12-21', label: '12/21~12/24' },
+];
+export const worklogArchiveName = (weekId) => `작업로그-${weekId}.md`;
+
+/**
+ * 작업로그 + 가장 최근 보관 파일 (HP-5 AC5). 주가 바뀐 직후에는 내 마지막 항목이 보관 파일에만 있을 수 있다.
+ * 항목을 고르는 쪽(lastWorklogEntryOf)이 시각으로 판정하므로 이어 붙이는 순서는 상관없다. 항목 추가는 WORKLOG_FILE 끝에 한다.
+ */
+export function readWorklog({ file = WORKLOG_FILE, archiveDir = WORKLOG_ARCHIVE_DIR } = {}) {
+  const latest = [...WORKLOG_WEEKS].reverse().map((w) => readText(join(archiveDir, worklogArchiveName(w.id)))).find((t) => t !== null);
+  return [latest, readText(file)].filter((t) => t !== null).join('\n\n');
+}
 
 // 두 사람이 영역별로 병렬 개발한다 (11-19 결정). 현재 작업 스냅샷은 사람별 파일 docs/handoff/NOW-<key>.md이고,
 // key는 PC id 접두다 (dh-ssafy → dh). 같은 사람의 PC 사이에서는 이 파일로 교대한다.
