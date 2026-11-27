@@ -1843,7 +1843,8 @@ class StructureAnalyzerTest {
 
     @Test
     void AC8_인스턴스_defaults_method를_바꾸면_config에_method가_없는_호출의_method를_모른다() {
-        // #150: X.defaults.method 쓰기·삭제, 계산된 키, Object.assign은 create config의 method를 덮는다
+        // #150: X.defaults.method 쓰기·삭제, 계산된 키, Object.assign, defaults 통째 대입은 create config의
+        // method를 덮는다
         AnalysisStructureResponse response =
                 run(
                         List.of(
@@ -1856,7 +1857,11 @@ class StructureAnalyzerTest {
                                 api("GET", "/api/users", 106),
                                 api("POST", "/api/users", 107),
                                 api("GET", "/api/tags", 108),
-                                api("POST", "/api/tags", 109)),
+                                api("POST", "/api/tags", 109),
+                                api("GET", "/api/posts", 110),
+                                api("POST", "/api/posts", 111),
+                                api("GET", "/api/likes", 112),
+                                api("POST", "/api/likes", 113)),
                         js(
                                 1,
                                 "src/a.js",
@@ -1875,6 +1880,12 @@ class StructureAnalyzerTest {
                                 const d = axios.create({ method: 'POST' })
                                 d.defaults['timeout'] = 1000
                                 d.request({ url: '/api/tags' })
+                                const e = axios.create({ method: 'POST' })
+                                Object.assign(e.defaults, { method: 'GET' })
+                                e.request({ url: '/api/posts' })
+                                const f = axios.create({ method: 'POST' })
+                                f.defaults = { method: 'GET' }
+                                f.request({ url: '/api/likes' })
                                 """));
 
         assertThat(http(response)).containsExactly(edge(1, 102, 5), edge(1, 109, 14));
@@ -1883,7 +1894,11 @@ class StructureAnalyzerTest {
                 .containsExactly(
                         tuple(4, UnresolvedReason.AMBIGUOUS),
                         tuple(8, UnresolvedReason.AMBIGUOUS),
-                        tuple(11, UnresolvedReason.AMBIGUOUS));
+                        tuple(11, UnresolvedReason.AMBIGUOUS),
+                        // Object.assign·통째 대입은 baseURL도 바꿀 수 있어 baseURL 규칙이 먼저 걸린다. POST로 확정하지 않는
+                        // 것이 핵심
+                        tuple(17, UnresolvedReason.BASE_URL_UNKNOWN),
+                        tuple(20, UnresolvedReason.BASE_URL_UNKNOWN));
     }
 
     @Test
