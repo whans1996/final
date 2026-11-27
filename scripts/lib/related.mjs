@@ -14,11 +14,18 @@ const BE_TEST_DIR = 'backend/src/test/java/';
 const BE_MAIN_DIR = 'backend/src/main/java/';
 const FE_CODE_RE = /^frontend\/(src|scripts)\/.*\.(js|mjs|vue|ts|css)$|^frontend\/[^/]+\.(js|mjs|json)$/;
 
-/** 바뀐 파일이 걸친 검증 영역 (verify.mjs 대상 이름). md만 바뀐 영역은 빼고, frontend/scripts의 하네스 래퍼는 fe로 본다 */
+/** 시드 카드 원본과 출처 목록: BE(SeedExampleTest)·FE(seed-check) 둘 다 검사한다 (K-3a AC11) */
+export const SEED_DATA_PATHS = ['data/seed', 'data/datasets.json'];
+export const isSeedData = (f) => f.startsWith('data/seed/') || f === 'data/datasets.json';
+/** 카드 ①형식 검사가 읽는 카테고리 목록. 이것만 바뀌어도 fe 카드 검사를 돌린다 (CI fe 필터와 같다) */
+export const SEED_CATEGORIES = 'backend/src/main/java/com/vibenote/analysis/concept/ConceptCategories.java';
+
+/** 바뀐 파일이 걸친 검증 영역 (verify.mjs 대상 이름). md만 바뀐 영역은 빼고, frontend/scripts의 하네스 래퍼는 fe로 본다. 시드 카드는 be·fe */
 export function areasOf(files) {
   const areas = [];
-  if (files.some((f) => f.startsWith('backend/') && !f.endsWith('.md'))) areas.push('be');
-  if (files.some((f) => f.startsWith('frontend/') && !f.endsWith('.md'))) areas.push('fe');
+  const seed = files.some(isSeedData);
+  if (seed || files.some((f) => f.startsWith('backend/') && !f.endsWith('.md'))) areas.push('be');
+  if (seed || files.includes(SEED_CATEGORIES) || files.some((f) => f.startsWith('frontend/') && !f.endsWith('.md'))) areas.push('fe');
   if (files.some(isHarness)) areas.push('harness');
   return areas;
 }
@@ -33,6 +40,7 @@ const dirOf = (path) => posix.dirname(path);
  * - 메인 클래스 X: 이름이 X로 시작하는 테스트(X·XImpl → XTest·XApiTest). 없으면 같은 패키지의 테스트
  * - Flyway 마이그레이션: FlywayMigrationTest
  * - MyBatis XML(XxxMapper.xml): Xxx로 시작하는 테스트
+ * - 시드 카드 원본(data/seed·datasets.json): SeedExampleTest. 생성본 R__seed_concepts.sql은 SeedConceptsTest도
  * 그 밖의 파일(build.gradle, application.yml, 프롬프트 등)은 관련 테스트를 정하지 않는다. 컴파일만 하고 전체는 pre-push가 돈다.
  */
 export function relatedBackendTests(files, testFiles) {
@@ -59,8 +67,11 @@ export function relatedBackendTests(files, testFiles) {
     } else if (f.startsWith(BE_MAIN_DIR) && f.endsWith('.java')) {
       const name = className(f).replace(/Impl$/, '');
       if (!addPrefix(name)) addPackage(BE_TEST_DIR + dirOf(f).slice(BE_MAIN_DIR.length));
+    } else if (isSeedData(f)) {
+      addPrefix('SeedExampleTest');
     } else if (/^backend\/src\/main\/resources\/db\/migration\//.test(f)) {
       addPrefix('FlywayMigrationTest');
+      if (f.endsWith('/R__seed_concepts.sql')) addPrefix('SeedConceptsTest');
     } else if (/^backend\/src\/main\/resources\/mapper\/.*Mapper\.xml$/.test(f)) {
       addPrefix(posix.basename(f).replace(/Mapper\.xml$/, ''));
     }

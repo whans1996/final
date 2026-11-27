@@ -25,6 +25,19 @@ test('영역: md만 바뀐 곳은 빼고 하네스 스크립트를 따로 본다
   assert.deepEqual(areasOf(['.claude/hooks/guard-bash.mjs', '.githooks/pre-push']), ['harness']);
   // frontend/scripts의 래퍼는 fe 영역이다
   assert.deepEqual(areasOf(['frontend/scripts/run-oxlint.mjs']), ['fe']);
+  // 시드 카드 원본·출처 목록은 BE(SeedExampleTest)·FE(seed-check) 둘 다 (K-3a AC11)
+  assert.deepEqual(areasOf(['data/seed/concepts/java/record.md']), ['be', 'fe']);
+  assert.deepEqual(areasOf(['data/datasets.json']), ['be', 'fe']);
+  assert.deepEqual(areasOf(['data/README.md']), []);
+  // 카드 형식 검사의 카테고리 목록 → fe 카드 검사도 (CI fe 필터와 같다)
+  assert.deepEqual(areasOf(['backend/src/main/java/com/vibenote/analysis/concept/ConceptCategories.java']), ['be', 'fe']);
+});
+
+test('BE: 시드 카드는 SeedExampleTest, 생성본 R__seed_concepts.sql은 Flyway·SeedConceptsTest', () => {
+  const tests = [`${T}common/SeedExampleTest.java`, `${T}common/SeedConceptsTest.java`, `${T}common/FlywayMigrationTest.java`];
+  assert.deepEqual(relatedBackendTests(['data/seed/concepts/vue/slots.md'], tests), ['SeedExampleTest']);
+  assert.deepEqual(relatedBackendTests(['backend/src/main/resources/db/migration/R__seed_concepts.sql'], tests), ['FlywayMigrationTest', 'SeedConceptsTest']);
+  assert.deepEqual(relatedBackendTests(['backend/src/main/resources/db/migration/V15__x.sql'], tests), ['FlywayMigrationTest']);
 });
 
 test('BE: 메인 클래스는 이름이 같은 접두어인 테스트를 고른다', () => {
