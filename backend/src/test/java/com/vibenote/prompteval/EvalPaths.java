@@ -65,7 +65,7 @@ final class EvalPaths {
         return Files.exists(cached) ? cached : null;
     }
 
-    /** 앱과 같은 방식(application.yml + ../.env)으로 설정을 읽는다. */
+    /** 앱과 같은 방식(application.yml + ~/.vibenote/.env)으로 설정을 읽는다. */
     static Binder binder() {
         StandardEnvironment environment = new StandardEnvironment();
         ConfigDataEnvironmentPostProcessor.applyTo(environment);

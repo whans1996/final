@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 // PC마다 최초 1회 실행: PC 등록 + git hook 경로 연결 + 개발 환경 점검
 // 사용법: node scripts/setup.mjs --pc <dh-ssafy|dh-home|js-ssafy|js-home>   (등록 뒤에는 --pc 생략 가능)
+//        node scripts/setup.mjs --move-env   저장소 루트 .env를 ~/.vibenote/.env로 옮기기만 한다 (#249, 내용은 읽지 않음)
 // 결과는 .harness/env-check.json에 남고, SessionStart hook이 세션마다 빠른 점검을 다시 한다.
 import { ROOT, git, isGitRepo, ownerKey } from './lib/common.mjs';
 import { currentPc, icon, loadPcs, registerPc, runChecks, saveFullCheck } from './lib/env-check.mjs';
+import { moveEnv } from './lib/env-file.mjs';
 import { EVAL_FETCH_EXCLUDE, evalBlockedFor, evalFetchExcluded } from './lib/protect.mjs';
 
 // git hook 연결 (유일하게 상태를 바꾸는 단계). PC 등록과 무관하므로 먼저 한다
@@ -11,12 +13,18 @@ const hookSet = isGitRepo() ? git(['config', 'core.hooksPath', '.githooks']) : n
 if (hookSet && !hookSet.ok) console.error(`⚠️  git hook 연결 실패: ${hookSet.err}`);
 
 const args = process.argv.slice(2);
+if (args.includes('--move-env')) {
+  const moved = moveEnv();
+  console.log(`${moved.ok ? '✅' : '⚠️ '} ${moved.message}`);
+  if (moved.ok) console.log('   BE를 다시 띄우면 새 위치에서 읽습니다. 다른 PC도 각각 옮깁니다.');
+  process.exit(moved.ok ? 0 : 1);
+}
 let pcArg;
 for (let i = 0; i < args.length; i++) {
   if (args[i] === '--pc') pcArg = args[++i] ?? '';
   else if (args[i].startsWith('--pc=')) pcArg = args[i].slice(5);
   else {
-    console.error(`❌ 알 수 없는 인자: ${args[i]}\n   사용법: node scripts/setup.mjs [--pc <id>]`);
+    console.error(`❌ 알 수 없는 인자: ${args[i]}\n   사용법: node scripts/setup.mjs [--pc <id>] [--move-env]`);
     process.exit(1);
   }
 }

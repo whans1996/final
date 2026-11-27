@@ -13,13 +13,17 @@ export function onlyDocsChanged(changedFiles, fromDevelop = () => false) {
   return changedFiles.every((f) => isDocPath(f) || fromDevelop(f));
 }
 
+/** 사람이 Codex 루프를 멈추기로 한 PR에 붙이는 라벨 (리뷰가 수렴하지 않을 때, #249·결정로그 11-27) */
+export const STOP_LABEL = 'codex-stopped';
+
 /**
- * codex-loop가 이 PR을 보지 않는 이유 (gh pr view --json state,isDraft,files). 볼 PR이면 null.
+ * codex-loop가 이 PR을 보지 않는 이유 (gh pr view --json state,isDraft,files,labels). 볼 PR이면 null.
  * docs만 바꾼 PR은 CI 초록이면 Codex를 기다리지 않고 머지한다 (docs/conventions.md 7절 예외, #129)
  */
 export function loopSkipReason(pr) {
   if (pr.state !== 'OPEN') return 'CLOSED';
   if (pr.isDraft) return 'DRAFT';
+  if ((pr.labels || []).some((l) => l.name === STOP_LABEL)) return 'STOPPED';
   if (onlyDocsChanged((pr.files || []).map((f) => f.path))) return 'DOCS';
   return null;
 }

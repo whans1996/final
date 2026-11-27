@@ -70,7 +70,7 @@ SSAFY 관통 프로젝트(2026-11-17 시작, 12-24 발표). Spring Boot 4 + MyBa
 2. **커밋 메시지는 `타입(범위): 요약`** 형식으로 쓴다. 상세 규칙은 `docs/conventions.md` 6절. git hook이 검사한다.
 3. `wip`가 아닌 커밋은 git hook이 변경된 영역의 포맷·린트·관련 테스트를 돌리고(빠른 검사), push 전에는 pre-push hook이 바뀐 영역의 전체 검증을 돌린다(tip이 wip면 건너뜀). 실패하면 거부한다. **`--no-verify`로 우회하지 않는다.**
 4. **이미 커밋된 Flyway 파일(`V*__*.sql`)은 수정하지 않는다.** 고칠 내용은 새 버전 파일로 추가한다. 예외: develop에 아직 머지되지 않은 내 파일은 번호가 겹칠 때 `git mv`로 **이름(번호)만** 바꿀 수 있다 (CI `check-migrations`가 알린다).
-5. **`.env`와 키 파일은 읽거나 커밋하지 않는다.** 키는 환경변수로만 받고, 예시는 `.env.example`에 둔다.
+5. **`.env`와 키 파일은 읽거나 커밋하지 않는다.** 키는 환경변수로만 받고, 예시는 `.env.example`에 둔다. `.env`는 PC마다 저장소 밖 `~/.vibenote/.env`에 둔다 (#249, 루트에 남아 있으면 사람이 `node scripts/setup.mjs --move-env`). 하네스 가드는 실수 방지이고 보안 경계가 아니다 (`docs/conventions.md` 7절).
 6. **LLM은 기본 `mock` 프로필로 쓴다.** 실제 LLM 호출(서비스 공급자 GMS는 팀 키 크레딧을 쓰고, Ollama·평가 비교용 Gemini도 같다)은 사람이 요청할 때 `prompt-evaluator` 에이전트로만 한다. 실호출 테스트는 `@Tag("live")`로 두고 사람만 `liveTest`로 돌린다.
 7. **spec 범위 밖 기능을 임의로 추가하지 않는다.** 필요하면 spec의 "결정 필요"에 적고 사람에게 묻는다.
 8. 기획이 바뀌면 `docs/결정로그.md` 맨 아래에 한 줄 추가한다 (기존 행은 고치지 않는다).
@@ -93,7 +93,7 @@ SSAFY 관통 프로젝트(2026-11-17 시작, 12-24 발표). Spring Boot 4 + MyBa
 
 | 목적 | 명령 |
 |---|---|
-| 최초 1회 세팅·PC 등록 (PC마다) | `node scripts/setup.mjs --pc <dh-ssafy\|dh-home\|js-ssafy\|js-home>` |
+| 최초 1회 세팅·PC 등록 (PC마다) | `node scripts/setup.mjs --pc <dh-ssafy\|dh-home\|js-ssafy\|js-home>` (루트 `.env`를 `~/.vibenote/.env`로 옮기기: `--move-env`) |
 | 검증 (실패만 요약) | `node scripts/verify.mjs [be\|fe\|harness\|all] [--fix] [--staged]` (`--staged`는 커밋 hook의 빠른 검사) |
 | 하네스·환경 점검 (읽기 전용) | `node scripts/doctor.mjs` (hook 권한, 남은 Gradle 잠금, CRLF, FE 의존성, NOW 파일 등) |
 | 주간 초안·지표 (`/progress` 전) | `node scripts/weekly.mjs [--days 7]` |

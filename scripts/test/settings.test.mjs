@@ -39,3 +39,17 @@ test('statusLine 스크립트가 실제로 있고 git·gh 없이 그린다 (HX-6
   const src = readFileSync(join(ROOT, rel), 'utf8');
   assert.doesNotMatch(src, /spawnSync|execSync|execFileSync|\bgit\(/);
 });
+
+test('permissions.deny가 비밀 파일 읽기를 도구 수준에서 한 겹 더 막고, .env.example은 막지 않는다 (#249)', async () => {
+  const { matchesGlob } = await import('node:path/posix');
+  const { SECRET_SAMPLES } = await import('../lib/protect.mjs');
+  const deny = settings.permissions?.deny || [];
+  const readGlobs = deny.map((r) => /^Read\((.+)\)$/.exec(r)?.[1]).filter(Boolean);
+  const denied = (path) => readGlobs.some((g) => matchesGlob(path, g));
+  for (const name of SECRET_SAMPLES) assert.ok(denied(`backend/${name}`), name);
+  // 저장소 밖으로 옮긴 .env (#249)
+  assert.ok(deny.includes('Read(~/.vibenote/**)'));
+  assert.ok(deny.includes('Edit(~/.vibenote/**)'));
+  // deny는 allow보다 먼저 적용되므로 .env.* 같은 넓은 규칙을 두면 예시 파일까지 못 읽는다
+  assert.ok(!denied('.env.example') && !denied('backend/.env.example'));
+});

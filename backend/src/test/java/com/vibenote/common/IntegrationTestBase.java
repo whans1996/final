@@ -15,8 +15,8 @@ import tools.jackson.databind.ObjectMapper;
  * <p>컨테이너는 JVM당 한 번만 띄우고 모든 테스트 클래스가 함께 쓴다(Spring 컨텍스트 캐시도 공유). 테스트끼리 데이터가 섞이지 않게
  * {@code @Transactional} 롤백이나 {@code @Sql} 정리 스크립트를 쓴다.
  *
- * <p>{@code properties}는 설정 파일과 저장소 루트 {@code .env}보다 우선하므로, 개발자 PC 설정과 상관없이 항상 mock LLM과 테스트용 JWT
- * 키를 쓴다.
+ * <p>{@code properties}는 설정 파일과 {@code ~/.vibenote/.env}(·옮기기 전 루트 {@code .env})보다 우선하므로, 개발자 PC
+ * 설정과 상관없이 항상 mock LLM과 테스트용 JWT 키를 쓴다.
  */
 @SpringBootTest(
         properties = {

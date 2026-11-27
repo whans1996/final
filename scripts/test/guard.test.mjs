@@ -77,6 +77,16 @@ test('GitHub: 머지·저장소·시크릿 변경은 사람이', () => {
   ok('gh issue create --title "gh pr merge 금지"');
 });
 
+test('Codex 루프를 멈추는 codex-stopped 라벨은 사람만 붙인다 (#249)', () => {
+  no('gh pr edit 251 --add-label codex-stopped');
+  no('gh pr edit 251 --add-label=follow-up,codex-stopped');
+  no('gh issue edit 251 --add-label codex-stopped');
+  no('gh api repos/o/r/issues/251/labels -f "labels[]=codex-stopped"');
+  ok('gh pr edit 251 --add-label follow-up');
+  ok('gh pr edit 251 --remove-label codex-stopped');
+  ok('gh pr view 251 --json labels');
+});
+
 test('.env 읽기·커밋 금지, .env.example은 허용', () => {
   no('cat .env');
   no('cat backend/.env.local');

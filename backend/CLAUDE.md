@@ -116,7 +116,7 @@ com.vibenote
 - Mapper: 실제 DB로 SQL을 검증한다. H2를 쓰지 않는다.
 - Service 단위 테스트는 로직이 복잡할 때만 Mockito로 쓴다 (예: 추천 점수 계산).
 - **테스트 메서드 이름에 spec의 AC 번호를 넣는다**: `AC1_파일이_200개를_넘으면_413을_반환한다()`. `@DisplayName`은 쓰지 않아도 된다.
-- **실제 외부 서비스(GMS·Gemini·Ollama 등)를 부르는 테스트는 `@Tag("live")`를 단다.** `test`(CI·git hook·verify)는 이 태그를 제외하고, 사람만 `./gradlew liveTest`로 돌린다. 개발 PC의 `.env`에 키가 있으므로, 태그 없이 쓰면 red 확인만으로도 무료 한도를 쓴다 (11-18 실제 발생). HTTP 동작 검증은 `MockRestServiceServer`로 한다 (`GeminiLlmClientTest` 참고).
+- **실제 외부 서비스(GMS·Gemini·Ollama 등)를 부르는 테스트는 `@Tag("live")`를 단다.** `test`(CI·git hook·verify)는 이 태그를 제외하고, 사람만 `./gradlew liveTest`로 돌린다. 개발 PC의 `~/.vibenote/.env`에 키가 있으므로, 태그 없이 쓰면 red 확인만으로도 무료 한도를 쓴다 (11-18 실제 발생). HTTP 동작 검증은 `MockRestServiceServer`로 한다 (`GeminiLlmClientTest` 참고).
 - 테스트끼리 데이터가 섞이지 않게 `@Transactional` 롤백 또는 `@Sql` 정리 스크립트를 쓴다.
 
 ## 명령어 (backend 폴더에서)
@@ -130,6 +130,6 @@ com.vibenote
 
 루트에서 `node scripts/verify.mjs be`를 쓰면 포맷 검사와 테스트를 돌리고 실패만 요약해 준다.
 
-- 설정: `application.yml`(공통, 저장소 루트 `.env`를 자동으로 읽음), `application-local.yml`(개발용 JWT 키, debug 로그). 테스트는 `IntegrationTestBase`의 `properties`가 우선한다.
+- 설정: `application.yml`(공통, PC마다 저장소 밖 `~/.vibenote/.env`를 자동으로 읽음. 옮기는 동안은 루트 `.env`도 읽는다. 키 단위로 합쳐져 같은 키만 `~/.vibenote`가 이긴다, #249), `application-local.yml`(개발용 JWT 키, debug 로그). 테스트는 `IntegrationTestBase`의 `properties`가 우선한다.
 - Gradle 실행은 **`JAVA_HOME`(JDK 17 이상)** 을 쓰고, 컴파일·테스트는 **Java 21 toolchain**으로 한다. JDK 21이 없으면 첫 빌드 때 Gradle(foojay resolver)이 `~/.gradle/jdks`에 자동으로 받는다. PATH의 `java`가 8이어도 상관없다. 설정 방법은 `docs/환경설정.md`.
 - STS에서는 Installed JREs에 **JDK 21**을 추가하고 프로젝트 JRE로 지정한다.
