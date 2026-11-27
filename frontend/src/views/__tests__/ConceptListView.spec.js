@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
 import ConceptListView from '@/views/concept/ConceptListView.vue'
 import * as conceptsApi from '@/api/concepts'
-import { apiError, mountAt } from './viewTestUtils'
+import { apiError, mountAt, untilAborted } from './viewTestUtils'
 
 vi.mock('@/api/concepts')
 
@@ -288,5 +288,21 @@ describe('ConceptListView (F-09 AC9~AC11)', () => {
     await flushPromises()
 
     expect(router.currentRoute.value.fullPath).toBe('/concepts?page=9')
+  })
+
+  it('AC4 조건을 응답 전에 바꾸면 이전 요청은 취소되고 에러 없이 마지막 조건 결과만 보인다 (V-4)', async () => {
+    conceptsApi.fetchConcepts
+      .mockImplementationOnce(untilAborted)
+      .mockResolvedValue(page([concept({ id: 2, name: 'Pinia 상태 관리' })]))
+    const { wrapper, router } = await mountList('/concepts?keyword=jwt')
+
+    await router.push('/concepts?keyword=pinia')
+    await flushPromises()
+
+    expect(conceptsApi.fetchConcepts.mock.calls[0][1].signal.aborted).toBe(true)
+    expect(conceptsApi.fetchConcepts.mock.calls[1][1].signal.aborted).toBe(false)
+    expect(wrapper.find('[role="alert"]').exists()).toBe(false)
+    expect(wrapper.text()).toContain('Pinia 상태 관리')
+    expect(wrapper.text()).not.toContain('조건에 맞는 개념 카드가 없습니다')
   })
 })

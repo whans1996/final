@@ -6,7 +6,7 @@ import { routes } from '@/router'
 import PostDetailView from '@/views/community/PostDetailView.vue'
 import * as postsApi from '@/api/posts'
 import { useAuthStore } from '@/stores/auth'
-import { apiError, mountAt } from './viewTestUtils'
+import { apiError, deferred, mountAt } from './viewTestUtils'
 
 vi.mock('@/api/posts')
 
@@ -267,5 +267,32 @@ describe('PostDetailView (F-17 AC15·AC16·AC18)', () => {
 
     expect(wrapper.find('[role="status"]').text()).toBe('본인이 쓴 글만 수정할 수 있습니다.')
     expect(router.options.history.state.notice).toBeFalsy()
+  })
+})
+
+describe('PostDetailView 늦은 응답 (V-4 AC6·AC7)', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+    postsApi.fetchComments.mockResolvedValue({ items: [], total: 0 })
+  })
+
+  it('AC6·AC7 이전 id의 늦은 실패와 화면을 떠난 뒤 온 응답은 화면 상태를 바꾸지 않는다', async () => {
+    const first = deferred()
+    const second = deferred()
+    postsApi.fetchPost.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise)
+    const { wrapper, router } = await mountDetail('/community/42')
+
+    await router.push('/community/43')
+    first.reject(apiError(500, { code: 'COMMON_500', message: '옛 글 실패' }))
+    await flushPromises()
+    const vm = wrapper.vm
+    expect(vm.loadError).toBe('')
+    expect(vm.loading).toBe(true)
+
+    wrapper.unmount()
+    second.resolve(detail({ id: 43 }))
+    await flushPromises()
+    expect(vm.post).toBeNull()
+    expect(vm.loading).toBe(true)
   })
 })

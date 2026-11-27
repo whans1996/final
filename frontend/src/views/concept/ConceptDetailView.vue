@@ -13,6 +13,7 @@ import WishButton from '@/components/concept/WishButton.vue'
 import ReviewPlanAddButton from '@/components/reviewplan/ReviewPlanAddButton.vue'
 import { useAuthStore } from '@/stores/auth'
 import { LEVELS } from '@/utils/authValidation'
+import { useLatestRequest } from '@/composables/useLatestRequest'
 
 const route = useRoute()
 const router = useRouter()
@@ -33,11 +34,11 @@ const rating = computed(() => Number(concept.value?.avgRating ?? 0).toFixed(1))
 // javascript: 같은 URL이 링크가 되지 않게 http(s)만 <a>로 그린다
 const referenceIsLink = computed(() => /^https?:\/\//i.test(concept.value?.referenceUrl ?? ''))
 
-// :id를 빠르게 바꿀 때 늦게 도착한 이전 요청의 응답은 버린다
-let lastRequest = 0
+// 관련 카드로 :id를 빠르게 바꾸거나 화면을 떠나면 늦게 도착한 이전 요청의 응답은 버린다 (V-4)
+const latest = useLatestRequest()
 
 async function load(id) {
-  const request = ++lastRequest
+  const request = latest.begin()
   loading.value = true
   notFound.value = false
   loadError.value = ''
@@ -45,15 +46,15 @@ async function load(id) {
   window.scrollTo(0, 0)
   try {
     const result = await fetchConcept(id)
-    if (request !== lastRequest) return
+    if (!request.isCurrent()) return
     concept.value = result
   } catch (error) {
-    if (request !== lastRequest) return
+    if (!request.isCurrent()) return
     concept.value = null
     if (errorCode(error) === 'CONCEPT_404') notFound.value = true
     else loadError.value = errorMessage(error)
   } finally {
-    if (request === lastRequest) loading.value = false
+    if (request.isCurrent()) loading.value = false
   }
 }
 

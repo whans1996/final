@@ -1,6 +1,6 @@
 <script setup>
 // SC-09 개념 카드 목록·검색 (F-09 AC9~AC11). 공개 화면. 조건의 정본은 라우트 쿼리이고 쿼리가 바뀔 때마다 다시 조회한다.
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { fetchConcepts } from '@/api/concepts'
 import { errorMessage } from '@/api/http'
@@ -9,6 +9,7 @@ import ConceptFilterBar from '@/components/concept/ConceptFilterBar.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import PageNav from '@/components/common/PageNav.vue'
 import { overflowLastPage } from '@/utils/pagination'
+import { useLatestRequest } from '@/composables/useLatestRequest'
 
 const PAGE_SIZE = 20
 const DEFAULT_SORT = 'POPULAR'
@@ -52,21 +53,21 @@ function toQuery({ keyword, category, difficulty, sort, page }) {
   return query
 }
 
-// 조건을 빠르게 바꿀 때 늦게 도착한 이전 요청의 응답은 버린다
-let lastRequest = 0
-// 화면이 사라지면 남은 요청을 무효로 한다. 늦은 응답이 범위 보정 replace로 다음 화면을 바꾸지 않게 (Codex 리뷰)
-onBeforeUnmount(() => {
-  lastRequest++
-})
+// 조건을 빠르게 바꾸면 이전 요청을 취소하고 늦게 온 응답은 버린다. 화면이 사라지면 남은 요청을 무효로 해
+// 늦은 응답이 범위 보정 replace로 다음 화면을 바꾸지 않게 한다 (Codex 리뷰, V-4)
+const latest = useLatestRequest()
 
 async function load() {
-  const request = ++lastRequest
+  const request = latest.begin()
   let redirecting = false
   loading.value = true
   loadError.value = ''
   try {
-    const result = await fetchConcepts({ ...conditions.value, size: PAGE_SIZE })
-    if (request !== lastRequest) return
+    const result = await fetchConcepts(
+      { ...conditions.value, size: PAGE_SIZE },
+      { signal: request.signal },
+    )
+    if (!request.isCurrent()) return
     // 범위를 넘은 page면 마지막 page로 주소를 바꾼다. 쿼리 watch가 다시 조회하는 동안 로딩을 유지한다 (#46)
     const lastPage = overflowLastPage({
       page: conditions.value.page,
@@ -83,10 +84,10 @@ async function load() {
     items.value = result.items
     total.value = result.total
   } catch (error) {
-    if (request !== lastRequest) return
+    if (!request.isCurrent()) return
     loadError.value = errorMessage(error)
   } finally {
-    if (request === lastRequest && !redirecting) loading.value = false
+    if (request.isCurrent() && !redirecting) loading.value = false
   }
 }
 

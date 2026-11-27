@@ -1,6 +1,7 @@
 // "더 보기" 목록 (F-04 팔로우 목록·피드). 페이지 번호로 다음 쪽을 불러 아래에 붙이고, 이미 보인 id는 거른다.
 // offset 페이지라 그사이 새 항목이 생기면 다음 쪽이 앞 쪽과 겹치기 때문이다 (F-12 UserWishes와 같은 방식).
 import { computed, ref } from 'vue'
+import { useLatestRequest } from '@/composables/useLatestRequest'
 
 /**
  * @param {(page: number) => Promise<{ items: { id: number }[], total: number }>} fetchPage
@@ -18,16 +19,16 @@ export function useMoreList(fetchPage, pageSize) {
     () => !ended.value && total.value !== null && items.value.length < total.value,
   )
 
-  // 다시 불러오면(탭·id 변경) 늦게 도착한 이전 요청의 응답은 버린다
-  let lastRequest = 0
+  // 다시 불러오면(탭·id 변경) 늦게 도착한 이전 요청의 응답은 버린다. 쓰는 컴포넌트가 사라진 뒤 온 응답도 버린다 (V-4)
+  const latest = useLatestRequest()
 
   async function load(nextPage) {
-    const request = ++lastRequest
+    const request = latest.begin()
     loading.value = true
     error.value = null
     try {
       const result = await fetchPage(nextPage)
-      if (request !== lastRequest) return
+      if (!request.isCurrent()) return
       if (nextPage === 1) {
         items.value = result.items
       } else {
@@ -38,9 +39,9 @@ export function useMoreList(fetchPage, pageSize) {
       total.value = result.total
       page.value = nextPage
     } catch (e) {
-      if (request === lastRequest) error.value = e
+      if (request.isCurrent()) error.value = e
     } finally {
-      if (request === lastRequest) loading.value = false
+      if (request.isCurrent()) loading.value = false
     }
   }
 

@@ -10,6 +10,7 @@ import { errorCode, errorDetails, errorMessage } from '@/api/http'
 import { useAuthStore } from '@/stores/auth'
 import AttachmentPicker from '@/components/community/AttachmentPicker.vue'
 import { BOARD_TYPES, DEFAULT_BOARD_TYPE, analysisLabel } from '@/components/community/boardTypes'
+import { useLatestRequest } from '@/composables/useLatestRequest'
 
 const TITLE_MAX = 100
 const CONTENT_MAX = 5000
@@ -63,10 +64,17 @@ const attachmentFromPost = (post) => {
   return null
 }
 
+// 응답 전에 화면을 떠나면 늦게 온 글·첨부 응답은 버린다. 남의 글 돌려보내기 replace가 떠난 화면을 바꾸지 않게 (V-4)
+// loadPost(수정)와 prefillAttachment(새 글)는 onMounted의 isEdit 분기로 한쪽만 불리므로 인스턴스 하나를 같이 쓴다.
+// 둘을 함께 부르게 바꾸면 뒤에 begin한 쪽이 앞의 요청을 무효로 만드니 인스턴스를 나눈다
+const latest = useLatestRequest()
+
 async function loadPost() {
+  const request = latest.begin()
   try {
     // 수정 화면에서 불러오는 것은 조회가 아니므로 조회수를 올리지 않는다 (#209)
     const post = await fetchPost(postId, { countView: false })
+    if (!request.isCurrent()) return
     if (post.authorId === null || post.authorId !== auth.user?.id) {
       notice.value = NOT_MINE
       await router.replace({ path: `/community/${postId}`, state: { notice: NOT_MINE } })
@@ -77,6 +85,7 @@ async function loadPost() {
     form.content = post.content
     attachment.value = attachmentFromPost(post)
   } catch (error) {
+    if (!request.isCurrent()) return
     loadError.value = errorMessage(error)
   }
 }
@@ -95,18 +104,22 @@ async function prefillAttachment() {
     }
     return
   }
+  const request = latest.begin()
   try {
     if (conceptId !== null) {
       const concept = await fetchConcept(conceptId)
+      if (!request.isCurrent()) return
       attachment.value = { type: 'CONCEPT', id: concept.id, label: concept.name }
     } else {
       const analysis = await fetchAnalysis(analysisId)
+      if (!request.isCurrent()) return
       // BE는 내 공개 DONE 분석만 첨부를 받는다 (POST_001). 채워 두면 제출 때야 거절된다 (#206·#207)
       const attachable = analysis.status === 'DONE' && analysis.mine === true && analysis.isPublic
       if (!attachable) throw new Error('not attachable')
       attachment.value = { type: 'ANALYSIS', id: analysis.id, label: analysisLabel(analysis) }
     }
   } catch {
+    if (!request.isCurrent()) return
     attachment.value = null
     notice.value = PREFILL_FAILED
   }

@@ -7,6 +7,7 @@ import { unwishConcept, wishConcept } from '@/api/concepts'
 import { errorMessage } from '@/api/http'
 import { useAuthStore } from '@/stores/auth'
 import { planDateLabel } from '@/utils/quizFormat'
+import { useLatestRequest } from '@/composables/useLatestRequest'
 
 const props = defineProps({
   conceptId: { type: Number, required: true },
@@ -24,13 +25,18 @@ const pending = ref(false)
 const planDate = ref('')
 const error = ref('')
 
-// 관련 카드로 :id가 바뀌거나 부모가 값을 맞추면 새 값으로 (AC12)
+// 누른 카드에서 :id가 바뀌거나 사라지면 그 응답은 새 카드에 반영하지 않는다 (V-4 AC9)
+const latest = useLatestRequest()
+
+// 관련 카드로 :id가 바뀌거나 부모가 값을 맞추면 새 값으로 (AC12). 카드가 바뀌면 이전 카드의 찜 요청은 버리고 잠금을 푼다
 watch(
   () => [props.conceptId, props.wished, props.wishCount],
   ([id, wished, wishCount], [prevId] = []) => {
     on.value = wished
     count.value = wishCount
     if (id !== prevId) {
+      latest.invalidate()
+      pending.value = false
       planDate.value = ''
       error.value = ''
     }
@@ -46,21 +52,24 @@ async function toggle() {
   const next = !before.wished
   on.value = next
   count.value = Math.max(0, before.wishCount + (next ? 1 : -1))
+  const request = latest.begin()
   pending.value = true
   error.value = ''
   planDate.value = ''
   try {
     const result = next ? await wishConcept(props.conceptId) : await unwishConcept(props.conceptId)
+    if (!request.isCurrent()) return
     on.value = result.wished
     count.value = result.wishCount
     planDate.value = result.reviewPlanDate ?? ''
     emit('change', { wished: result.wished, wishCount: result.wishCount })
   } catch (e) {
+    if (!request.isCurrent()) return
     on.value = before.wished
     count.value = before.wishCount
     error.value = errorMessage(e)
   } finally {
-    pending.value = false
+    if (request.isCurrent()) pending.value = false
   }
 }
 </script>

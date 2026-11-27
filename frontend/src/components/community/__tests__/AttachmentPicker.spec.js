@@ -3,7 +3,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 import AttachmentPicker from '@/components/community/AttachmentPicker.vue'
 import * as analysesApi from '@/api/analyses'
 import * as conceptsApi from '@/api/concepts'
-import { apiError } from '@/views/__tests__/viewTestUtils'
+import { apiError, untilAborted } from '@/views/__tests__/viewTestUtils'
 
 vi.mock('@/api/analyses')
 vi.mock('@/api/concepts')
@@ -132,7 +132,10 @@ describe('AttachmentPicker (F-17 AC17)', () => {
     await wrapper.find('[data-action="search-concepts"]').trigger('click')
     await flushPromises()
 
-    expect(conceptsApi.fetchConcepts).toHaveBeenCalledWith({ keyword: 'jwt', size: 10 })
+    expect(conceptsApi.fetchConcepts).toHaveBeenCalledWith(
+      { keyword: 'jwt', size: 10 },
+      { signal: expect.any(AbortSignal) },
+    )
     const options = wrapper.findAll('[data-concept-option]')
     expect(options).toHaveLength(2)
     await options[1].trigger('click')
@@ -233,5 +236,26 @@ describe('AttachmentPicker (F-17 AC17)', () => {
     await chooseMode(wrapper, 'none')
 
     expect(emitted(wrapper)).toBeNull()
+  })
+
+  it('AC4 응답 전에 다시 찾으면 이전 검색은 취소되고 에러 없이 마지막 검색 결과만 보인다 (V-4)', async () => {
+    conceptsApi.fetchConcepts
+      .mockImplementationOnce(untilAborted)
+      .mockResolvedValue({ items: [concept({ id: 20, name: 'Spring Bean' })], total: 1 })
+    const wrapper = mountPicker()
+    await chooseMode(wrapper, 'concept')
+    const input = wrapper.find('input[name="conceptKeyword"]')
+
+    await input.setValue('jwt')
+    await input.trigger('keydown', { key: 'Enter' })
+    await input.setValue('spring')
+    await input.trigger('keydown', { key: 'Enter' })
+    await flushPromises()
+
+    expect(conceptsApi.fetchConcepts.mock.calls[0][1].signal.aborted).toBe(true)
+    expect(wrapper.find('.error').exists()).toBe(false)
+    const names = wrapper.findAll('[data-concept-option]').map((o) => o.text())
+    expect(names).toHaveLength(1)
+    expect(names[0]).toContain('Spring Bean')
   })
 })

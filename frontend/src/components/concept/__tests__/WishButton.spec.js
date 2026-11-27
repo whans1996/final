@@ -172,3 +172,45 @@ describe('WishButton (F-12 AC12~AC14)', () => {
     expect(wrapper.find('[data-message="wish-error"]').text()).toBe('서버 오류입니다.')
   })
 })
+
+describe('WishButton 카드가 바뀐 뒤 온 응답 (V-4 AC9)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  async function startOnAThenMoveToB() {
+    const call = deferred()
+    conceptsApi.wishConcept.mockReturnValueOnce(call.promise)
+    const { wrapper } = await mountButton({ wished: false, wishCount: 12 })
+    await button(wrapper).trigger('click')
+    expect(button(wrapper).element.disabled).toBe(true)
+    await wrapper.setProps({ conceptId: 58, wished: true, wishCount: 30 })
+    return { wrapper, call }
+  }
+
+  it('AC9 A의 성공 응답은 B의 찜 상태·수·복습 예정일을 바꾸지 않고 change를 올리지 않으며 잠금은 풀린다', async () => {
+    const { wrapper, call } = await startOnAThenMoveToB()
+
+    call.resolve({ wished: true, wishCount: 13, reviewPlanDate: '2026-12-01' })
+    await flushPromises()
+
+    expect(button(wrapper).text()).toBe('♥ 30')
+    expect(button(wrapper).attributes('aria-pressed')).toBe('true')
+    expect(wrapper.find('[data-message="wish-review-plan"]').exists()).toBe(false)
+    expect(wrapper.emitted('change')).toBeUndefined()
+    expect(button(wrapper).element.disabled).toBe(false)
+  })
+
+  it('AC9 A의 실패 응답은 B를 되돌리거나 에러를 보이지 않고 잠금은 풀린다', async () => {
+    const { wrapper, call } = await startOnAThenMoveToB()
+    expect(button(wrapper).element.disabled).toBe(false)
+
+    call.reject(apiError(500, { code: 'COMMON_500', message: '찜하지 못했습니다' }))
+    await flushPromises()
+
+    expect(button(wrapper).text()).toBe('♥ 30')
+    expect(wrapper.find('[data-message="wish-error"]').exists()).toBe(false)
+    expect(wrapper.emitted('change')).toBeUndefined()
+    expect(button(wrapper).element.disabled).toBe(false)
+  })
+})

@@ -5,7 +5,7 @@ import { createMemoryHistory, createRouter } from 'vue-router'
 import UserWishes from '@/components/concept/UserWishes.vue'
 import * as conceptsApi from '@/api/concepts'
 import { routes } from '@/router'
-import { apiError } from '@/views/__tests__/viewTestUtils'
+import { apiError, deferred } from '@/views/__tests__/viewTestUtils'
 
 vi.mock('@/api/concepts')
 
@@ -152,5 +152,33 @@ describe('UserWishes (F-12 AC15)', () => {
     expect(conceptsApi.fetchUserWishes).toHaveBeenLastCalledWith(4, { page: 1, size: 12 })
     expect(wrapper.find('h2').text()).toBe('찜한 카드 1')
     expect(wrapper.findAll('[data-concept-id]')).toHaveLength(1)
+  })
+})
+
+describe('UserWishes 늦은 응답 (V-4 AC6·AC7)', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+  })
+
+  it('AC6·AC7 이전 회원의 늦은 실패와 사라진 뒤 온 응답은 상태를 바꾸지 않는다', async () => {
+    const first = deferred()
+    const second = deferred()
+    conceptsApi.fetchUserWishes
+      .mockReturnValueOnce(first.promise)
+      .mockReturnValueOnce(second.promise)
+    const { wrapper } = await mountWishes({ userId: 3, isMe: false })
+
+    await wrapper.setProps({ userId: 4 })
+    first.reject(apiError(500, { code: 'COMMON_500', message: '옛 찜 실패' }))
+    await flushPromises()
+    const vm = wrapper.vm
+    expect(vm.error).toBe('')
+    expect(vm.loading).toBe(true)
+
+    wrapper.unmount()
+    second.resolve({ items: cards(1, 2), page: 1, size: 12, total: 2 })
+    await flushPromises()
+    expect(vm.items).toEqual([])
+    expect(vm.loading).toBe(true)
   })
 })

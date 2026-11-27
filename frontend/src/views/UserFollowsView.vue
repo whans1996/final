@@ -8,6 +8,7 @@ import { errorCode, errorMessage } from '@/api/http'
 import { useMoreList } from '@/composables/useMoreList'
 import EmptyState from '@/components/common/EmptyState.vue'
 import FollowUserItem from '@/components/follow/FollowUserItem.vue'
+import { useLatestRequest } from '@/composables/useLatestRequest'
 
 const TABS = [
   {
@@ -51,20 +52,21 @@ const errorText = computed(() => {
   return error ? errorMessage(error) : ''
 })
 
-let lastHead = 0
+// 머리(닉네임·팔로우 수)는 목록과 따로 최신 요청만 반영한다. 화면을 떠나도 버린다 (V-4)
+const head = useLatestRequest()
 
 async function loadHead(id) {
-  const request = ++lastHead
+  const request = head.begin()
   nickname.value = ''
   status.value = null
   headError.value = null
   try {
     const [user, followStatus] = await Promise.all([fetchUser(id), fetchFollowStatus(id)])
-    if (request !== lastHead) return
+    if (!request.isCurrent()) return
     nickname.value = user.nickname
     status.value = followStatus
   } catch (e) {
-    if (request === lastHead) headError.value = e
+    if (request.isCurrent()) headError.value = e
   }
 }
 

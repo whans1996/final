@@ -9,6 +9,7 @@ import { useAuthStore } from '@/stores/auth'
 import PostAttachment from '@/components/community/PostAttachment.vue'
 import PostComments from '@/components/community/PostComments.vue'
 import { authorName, boardChip, formatDateTime } from '@/components/community/boardTypes'
+import { useLatestRequest } from '@/composables/useLatestRequest'
 
 const route = useRoute()
 const router = useRouter()
@@ -27,7 +28,8 @@ const liveCommentCount = ref(null)
 
 const isMine = computed(() => post.value?.authorId != null && post.value.authorId === auth.user?.id)
 
-let lastRequest = 0
+// :id를 바꾸거나 화면을 떠나면 늦게 도착한 이전 요청의 응답은 버린다 (V-4)
+const latest = useLatestRequest()
 
 // edit 화면이 history state로 넘긴 안내를 꺼내고 그 항목에서 지운다 (#171).
 // 브라우저는 새로고침·뒤로 가기에도 history.state를 유지하므로 지우지 않으면 그때마다 다시 뜬다.
@@ -40,7 +42,7 @@ function takeNotice() {
 }
 
 async function load(id) {
-  const request = ++lastRequest
+  const request = latest.begin()
   loading.value = true
   notFound.value = false
   loadError.value = ''
@@ -49,15 +51,15 @@ async function load(id) {
   notice.value = takeNotice()
   try {
     const result = await fetchPost(id)
-    if (request !== lastRequest) return
+    if (!request.isCurrent()) return
     post.value = result
   } catch (error) {
-    if (request !== lastRequest) return
+    if (!request.isCurrent()) return
     post.value = null
     if (errorCode(error) === 'POST_404') notFound.value = true
     else loadError.value = errorMessage(error)
   } finally {
-    if (request === lastRequest) loading.value = false
+    if (request.isCurrent()) loading.value = false
   }
 }
 

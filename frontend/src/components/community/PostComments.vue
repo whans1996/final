@@ -8,6 +8,7 @@ import { errorCode, errorDetails, errorMessage } from '@/api/http'
 import { useAuthStore } from '@/stores/auth'
 import CommentForm from '@/components/community/CommentForm.vue'
 import CommentItem from '@/components/community/CommentItem.vue'
+import { useLatestRequest } from '@/composables/useLatestRequest'
 
 const props = defineProps({
   postId: { type: Number, required: true },
@@ -38,23 +39,23 @@ const loginLink = computed(() => ({
 
 const isMine = (comment) => comment.authorId !== null && comment.authorId === auth.user?.id
 
-// 다시 불러오기가 겹치면 마지막 요청의 응답만 쓴다
-let lastRequest = 0
+// 다시 불러오기가 겹치면 마지막 요청의 응답만 쓰고, 컴포넌트가 사라지면 버린다 (V-4)
+const latest = useLatestRequest()
 
 async function load() {
-  const request = ++lastRequest
+  const request = latest.begin()
   try {
     const result = await fetchComments(props.postId)
-    if (request !== lastRequest) return
+    if (!request.isCurrent()) return
     items.value = result.items
     total.value = result.total
     loadError.value = ''
     emit('count', result.total)
   } catch (error) {
-    if (request !== lastRequest) return
+    if (!request.isCurrent()) return
     loadError.value = errorMessage(error)
   } finally {
-    if (request === lastRequest) loading.value = false
+    if (request.isCurrent()) loading.value = false
   }
 }
 
