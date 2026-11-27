@@ -13,6 +13,7 @@ import static org.mockito.Mockito.inOrder;
 import com.vibenote.analysis.domain.AnalysisFile;
 import com.vibenote.analysis.fetch.FakeRepositoryServer;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Clock;
@@ -571,6 +572,128 @@ class AnalysisPipelineTest extends AnalysisTestSupport {
         Map<String, Object> row = analysisRow(id);
         assertThat(row.get("status")).isEqualTo("DONE");
         assertThat(row.get("error_code")).isNull();
+        assertThat(tempZip(id)).doesNotExist();
+    }
+
+    // ═════════════ P-1a FETCHING에서 버전 정하기 (docs/specs/P-1a-project-versions.md AC2·AC3)
+    // ═════════════
+
+    private static final String SHA_A = "aaaa4e1a7b3d5f60812c9e4a1b2c3d4e5f607182";
+    private static final String SHA_B = "bbbb4e1a7b3d5f60812c9e4a1b2c3d4e5f607182";
+
+    /** GitHub 커밋 목록 첫 항목이 {@code sha}가 되게 하고, 그 커밋 zipball을 준다. */
+    private static void githubAt(String repo, String sha, String message) {
+        REPOSITORY
+                .on(
+                        "/repos/octo/" + repo + "/commits",
+                        FakeRepositoryServer.body(
+                                200,
+                                ("[{\"sha\":\"%s\",\"commit\":{\"message\":\"%s\","
+                                     + "\"committer\":{\"date\":\"2026-11-28T05:02:11Z\"}}}]")
+                                        .formatted(sha, message)
+                                        .getBytes(StandardCharsets.UTF_8)))
+                .on(
+                        "/repos/octo/" + repo + "/zipball/" + sha,
+                        FakeRepositoryServer.zip(githubArchive(springProject())));
+    }
+
+    private List<Map<String, Object>> versions(long userId) {
+        return jdbc.queryForList(
+                "SELECT v.* FROM project_versions v JOIN projects p ON p.id = v.project_id"
+                        + " WHERE p.user_id = ? ORDER BY v.number",
+                userId);
+    }
+
+    @Test
+    void P1a_AC2_같은_커밋을_두_수준으로_분석하면_같은_버전에_붙고_커밋_정보를_저장한다() {
+        long userId = createUser("p2same", "JUNIOR");
+        githubAt("p2-same", SHA_A, "feat: JWT 로그인");
+        long beginner = insertUrlAnalysis(userId, "https://github.com/octo/p2-same");
+        long senior = insertUrlAnalysis(userId, "https://github.com/octo/p2-same");
+        jdbc.update("UPDATE analyses SET level = 'SENIOR' WHERE id = ?", senior);
+
+        pipeline.run(beginner);
+        pipeline.run(senior);
+
+        assertThat(analysisRow(beginner).get("status")).isEqualTo("DONE");
+        assertThat(analysisRow(senior).get("status")).isEqualTo("DONE");
+        List<Map<String, Object>> versions = versions(userId);
+        assertThat(versions).hasSize(1);
+        Map<String, Object> v1 = versions.get(0);
+        assertThat(v1.get("number")).isEqualTo(1);
+        assertThat(v1.get("commit_sha")).isEqualTo(SHA_A);
+        assertThat(v1.get("commit_message")).isEqualTo("feat: JWT 로그인");
+        assertThat(v1.get("committed_at")).isEqualTo(LocalDateTime.of(2026, 11, 28, 14, 2, 11));
+        assertThat(analysisRow(beginner).get("project_version_id")).isEqualTo(v1.get("id"));
+        assertThat(analysisRow(senior).get("project_version_id")).isEqualTo(v1.get("id"));
+        assertThat(REPOSITORY.requests())
+                .extracting(FakeRepositoryServer.Recorded::rawPath)
+                .contains("/repos/octo/p2-same/zipball/" + SHA_A)
+                .doesNotContain("/repos/octo/p2-same/zipball");
+    }
+
+    @Test
+    void P1a_AC2_새_커밋이면_최대_번호_더하기_1인_새_버전에_붙는다() {
+        long userId = createUser("p2next", "JUNIOR");
+        githubAt("p2-next", SHA_A, "feat: 첫 커밋");
+        long first = insertUrlAnalysis(userId, "https://github.com/octo/p2-next");
+        pipeline.run(first);
+
+        githubAt("p2-next", SHA_B, "feat: 둘째 커밋");
+        long second = insertUrlAnalysis(userId, "https://github.com/octo/p2-next");
+        pipeline.run(second);
+
+        List<Map<String, Object>> versions = versions(userId);
+        assertThat(versions)
+                .extracting(v -> v.get("number"), v -> v.get("commit_sha"))
+                .containsExactly(tuple(1, SHA_A), tuple(2, SHA_B));
+        assertThat(analysisRow(second).get("project_version_id"))
+                .isEqualTo(versions.get(1).get("id"));
+    }
+
+    @Test
+    void P1a_AC3_커밋_조회가_실패하면_기본_브랜치를_받고_커밋_정보_없는_새_버전에_붙는다() {
+        long userId = createUser("p3nocommit", "JUNIOR");
+        REPOSITORY
+                .on("/repos/octo/p3-nocommit/commits", FakeRepositoryServer.status(503))
+                .on(
+                        "/repos/octo/p3-nocommit/zipball",
+                        FakeRepositoryServer.zip(githubArchive(springProject())));
+        long first = insertUrlAnalysis(userId, "https://github.com/octo/p3-nocommit");
+        long second = insertUrlAnalysis(userId, "https://github.com/octo/p3-nocommit");
+
+        pipeline.run(first);
+        pipeline.run(second);
+
+        assertThat(analysisRow(first).get("status")).isEqualTo("DONE");
+        assertThat(analysisRow(first).get("error_code")).isNull();
+        List<Map<String, Object>> versions = versions(userId);
+        assertThat(versions)
+                .extracting(
+                        v -> v.get("number"),
+                        v -> v.get("commit_sha"),
+                        v -> v.get("commit_message"))
+                .containsExactly(tuple(1, null, null), tuple(2, null, null));
+        assertThat(analysisRow(first).get("project_version_id"))
+                .isEqualTo(versions.get(0).get("id"));
+        assertThat(analysisRow(second).get("project_version_id"))
+                .isEqualTo(versions.get(1).get("id"));
+    }
+
+    @Test
+    void P1a_AC3_아카이브_받기가_실패하면_지금과_같은_코드로_FAILED이고_버전을_만들지_않는다() {
+        long userId = createUser("p3fail", "JUNIOR");
+        githubAt("p3-fail", SHA_A, "feat: 받기 실패");
+        REPOSITORY.on("/repos/octo/p3-fail/zipball/" + SHA_A, FakeRepositoryServer.status(404));
+        long id = insertUrlAnalysis(userId, "https://github.com/octo/p3-fail");
+
+        pipeline.run(id);
+
+        Map<String, Object> row = analysisRow(id);
+        assertThat(row.get("status")).isEqualTo("FAILED");
+        assertThat(row.get("error_code")).isEqualTo("ANALYSIS_004");
+        assertThat(row.get("project_version_id")).isNull();
+        assertThat(versions(userId)).isEmpty();
         assertThat(tempZip(id)).doesNotExist();
     }
 }
