@@ -54,6 +54,12 @@ describe('ConceptListView (F-09 AC9~AC11)', () => {
       ['security', 'Security'],
       ['mybatis', 'MyBatis'],
       ['vue', 'Vue'],
+      ['database', 'Database'],
+      ['javascript', 'JavaScript'],
+      ['tooling', 'Tooling'],
+      ['typescript', 'TypeScript'],
+      ['react', 'React'],
+      ['cs', 'CS'],
     ])
     expect(options(wrapper, 'difficulty')).toEqual([
       ['', '전체'],
@@ -71,7 +77,7 @@ describe('ConceptListView (F-09 AC9~AC11)', () => {
     expect(cards).toHaveLength(2)
     expect(cards[0].attributes('href')).toBe('/concepts/57')
     expect(cards[0].text()).toContain('JWT 기반 인증')
-    expect(cards[0].text()).toContain('security')
+    expect(cards[0].text()).toContain('Security') // K-1 AC12: 원문 대신 라벨
     expect(cards[0].text()).toContain('숙련')
     expect(cards[0].text()).toContain('4.5')
     expect(cards[0].text()).toContain('12')

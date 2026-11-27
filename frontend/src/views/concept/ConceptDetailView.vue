@@ -13,6 +13,7 @@ import WishButton from '@/components/concept/WishButton.vue'
 import ReviewPlanAddButton from '@/components/reviewplan/ReviewPlanAddButton.vue'
 import { useAuthStore } from '@/stores/auth'
 import { LEVELS } from '@/utils/authValidation'
+import { categoryLabel } from '@/utils/conceptCategories'
 import { useLatestRequest } from '@/composables/useLatestRequest'
 
 const route = useRoute()
@@ -130,7 +131,7 @@ function backToList() {
           </span>
         </div>
         <span class="tags">
-          <span class="tag">{{ concept.category }}</span>
+          <span class="tag">{{ categoryLabel(concept.category) }}</span>
           <span class="tag">{{ difficultyLabel }}</span>
         </span>
         <p class="summary">{{ concept.summary }}</p>

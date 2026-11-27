@@ -37,11 +37,25 @@ describe('AdminConceptForm (F-13 AC14·AC15)', () => {
     })
   })
 
-  it('AC14 카테고리·난이도 선택지는 6종·3종이고 선택 전에는 빈 값이다', () => {
+  it('AC14 K-1 AC12 카테고리·난이도 선택지는 12종·3종이고 선택 전에는 빈 값이다', () => {
     const wrapper = mountForm({ modelValue: { ...VALUES, category: '', difficulty: '' } })
 
     const values = (name) => wrapper.findAll(`[name="${name}"] option`).map((o) => o.element.value)
-    expect(values('category')).toEqual(['', 'java', 'spring', 'web', 'security', 'mybatis', 'vue'])
+    expect(values('category')).toEqual([
+      '',
+      'java',
+      'spring',
+      'web',
+      'security',
+      'mybatis',
+      'vue',
+      'database',
+      'javascript',
+      'tooling',
+      'typescript',
+      'react',
+      'cs',
+    ])
     expect(values('difficulty')).toEqual(['', 'BEGINNER', 'JUNIOR', 'SENIOR'])
   })
 

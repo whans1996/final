@@ -6,6 +6,7 @@ import { fetchAnalyses } from '@/api/analyses'
 import { fetchConcepts } from '@/api/concepts'
 import { errorMessage } from '@/api/http'
 import { useLatestRequest } from '@/composables/useLatestRequest'
+import { categoryLabel } from '@/utils/conceptCategories'
 import { ATTACHMENT_ICONS, analysisLabel } from './boardTypes'
 
 const props = defineProps({
@@ -179,7 +180,7 @@ function clear() {
       <ul v-else-if="concepts" class="results">
         <li v-for="concept in concepts" :key="concept.id">
           <button type="button" :data-concept-option="concept.id" @click="chooseConcept(concept)">
-            {{ concept.name }} <span class="hint">{{ concept.category }}</span>
+            {{ concept.name }} <span class="hint">{{ categoryLabel(concept.category) }}</span>
           </button>
         </li>
       </ul>
