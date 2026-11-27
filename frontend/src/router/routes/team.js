@@ -20,6 +20,6 @@ export default [
     path: '/teams/:id(\\d+)/analyses/:analysisId(\\d+)',
     name: 'team-understanding',
     component: () => import('@/views/team/TeamUnderstandingView.vue'),
-    meta: { requiresAuth: true },
+    meta: { requiresAuth: true, wide: true },
   },
 ]

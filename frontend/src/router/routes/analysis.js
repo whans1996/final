@@ -22,7 +22,7 @@ export default [
     path: '/analyses/:id(\\d+)',
     name: 'analysis-detail',
     component: () => import('@/views/AnalysisDetailView.vue'),
-    meta: { requiresAuth: true },
+    meta: { requiresAuth: true, wide: true },
   },
   {
     // SC-08 퀴즈 풀이 (F-14)

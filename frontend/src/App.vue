@@ -1,89 +1,25 @@
 <script setup>
+// 셸 선택 (F-29b AC7): meta.layout === 'bare'면 셸 없이, 로그인했으면 AppShell, 아니면 GuestShell.
+// 회원이 개념 카드·커뮤니티 같은 공개 화면을 봐도 AppShell이다. 본문 폭은 meta.wide면 1440px, 아니면 1080px.
+// 메뉴는 각 route의 meta.nav로 정한다 (F-00b·F-29b). 여기에 링크를 직접 추가하지 않는다.
 import { computed } from 'vue'
-import { RouterLink, RouterView, useRouter } from 'vue-router'
+import { RouterView, useRoute } from 'vue-router'
+import AppShell from '@/layouts/AppShell.vue'
+import GuestShell from '@/layouts/GuestShell.vue'
 import { useAuthStore } from '@/stores/auth'
-import { navItems } from '@/utils/navItems'
 
 const auth = useAuthStore()
-const router = useRouter()
+const route = useRoute()
 
-// 메뉴는 각 route의 meta.nav로 정한다 (F-00b). 닉네임·로그아웃만 여기서 고정으로 붙인다
-const menu = computed(() => navItems(router.options.routes, auth))
-
-async function onLogout() {
-  await auth.logout()
-  await router.push({ name: 'home' })
-}
+const shell = computed(() => {
+  if (route.meta.layout === 'bare') return null
+  return auth.isLoggedIn ? AppShell : GuestShell
+})
 </script>
 
 <template>
-  <header class="app-header">
-    <RouterLink to="/" class="brand">바이브노트</RouterLink>
-    <nav class="account">
-      <RouterLink v-for="item in menu" :key="item.to" :to="item.to">{{ item.label }}</RouterLink>
-      <template v-if="auth.isLoggedIn">
-        <RouterLink
-          v-if="auth.user"
-          :to="{ name: 'user-profile', params: { id: auth.user.id } }"
-          class="nickname"
-        >
-          {{ auth.user.nickname }}
-        </RouterLink>
-        <button type="button" class="link-button" @click="onLogout">로그아웃</button>
-      </template>
-    </nav>
-  </header>
-  <main class="app-main">
+  <component :is="shell" v-if="shell" :wide="Boolean(route.meta.wide)">
     <RouterView />
-  </main>
+  </component>
+  <RouterView v-else />
 </template>
-
-<style scoped>
-.app-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-4);
-  min-height: 56px;
-  padding: var(--space-2) var(--space-4);
-  border-bottom: 1px solid var(--color-border);
-  background: var(--color-surface);
-}
-
-.brand {
-  flex-shrink: 0;
-  white-space: nowrap;
-  font-weight: 700;
-  color: var(--color-primary);
-  text-decoration: none;
-}
-
-.account {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-end;
-  column-gap: var(--space-4);
-  row-gap: var(--space-1);
-}
-
-.nickname {
-  font-weight: 600;
-}
-
-.link-button {
-  padding: 0;
-  border: none;
-  background: none;
-  color: var(--color-primary);
-  font: inherit;
-  cursor: pointer;
-  text-decoration: underline;
-}
-
-.app-main {
-  max-width: 1080px;
-  margin: 0 auto;
-  padding: 0 var(--space-4);
-}
-</style>

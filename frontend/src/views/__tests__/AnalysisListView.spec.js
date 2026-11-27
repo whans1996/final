@@ -145,11 +145,13 @@ describe('AnalysisListView (F-05a AC16)', () => {
     expect(wrapper.find('button[data-action="next"]').exists()).toBe(false)
   })
 
-  it('AC16 로그인 헤더에 분석 요청·내 분석 링크가 있다', async () => {
+  it('AC16 로그인 메뉴(옆 메뉴, F-29b)에 분석 요청·내 분석 링크가 있다', async () => {
     const { wrapper } = await mountAt(App, '/', { beforeNavigate: login })
     await flushPromises()
 
-    const links = wrapper.findAll('header a').map((a) => [a.text(), a.attributes('href')])
+    const links = wrapper
+      .findAll('aside nav a')
+      .map((a) => [a.attributes('aria-label'), a.attributes('href')])
     expect(links).toContainEqual(['분석 요청', '/analyses/new'])
     expect(links).toContainEqual(['내 분석', '/analyses'])
   })

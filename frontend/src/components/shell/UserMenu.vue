@@ -1,7 +1,7 @@
 <script setup>
 // 닉네임 메뉴 (F-29b AC11). Reka UI DropdownMenu가 키보드 이동·Esc·바깥 클릭·포커스 되돌리기를 맡는다.
 // auth.user가 아직 없으면(세션 복원 중) 닉네임 자리만 둔다 (5.2 상태별 UI).
-import { useRouter } from 'vue-router'
+import { RouterLink } from 'vue-router'
 import { ChevronDown, LogOut, Settings, Shield, User } from 'lucide-vue-next'
 import {
   DropdownMenuContent,
@@ -12,14 +12,10 @@ import {
   DropdownMenuTrigger,
 } from 'reka-ui'
 import { useAuthStore } from '@/stores/auth'
+import { useLogout } from './useLogout'
 
 const auth = useAuthStore()
-const router = useRouter()
-
-async function onLogout() {
-  await auth.logout()
-  await router.push({ name: 'home' })
-}
+const onLogout = useLogout()
 
 const item =
   'flex cursor-pointer items-center gap-2 rounded-sm px-3 py-2 text-sm text-text no-underline outline-none data-highlighted:bg-primary-soft'

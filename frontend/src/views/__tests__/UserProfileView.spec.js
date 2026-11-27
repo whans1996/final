@@ -171,14 +171,19 @@ describe('UserProfileView (F-03 AC9)', () => {
     expect(usersApi.fetchUserStats).toHaveBeenCalledTimes(1)
   })
 
-  it('AC9 로그인하면 헤더 닉네임이 내 프로필 링크가 된다', async () => {
+  it('AC9 로그인하면 헤더 닉네임 메뉴(F-29b)에 내 프로필 링크가 생긴다', async () => {
     const { wrapper } = await mountAt(App, '/')
     login(3)
     await flushPromises()
 
-    const link = wrapper.find('header a.nickname')
-    expect(link.attributes('href')).toBe('/users/3')
-    expect(link.text()).toBe('코딩초보')
+    const trigger = wrapper.find('header button[aria-label="내 메뉴"]')
+    expect(trigger.text()).toBe('코딩초보')
+    await trigger.trigger('keydown', { key: 'Enter' })
+    await flushPromises()
+
+    const link = document.querySelector('[role="menuitem"][href="/users/3"]')
+    expect(link?.textContent.trim()).toBe('프로필')
+    wrapper.unmount()
   })
 })
 
