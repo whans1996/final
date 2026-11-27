@@ -1917,6 +1917,58 @@
         "required" : [ "attemptId", "createdAt", "score", "total" ],
         "type" : "object"
       },
+      "LatestCommit" : {
+        "description" : "기본 브랜치 최신 커밋",
+        "properties" : {
+          "committedAt" : {
+            "description" : "커밋 시각",
+            "example" : "2026-11-29T09:12:40+09:00",
+            "format" : "date-time",
+            "type" : [ "string", "null" ]
+          },
+          "message" : {
+            "description" : "커밋 메시지 첫 줄 (200자까지)",
+            "example" : "feat: 비밀번호 재설정",
+            "type" : [ "string", "null" ]
+          },
+          "sha" : {
+            "description" : "커밋 SHA (40자)",
+            "example" : "a1b2c3d4e5f60718293a4b5c6d7e8f9012345678",
+            "type" : "string"
+          }
+        },
+        "required" : [ "sha" ],
+        "type" : "object"
+      },
+      "LatestCommitResponse" : {
+        "description" : "새 커밋 배지",
+        "properties" : {
+          "analyzedSha" : {
+            "description" : "분석한 최신 커밋 SHA. 없거나 ZIP이면 null",
+            "example" : "9f2c4e1a7b3d5f60812c9e4a1b2c3d4e5f607182",
+            "type" : [ "string", "null" ]
+          },
+          "checkedAt" : {
+            "description" : "외부 조회 시각 (5분 동안 다시 쓴다). ZIP이면 null",
+            "example" : "2026-11-29T10:00:00+09:00",
+            "format" : "date-time",
+            "type" : [ "string", "null" ]
+          },
+          "latest" : {
+            "$ref" : "#/components/schemas/LatestCommit",
+            "description" : "기본 브랜치 최신 커밋. 조회하지 못했거나 ZIP이면 null",
+            "type" : "null"
+          },
+          "status" : {
+            "description" : "NEW_COMMIT: 최신 커밋 ≠ 분석한 최신 커밋 · UP_TO_DATE: 같음 · UNKNOWN: 조회 실패·비공개로 바뀜·분석한 커밋 없음 · NOT_SUPPORTED: ZIP 프로젝트",
+            "enum" : [ "NEW_COMMIT", "UP_TO_DATE", "UNKNOWN", "NOT_SUPPORTED" ],
+            "example" : "NEW_COMMIT",
+            "type" : "string"
+          }
+        },
+        "required" : [ "status" ],
+        "type" : "object"
+      },
       "LayerRole" : {
         "description" : "레이어 하나의 역할",
         "properties" : {
@@ -2563,6 +2615,37 @@
         },
         "type" : "object"
       },
+      "PageResponseProjectSummaryResponse" : {
+        "description" : "페이지 응답",
+        "properties" : {
+          "items" : {
+            "description" : "현재 페이지 항목",
+            "items" : {
+              "$ref" : "#/components/schemas/ProjectSummaryResponse"
+            },
+            "type" : "array"
+          },
+          "page" : {
+            "description" : "페이지 번호 (1부터)",
+            "example" : 1,
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "size" : {
+            "description" : "페이지 크기",
+            "example" : 20,
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "total" : {
+            "description" : "전체 항목 수",
+            "example" : 134,
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
       "ParticipationResponse" : {
         "description" : "챌린지 참여 상태",
         "properties" : {
@@ -2837,6 +2920,198 @@
           }
         },
         "required" : [ "attachmentType", "authorId", "authorNickname", "boardType", "commentCount", "createdAt", "id", "title", "viewCount" ],
+        "type" : "object"
+      },
+      "ProjectAnalysisResponse" : {
+        "description" : "프로젝트에 붙은 분석",
+        "properties" : {
+          "createdAt" : {
+            "description" : "요청 시각",
+            "example" : "2026-11-28T17:30:00+09:00",
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "id" : {
+            "description" : "분석 ID",
+            "example" : 128,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "level" : {
+            "description" : "분석 수준",
+            "enum" : [ "BEGINNER", "JUNIOR", "SENIOR" ],
+            "example" : "BEGINNER",
+            "type" : "string"
+          },
+          "quizStatus" : {
+            "description" : "퀴즈 상태. QUIZ 단계 전이면 null",
+            "enum" : [ "GENERATING", "READY", "FAILED" ],
+            "example" : "READY",
+            "type" : [ "string", "null" ]
+          },
+          "status" : {
+            "description" : "진행 상태",
+            "enum" : [ "FETCHING", "FILTERING", "SELECTING", "EXPLAINING", "EXTRACTING", "QUIZ", "DONE", "FAILED" ],
+            "example" : "DONE",
+            "type" : "string"
+          },
+          "title" : {
+            "description" : "분석 제목",
+            "example" : "todo-app",
+            "type" : [ "string", "null" ]
+          },
+          "versionId" : {
+            "description" : "붙은 버전 ID. 아직 버전이 없는 FETCHING·FAILED 분석은 null",
+            "example" : 31,
+            "format" : "int64",
+            "type" : [ "integer", "null" ]
+          }
+        },
+        "required" : [ "createdAt", "id", "level", "status" ],
+        "type" : "object"
+      },
+      "ProjectDetailResponse" : {
+        "description" : "프로젝트 상세",
+        "properties" : {
+          "analyses" : {
+            "description" : "삭제하지 않은 분석 (요청 최신순)",
+            "items" : {
+              "$ref" : "#/components/schemas/ProjectAnalysisResponse"
+            },
+            "type" : "array"
+          },
+          "createdAt" : {
+            "description" : "만든 시각",
+            "example" : "2026-11-27T10:00:00+09:00",
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "id" : {
+            "description" : "프로젝트 ID",
+            "example" : 12,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "name" : {
+            "description" : "이름",
+            "example" : "todo-app",
+            "type" : "string"
+          },
+          "sourceType" : {
+            "description" : "입력 종류",
+            "enum" : [ "URL", "ZIP" ],
+            "example" : "URL",
+            "type" : "string"
+          },
+          "sourceUrl" : {
+            "description" : "정규화한 저장소 주소. ZIP이면 null",
+            "example" : "https://github.com/octo/todo-app",
+            "type" : [ "string", "null" ]
+          },
+          "versions" : {
+            "description" : "버전 (번호 내림차순). 삭제하지 않은 분석이 없는 버전은 빠져 번호가 빌 수 있다",
+            "items" : {
+              "$ref" : "#/components/schemas/ProjectVersionResponse"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "analyses", "createdAt", "id", "name", "sourceType", "versions" ],
+        "type" : "object"
+      },
+      "ProjectSummaryResponse" : {
+        "description" : "프로젝트 목록 항목",
+        "properties" : {
+          "id" : {
+            "description" : "프로젝트 ID",
+            "example" : 12,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "lastAnalyzedAt" : {
+            "description" : "마지막 분석 요청 시각",
+            "example" : "2026-11-28T17:30:00+09:00",
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "latestVersion" : {
+            "$ref" : "#/components/schemas/ProjectVersionResponse",
+            "description" : "번호가 가장 큰 버전 (삭제하지 않은 분석이 붙은 것). 첫 분석이 아직 FETCHING이거나 실패했으면 null",
+            "type" : "null"
+          },
+          "levels" : {
+            "description" : "삭제하지 않은 분석의 수준 (중복 없이 BEGINNER → SENIOR 순)",
+            "items" : {
+              "enum" : [ "BEGINNER", "JUNIOR", "SENIOR" ],
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "name" : {
+            "description" : "이름",
+            "example" : "todo-app",
+            "type" : "string"
+          },
+          "sourceType" : {
+            "description" : "입력 종류",
+            "enum" : [ "URL", "ZIP" ],
+            "example" : "URL",
+            "type" : "string"
+          },
+          "sourceUrl" : {
+            "description" : "정규화한 저장소 주소. ZIP이면 null",
+            "example" : "https://github.com/octo/todo-app",
+            "type" : [ "string", "null" ]
+          },
+          "versionCount" : {
+            "description" : "삭제하지 않은 분석이 붙은 버전 수",
+            "example" : 2,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "id", "lastAnalyzedAt", "levels", "name", "sourceType", "versionCount" ],
+        "type" : "object"
+      },
+      "ProjectVersionResponse" : {
+        "description" : "프로젝트 버전",
+        "properties" : {
+          "commitMessage" : {
+            "description" : "커밋 메시지 첫 줄 (200자까지)",
+            "example" : "feat: JWT 로그인",
+            "type" : [ "string", "null" ]
+          },
+          "commitSha" : {
+            "description" : "커밋 SHA (40자)",
+            "example" : "9f2c4e1a7b3d5f60812c9e4a1b2c3d4e5f607182",
+            "type" : [ "string", "null" ]
+          },
+          "committedAt" : {
+            "description" : "커밋 시각",
+            "example" : "2026-11-28T14:02:11+09:00",
+            "format" : "date-time",
+            "type" : [ "string", "null" ]
+          },
+          "createdAt" : {
+            "description" : "버전이 생긴 시각",
+            "example" : "2026-11-28T17:30:05+09:00",
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "id" : {
+            "description" : "버전 ID",
+            "example" : 31,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "number" : {
+            "description" : "버전 번호 (프로젝트 안에서 1부터)",
+            "example" : 2,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "createdAt", "id", "number" ],
         "type" : "object"
       },
       "QuizAnswerRequest" : {
@@ -3914,6 +4189,38 @@
             "type" : [ "string", "null" ]
           }
         },
+        "type" : "object"
+      },
+      "UpdateProjectRequest" : {
+        "description" : "프로젝트 이름 바꾸기 요청",
+        "properties" : {
+          "name" : {
+            "description" : "새 이름 (앞뒤 공백을 뗀 1~100자)",
+            "example" : "할 일 앱",
+            "maxLength" : 100,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "name" ],
+        "type" : "object"
+      },
+      "UpdateProjectResponse" : {
+        "description" : "바뀐 프로젝트 이름",
+        "properties" : {
+          "id" : {
+            "description" : "프로젝트 ID",
+            "example" : 12,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "name" : {
+            "description" : "바뀐 이름",
+            "example" : "할 일 앱",
+            "type" : "string"
+          }
+        },
+        "required" : [ "id", "name" ],
         "type" : "object"
       },
       "UpdateVisibilityRequest" : {
@@ -5074,7 +5381,7 @@
       },
       "get" : {
         "description" : "내 분석 또는 공개·완료된 남의 분석의 정보와 개요(요약·기술 스택·레이어·읽는 순서·API 목록). 진행 중이거나 개요 생성에 실패했으면 overview가 null이다. 남의 분석이면 mine = false, memo = null. LLM을 부르지 않는다.",
-        "operationId" : "getDetail",
+        "operationId" : "getDetail_1",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -6033,7 +6340,7 @@
     "/api/challenges" : {
       "get" : {
         "description" : "상태(오늘 기준, 기본 진행 중)로 거른다. 진행 중은 종료일 오름차순, 예정은 시작일 오름차순, 종료는 종료일 내림차순이고 모두 다음 기준 id 역순이다. 비로그인도 쓸 수 있고, 로그인했으면 항목마다 참여 여부(joined)를 채운다.",
-        "operationId" : "list_8",
+        "operationId" : "list_9",
         "parameters" : [ {
           "description" : "상태 (없으면 ONGOING). 오늘(Asia/Seoul)과 기간으로 계산한다",
           "example" : "ONGOING",
@@ -6270,7 +6577,7 @@
     "/api/concepts" : {
       "get" : {
         "description" : "공개(PUBLISHED) 카드를 키워드(이름·요약 부분 일치)·카테고리·난이도로 거르고 인기순(찜 수→평점) 또는 최신순으로 페이지 조회한다. 비로그인도 쓸 수 있다.",
-        "operationId" : "list_7",
+        "operationId" : "list_8",
         "parameters" : [ {
           "description" : "이름·요약 부분 일치 검색어 (trim 후 50자 이하, 대소문자 무시)",
           "example" : "jwt",
@@ -7505,6 +7812,241 @@
         },
         "summary" : "댓글 수정",
         "tags" : [ "커뮤니티" ]
+      }
+    },
+    "/api/projects" : {
+      "get" : {
+        "description" : "삭제하지 않은 분석이 하나 이상 있는 내 프로젝트를 마지막 분석 요청 최신순으로 준다.",
+        "operationId" : "list_7",
+        "parameters" : [ {
+          "description" : "페이지 번호 (1부터)",
+          "example" : 1,
+          "in" : "query",
+          "name" : "page",
+          "required" : false,
+          "schema" : {
+            "default" : 1,
+            "description" : "페이지 번호 (1부터)",
+            "example" : 1,
+            "format" : "int32",
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        }, {
+          "description" : "페이지 크기 (최대 100)",
+          "example" : 20,
+          "in" : "query",
+          "name" : "size",
+          "required" : false,
+          "schema" : {
+            "default" : 20,
+            "description" : "페이지 크기 (최대 100)",
+            "example" : 20,
+            "format" : "int32",
+            "maximum" : 100,
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PageResponseProjectSummaryResponse"
+                }
+              }
+            },
+            "description" : "조회 성공"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "page·size 범위 밖 (COMMON_400)"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "토큰 없음·만료 (AUTH_401)"
+          }
+        },
+        "summary" : "내 프로젝트 목록",
+        "tags" : [ "분석" ]
+      }
+    },
+    "/api/projects/{id}" : {
+      "get" : {
+        "description" : "프로젝트 정보, 버전(번호 내림차순), 삭제하지 않은 분석(요청 최신순). 아직 버전이 없는 분석은 versionId가 null이다.",
+        "operationId" : "getDetail",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProjectDetailResponse"
+                }
+              }
+            },
+            "description" : "조회 성공"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "토큰 없음·만료 (AUTH_401)"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "없는 프로젝트, 남의 프로젝트, 분석을 모두 삭제한 프로젝트 (PROJECT_404)"
+          }
+        },
+        "summary" : "프로젝트 상세",
+        "tags" : [ "분석" ]
+      },
+      "patch" : {
+        "description" : "분석의 제목은 바뀌지 않는다.",
+        "operationId" : "rename",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdateProjectRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/UpdateProjectResponse"
+                }
+              }
+            },
+            "description" : "바뀜"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "이름이 비었거나 100자 초과 (COMMON_400, details.name)"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "토큰 없음·만료 (AUTH_401)"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "없는 프로젝트, 남의 프로젝트, 분석을 모두 삭제한 프로젝트 (PROJECT_404)"
+          }
+        },
+        "summary" : "프로젝트 이름 바꾸기",
+        "tags" : [ "분석" ]
+      }
+    },
+    "/api/projects/{id}/latest-commit" : {
+      "get" : {
+        "description" : "저장소 프로젝트의 기본 브랜치 최신 커밋을 분석한 최신 커밋과 비교한다. 조회 결과(실패 포함)는 5분 동안 다시 쓰고 외부 요청을 하지 않는다. 조회 실패·비공개로 바뀜·분석한 커밋 없음은 UNKNOWN, ZIP 프로젝트는 NOT_SUPPORTED이며 모두 200이다.",
+        "operationId" : "latestCommit",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LatestCommitResponse"
+                }
+              }
+            },
+            "description" : "조회 성공"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "토큰 없음·만료 (AUTH_401)"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "없는 프로젝트, 남의 프로젝트, 분석을 모두 삭제한 프로젝트 (PROJECT_404)"
+          }
+        },
+        "summary" : "새 커밋 배지",
+        "tags" : [ "분석" ]
       }
     },
     "/api/quizzes/{quizId}/attempts" : {

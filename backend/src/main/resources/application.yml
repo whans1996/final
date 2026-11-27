@@ -87,6 +87,9 @@ analysis:
     max-redirects: 3
     # 최신 커밋 조회(P-1a): 실패·시간 초과면 분석은 기본 브랜치 아카이브로 계속하고, 배지는 UNKNOWN이다
     commit-timeout: 5s
+  # 프로젝트·버전 (docs/specs/P-1a-project-versions.md AC10): 새 커밋 배지 조회 결과(실패 포함)를 다시 쓰는 시간
+  project:
+    latest-commit-ttl: 5m
   # EXPLAINING 단계 (docs/specs/F-06-overview-explanation.md 5절): 파일 6개씩 묶어 설명, 프롬프트 입력 길이 상한
   explain:
     batch-size: 6
