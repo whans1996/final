@@ -1842,6 +1842,86 @@ class StructureAnalyzerTest {
     }
 
     @Test
+    void AC8_인스턴스_defaults_method를_바꾸면_config에_method가_없는_호출의_method를_모른다() {
+        // #150: X.defaults.method 쓰기·삭제, 계산된 키, Object.assign은 create config의 method를 덮는다
+        AnalysisStructureResponse response =
+                run(
+                        List.of(
+                                api("GET", "/api/todos", 100),
+                                api("POST", "/api/todos", 101),
+                                api("GET", "/api/items", 102),
+                                api("POST", "/api/items", 103),
+                                api("GET", "/api/notes", 104),
+                                api("POST", "/api/notes", 105),
+                                api("GET", "/api/users", 106),
+                                api("POST", "/api/users", 107),
+                                api("GET", "/api/tags", 108),
+                                api("POST", "/api/tags", 109)),
+                        js(
+                                1,
+                                "src/a.js",
+                                """
+                                import axios from 'axios'
+                                const a = axios.create({ method: 'POST' })
+                                a.defaults.method = 'DELETE'
+                                a.request({ url: '/api/todos' })
+                                a.request({ url: '/api/items', method: 'GET' })
+                                const b = axios.create({ method: 'POST' })
+                                delete b.defaults.method
+                                b.request({ url: '/api/notes' })
+                                const c = axios.create({ method: 'POST' })
+                                c.defaults['method'] = 'GET'
+                                c.request({ url: '/api/users' })
+                                const d = axios.create({ method: 'POST' })
+                                d.defaults['timeout'] = 1000
+                                d.request({ url: '/api/tags' })
+                                """));
+
+        assertThat(http(response)).containsExactly(edge(1, 102, 5), edge(1, 109, 14));
+        assertThat(httpUnresolved(response))
+                .extracting(UnresolvedLink::line, UnresolvedLink::reason)
+                .containsExactly(
+                        tuple(4, UnresolvedReason.AMBIGUOUS),
+                        tuple(8, UnresolvedReason.AMBIGUOUS),
+                        tuple(11, UnresolvedReason.AMBIGUOUS));
+    }
+
+    @Test
+    void AC8_axios_defaults_method를_바꾸면_axios와_method_없이_만든_인스턴스의_method를_모른다() {
+        // #150: 전역 기본 method는 axios.request와, method 없이 만든 인스턴스가 물려받는다. get·post는 메서드가 정해져 있다
+        AnalysisStructureResponse response =
+                run(
+                        List.of(
+                                api("GET", "/api/todos", 100),
+                                api("POST", "/api/todos", 101),
+                                api("GET", "/api/items", 102),
+                                api("POST", "/api/items", 103),
+                                api("GET", "/api/notes", 104),
+                                api("POST", "/api/notes", 105),
+                                api("GET", "/api/users", 106),
+                                api("POST", "/api/users", 107)),
+                        js(
+                                1,
+                                "src/a.js",
+                                """
+                                import axios from 'axios'
+                                axios.defaults.method = 'post'
+                                axios.request({ url: '/api/todos' })
+                                const api = axios.create({})
+                                api.request({ url: '/api/items' })
+                                const fixed = axios.create({ method: 'GET' })
+                                fixed.request({ url: '/api/notes' })
+                                axios.get('/api/users')
+                                """));
+
+        assertThat(http(response)).containsExactly(edge(1, 104, 7), edge(1, 106, 8));
+        assertThat(httpUnresolved(response))
+                .extracting(UnresolvedLink::line, UnresolvedLink::reason)
+                .containsExactly(
+                        tuple(3, UnresolvedReason.AMBIGUOUS), tuple(5, UnresolvedReason.AMBIGUOUS));
+    }
+
+    @Test
     void AC8_템플릿_안에서_config_속성을_바꾸면_const_config를_따라가지_않는다() {
         // #124: 템플릿 ${} 안의 식도 실행되므로 그 안의 cfg.url = … 도 config를 바꾼다
         AnalysisStructureResponse response =
