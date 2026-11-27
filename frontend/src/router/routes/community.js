@@ -4,7 +4,9 @@ export default [
     path: '/community',
     name: 'community',
     component: () => import('@/views/community/PostListView.vue'),
-    meta: { nav: { label: '커뮤니티', order: 6, show: 'all' } },
+    meta: {
+      nav: { label: '커뮤니티', order: 6, show: 'all', group: 'together', icon: 'MessagesSquare' },
+    },
   },
   {
     // 숫자가 아닌 id는 여기 걸리지 않고 not-found로 간다
@@ -28,6 +30,9 @@ export default [
     path: '/feed',
     name: 'feed',
     component: () => import('@/views/community/FeedView.vue'),
-    meta: { requiresAuth: true, nav: { label: '피드', order: 7, show: 'user' } },
+    meta: {
+      requiresAuth: true,
+      nav: { label: '피드', order: 7, show: 'user', group: 'together', icon: 'Rss' },
+    },
   },
 ]

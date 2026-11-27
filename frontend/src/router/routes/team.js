@@ -4,7 +4,10 @@ export default [
     path: '/teams',
     name: 'teams',
     component: () => import('@/views/team/TeamListView.vue'),
-    meta: { requiresAuth: true, nav: { label: '팀', order: 8, show: 'user' } },
+    meta: {
+      requiresAuth: true,
+      nav: { label: '팀', order: 8, show: 'user', group: 'together', icon: 'Users' },
+    },
   },
   {
     // 숫자가 아닌 id는 여기 걸리지 않고 not-found로 간다

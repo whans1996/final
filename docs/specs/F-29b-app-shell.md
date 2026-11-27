@@ -104,7 +104,7 @@
 
 ## 10. 구현 체크리스트
 
-- [ ] F-29a 머지 확인 → develop에서 브랜치 `feature/F-29b-app-shell`
+- [x] F-29a 머지 확인 → develop에서 브랜치 `feature/F-29b-app-shell`
 - [ ] AC별 실패 테스트 작성 (red 확인)
 - [ ] `navGroups`·`navIcons`·`searchTargets`, route 파일 `group`·`icon`
 - [ ] 셸 조각 7개 + `AppShell`·`GuestShell`·`App.vue` 셸 선택
