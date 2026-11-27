@@ -5,7 +5,7 @@ export default [
     path: '/concepts',
     name: 'concepts',
     component: () => import('@/views/concept/ConceptListView.vue'),
-    meta: { nav: { label: '개념 카드', order: 5, show: 'all' } },
+    meta: { nav: { label: '개념 카드', order: 5, show: 'all', group: 'learn', icon: 'BookOpen' } },
   },
   {
     // 숫자가 아닌 id는 여기 걸리지 않고 not-found로 간다 (F-10 3절)

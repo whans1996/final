@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 |---|---|
-| 상태 | APPROVED <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
+| 상태 | DONE (PR #247) <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
 | 기능 ID | F-29b (로드맵 `F-29`의 뒤 절반, 12/02 넘겨주기. PR 본문 `Roadmap: F-29`) |
 | 우선순위 | T0 |
 | 영역 오너 | B 김준섭 (공통 셸. A 영역 route 파일의 `meta.nav`를 고치므로 PR에서 김동환 @멘션) |
@@ -30,7 +30,7 @@
 | AC7 | route에 `meta.layout`이 | `'bare'`이면(랜딩용, F-29b에서는 실제 사용 route 없음) / `meta.wide: true`이면 | bare는 셸 없이 본문만 전체 폭으로, wide는 본문 최대 폭 1440px, 그 밖에는 1080px로 그린다. `/analyses/:id`·팀 분석 상세는 `wide: true` |
 | AC8 | 헤더 검색에서 대상 `개념 카드`·카테고리 `Spring`·검색어 `트랜잭션`을 넣고 | Enter를 누르면 | `/concepts?keyword=트랜잭션&category=spring`으로 이동한다. 대상 `커뮤니티`면 `/community?keyword=트랜잭션`. 카테고리 선택은 대상이 개념 카드일 때만 보인다. 검색어 앞뒤 공백은 지우고 빈 검색어면 이동하지 않는다 |
 | AC9 | 검색 대상 목록이 | 렌더링되면 | 지금 `keyword` 검색 API가 있는 대상(개념 카드 `GET /api/concepts`, 커뮤니티 `GET /api/posts`)만 보인다. 대상 정의는 `utils/searchTargets.js` 배열 한 곳이고, 챌린지·팀은 API가 생기면 이 배열에 한 줄을 더한다. 640 미만에서는 🔍 버튼을 누르면 검색 줄이 헤더 아래로 펼쳐진다 |
-| AC10 | 헤더의 다크 토글을 | 누르면 | 라이트 → 다크 → OS 순으로 바뀌고 아이콘(Sun·Moon·Monitor)과 `aria-label`("테마: 다크")이 현재 값을 알린다 (`useTheme` 사용) |
+| AC10 | 헤더의 다크 토글을 | 누르면 | `FOLLOW_SYSTEM=false`인 동안은 라이트 ↔ 다크 2단계로 바뀌고(저장값 `system`은 라이트로 표시), `FOLLOW_SYSTEM`을 켜면 라이트 → 다크 → OS 3단계로 바뀐다. 아이콘(Sun·Moon·Monitor)과 `aria-label`("테마: 다크")이 현재 값을 알린다 (`useTheme` 사용, 순서는 `components/shell/themeCycle.js`. 11-27 구현 중 변경) |
 | AC11 | 닉네임 메뉴를 | 열면 | 프로필(`/users/:id`)·설정(`/me/settings`)·관리자(ADMIN만)·로그아웃이 보이고, 로그아웃하면 `home`으로 이동한다 (지금 App의 동작 유지) |
 | AC12 | 헤더에 | 알림 자리가 | `AppHeader`의 `#notifications` 슬롯으로만 있고 F-29b에서는 아무것도 그리지 않는다 (T1이 채운다) |
 | AC13 | `/admin` 아래 화면을 | ADMIN이 열면 | 회원 셸 안에 `AdminLayout`(관리자 사이드 메뉴)이 본문으로 들어가 기존 관리자 기능이 그대로 동작한다 (`AdminLayout.spec.js` 통과) |
@@ -101,16 +101,17 @@
 ## 9. 결정 필요
 
 - (없음. 결정로그 11-27 "앱 셸" + spec 질문 답(하단 탭 '분석' = 내 분석, 알림은 슬롯만) 반영)
+- ~~AC10 토글 3단계~~ → 11-27 구현 중 결정: `FOLLOW_SYSTEM=false`인 동안 2단계 (결정로그)
 
 ## 10. 구현 체크리스트
 
-- [ ] F-29a 머지 확인 → develop에서 브랜치 `feature/F-29b-app-shell`
-- [ ] AC별 실패 테스트 작성 (red 확인)
-- [ ] `navGroups`·`navIcons`·`searchTargets`, route 파일 `group`·`icon`
-- [ ] 셸 조각 7개 + `AppShell`·`GuestShell`·`App.vue` 셸 선택
-- [ ] `frontend/CLAUDE.md` 메뉴·layout 규칙
-- [ ] ui-verifier 통과 (1280·800·375, 회원·비회원·ADMIN, 라이트·다크)
-- [ ] reviewer 지적 사항 반영
-- [ ] 산출물 반영: 화면 설계서 2-1절 스크린샷 3폭 (PR 스크린샷 `pr-screens.mjs`)
-- [ ] PR CI 초록 (김동환 @멘션: A route 파일 5개 `meta.nav`)
-- [ ] 상태 DONE (PR 머지 후)
+- [x] F-29a 머지 확인 → develop에서 브랜치 `feature/F-29b-app-shell`
+- [x] AC별 실패 테스트 작성 (red 확인)
+- [x] `navGroups`·`navIcons`·`searchTargets`, route 파일 `group`·`icon`
+- [x] 셸 조각 7개 + `AppShell`·`GuestShell`·`App.vue` 셸 선택
+- [x] `frontend/CLAUDE.md` 메뉴·layout 규칙
+- [x] ui-verifier 통과 (1280·800·375, 회원·비회원, 라이트·다크, 키보드. 비회원 800 검색 찌그러짐 → 비회원 헤더는 1024 미만에서 🔍로 접음. ADMIN `/admin`은 App.spec AC13으로 확인, 화면은 관리자 계정 없어 미확인)
+- [x] reviewer 지적 사항 반영 (셸 전환을 afterEach로: 로그아웃 재마운트, 권장 4건)
+- [x] 산출물 반영: 화면 설계서 2-1절 스크린샷 3폭 (PR 스크린샷 `pr-screens.mjs`)
+- [x] PR CI 초록 (김동환 @멘션: A route 파일 5개 `meta.nav`), Codex ✅ e7777e9 (재리뷰 2회: 취소된 이동·같은 곳 이동 셸 전환, 검색어 50자)
+- [x] 상태 DONE (PR #247)

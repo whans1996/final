@@ -47,7 +47,7 @@ const inputClass =
 </script>
 
 <template>
-  <main class="mx-auto flex max-w-4xl flex-col gap-8 px-4 py-8">
+  <div class="mx-auto flex max-w-4xl flex-col gap-8 px-4 py-8">
     <header class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div>
         <h1 class="text-xl font-bold">공통 컴포넌트</h1>
@@ -212,5 +212,5 @@ const inputClass =
         @confirm="confirmDelete"
       />
     </section>
-  </main>
+  </div>
 </template>

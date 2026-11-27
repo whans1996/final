@@ -12,9 +12,9 @@ src/
 │  └─ http.js    Axios 인스턴스, 인터셉터 (토큰 첨부, 401 → refresh → 1회 재시도)
 ├─ stores/       Pinia (지금은 auth.js 하나뿐. user.js는 없다)
 ├─ router/       index.js(합치기·인증 가드), routes/<도메인>.js (route 배열)
-├─ layouts/      AdminLayout.vue (/admin 공통 레이아웃)
+├─ layouts/      AppShell.vue(회원 셸)·GuestShell.vue(비회원 셸)·SkipLink.vue (F-29b), AdminLayout.vue (/admin 공통 레이아웃)
 ├─ views/        화면 단위 컴포넌트 XxxView.vue (라우트와 1:1)
-├─ components/   재사용 컴포넌트 (도메인별 하위 폴더)
+├─ components/   재사용 컴포넌트 (도메인별 하위 폴더, 공통 UI common/, 앱 셸 조각 shell/)
 ├─ composables/  useXxx.js (폴링, 페이지네이션 등 재사용 로직)
 └─ utils/
 ```
@@ -27,7 +27,8 @@ src/
 - 모든 목록 화면은 **로딩 / 빈 목록 / 에러** 세 가지 상태를 처리한다.
 - 로그인 상태, Access 토큰, 사용자 수준(level)은 `useAuthStore`에서 관리한다. Access 토큰은 **메모리에만** 두고(localStorage 금지), Refresh 토큰은 HttpOnly 쿠키라 JS가 다루지 않는다. 앱 시작 시 `restore()`가 refresh로 세션을 복원한다. `http.js`는 401 `AUTH_401`이면 `auth.refresh()`(동시 호출 1회) 후 1회 재시도하고, 실패하면 `setUnauthorizedHandler`로 등록한 로그인 화면 이동을 부른다 (F-02).
 - **라우트는 `router/routes/<도메인>.js`에 둔다** (F-00b). `index.js`는 합치기만 하고, 기능 PR은 자기 도메인 파일만 고친다 (`analysis.js`·`challenge.js`·`dashboard.js`·`reviewplan.js`·`team.js` A, `community.js` B, `concept.js`·`user.js`·`auth.js`·`admin.js` 공통. 영역 정본은 `.github/CODEOWNERS`). `not-found`는 항상 마지막이다.
-- **헤더 메뉴는 route의 `meta.nav = { label, order, show: 'guest' | 'user' | 'admin' }`**로 정한다 (`utils/navItems.js`, `user`는 ADMIN에게도 보인다). `App.vue`에 링크를 직접 추가하지 않는다. 닉네임·로그아웃만 App 고정이다.
+- **메뉴는 route의 `meta.nav = { label, order, show: 'all' | 'guest' | 'user' | 'admin', group?, icon? }`**로 정한다 (`utils/navItems.js`, `user`는 ADMIN에게도 보인다). `group`(`dashboard`·`learn`·`together`·`prepare`, `NAV_GROUPS`)이 있으면 회원 옆 메뉴·비회원 윗쪽 메뉴·드로어에 그룹으로 나오고(`navGroups()`), `icon`은 `utils/navIcons.js`의 Lucide 이름(새 아이콘은 맵에 한 줄). `group` 없는 항목(로그인·회원가입·관리자)은 계정 자리에 나온다. 셸·헤더에 링크를 직접 추가하지 않는다.
+- **앱 셸** (F-29b, `layouts/AppShell.vue`·`GuestShell.vue`, 조각은 `components/shell/`): `App.vue`가 로그인이면 AppShell(헤더 + 옆 메뉴 640~1024 아이콘만·1024 이상 240px 접기 + 640 미만 하단 탭 `bottomTabs.js`·더보기 드로어), 아니면 GuestShell을 고른다. route `meta.layout: 'bare'`면 셸 없음, `meta.wide: true`면 본문 최대 폭 1440px(기본 1080px). 헤더 검색 대상은 `utils/searchTargets.js` 배열(keyword API가 생기면 한 줄), 알림은 `AppHeader` `#notifications` 슬롯. 본문은 셸의 `<main id="main">`이고 셸이 "본문으로 건너뛰기" 링크를 단다. 화면(View)은 `<main>`을 쓰지 않는다 (랜드마크 중복).
 - **관리자 화면은 `/admin` 자식 route**다. 각 도메인 파일이 `export const adminChildren = [...]`로 내보내면 `admin.js`가 합친다. 자식에 `name`과 `meta.adminNav = { label, order }`를 달면 `AdminLayout` 사이드 메뉴에 나온다. `requiresAuth`·`requiresAdmin`은 부모에서 상속되므로 다시 달지 않는다.
 - 공용 컴포넌트: 카드 요약 `components/concept/ConceptCard.vue`(BE `ConceptSummaryResponse` 그대로), 페이지 이동 `components/common/PageNav.vue`(`page`·`size`·`total`, `@change`), 빈 목록 `components/common/EmptyState.vue`(`message`, `#action` 슬롯).
 - 공통 UI 컴포넌트 (F-29a, `components/common/`, 미리보기는 개발 서버 `/dev/components`): `BaseButton`(`variant` primary·secondary·ghost·danger, `size` sm·md, `loading`, `disabled`, `to`면 RouterLink), `FormField`(`label`·`error`·`hint`·`required`, 기본 슬롯이 `{ id, describedBy, invalid, required }`를 받아 입력에 단다), `AsyncState`(`loading`·`error` 문구·`empty`·`emptyMessage`, `#skeleton`·`#empty-action` 슬롯, `@retry`), `BaseBadge`(`tone`), `BaseCard`(`as`, `interactive`, `#header`·`#footer`), `BaseTabs`(Reka Tabs, `v-model`, `items=[{value,label}]`, 탭별 슬롯), `ConfirmDialog`(Reka Dialog, `v-model:open`, `title`·`message`·`confirmLabel`·`danger`·`loading`, `@confirm`은 닫지 않음·`@cancel`은 닫음). 아이콘은 `lucide-vue-next`에서 하나씩 import한다.

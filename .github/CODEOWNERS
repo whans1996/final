@@ -40,10 +40,13 @@
 /frontend/src/utils/**/conceptCategories.*   @whans1996 @JoonseobKim
 /frontend/src/utils/**/authValidation.*      @whans1996 @JoonseobKim
 /frontend/src/utils/**/navItems.*            @whans1996 @JoonseobKim
+/frontend/src/utils/**/navIcons.*            @whans1996 @JoonseobKim
+/frontend/src/utils/**/searchTargets.*       @whans1996 @JoonseobKim
 /frontend/src/utils/**/pagination.*          @whans1996 @JoonseobKim
 /frontend/src/utils/**/relativeTime.*        @whans1996 @JoonseobKim
 /frontend/src/utils/**/seoulDate.*           @whans1996 @JoonseobKim
 /frontend/src/components/common/             @whans1996 @JoonseobKim
+/frontend/src/components/shell/              @whans1996 @JoonseobKim
 /frontend/src/components/feed/               @whans1996 @JoonseobKim
 /frontend/src/composables/                   @whans1996 @JoonseobKim
 /frontend/src/views/concept/                 @whans1996 @JoonseobKim

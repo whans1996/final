@@ -5,7 +5,7 @@ export default [
     path: '/challenges',
     name: 'challenge-list',
     component: () => import('@/views/challenge/ChallengeListView.vue'),
-    meta: { nav: { label: '챌린지', order: 9, show: 'all' } },
+    meta: { nav: { label: '챌린지', order: 9, show: 'all', group: 'together', icon: 'Trophy' } },
   },
   {
     path: '/challenges/:id(\\d+)',
