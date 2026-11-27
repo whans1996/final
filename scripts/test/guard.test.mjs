@@ -659,6 +659,13 @@ test('Codex 반영: find -type d의 부정·분기, rg --type-add include:, git 
   for (const cmd of ['find . -type d -exec ls {} +', "rg -uu --type-add 'custom:include:java' -t custom KEY .", "git grep --no-index KEY -- 'src/*'"]) ok(cmd, rootOnly);
 });
 
+// PR #246 Codex 5회차: --type-add는 내장 타입 글롭에 덧붙는다 (--type-clear가 없으면)
+test('Codex 반영: rg --type-add로 내장 타입을 넓혀도 내장 규칙은 남는다', () => {
+  const rootOnly = { secretFiles: (dir) => [{ path: '/repo/.env', ignored: true }].filter((f) => isWithin(f.path, dir)) };
+  for (const cmd of ["rg -uu --type-add 'sh:*.foo' -t sh KEY .", "rg -uu --type-add 'config:*.foo' --type config KEY ."]) no(cmd, rootOnly);
+  for (const cmd of ["rg -uu --type-clear sh --type-add 'sh:*.foo' -t sh KEY .", "rg -uu --type-add 'java:*.foo' -t java KEY .", "rg -uu --type-add 'mine:*.foo' -t mine KEY ."]) ok(cmd, rootOnly);
+});
+
 // #245: 가드 우회 잔여 (PR #246 reviewer가 재현, 같은 PR에서 처리)
 test('#245: 읽기·검색 인자의 셸 글롭 (bash는 * 가 점으로 시작하는 이름에 맞지 않는다)', () => {
   const sf = { secretFiles };
