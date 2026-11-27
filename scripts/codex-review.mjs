@@ -87,21 +87,25 @@ const isAncestor = (a, b) => git(['merge-base', '--is-ancestor', a, b]).ok;
 
 /**
  * PR head 커밋. push 직후에는 GitHub가 이전 head를 잠깐 돌려준다. 그대로 판정하면 이전 커밋의 지적을 FINDINGS로
- * 읽고 재리뷰를 요청하지 않은 채 끝난다 (#235). 그래서 push로 갱신된 origin/<브랜치>가 더 새것이면 최대 60초 다시 본다
+ * 읽고 재리뷰를 요청하지 않은 채 끝난다 (#235). 그래서 push로 갱신된 origin/<브랜치>가 더 새것이면 --wait·--request일 때
+ * 최대 60초 다시 본다. 그 밖(Stop hook codex-loop은 15초 제한으로 부른다)에는 기다리지 않는다. 끝까지 뒤처져 있으면
+ * h.lagging에 push한 sha를 담아 judge가 STALE로 판정한다 (이전 커밋으로 판정·요청하지 않게)
  */
 async function head() {
   let h = headOnce();
   if (h.state !== 'OPEN') return h;
   const pushed = git(['rev-parse', '--verify', '-q', `refs/remotes/origin/${h.ref}`]);
-  if (!pushed.ok || !headLagging(h.sha, pushed.out, isAncestor)) return h;
-  console.error(`(GitHub PR head ${h.sha.slice(0, 7)}가 push한 ${pushed.out.slice(0, 7)}보다 이전이라 반영을 기다립니다…)`);
-  const until = Date.now() + HEAD_LAG_MS;
-  while (Date.now() < until && headLagging(h.sha, pushed.out, isAncestor)) {
-    await sleep(5_000);
-    h = headOnce();
+  const lagging = () => pushed.ok && headLagging(h.sha, pushed.out, isAncestor);
+  if (!lagging()) return h;
+  if (wait || request) {
+    console.error(`(GitHub PR head ${h.sha.slice(0, 7)}가 push한 ${pushed.out.slice(0, 7)}보다 이전이라 반영을 기다립니다…)`);
+    const until = Date.now() + HEAD_LAG_MS;
+    while (Date.now() < until && lagging()) {
+      await sleep(5_000);
+      h = headOnce();
+    }
   }
-  if (headLagging(h.sha, pushed.out, isAncestor)) console.error(`(${HEAD_LAG_MS / 1000}초 뒤에도 PR head가 ${h.sha.slice(0, 7)}: 이 head로 판정)`);
-  return h;
+  return lagging() ? { ...h, lagging: pushed.out } : h;
 }
 
 /** 모든 페이지를 읽어 하나의 배열로 (댓글이 100개를 넘어도 영수증·요청 마커를 놓치지 않게, Codex 리뷰) */
@@ -165,6 +169,11 @@ function developMergeBase(h) {
 async function judge() {
   const h = await head();
   const comments = issueComments();
+  if (h.lagging) {
+    // 재리뷰 요청은 GitHub가 push를 반영한 뒤 그 head로 한다 (--request --wait를 다시 실행)
+    const msg = `head ${h.lagging.slice(0, 7)} push가 GitHub PR에 아직 반영 전 (PR head ${h.sha.slice(0, 7)}) → 재리뷰 요청 필요`;
+    return { verdict: 'STALE', msg, lagging: true, h, comments };
+  }
   // 문서 판정은 필요할 때만 head·develop을 받는다 (head를 못 받으면 문서만 변경으로 보지 않는다)
   let dev;
   const docsOnly = (base) => {
@@ -215,6 +224,9 @@ if (resolve) {
   gh(['pr', 'comment', pr, '--body', `Codex 남은 지적을 follow-up 이슈로 이관했습니다 (${target.slice(0, 7)}).\n\n<!-- codex-findings-resolved: ${target} -->`]);
   report({ ...r, verdict: 'COMPLETE', msg: `head ${r.h.sha.slice(0, 7)} 남은 지적 이관 완료 (--resolve 마커 댓글)` });
 }
+
+// GitHub가 push를 끝내 반영하지 못했으면 이전 head로 요청하지 않고 STALE로 끝낸다 (#235)
+if (r.lagging) report(r);
 
 if (request && r.envMissing) {
   // 안내가 마지막 요청보다 늦으므로 기존 요청이 있어도 다시 단다. 환경이 아직 없으면 대기 중 같은 안내가 와서 ERROR로 끝난다
