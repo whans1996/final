@@ -29,8 +29,10 @@
         WHERE user_id = #{userId} AND source_url = #{sourceUrl}
     </select>
 
+    <!-- 버전 조회·번호 계산은 프로젝트 행 잠금 뒤에 부르고, 잠금 읽기(FOR UPDATE)로 최신 커밋을 본다. REPEATABLE READ에서 일반 SELECT는
+         잠금 전에 잡힌 스냅샷을 보므로 동시에 커밋된 다른 분석의 버전을 놓쳐 유니크 키에 걸린다 (PR #258 Codex P1, ProjectVersionConcurrencyTest) -->
     <select id="nextVersionNumber" resultType="int">
-        SELECT COALESCE(MAX(number), 0) + 1 FROM project_versions WHERE project_id = #{projectId}
+        SELECT COALESCE(MAX(number), 0) + 1 FROM project_versions WHERE project_id = #{projectId} FOR UPDATE
     </select>
 
     <insert id="insertVersion" useGeneratedKeys="true" keyProperty="id">
@@ -39,7 +41,7 @@
     </insert>
 
     <select id="findVersionIdByCommit" resultType="long">
-        SELECT id FROM project_versions WHERE project_id = #{projectId} AND commit_sha = #{commitSha}
+        SELECT id FROM project_versions WHERE project_id = #{projectId} AND commit_sha = #{commitSha} FOR UPDATE
     </select>
 
     <!-- ── 프로젝트 API (AC6~AC10) ── -->
