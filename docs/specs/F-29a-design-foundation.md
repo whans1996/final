@@ -73,12 +73,15 @@
 | `--color-text` / `--color-text-muted` | `#1f1d1b` / `#6b645d` | `#f2eee9` / `#a69e95` |
 | `--color-border` | `#e7e2dc` | `#3a3532` |
 | `--color-code-bg` / `--color-code-text` | `#f6f4f0` / `#1f1d1b` | `#141211` / `#e8e3dc` |
-| success 글자/바탕 | `#3f7d3a` / `#e8f1e3` | `#8fca86` / `#1f3320` |
+| `--color-on-solid` (primary·danger 바탕 위 글자) | `#ffffff` | `#1c1a18` |
+| success 글자/바탕 (`--color-success`/`-soft`, 아래 셋도 같은 이름 규칙) | `#3a7535` / `#e8f1e3` | `#8fca86` / `#1f3320` |
 | warning | `#a15c07` / `#fbefd9` | `#f0b45a` / `#3a2a10` |
 | info | `#33658a` / `#e3edf4` | `#8db8d9` / `#17293a` |
 | danger | `#b4232c` / `#fbe4e2` | `#f2867f` / `#3d1a1a` |
 
 - 다크 값은 결정로그에 없어 이 spec에서 정한다 (같은 색상, 밝기만 올림). 구현 중 AC13 대비가 안 나오면 다크 값만 조정하고 이 표를 고친다
+- 구현 중 조정 (11/27): 라이트 success 글자 `#3f7d3a`가 바탕 `#e8f1e3`에서 4.31:1이라 `#3a7535`(4.80:1)로 어둡게 했다. 다크 primary 바탕 위 흰 글자가 대비 미달이라 `on-solid` 토큰을 더했다. 대비는 `tokens.spec.js` AC13이 검사한다
+- Tailwind 기본 팔레트(`--color-*`)·글자 크기·굵기·반경·그림자는 `initial`로 지우고 이 표의 토큰만 남긴다 (`white`·`black`만 예외)
 - 글자: `--text-xs` 12 · `sm` 14 · `base` 16 · `lg` 20 · `xl` 28 · `hero` 48 (640 미만 32). 굵기 400·600·700만
 - 반경: `--radius-sm` 6 · `--radius-md` 12 · `full`. 그림자: `--shadow-1`(카드)·`--shadow-2`(팝오버·대화상자). 다크에서는 그림자를 약하게 하고 `surface-raised`로 높이를 보인다
 - 반응형: Tailwind `sm`을 640, `lg`를 1024로 두고 나머지(`md`·`xl`·`2xl`)는 쓰지 않는다 (`--breakpoint-*: initial`로 지운다)
@@ -127,12 +130,12 @@
 
 ## 10. 구현 체크리스트
 
-- [ ] 브랜치 `feature/F-29-design-common` (이 브랜치에서 F-29a. F-29b는 F-29a 머지 뒤 develop에서 `feature/F-29b-app-shell`)
-- [ ] 패키지 설치, `vite.config.js`에 `tailwindcss()` 플러그인
-- [ ] AC별 실패 테스트 작성 (red 확인)
-- [ ] `main.css` 토큰·별칭·base 보정·폰트, `index.html` 테마 스크립트, `useTheme`
-- [ ] 공통 컴포넌트 7개 + EmptyState·PageNav 이전 + `/dev/components`
-- [ ] NOTICE 폰트 라이선스, `frontend/CLAUDE.md` 스타일 규칙
+- [x] 브랜치 `feature/F-29-design-common` (이 브랜치에서 F-29a. F-29b는 F-29a 머지 뒤 develop에서 `feature/F-29b-app-shell`)
+- [x] 패키지 설치, `vite.config.js`에 `tailwindcss()` 플러그인
+- [x] AC별 실패 테스트 작성 (red 확인)
+- [x] `main.css` 토큰·별칭·base 보정·폰트, `index.html` 테마 스크립트, `useTheme`
+- [x] 공통 컴포넌트 7개 + EmptyState·PageNav 이전 + `/dev/components`
+- [x] NOTICE 폰트 라이선스, `frontend/CLAUDE.md` 스타일 규칙
 - [ ] ui-verifier 통과 (데스크톱·모바일, 라이트·다크)
 - [ ] reviewer 지적 사항 반영
 - [ ] 산출물 반영: 화면 설계서 2-1절 "값은 F-29 spec" → F-29a 경로

@@ -1,6 +1,6 @@
 # Frontend 규칙
 
-> Vue 3 (Composition API, `<script setup>`), Vite 8, Pinia 4, Vue Router 5, Axios, JavaScript. 린트는 oxlint + ESLint, 포맷은 Prettier(세미콜론 없음, 작은따옴표, 100자).
+> Vue 3 (Composition API, `<script setup>`), Vite 8, Pinia 4, Vue Router 5, Axios, JavaScript, Tailwind CSS v4, Reka UI, lucide-vue-next. 린트는 oxlint + ESLint, 포맷은 Prettier(세미콜론 없음, 작은따옴표, 100자).
 > 공통 API 규칙(URL, 필드 이름, 에러 형식)은 `../docs/conventions.md`를 따른다.
 > create-vue로 생성했다 (F-00). 이미 있는 것: `api/http.js`(`errorMessage`·`errorCode` 포함), `stores/auth.js`, `router/index.js`의 `authGuard`, `HomeView`·`NotFoundView`, `assets/main.css` 변수.
 
@@ -30,12 +30,16 @@ src/
 - **헤더 메뉴는 route의 `meta.nav = { label, order, show: 'guest' | 'user' | 'admin' }`**로 정한다 (`utils/navItems.js`, `user`는 ADMIN에게도 보인다). `App.vue`에 링크를 직접 추가하지 않는다. 닉네임·로그아웃만 App 고정이다.
 - **관리자 화면은 `/admin` 자식 route**다. 각 도메인 파일이 `export const adminChildren = [...]`로 내보내면 `admin.js`가 합친다. 자식에 `name`과 `meta.adminNav = { label, order }`를 달면 `AdminLayout` 사이드 메뉴에 나온다. `requiresAuth`·`requiresAdmin`은 부모에서 상속되므로 다시 달지 않는다.
 - 공용 컴포넌트: 카드 요약 `components/concept/ConceptCard.vue`(BE `ConceptSummaryResponse` 그대로), 페이지 이동 `components/common/PageNav.vue`(`page`·`size`·`total`, `@change`), 빈 목록 `components/common/EmptyState.vue`(`message`, `#action` 슬롯).
+- 공통 UI 컴포넌트 (F-29a, `components/common/`, 미리보기는 개발 서버 `/dev/components`): `BaseButton`(`variant` primary·secondary·ghost·danger, `size` sm·md, `loading`, `disabled`, `to`면 RouterLink), `FormField`(`label`·`error`·`hint`·`required`, 기본 슬롯이 `{ id, describedBy, invalid }`를 받아 입력에 단다), `AsyncState`(`loading`·`error` 문구·`empty`·`emptyMessage`, `#skeleton`·`#empty-action` 슬롯, `@retry`), `BaseBadge`(`tone`), `BaseCard`(`as`, `interactive`, `#header`·`#footer`), `BaseTabs`(Reka Tabs, `v-model`, `items=[{value,label}]`, 탭별 슬롯), `ConfirmDialog`(Reka Dialog, `v-model:open`, `title`·`message`·`confirmLabel`·`danger`·`loading`, `@confirm`은 닫지 않음·`@cancel`은 닫음). 아이콘은 `lucide-vue-next`에서 하나씩 import한다.
+- 테마는 `composables/useTheme.js`(`theme`·`resolved`·`setTheme('light'|'dark'|'system')`, `localStorage` `vibenote.theme`). 다크는 `<html class="dark">`이고 `index.html` 인라인 스크립트가 같은 규칙으로 먼저 붙인다.
 - 로그인이 필요한 화면은 라우트에 `meta.requiresAuth`, 로그인·가입처럼 비로그인 전용은 `meta.guestOnly`를 붙인다. 돌아갈 주소는 `redirectTarget(route.query)`로 꺼낸다 (외부 주소 차단).
 - 폼 검증 실패는 서버 `details`를 `errorDetails(error)`로 꺼내 필드 아래에 보여 준다.
 - 에러 메시지는 `errorMessage(error)`, 분기는 `errorCode(error)`(`@/api/http`)로 꺼낸다.
 - 분석 진행 상태는 `composables/usePolling.js`로 2~3초 간격 폴링하고, `DONE`/`FAILED`이거나 화면을 떠나면 멈춘다.
 - mermaid 렌더링(F-21)은 해당 화면에서만 동적 import한다.
-- 스타일은 컴포넌트 `<style scoped>`를 기본으로 한다. 공통 색상·간격은 `src/assets/main.css`의 CSS 변수로 둔다.
+- **스타일은 Tailwind 클래스 + 토큰**으로 쓴다 (F-29a). 토큰 정본은 `src/assets/main.css`(`@theme inline`)와 `docs/specs/F-29a-design-foundation.md` 5.2절: 색 `primary`·`primary-soft`·`accent`·`highlight`·`bg`·`surface`·`surface-raised`·`text`·`text-muted`·`border`·`code-bg`·`code-text`·`on-solid`·`success|warning|info|danger`(+`-soft`), 글자 `text-xs|sm|base|lg|xl|hero`, 굵기 `font-normal|semibold|bold`, 반경 `rounded-sm|md|full`, 그림자 `shadow-1|2`, 반응형 `sm:`(640)·`lg:`(1024)만. Tailwind 기본 팔레트(`indigo-500` 등)는 지웠다. 다크는 토큰이 바꾸므로 대개 `dark:`가 필요 없다.
+- **새 화면·컴포넌트에 `<style scoped>`를 쓰지 않는다.** 예외: 토큰으로 안 되는 애니메이션·mermaid·코드 하이라이트. 아직 옮기지 않은 화면의 scoped 스타일과 별칭 변수(`--color-primary`·`--color-background`·`--space-*`·`--radius`)는 각자 개편 PR에서 Tailwind로 옮길 때 지운다.
+- preflight가 켜져 있고 `main.css` `@layer base`가 h1~h3 크기, 링크 색·밑줄, 목록 들여쓰기·불릿을 되돌린다. 새 코드에서 필요 없으면 `no-underline`·`list-none`·`ps-0`처럼 클래스로 끈다.
 
 ## 테스트
 

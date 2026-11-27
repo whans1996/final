@@ -6,26 +6,10 @@ defineProps({
 </script>
 
 <template>
-  <div class="empty">
+  <div
+    class="empty mt-6 flex flex-col items-center gap-4 rounded-md border border-dashed border-border px-4 py-8 text-center text-text-muted"
+  >
     <p>{{ message }}</p>
     <slot name="action" />
   </div>
 </template>
-
-<style scoped>
-.empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-4);
-  margin-top: var(--space-6);
-  padding: var(--space-8) var(--space-4);
-  border: 1px dashed var(--color-border);
-  border-radius: var(--radius);
-  text-align: center;
-}
-
-.empty p {
-  margin: 0;
-}
-</style>

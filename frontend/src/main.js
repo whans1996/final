@@ -7,6 +7,10 @@ import App from './App.vue'
 import router from './router'
 import { setUnauthorizedHandler } from './api/http'
 import { useAuthStore } from './stores/auth'
+import { initTheme } from './composables/useTheme'
+
+// 테마 클래스는 index.html이 먼저 붙이고, 여기서 OS 설정 구독과 이후 변경 반영을 맡는다 (F-29a AC4)
+initTheme()
 
 const app = createApp(App)
 const pinia = createPinia()
