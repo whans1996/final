@@ -245,6 +245,7 @@ ALTER TABLE analyses MODIFY project_id BIGINT NOT NULL;
 
 - 없음 (11-27 사용자 선택: FE 최소 화면 포함, ZIP은 요청 때 프로젝트 선택)
 - 구현 메모 (11-27): F-05a·F-05b 테스트의 AC 번호와 섞이지 않게 AC1·4·5는 `AnalysisProjectRequestTest`, AC2·3·11 수집기는 `fetch/RepositoryCommitFetchTest`로 나눈다. 커밋 조회 시간 상한은 `analysis.fetch.commit-timeout`(5s)
+- 구현 메모 (11-27, reviewer): 실패한 내 ZIP 분석(SC-07)의 "ZIP 다시 올리기"도 SC-26 버튼처럼 `?projectId=`를 붙여 같은 프로젝트의 새 버전으로 보낸다 (안 붙이면 AC4대로 같은 이름의 ZIP 프로젝트가 하나 더 생긴다). 같은 커밋 동시 분석 잠금 테스트는 #257, 분석 api `signal` 전달은 #250(AM-1)
 
 ## 10. 구현 체크리스트
 

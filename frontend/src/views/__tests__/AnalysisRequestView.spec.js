@@ -420,3 +420,75 @@ describe('AnalysisRequestView 프로젝트 새 버전 (P-1a AC15)', () => {
     expect(analysesApi.createAnalysis.mock.calls[0][0]).not.toHaveProperty('projectId')
   })
 })
+
+describe('AnalysisRequestView 프로젝트 오류 (P-1a AC5)', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+  })
+
+  it('AC5 400 details.projectId를 폼 위에 보여 준다', async () => {
+    projectsApi.fetchProject.mockResolvedValue({
+      id: 12,
+      name: 'todo-app',
+      sourceType: 'URL',
+      sourceUrl: 'https://github.com/octo/todo-app',
+      createdAt: '2026-11-27T10:00:00+09:00',
+      versions: [],
+      analyses: [],
+    })
+    analysesApi.createAnalysis.mockRejectedValue(
+      apiError(400, {
+        code: 'COMMON_400',
+        message: '입력값이 올바르지 않습니다.',
+        details: { projectId: '이 프로젝트의 저장소 주소와 다릅니다.' },
+      }),
+    )
+
+    const { wrapper } = await mountAt(AnalysisRequestView, '/analyses/new?projectId=12', {
+      beforeNavigate: () => login(),
+    })
+    await flushPromises()
+    await wrapper.find('input[name="consent"]').setChecked(true)
+    await submitForm(wrapper)
+
+    expect(wrapper.find('[data-error="projectId"]').text()).toBe(
+      '이 프로젝트의 저장소 주소와 다릅니다.',
+    )
+  })
+})
+
+describe('AnalysisRequestView 프로젝트 조회 실패 (P-1a AC15)', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+  })
+
+  it('AC15 404가 아닌 오류면 메시지와 다시 시도를 보여 주고, 다시 시도하면 고정한다', async () => {
+    projectsApi.fetchProject
+      .mockRejectedValueOnce(
+        apiError(503, { code: 'COMMON_503', message: '잠시 후 다시 시도해 주세요.' }),
+      )
+      .mockResolvedValueOnce({
+        id: 12,
+        name: 'todo-app',
+        sourceType: 'URL',
+        sourceUrl: 'https://github.com/octo/todo-app',
+        createdAt: '2026-11-27T10:00:00+09:00',
+        versions: [],
+        analyses: [],
+      })
+
+    const { wrapper } = await mountAt(AnalysisRequestView, '/analyses/new?projectId=12', {
+      beforeNavigate: () => login(),
+    })
+    await flushPromises()
+
+    expect(wrapper.find('[data-section="project"]').text()).toContain('잠시 후 다시 시도해 주세요.')
+    await wrapper.find('[data-action="retry-project"]').trigger('click')
+    await flushPromises()
+
+    expect(projectsApi.fetchProject).toHaveBeenCalledTimes(2)
+    expect(wrapper.find('input[name="sourceUrl"]').element.value).toBe(
+      'https://github.com/octo/todo-app',
+    )
+  })
+})

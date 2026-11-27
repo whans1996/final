@@ -32,10 +32,8 @@ public record ProjectSummaryResponse(
                         description = "삭제하지 않은 분석이 붙은 버전 수",
                         example = "2")
                 int versionCount,
-        @Schema(
-                        description =
-                                "번호가 가장 큰 버전 (삭제하지 않은 분석이 붙은 것). 첫 분석이 아직 FETCHING이거나 실패했으면 null",
-                        nullable = true)
+        @Schema(description = "번호가 가장 큰 버전 (삭제하지 않은 분석이 붙은 것). 첫 분석이 아직 FETCHING이거나 실패했으면 null")
+                // $ref에 nullable=true를 붙이지 않는다 (LatestCommitResponse.latest와 같은 이유)
                 ProjectVersionResponse latestVersion,
         @ArraySchema(
                         schema = @Schema(implementation = Level.class),

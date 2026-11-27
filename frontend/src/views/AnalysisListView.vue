@@ -96,7 +96,7 @@ onMounted(() => load(1))
             :data-analysis-id="analysis.id"
           >
             <span class="flex items-start justify-between gap-2">
-              <strong class="title break-all">
+              <strong class="title wrap-anywhere">
                 {{ analysis.title ?? analysis.projectName ?? '제목 없는 분석' }}
               </strong>
               <BaseBadge v-if="analysis.isPublic" tone="primary" data-badge="public"

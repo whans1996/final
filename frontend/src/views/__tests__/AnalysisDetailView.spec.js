@@ -1023,3 +1023,39 @@ describe('AnalysisDetailView 프로젝트 링크 (P-1a AC16)', () => {
     expect(label.find('a').exists()).toBe(false)
   })
 })
+
+describe('AnalysisDetailView ZIP 다시 올리기 (P-1a AC4·AC15)', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('AC15 실패한 내 ZIP 분석의 "ZIP 다시 올리기"는 같은 프로젝트의 새 버전으로 간다', async () => {
+    analysesApi.fetchAnalysisStatus.mockResolvedValue(
+      status({
+        status: 'FAILED',
+        progress: 15,
+        errorCode: 'ANALYSIS_415',
+        errorMessage: '지원하지 않는 스택',
+      }),
+    )
+    analysesApi.fetchAnalysis.mockResolvedValue(
+      detail({
+        status: 'FAILED',
+        overview: null,
+        project: { id: 13, name: 'shop.zip' },
+        version: null,
+      }),
+    )
+
+    const { wrapper } = await mountDetail()
+
+    expect(wrapper.find('a[data-action="retry"]').attributes('href')).toBe(
+      '/analyses/new?projectId=13',
+    )
+  })
+})

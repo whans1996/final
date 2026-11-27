@@ -81,7 +81,7 @@ onMounted(() => load(1))
             :data-project-id="project.id"
           >
             <span class="flex items-start justify-between gap-2">
-              <strong class="min-w-0 break-all text-lg">{{ project.name }}</strong>
+              <strong class="min-w-0 wrap-anywhere text-lg">{{ project.name }}</strong>
               <BaseBadge :tone="project.sourceType === 'URL' ? 'info' : 'neutral'">
                 <FolderGit2
                   v-if="project.sourceType === 'URL'"

@@ -16,7 +16,9 @@ public record LatestCommitResponse(
                                         + " 실패·비공개로 바뀜·분석한 커밋 없음 · NOT_SUPPORTED: ZIP 프로젝트",
                         example = "NEW_COMMIT")
                 LatestCommitStatus status,
-        @Schema(description = "기본 브랜치 최신 커밋. 조회하지 못했거나 ZIP이면 null", nullable = true) Commit latest,
+        // $ref에 nullable=true를 붙이면 springdoc이 type: null만 남겨 객체를 허용하지 않는다 (AnalysisDetailResponse
+        // overview와 같은 이유)
+        @Schema(description = "기본 브랜치 최신 커밋. 조회하지 못했거나 ZIP이면 null") Commit latest,
         @Schema(
                         description = "분석한 최신 커밋 SHA. 없거나 ZIP이면 null",
                         example = "9f2c4e1a7b3d5f60812c9e4a1b2c3d4e5f607182",

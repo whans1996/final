@@ -67,7 +67,7 @@ const tone = computed(
       <template v-else-if="status === 'UP_TO_DATE'">최신 커밋을 분석했어요</template>
       <template v-else>최신 커밋</template>
     </BaseBadge>
-    <span v-if="status !== 'UP_TO_DATE' && commit.message" class="break-all text-text">
+    <span v-if="status !== 'UP_TO_DATE' && commit.message" class="wrap-anywhere text-text">
       {{ commit.message }}
     </span>
     <span v-if="status !== 'UP_TO_DATE' && when" class="text-text-muted">· {{ when }}</span>

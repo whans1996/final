@@ -123,7 +123,7 @@ async function onRename() {
       <template v-if="project">
         <header class="flex flex-col gap-3">
           <div v-if="!editing" class="flex flex-wrap items-center gap-3">
-            <h1 class="min-w-0 break-all">{{ project.name }}</h1>
+            <h1 class="min-w-0 wrap-anywhere">{{ project.name }}</h1>
             <BaseBadge :tone="isRepo ? 'info' : 'neutral'">
               {{ SOURCE_LABELS[project.sourceType] ?? project.sourceType }}
             </BaseBadge>
@@ -174,7 +174,7 @@ async function onRename() {
             :href="sourceLink"
             target="_blank"
             rel="noopener noreferrer"
-            class="inline-flex items-center gap-1 self-start text-sm break-all"
+            class="inline-flex items-center gap-1 self-start text-sm wrap-anywhere"
             data-action="source"
           >
             {{ sourceLink }}

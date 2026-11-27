@@ -116,6 +116,12 @@ watch(
   { immediate: true },
 )
 
+function retryProject() {
+  const raw = route.query.projectId
+  projectError.value = ''
+  loadProject(Array.isArray(raw) ? raw[0] : raw)
+}
+
 function onFileChange(event) {
   file.value = event.target.files?.[0] ?? null
   fieldErrors.value = { ...fieldErrors.value, file: undefined }
@@ -171,11 +177,17 @@ const choiceClass =
         프로젝트를 찾을 수 없어요.
         <RouterLink :to="{ name: 'analysis-new' }" class="ms-1">새 프로젝트로 요청하기</RouterLink>
       </p>
-      <p v-else-if="projectError" class="text-danger" role="alert">{{ projectError }}</p>
+      <div v-else-if="projectError" class="flex flex-wrap items-center gap-2" role="alert">
+        <p class="text-danger">{{ projectError }}</p>
+        <BaseButton variant="secondary" size="sm" data-action="retry-project" @click="retryProject">
+          다시 시도
+        </BaseButton>
+        <RouterLink :to="{ name: 'analysis-new' }">새 프로젝트로 요청하기</RouterLink>
+      </div>
       <p v-else-if="project">
         <RouterLink
           :to="{ name: 'project-detail', params: { id: project.id } }"
-          class="font-semibold break-all"
+          class="font-semibold wrap-anywhere"
           >{{ project.name }}</RouterLink
         >
         프로젝트의 새 버전으로 분석해요.
@@ -195,6 +207,10 @@ const choiceClass =
       @submit.prevent="onSubmit"
     >
       <p v-if="formError" class="text-danger" role="alert">{{ formError }}</p>
+      <!-- projectId 오류(저장소 주소가 다름·방식 불일치)는 고정된 입력 칸 대신 폼 위에 보인다 (P-1a AC5) -->
+      <p v-if="fieldErrors.projectId" class="text-sm text-danger" data-error="projectId">
+        {{ fieldErrors.projectId }}
+      </p>
 
       <fieldset class="flex flex-wrap gap-2">
         <legend class="mb-2 font-semibold">입력 방식</legend>

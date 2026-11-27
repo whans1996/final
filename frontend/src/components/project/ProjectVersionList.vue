@@ -69,7 +69,7 @@ const groups = computed(() =>
           <code class="rounded-sm bg-code-bg px-1.5 py-0.5 text-xs text-code-text">
             {{ shortSha(version.commitSha) }}
           </code>
-          <span v-if="version.commitMessage" class="min-w-0 break-all text-sm text-text">
+          <span v-if="version.commitMessage" class="min-w-0 wrap-anywhere text-sm text-text">
             {{ version.commitMessage }}
           </span>
           <span v-if="version.committedAt" class="text-sm text-text-muted">

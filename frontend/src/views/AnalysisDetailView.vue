@@ -218,16 +218,16 @@ watch(
       data-action="back-to-mine"
       >← 내 분석</RouterLink
     >
-    <h1 class="mt-2 break-all">{{ isDone ? title : '분석 진행 상태' }}</h1>
+    <h1 class="mt-2 wrap-anywhere">{{ isDone ? title : '분석 진행 상태' }}</h1>
     <template v-if="projectLabel">
       <RouterLink
         v-if="mine"
         :to="{ name: 'project-detail', params: { id: analysis.project.id } }"
-        class="mt-1 self-start text-sm font-semibold break-all"
+        class="mt-1 self-start text-sm font-semibold wrap-anywhere"
         data-section="project"
         >{{ projectLabel }}</RouterLink
       >
-      <p v-else class="mt-1 text-sm break-all text-text-muted" data-section="project">
+      <p v-else class="mt-1 text-sm wrap-anywhere text-text-muted" data-section="project">
         {{ projectLabel }}
       </p>
     </template>
@@ -238,7 +238,7 @@ watch(
     </p>
     <p
       v-if="mine && analysis.memo"
-      class="mt-2 break-all whitespace-pre-line text-text-muted"
+      class="mt-2 wrap-anywhere whitespace-pre-line text-text-muted"
       data-section="memo"
     >
       {{ analysis.memo }}
@@ -400,7 +400,14 @@ watch(
             <p class="text-text-muted" data-message="zip-rerun">
               ZIP 분석은 원본을 보관하지 않습니다. ZIP 파일을 다시 올려 주세요.
             </p>
-            <BaseButton :to="{ name: 'analysis-new' }" data-action="retry">
+            <!-- 같은 ZIP 프로젝트의 새 버전으로 올린다 (SC-26 "ZIP 다시 올리기"와 같게, P-1a AC4·AC15) -->
+            <BaseButton
+              :to="{
+                name: 'analysis-new',
+                query: analysis.project ? { projectId: String(analysis.project.id) } : {},
+              }"
+              data-action="retry"
+            >
               ZIP 다시 올리기
             </BaseButton>
           </template>
