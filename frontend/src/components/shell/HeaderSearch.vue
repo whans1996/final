@@ -49,6 +49,7 @@ const field =
     <input
       v-model="keyword"
       type="search"
+      maxlength="50"
       aria-label="검색어"
       placeholder="검색어"
       :class="[field, 'min-w-28 flex-1']"

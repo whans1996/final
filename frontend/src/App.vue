@@ -18,7 +18,9 @@ const router = useRouter()
 
 const memberShell = ref(auth.isLoggedIn)
 onUnmounted(
-  router.afterEach(() => {
+  router.afterEach((to, from, failure) => {
+    // 취소·중단된 이동(떠나기 확인에서 머묾 등)은 지금 화면이 그대로이므로 셸도 그대로 둔다
+    if (failure) return
     memberShell.value = auth.isLoggedIn
   }),
 )

@@ -59,6 +59,7 @@ const contentWidth = (wrapper) => wrapper.find('#main > div').classes()
 describe('App 셸 선택 (F-29b AC6·AC7, F-00b AC8)', () => {
   afterEach(() => {
     document.body.innerHTML = ''
+    vi.clearAllMocks()
   })
 
   it('AC6 비회원은 옆 메뉴 없이 윗쪽 메뉴(개념 카드·커뮤니티·챌린지)와 로그인·회원가입을 본다', async () => {
@@ -151,5 +152,22 @@ describe('App 셸 선택 (F-29b AC6·AC7, F-00b AC8)', () => {
     expect(fetchReviewPlans).toHaveBeenCalledTimes(1)
     expect(wrapper.find('aside').exists()).toBe(false)
     expect(wrapper.find('header a[href="/login"]').exists()).toBe(true)
+  })
+
+  it('AC11 로그아웃 이동이 취소되면(떠나기 확인에서 머묾) 셸을 바꾸지 않고 지금 화면을 다시 그리지 않는다 (Codex P1)', async () => {
+    const wrapper = await mountApp('/dashboard', 'USER')
+    const router = wrapper.vm.$router
+    router.beforeEach(() => false) // PostWriteView의 떠나기 확인에서 '머물기'를 고른 것처럼
+
+    await wrapper.find('header button[aria-haspopup="menu"]').trigger('keydown', { key: 'Enter' })
+    await flushPromises()
+    ;[...document.querySelectorAll('[role="menuitem"]')]
+      .find((el) => el.textContent.trim() === '로그아웃')
+      .click()
+    await flushPromises()
+
+    expect(router.currentRoute.value.name).toBe('dashboard')
+    expect(wrapper.find('aside').exists()).toBe(true)
+    expect(fetchReviewPlans).toHaveBeenCalledTimes(1)
   })
 })

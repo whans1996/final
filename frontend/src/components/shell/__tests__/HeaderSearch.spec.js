@@ -90,4 +90,10 @@ describe('HeaderSearch (F-29b AC8·AC9)', () => {
     expect(searchLocation('nope', ' a ')).toEqual({ path: '/concepts', query: { keyword: 'a' } })
     expect(searchLocation('concepts', '')).toBeNull()
   })
+
+  it('AC8 검색어는 목록 API 한도(50자)까지만 입력받는다 (Codex P2)', async () => {
+    const { wrapper } = await mountSearch()
+
+    expect(wrapper.find('input[type="search"]').attributes('maxlength')).toBe('50')
+  })
 })
