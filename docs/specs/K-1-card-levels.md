@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 |---|---|
-| 상태 | APPROVED <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
+| 상태 | DONE (PR #261) <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
 | 기능 ID | K-1 (로드맵 트랙 3 카드, 11/28~12/02) |
 | 우선순위 | T0 (기획서 7.4b) |
 | 영역 오너 | A 김동환. `concept` 패키지·FE 카드 화면·`R__seed_concepts.sql`은 공통·B 파일이라 PR에서 @JoonseobKim 멘션 (기획서 7.5절 ⑤) |
@@ -235,7 +235,7 @@ ALTER TABLE concepts
 - [x] ui-verifier 통과 (라벨 바뀐 화면: 카드 목록·상세·커뮤니티 글 첨부, 데스크톱·모바일)
 - [x] reviewer 지적 사항 반영
 - [x] 산출물·문서 반영: 03 ERD, 07 API(생성), 09 데이터셋 DS-05 카테고리, 01 요구사항 정의서 K-1 행, 기획서 ERD, F-08 spec AC5·5.4절, F-09·F-13·K-3a spec의 6종 문구
-- [ ] PR 본문 `Roadmap: K-1`, `Closes #163`, `Closes #204`, 공통 코드 변경 @JoonseobKim
+- [x] PR 본문 `Roadmap: K-1`, `Closes #163`, `Closes #204`, 공통 코드 변경 @JoonseobKim
 - [ ] EV-1 기준선(12/01) 뒤 머지
-- [ ] PR CI 초록
-- [ ] 상태 DONE (PR 머지 후)
+- [x] PR CI 초록
+- [x] 상태 DONE (PR 머지 후)
