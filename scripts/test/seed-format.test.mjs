@@ -1,13 +1,13 @@
 // 시드 카드 ①형식 검사 (K-3a AC4~AC6)
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { parseCard, renderCard } from '../lib/seed/card.mjs';
+import { CATEGORY_ORDER, parseCard, renderCard } from '../lib/seed/card.mjs';
 import { checkFormat, loadRules } from '../lib/seed/format.mjs';
 
 const SRC = 'data/seed/concepts';
 const rules = {
   src: SRC,
-  categories: new Set(['java', 'spring', 'web', 'security', 'mybatis', 'vue']),
+  categories: new Set(CATEGORY_ORDER),
   hosts: new Set(['docs.oracle.com', 'docs.spring.io', 'developer.mozilla.org']),
 };
 const BODY = '## 핵심\n' + '본문 문장이다. '.repeat(20);
@@ -67,7 +67,8 @@ test('AC4_frontmatter가_없으면_오류', () => {
 });
 
 test('AC4_카테고리가_허용_목록_밖이거나_폴더와_다르면_오류', () => {
-  assert.deepEqual(items(issues(card('a', { category: 'react' }, JAVA, 'react'), 'error')), ['category']);
+  // K-1에서 react가 12종에 들어와 목록 밖 예시를 kotlin으로 바꿨다
+  assert.deepEqual(items(issues(card('a', { category: 'kotlin' }, JAVA, 'kotlin'), 'error')), ['category']);
   const moved = card('a', { category: 'spring' }, JAVA, 'java');
   const list = issues(moved, 'error');
   assert.deepEqual(items(list), ['category']);
@@ -164,10 +165,29 @@ test('AC6_요약의_문자_3-gram_Jaccard가_0.5_이상이면_두_카드와_점�
   assert.match(list[0].message, /0\.\d\d/);
 });
 
-test('loadRules는 ConceptCategories.ALL과 datasets.json DS-01 호스트를 읽는다', () => {
+test('K1_AC5_loadRules는 ConceptCategories.ORDERED 12종과 datasets.json DS-01 호스트를 읽고 CATEGORY_ORDER와 같다', () => {
   const r = loadRules();
-  assert.deepEqual([...r.categories].sort(), ['java', 'mybatis', 'security', 'spring', 'vue', 'web']);
+  assert.deepEqual([...r.categories], CATEGORY_ORDER);
+  assert.deepEqual(CATEGORY_ORDER, ['java', 'spring', 'web', 'security', 'mybatis', 'vue', 'database', 'javascript', 'tooling', 'typescript', 'react', 'cs']);
   assert.ok(r.hosts.has('docs.spring.io'));
   assert.ok(r.hosts.has('ko.vuejs.org'));
   assert.equal(r.src, 'data/seed/concepts');
+});
+
+// ── K-1 AC13 수준별 선택 절 ──
+
+test('K1_AC13_수준별_절은_선택이고_요약_300자_본문_10000자까지', () => {
+  assert.deepEqual(issues(card('ok', { summary_beginner: '가'.repeat(300), body_senior: '나'.repeat(10000) }), 'error'), []);
+  const over = issues(card('over', { summary_junior: '가'.repeat(301), body_beginner: '나'.repeat(10001) }), 'error');
+  assert.deepEqual(items(over), ['body-beginner', 'summary-junior']);
+});
+
+test('K1_AC13_빈_수준별_절과_모르는_절은_오류', () => {
+  const text = renderCard(row(), JAVA).replace('## example', '## summary-senior\n\n## body-expert\n\n본문\n\n## example');
+  const list = issues(parseCard(text, `${SRC}/java/empty.md`), 'error');
+  assert.deepEqual(items(list), ['body-expert', 'summary-senior']);
+});
+
+test('K1_AC5_새_카테고리_폴더의_카드도_통과한다', () => {
+  assert.deepEqual(issues(card('hooks', { category: 'react' }), 'error'), []);
 });

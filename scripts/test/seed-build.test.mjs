@@ -6,7 +6,10 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { ROOT } from '../lib/common.mjs';
-import { buildSql, parseCard, readCards, renderCard, sqlString, toRow } from '../lib/seed/card.mjs';
+import { LEVEL_SECTIONS, buildSql, parseCard, readCards, renderCard, sqlString, toRow } from '../lib/seed/card.mjs';
+
+/** 수준별 선택 절이 없을 때의 6칸 (K-1 AC13) */
+const NO_LEVELS = Object.fromEntries(Object.values(LEVEL_SECTIONS).map((c) => [c, null]));
 
 const row = (over = {}) => ({
   name: '예외 처리',
@@ -96,7 +99,7 @@ test('AC1_renderCard와_parseCard는_왕복된다 (코드 안의 백틱·frontma
   const r = row({ name: ' 앞뒤 공백 ', summary: '한 줄\n두 줄' });
   const c = parseCard(renderCard(r, blocks), 'x.md');
   assert.deepEqual(c.problems, []);
-  assert.deepEqual(toRow(c), { ...r, example_code: blocks[0].code });
+  assert.deepEqual(toRow(c), { ...NO_LEVELS, ...r, example_code: blocks[0].code });
 });
 
 test('AC1_BE_이스케이프_픽스처가_생성기_출력과_같다 (SeedConceptsTest가 DB 값을 확인)', () => {
@@ -153,4 +156,33 @@ test('AC3_읽을_수_없는_카드가_있으면_생성하지_않는다', () => {
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+// ── K-1 AC13 수준별 선택 절 ──
+
+test('K1_AC13_수준별_절은_선택이고_파싱_렌더가_왕복된다', () => {
+  const levels = { summary_junior: '주니어 요약', body_senior: "## 시니어\n- It's \\d+" };
+  const r = row(levels);
+  const text = renderCard(r, [{ lang: 'java', code: 'int a = 1;' }]);
+  assert.match(text, /## summary-junior\n\n주니어 요약\n/);
+  assert.match(text, /## body-senior\n/);
+  assert.doesNotMatch(text, /## summary-beginner/);
+  const c = parseCard(text, 'x.md');
+  assert.deepEqual(c.problems, []);
+  assert.deepEqual(toRow(c), { ...NO_LEVELS, ...r, example_code: 'int a = 1;' });
+});
+
+test('K1_AC13_INSERT와_ON_DUPLICATE_KEY_UPDATE에_6칸이_들어가고_절이_없으면_NULL', () => {
+  const withLevels = card('data/seed/concepts/java/a.md', { summary_beginner: '입문', body_junior: '## 주니어' });
+  const plain = card('data/seed/concepts/java/b.md', { name: '다른 카드' });
+  const sql = buildSql([withLevels, plain]);
+  for (const column of Object.values(LEVEL_SECTIONS)) {
+    assert.match(sql.slice(0, sql.indexOf('VALUES')), new RegExp(`\\b${column}\\b`), `INSERT 열 ${column}`);
+    assert.match(sql, new RegExp(`\\n\\s+${column}\\s+= seed\\.${column},`), `UPDATE ${column}`);
+  }
+  const rowA = sql.slice(sql.indexOf('-- data/seed/concepts/java/a.md'), sql.indexOf('-- data/seed/concepts/java/b.md'));
+  assert.match(rowA, /\n '입문', NULL, NULL,\n/);
+  assert.match(rowA, /\n NULL, '## 주니어', NULL,\n/);
+  const rowB = sql.slice(sql.indexOf('-- data/seed/concepts/java/b.md'));
+  assert.equal((rowB.match(/NULL, NULL, NULL,/g) ?? []).length, 2);
 });
