@@ -33,7 +33,7 @@ const slugOf = (file) => posix.basename(file).replace(/\.md$/, '');
 /**
  * ts·js 가상 파일 묶음을 한 프로그램으로 검사한다 (lib.d.ts를 한 번만 읽게).
  * 파일은 frontend/ 아래 가상 경로에 두어 vue·pinia·vue-router 타입이 실제로 해석된다.
- * @param units [{path, text, semantic, report(diag)}]
+ * @param units [{path, text, semantic, report(diag)}] semantic: true면 타입까지, 'grammar'면 checker의 문법 진단(TS1xxx)만 (js)
  */
 function runTs(ts, root, units) {
   if (!units.length) return;
@@ -44,7 +44,8 @@ function runTs(ts, root, units) {
     moduleResolution: ts.ModuleResolutionKind.Bundler,
     jsx: ts.JsxEmit.Preserve,
     allowJs: true,
-    checkJs: false,
+    // js도 checker를 돌려야 루프 밖 break·최상위 return 같은 문법 오류가 나온다. js는 그중 TS1xxx만 쓴다
+    checkJs: true,
     strict: false,
     noImplicitAny: false,
     skipLibCheck: true,
@@ -69,7 +70,10 @@ function runTs(ts, root, units) {
     const sf = program.getSourceFile(u.path);
     // 문법 오류는 연쇄로 여러 개 나오므로 첫 오류만 본다
     const diags = program.getSyntacticDiagnostics(sf).slice(0, 1);
-    if (u.semantic && !diags.length) diags.push(...program.getSemanticDiagnostics(sf));
+    if (u.semantic && !diags.length) {
+      const sem = program.getSemanticDiagnostics(sf);
+      diags.push(...(u.semantic === 'grammar' ? sem.filter((d) => d.code >= 1000 && d.code < 2000).slice(0, 1) : sem));
+    }
     for (const d of diags) {
       const line = d.file && d.start != null ? d.file.getLineAndCharacterOfPosition(d.start).line + 1 : 1;
       u.report({ code: d.code, line, message: ts.flattenDiagnosticMessageText(d.messageText, ' ') });
@@ -102,9 +106,10 @@ export function checkFeExamples(cards, tools) {
       if (UNCHECKED_LANGS.includes(lang)) return void unchecked.push({ file: card.file, lang, line: block.line });
       if (!FE_LANGS.includes(lang)) return;
       checked[lang] = (checked[lang] ?? 0) + 1;
-      const tsUnit = (ext, text, offset, semantic) =>
+      const tsUnit = (ext, text, offset, semantic, part = '') =>
         units.push({
-          path: `${base}/${card.file.split('/').at(-2)}-${slugOf(card.file)}-${idx + 1}.${ext}`,
+          // part: vue의 <script>·<script setup>을 서로 다른 파일로 (경로가 같으면 한쪽이 버려진다)
+          path: `${base}/${card.file.split('/').at(-2)}-${slugOf(card.file)}-${idx + 1}${part}.${ext}`,
           // 블록끼리 전역 이름이 겹치지 않게 모듈로 만든다 (끝에 붙여 줄 번호는 그대로)
           text: `${text}\nexport {};\n`,
           semantic,
@@ -120,7 +125,7 @@ export function checkFeExamples(cards, tools) {
         } catch (e) {
           add('error', 1, `JSON 파싱 실패: ${e.message}`);
         }
-      } else if (lang === 'js' || lang === 'jsx') tsUnit(lang, code, 0, false);
+      } else if (lang === 'js' || lang === 'jsx') tsUnit(lang, code, 0, 'grammar');
       else if (lang === 'ts' || lang === 'tsx') tsUnit(lang, code, 0, true);
       else if (lang === 'vue') {
         const filename = `${slugOf(card.file)}-${idx + 1}.vue`;
@@ -150,7 +155,7 @@ export function checkFeExamples(cards, tools) {
             if (!s || (s.lang !== 'ts' && s.lang !== 'tsx')) continue;
             // <script setup>의 컴파일러 매크로는 전역 선언 없이 쓴다 → 한 줄로 선언을 붙이고 줄 번호를 하나 당긴다
             const text = s === scriptSetup ? `${SETUP_MACROS}${s.content}` : s.content;
-            tsUnit(s.lang, text, s.loc.start.line - 1 - (s === scriptSetup ? 1 : 0), true);
+            tsUnit(s.lang, text, s.loc.start.line - 1 - (s === scriptSetup ? 1 : 0), true, s === scriptSetup ? '-setup' : '-script');
           }
         }
       }

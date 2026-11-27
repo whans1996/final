@@ -3,7 +3,7 @@
 > 김동환(A 영역: AI·분석·학습 루프) 전용. 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
 > 머리 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
-갱신: 2026-11-27 09:58 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/K-3a-seed-check
+갱신: 2026-11-27 10:07 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/K-3a-seed-check
 
 ## 현재 기능
 
@@ -20,7 +20,7 @@
 
 ## 바로 다음 할 일
 
-1. push → `gh pr create --base develop --title "feat(K-3a): 시드 카드 원본 형식과 검수 ①형식 ②예제 실행" --body-file .harness/pr-K-3a.md` → CI·Codex 루프(`node scripts/codex-review.mjs <PR> --request --wait --status`)
+1. **PR #234** 열림. Codex P2 2건(vue script·setup 경로 겹침, js checker 문법 오류) 반영 후 재리뷰 중 (재리뷰 3회째). Codex 루프: `node scripts/codex-review.mjs 234 --request --wait --status` (Bash 백그라운드)
 2. COMPLETE·CI 초록이면 `docs(K-3a): 완료 표시 (spec DONE)` → 머지는 GitHub에서 직접
 3. 11/29부터 HP-4 (#165·#166 + ④ 묶음)
 

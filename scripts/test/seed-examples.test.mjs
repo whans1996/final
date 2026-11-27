@@ -58,6 +58,20 @@ test('AC9_vue_script_setup_lang_ts면_ts_규칙도_적용', { skip }, () => {
   const r = run([{ lang: 'vue', code: sfc('const count: number = "1";') }]);
   assert.deepEqual(sev(r), ['vue:error']);
   assert.match(r.issues[0].message, /TS2322/);
+  // <script>와 <script setup>이 함께 있어도 둘 다 검사한다 (가상 파일 경로가 겹쳐 한쪽이 버려지지 않게, Codex 리뷰)
+  const both = run([
+    { lang: 'vue', code: '<script lang="ts">\nconst n: number = "wrong";\n</script>\n\n<script setup lang="ts">\nconst m: number = 1;\n</script>' },
+  ]);
+  assert.deepEqual(sev(both), ['vue:error']);
+  assert.equal(both.issues[0].line, 20); // <script>의 둘째 줄
+});
+
+test('AC9_js는_파서가_받아도_문법상_틀린_문장을_오류로_본다 (Codex 리뷰)', { skip }, () => {
+  for (const code of ['break;', 'return 1;', 'const missing;']) {
+    assert.deepEqual(sev(run([{ lang: 'js', code }])), ['js:error'], code);
+  }
+  // 모르는 이름·속성은 여전히 문제 아님 (js는 타입을 보지 않는다)
+  assert.deepEqual(sev(run([{ lang: 'js', code: 'let x = 1;\nx.foo.bar();\nfor (;;) { break; }' }])), []);
 });
 
 test('AC9_json은_JSON.parse_실패가_오류이고_검사_안_하는_언어는_따로_센다', { skip }, () => {
