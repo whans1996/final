@@ -32,7 +32,7 @@
 | AC6 | 조건에 맞는 카드가 25개일 때 | `page=2&size=10` / `page=4&size=10`으로 요청하면 | page 2는 11~20번째 10개와 `total: 25`, 범위를 넘은 page 4는 `items: []`과 `total: 25`를 받는다 |
 | AC7 | 누구나 | 규칙을 어긴 값(`difficulty=EXPERT`, `sort=NAME`, `page=0`, `size=101`, 51자 이상 `keyword`, 51자 이상 `category`)으로 요청하면 | 400 `COMMON_400`을 받고 `details`에 필드별 사유가 담긴다 (4절 검증 규칙). enum 값은 대문자만 받는다 (`difficulty=junior`도 400) |
 | AC8 | 시드 카드 85개가 적재된 DB에서 | 키워드·카테고리 조건을 넣어 목록을 요청하면 | 한 번 데운 뒤 잰 응답 시간이 500ms 이내다 (NF-03). 통합 테스트에서 측정한다 |
-| AC9 | 누구나 | `/concepts` 화면(SC-09)을 열면 | 검색창, 카테고리 선택(전체 + 6종), 난이도 선택(전체 + 3단계), 정렬 선택(인기순·최신순), 카드 그리드, 이전·다음 페이지를 본다. 카드는 이름, 카테고리, 난이도 배지, 요약, 찜 수, 평점을 보여 주고, 누르면 `/concepts/:id`(F-10)로 간다. 상단 nav에 "개념 카드" 링크가 있다 |
+| AC9 | 누구나 | `/concepts` 화면(SC-09)을 열면 | 검색창, 카테고리 선택(전체 + 6종, K-1부터 12종), 난이도 선택(전체 + 3단계), 정렬 선택(인기순·최신순), 카드 그리드, 이전·다음 페이지를 본다. 카드는 이름, 카테고리, 난이도 배지, 요약, 찜 수, 평점을 보여 주고, 누르면 `/concepts/:id`(F-10)로 간다. 상단 nav에 "개념 카드" 링크가 있다 |
 | AC10 | `/concepts` 화면에서 | 검색어를 입력하고 Enter나 검색 버튼을 누르거나, 필터·정렬을 바꾸거나, 페이지를 넘기면 | 조건이 URL 쿼리(`?keyword=jwt&category=security&difficulty=JUNIOR&sort=LATEST&page=2`)에 반영되고 그 조건으로 다시 조회한다. 검색·필터·정렬을 바꾸면 page는 1로 돌아간다. 쿼리가 달린 URL을 바로 열거나 뒤로 가기를 하면 그 조건이 입력란과 목록에 복원된다. 기본값(`sort=POPULAR`, `page=1`, 빈 값)은 쿼리에 넣지 않는다 |
 | AC11 | `/concepts` 화면에서 | 로딩 중 / 결과가 0건 / 요청이 실패하면 | 로딩 문구 / "조건에 맞는 개념 카드가 없습니다" + "필터 초기화" 버튼(누르면 `/concepts`로 이동) / 서버 `message`를 보여 준다. 375px 폭에서는 카드가 한 열이고 가로 스크롤이 없다 (NF-02) |
 
@@ -47,7 +47,7 @@
 | page·size | `PageQuery` 그대로 (page ≥1, 1 ≤ size ≤100, 기본 1·20) | `PageQuery`의 메시지 |
 
 - enum 파라미터는 문자열로 받아 검증한다 (F-01 `level`과 같은 방식). Spring 기본 변환 실패(`MethodArgumentTypeMismatchException`)에 맡기면 `details`에 필드가 담기지 않는다.
-- 카테고리 6종(`java`·`spring`·`web`·`security`·`mybatis`·`vue`, 결정로그 11-18)은 FE 상수로 둔다. 화면 표시명은 Java·Spring·Web·Security·MyBatis·Vue.
+- 카테고리 6종(`java`·`spring`·`web`·`security`·`mybatis`·`vue`, 결정로그 11-18)은 FE 상수로 둔다. 화면 표시명은 Java·Spring·Web·Security·MyBatis·Vue. **K-1(11-27)에서 12종으로 늘었다**: + `database`·`javascript`·`tooling`·`typescript`·`react`·`cs` (Database·JavaScript·Tooling·TypeScript·React·CS), 표시명은 `categoryLabel()`.
 
 ## 3. API 계약
 

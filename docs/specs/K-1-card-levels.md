@@ -189,7 +189,7 @@ ALTER TABLE concepts
 
 ### 5.4절 이름 비교 개정 (F-08 spec 5.4절을 이 PR에서 고친다)
 
-키 = 소문자 + 공백 제거. 카드·초안마다 ① 전체 이름 ② 끝 괄호 `(…)`를 뗀 앞부분 ③ 끝 괄호 **안**(2~30자, `·`·`,`·`/`가 없을 때만)을 만든다. 기존 카드의 ③ 키는 **다른 카드의 ③ 키와 겹치면 둘 다 쓰지 않는다**. 찾을 때 우선순위는 전체 이름 → 앞부분 → 괄호 안. 같은 카드로 판정된 카드가 `HIDDEN`이면 그 항목을 버린다(AC10).
+키 = 소문자 + 공백 제거. 카드·초안마다 ① 전체 이름 ② 끝 괄호 `(…)`를 뗀 앞부분 ③ 끝 괄호 **안**(2~30자, `·`·`,`·`/`가 없을 때만)을 만든다. 기존 카드의 ③ 키는 **다른 카드의 ③ 키와 겹치면 둘 다 쓰지 않는다**. 찾을 때 우선순위는 전체 이름 → 앞부분 → 괄호 안. 같은 카드로 판정된 카드가 `HIDDEN`이면 그 항목을 버린다(AC10). 저장 때 초안 INSERT가 UNIQUE 충돌(콜레이션만 같은 이름, 카탈로그를 읽은 뒤 숨긴 카드)로 `HIDDEN` 카드에 닿아도 연결하지 않는다(구현 중 추가, AC10과 같은 목적). 같은 응답의 초안끼리는 ①·②만 비교한다(괄호 안만 같은 서로 다른 개념을 합치지 않게).
 
 ## 7. 테스트 계획
 
@@ -224,17 +224,17 @@ ALTER TABLE concepts
 
 `/implement`가 진행하며 체크한다.
 
-- [ ] 브랜치 `feature/K-1-card-levels`
-- [ ] Flyway `V16__concept_levels.sql` (`node scripts/next-migration.mjs`로 번호 재확인)
-- [ ] AC별 실패 테스트 작성 (red 확인)
-- [ ] BE 구현 (green): ConceptCategories(12종·별칭), 파서(levelSummaries·별칭·괄호 안 키·HIDDEN), ConceptLinkService INSERT, 상세·관리자 DTO·Mapper, 스키마·프롬프트 3개·fixture
-- [ ] 시드 도구 (card.mjs·seed-build·seed-check) + `R__seed_concepts.sql` 다시 생성
-- [ ] FE 구현 (green): 카테고리 12종·`categoryLabel` 4곳·JSDoc
+- [x] 브랜치 `feature/K-1-card-levels`
+- [x] Flyway `V16__concept_levels.sql` (`node scripts/next-migration.mjs`로 번호 재확인)
+- [x] AC별 실패 테스트 작성 (red 확인)
+- [x] BE 구현 (green): ConceptCategories(12종·별칭), 파서(levelSummaries·별칭·괄호 안 키·HIDDEN), ConceptLinkService INSERT, 상세·관리자 DTO·Mapper, 스키마·프롬프트 3개·fixture
+- [x] 시드 도구 (card.mjs·seed-build·seed-check) + `R__seed_concepts.sql` 다시 생성
+- [x] FE 구현 (green): 카테고리 12종·`categoryLabel` 4곳·JSDoc
 - [ ] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
 - [ ] contract-checker 통과
 - [ ] ui-verifier 통과 (라벨 바뀐 화면: 카드 목록·상세·커뮤니티 글 첨부, 데스크톱·모바일)
 - [ ] reviewer 지적 사항 반영
-- [ ] 산출물·문서 반영: 03 ERD, 07 API(생성), 09 데이터셋 DS-05 카테고리, 01 요구사항 정의서 K-1 행, 기획서 ERD, F-08 spec AC5·5.4절, F-09·F-13·K-3a spec의 6종 문구
+- [x] 산출물·문서 반영: 03 ERD, 07 API(생성), 09 데이터셋 DS-05 카테고리, 01 요구사항 정의서 K-1 행, 기획서 ERD, F-08 spec AC5·5.4절, F-09·F-13·K-3a spec의 6종 문구
 - [ ] PR 본문 `Roadmap: K-1`, `Closes #163`, `Closes #204`, 공통 코드 변경 @JoonseobKim
 - [ ] EV-1 기준선(12/01) 뒤 머지
 - [ ] PR CI 초록

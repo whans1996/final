@@ -75,8 +75,9 @@ List<Post> search(@Param("keyword") String keyword);
 - 경로 `data/seed/concepts/<category>/<slug>.md`. slug는 영문 소문자 kebab. 폴더 = category.
 - `example_code`는 블록 내용을 순서대로 빈 줄 하나(`\n\n`)로 이어 붙인 값이다. 언어 태그는 검사에만 쓰고 DB에 저장하지 않는다 (FE·API 그대로).
 - `status`·`source`는 파일에 쓰지 않는다. 생성기가 `PUBLISHED`·`SEED`로 넣는다.
+- 선택 절 (K-1 AC13): `## summary-beginner`·`## summary-junior`·`## summary-senior`(수준별 한 줄 요약, 300자 이하)·`## body-beginner`·`## body-junior`·`## body-senior`(수준별 본문, 10,000자 이하). `## body` 뒤·`## example` 앞에 둔다. 없으면 DB 값이 NULL이고, 절을 쓰고 비워 두면 오류다. 내용은 K-3c가 채운다.
 - 허용 언어 태그. 검사함: `java` `sql` `xml` `yaml` `js` `jsx` `ts` `tsx` `vue` `json`. 검사 안 함: `http` `text` `bash` `properties` `gradle` `kotlin`.
-- 생성 순서: 카테고리 순(java·spring·web·security·mybatis·vue, 그 밖은 이름순) → 파일 이름순. 새 DB의 id 순서만 정하고, Mock fixture는 이름으로 연결해서 영향이 없다 (#49).
+- 생성 순서: 카테고리 순(java·spring·web·security·mybatis·vue·database·javascript·tooling·typescript·react·cs 12종(K-1), 그 밖은 이름순) → 파일 이름순. 새 DB의 id 순서만 정하고, Mock fixture는 이름으로 연결해서 영향이 없다 (#49).
 
 ## 5. 프론트엔드
 
