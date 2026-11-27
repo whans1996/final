@@ -455,6 +455,23 @@ describe('AnalysisDetailView 결과 탭 (F-06 AC13~AC15)', () => {
     expect(wrapper.find('[data-message="no-edges"]').exists()).toBe(true)
   })
 
+  it('#200 "← 내 분석" 링크는 내 분석에만 있고, 남의 공개 분석에는 없다', async () => {
+    analysesApi.fetchAnalysisStatus.mockResolvedValue(status({ status: 'DONE', progress: 100 }))
+    analysesApi.fetchAnalysis.mockResolvedValue(detail())
+    const own = await mountDetail()
+    const back = own.wrapper.find('[data-action="back-to-mine"]')
+    expect(back.text()).toBe('← 내 분석')
+    expect(back.attributes('href')).toBe('/analyses')
+
+    analysesApi.fetchAnalysis.mockResolvedValue(
+      detail({ mine: false, owner: { id: 7, nickname: 'vibecoder' } }),
+    )
+    const other = await mountDetail()
+    expect(other.wrapper.find('[data-action="back-to-mine"]').exists()).toBe(false)
+    expect(other.wrapper.text()).not.toContain('내 분석')
+    expect(other.wrapper.find('[data-section="owner"]').text()).toBe('vibecoder님의 분석')
+  })
+
   it('F-08 AC8 개념 탭은 실행 흐름 다음이고, ?tab=concepts로 열면 복원하며 위치를 누르면 파일 탭으로 간다', async () => {
     analysesApi.fetchAnalysisStatus.mockResolvedValue(status({ status: 'DONE', progress: 100 }))
     analysesApi.fetchAnalysis.mockResolvedValue(detail())
