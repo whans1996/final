@@ -1,28 +1,30 @@
 # NOW — 김준섭 현재 작업 스냅샷
 
 > 김준섭(B 영역: 카드·소셜) 전용. 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
-갱신: 2026-11-27 15:25 · 작업자: JoonseobKim · PC: js-ssafy · 브랜치: feature/F-29b-app-shell
+갱신: 2026-11-27 15:41 · 작업자: JoonseobKim · PC: js-ssafy · 브랜치: feature/F-29b-app-shell
 
 ## 현재 기능
 
-**F-29b 앱 셸** `docs/specs/F-29b-app-shell.md` (APPROVED, AC14) · 브랜치 `feature/F-29b-app-shell` (develop a234309에서, F-29a PR #244 머지됨) · ~12/02 넘겨주기. PR 본문 `Roadmap: F-29`
+**F-29b 앱 셸** `docs/specs/F-29b-app-shell.md` (APPROVED, AC14 모두 green) · 브랜치 `feature/F-29b-app-shell` · **PR #247** (head ac88f2b, `Roadmap: F-29`, 김동환 @멘션) · ~12/02 넘겨주기
 
 ## 진행
 
-- ✅ 커밋·push: AC1 navGroups·navIcons·route group/icon (e9acb91), CODEOWNERS shell (189ab5a), AC2~AC4 AppSidebar (fedbec1), AC8~AC11 HeaderSearch·searchTargets·ThemeToggle 2단계(결정로그·spec AC10 수정)·UserMenu (0e3403a)
-- 🟡 **미커밋 (테스트 green, FE 전체 verify 진행 중)**: `components/shell/` AppHeader(AC9 모바일 🔍·AC12 슬롯)·AppBottomTabs+bottomTabs.js(AC5)·NavDrawer(Reka Dialog)·useLogout.js, `layouts/` AppShell·GuestShell(AC6)·SkipLink(AC14), `App.vue` 셸 선택(AC7), route `wide: true`(analysis-detail·team-understanding), `src/__tests__/App.spec.js` 새 셸 기준 재작성(AC2·AC6·AC7·AC13·AC14), `frontend/CLAUDE.md` 메뉴·셸 규칙
+- ✅ AC1~AC14 구현·테스트 (e9acb91 … 1256182), `/pr-review`: verify all 통과, reviewer 반드시 수정 1건 반영 fe99fa1 (App.vue 셸 전환을 `router.afterEach`로 → 로그아웃 시 화면 재마운트·401→/login 방지, 회귀 App.spec AC11) + 권장 4건(닉네임 메뉴 접근 이름, viewport-fit=cover, dev 갤러리 중첩 main 제거, 사이드바 z-20, FE CLAUDE.md)
+- ✅ 화면 설계서 2-1절 구현 반영·스크린샷 7장 (ac88f2b), PR 본문 `.harness/pr-F-29b.md`
+- 🟡 CI 진행 중, Codex 리뷰 RUNNING (`node scripts/codex-review.mjs 247 --request --wait --status` 백그라운드)
 
 ## 바로 다음 할 일
 
-1. `/pr-review` (verify all → reviewer·ui 스크린샷 → 화면 설계서 2-1절 앱 셸 3폭 스크린샷 `docs/산출물/screens/` → PR 본문 `Roadmap: F-29`, 김동환 @멘션: A route 파일 5개 `meta.nav` group·icon + analysis·team `wide`, 공통 App.vue·layouts·components/shell)
-2. ui-verifier 결과: 회원·비회원 1280·800·375·다크·키보드 OK. 비회원 800 검색 찌그러짐은 고침(AppHeader `inlineSearchFrom="lg"`). 미확인: ADMIN 화면(관리자 계정 없음), `/analyses/:id` wide(분석 데이터 없음). 임시 계정 `ui-f29b-31835@example.com` (로컬 DB)
+1. Codex 판정 확인: `node scripts/codex-review.mjs 247`. FINDINGS면 `/pr-review` 8단계(AC·보안 깨는 것만 고치고 P2는 follow-up 이슈 → `--resolve`). COMPLETE + CI 초록이면 10단계: spec 헤더 `DONE (PR #247)`·체크리스트 마지막 칸 → `docs(F-29b): 완료 표시` 커밋·push
+2. 사람이 GitHub에서 #247 머지 (상대 PR이 먼저 머지되면 `git merge origin/develop` → push → CI 재확인)
+3. 머지 뒤 다음 로드맵: `node scripts/roadmap.mjs --next --after F-29` (LP-1 랜딩·CD-1·V-4, 12/03~)
 
 ## 막힌 점 / 결정 필요
-- 없음. GMS 키 만료 12/09 18:00 → EV-2 전에 재발급·연장 확인
+- 없음. 미확인: ADMIN `/admin` 화면, `/analyses/:id` 1440px 화면 (단위 테스트로만). GMS 키 만료 12/09 18:00 → EV-2 전에 재발급·연장 확인
 
 ## 주의
 
 - **NOW·작업로그·PR·커밋 메시지에 eval 라벨 내용을 적지 않는다.** 점수·개수·SHA만
-- 공통 코드 변경 → PR에서 김동환 @멘션: A route 파일 5개(`meta.nav` group·icon, analysis·team `wide`), `App.vue`, `layouts/`, `components/shell/`, `utils/navItems.js`·`navIcons.js`·`searchTargets.js`, CODEOWNERS
-- push는 pre-push가 미커밋 FE 변경이 있으면 거부한다 → 커밋 후 push, push 중엔 작업 트리 건드리지 않기
+- 셸 전환은 내비게이션 경계(afterEach)에서만: 로그인 뒤 테스트는 `router.push`까지 해야 회원 셸이 된다
+- 화면(View)은 `<main>`을 쓰지 않는다. 본문 상하 여백은 각 화면 개편 PR에서
 - Figma는 공동 세션 전까지 건드리지 않는다
