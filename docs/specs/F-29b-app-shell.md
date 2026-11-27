@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 |---|---|
-| 상태 | APPROVED <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
+| 상태 | DONE (PR #247) <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
 | 기능 ID | F-29b (로드맵 `F-29`의 뒤 절반, 12/02 넘겨주기. PR 본문 `Roadmap: F-29`) |
 | 우선순위 | T0 |
 | 영역 오너 | B 김준섭 (공통 셸. A 영역 route 파일의 `meta.nav`를 고치므로 PR에서 김동환 @멘션) |
@@ -113,5 +113,5 @@
 - [x] ui-verifier 통과 (1280·800·375, 회원·비회원, 라이트·다크, 키보드. 비회원 800 검색 찌그러짐 → 비회원 헤더는 1024 미만에서 🔍로 접음. ADMIN `/admin`은 App.spec AC13으로 확인, 화면은 관리자 계정 없어 미확인)
 - [x] reviewer 지적 사항 반영 (셸 전환을 afterEach로: 로그아웃 재마운트, 권장 4건)
 - [x] 산출물 반영: 화면 설계서 2-1절 스크린샷 3폭 (PR 스크린샷 `pr-screens.mjs`)
-- [ ] PR CI 초록 (김동환 @멘션: A route 파일 5개 `meta.nav`)
-- [ ] 상태 DONE (PR 머지 후)
+- [x] PR CI 초록 (김동환 @멘션: A route 파일 5개 `meta.nav`), Codex ✅ e7777e9 (재리뷰 2회: 취소된 이동·같은 곳 이동 셸 전환, 검색어 50자)
+- [x] 상태 DONE (PR #247)
