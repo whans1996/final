@@ -390,8 +390,22 @@ export function overdueMessage(overdue) {
 export function overduePayload(md, prsRes, sinceIso, { today = seoulToday() } = {}) {
   if (!sinceIso) return { text: null, reason: '직전 커밋 시각 없음' };
   const { view } = loadView(md, prsRes, { today, branches: [] });
-  if (!view.statusOk) return { text: null, reason: `상태 조회 실패: ${view.reason ?? '?'}` };
+  if (!view.statusOk) return { text: null, reason: `상태 조회 실패: ${view.reason ?? '?'}`, failed: true };
   return { text: overdueMessage(newlyOverdue(view, seoulToday(new Date(sinceIso)))), reason: null };
+}
+
+const RERUN = '→ Actions에서 이 실행을 Re-run으로 다시 보내기 (같은 커밋 기준으로 다시 계산한다)';
+
+/**
+ * 알림 실행 결과 → { exit, message } (HP-4 AC13, #196). "한 번" 규칙(newlyOverdue)이라 다음 push에서는 다시 알리지 않으므로,
+ * 상태 조회(failed)나 Mattermost 전송(sent === false)이 실패하면 job을 실패시켜 사람이 Re-run하게 한다.
+ * sent: true(보냄) | false(실패, error에 이유) | null(보낼 것 없음)
+ */
+export function overdueOutcome({ text, reason, failed = false, sent = null, error = '' }) {
+  if (failed) return { exit: 1, message: `${reason} ${RERUN}` };
+  if (text && sent === false) return { exit: 1, message: `Mattermost 전송 실패 (${error || '?'}) ${RERUN}` };
+  if (text && sent) return { exit: 0, message: '넘겨주는 시점 지남 알림을 보냈습니다' };
+  return { exit: 0, message: reason ? `알림 없음: ${reason}` : '새로 지난 넘겨주는 시점 없음' };
 }
 
 /**

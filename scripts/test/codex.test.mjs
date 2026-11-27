@@ -1,5 +1,6 @@
 // Codex 재리뷰 판정 중 GitHub 호출 없는 부분
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import {
   STUCK_MS,
@@ -330,4 +331,61 @@ test('push 직후 PR head가 방금 push한 커밋의 조상이면 반영을 기
   assert.equal(headLagging('c', 'b', isAncestor), false); // 다른 PC가 더 새 커밋을 push함
   assert.equal(headLagging('b', null, isAncestor), false); // 원격 추적 브랜치 없음
   assert.equal(headLagging('x', 'c', () => false), false); // force push 등 갈라짐
+});
+
+const cleanReceipt = (sha, min) =>
+  bot(iso(min), `<!-- codex-review-receipt:v1 -->\n\nCodex Review: Didn't find any major issues. Keep it up!\n\n**Reviewed commit:** \`${sha.slice(0, 10)}\``);
+
+test('HP-4 AC10: PR 전체가 문서만이면 리뷰가 없거나 실패해도 COMPLETE (문서만 PR, Codex 생략) (#165)', () => {
+  const prDocs = (comments, opts = {}) => judgeReview({ pr: 7, h: { sha: HEAD, state: 'OPEN' }, comments, prDocsOnly: () => true, now: T0, ...opts });
+  for (const comments of [[], [summary(HEAD, 'failed')], [summary(PREV, 'failed')], [summary(PREV, 'completed', { findings: true })]]) {
+    const r = prDocs(comments);
+    assert.equal(r.verdict, 'COMPLETE', JSON.stringify(comments.map((c) => c.body.slice(-60))));
+    assert.equal(r.msg, 'head 1111111 문서만 PR, Codex 생략 (conventions 7절)');
+  }
+  // head 리뷰가 끝났으면 그 판정을 그대로 보인다: 지적 없음, 또는 지적(사람이 읽고 판단, conventions 7절)
+  assert.match(prDocs([summary(HEAD, 'completed')]).msg, /지적 없음/);
+  assert.equal(prDocs([summary(HEAD, 'completed', { findings: true })]).verdict, 'FINDINGS');
+  // 문서 밖 변경이 있는 PR은 기존 판정
+  assert.equal(judge([summary(HEAD, 'failed')]).verdict, 'STALE');
+  assert.equal(judge([]).verdict, 'STALE');
+});
+
+test('HP-4 AC10: codex-review.mjs는 develop merge-base 대비 PR 전체로 문서만 PR을 판정한다', () => {
+  const src = readFileSync(new URL('../codex-review.mjs', import.meta.url), 'utf8');
+  assert.match(src, /prDocsOnly/);
+});
+
+test('HP-4 AC11: 상태 댓글이 지적 있던 A에 머물러도, 지적보다 늦은 영수증 B 이후 문서만 바뀌었으면 COMPLETE (#198)', () => {
+  const B = '3'.repeat(40);
+  // A(PREV) 리뷰: 지적 2건(-30, -20분), 상태 댓글 갱신 0분 → B 리뷰: 영수증 10분 (영수증의 sha는 10자)
+  const comments = [summary(PREV, 'completed', { at: 0, findings: true }), cleanReceipt(B, 10)];
+  const r = judge(comments, { findings: [iso(-30), iso(-20)], docsOnly: [B.slice(0, 10)] });
+  assert.equal(r.verdict, 'COMPLETE');
+  assert.equal(r.msg, `head 1111111 문서만 변경 (Codex ✅ ${B.slice(0, 7)} 이후)`);
+  // 영수증보다 늦은 미해결 인라인 지적이 있으면 COMPLETE가 아니다
+  assert.notEqual(judge(comments, { findings: [iso(-30), iso(12)], docsOnly: [B.slice(0, 10)] }).verdict, 'COMPLETE');
+  // B 이후 코드도 바뀌었으면 COMPLETE가 아니다
+  assert.notEqual(judge(comments, { findings: [iso(-30)] }).verdict, 'COMPLETE');
+  // 상태 댓글보다 이른 영수증은 기준이 아니다 (그 뒤의 A 리뷰가 지적을 남겼다)
+  assert.notEqual(judge([cleanReceipt(B, -40), summary(PREV, 'completed', { at: 0, findings: true })], { findings: [iso(-30)], docsOnly: [B.slice(0, 10)] }).verdict, 'COMPLETE');
+});
+
+test('HP-4 AC12: 로컬 HEAD가 그대로여도 push로 원격 브랜치가 바뀌었으면 3분 안이라도 다시 판정한다 (#178)', () => {
+  const head = 'abc1234' + '0'.repeat(33);
+  const now = 10 * 60_000;
+  const MS = 3 * 60_000;
+  const prev = { head, prHead: 'def5678', verdict: 'STALE', at: now - 1000, remote: 'r1' };
+  assert.ok(skipRecheck(prev, head, now, MS, 'r1'));
+  assert.ok(!skipRecheck(prev, head, now, MS, 'r2'));
+  // COMPLETE 확정도 원격이 바뀌면 다시 본다
+  assert.ok(!skipRecheck({ ...prev, prHead: 'abc1234', verdict: 'COMPLETE', at: 0 }, head, now, MS, 'r2'));
+  // 원격을 모르면(브랜치를 아직 push하지 않음) 기존 규칙
+  assert.ok(skipRecheck({ ...prev, remote: null }, head, now, MS, null));
+});
+
+test('HP-4 AC12: codex-loop는 판정 기록에 원격 브랜치 sha를 남기고 skipRecheck에 넘긴다', () => {
+  const src = readFileSync(new URL('../../.claude/hooks/codex-loop.mjs', import.meta.url), 'utf8');
+  assert.match(src, /skipRecheck\(prev, head, Date\.now\(\), RECHECK_MS, remote\)/);
+  assert.match(src, /remote,/);
 });

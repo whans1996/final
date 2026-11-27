@@ -180,7 +180,12 @@ async function judge() {
     dev ??= developMergeBase(h) ?? { missing: true };
     return !dev.missing && docsOnlySince(base, h, dev.mb);
   };
-  return { ...judgeReview({ pr, h, comments, findingTimes, docsOnlySince: docsOnly }), h, comments };
+  // PR 전체(develop merge-base 대비)가 문서만인가 (#165)
+  const prDocsOnly = () => {
+    dev ??= developMergeBase(h) ?? { missing: true };
+    return !dev.missing && !!dev.mb && docsOnlySince(dev.mb, h, dev.mb);
+  };
+  return { ...judgeReview({ pr, h, comments, findingTimes, docsOnlySince: docsOnly, prDocsOnly }), h, comments };
 }
 
 const STATUS = { COMPLETE: 'success', FINDINGS: 'failure', ERROR: 'error' };

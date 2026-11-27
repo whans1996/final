@@ -9,7 +9,7 @@
 // (PR, head, 판정)마다 한 번만 반응한다: 지적을 반박하거나 사람에게 넘기고 멈춘 경우 매 턴 다시 막지 않게.
 // draft PR과 docs만 바꾼 PR(conventions 7절 예외, #129)은 보지 않는다. 판정 규칙은 scripts/lib/codex.mjs(loopAction·skipRecheck·waitingInTranscript, 테스트 있음)에 있고,
 // 판정 자체는 scripts/codex-review.mjs(대기 없음, 읽기 전용)의 첫 줄을 쓴다.
-// 네트워크 비용: 판정한 PR head가 로컬 HEAD이고 COMPLETE면 건너뛰고, 그 밖에는 3분에 한 번만 확인한다.
+// 네트워크 비용: 판정한 PR head가 로컬 HEAD이고 COMPLETE면 건너뛰고, 그 밖에는 3분에 한 번만 확인한다 (push로 원격 브랜치가 바뀌면 바로, #178).
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -33,10 +33,12 @@ try {
   state = {};
 }
 const prev = state[branch] || {};
-if (skipRecheck(prev, head, Date.now(), RECHECK_MS)) process.exit(0);
+// push하면 origin/<브랜치>가 바뀐다. 로컬 HEAD가 그대로여도 push 뒤에는 바로 다시 판정한다 (#178)
+const remote = git(['rev-parse', '--verify', '-q', `refs/remotes/origin/${branch}`]).out || null;
+if (skipRecheck(prev, head, Date.now(), RECHECK_MS, remote)) process.exit(0);
 
 function save(entry) {
-  state[branch] = { handled: prev.handled || [], head, at: Date.now(), prHead: null, ...entry };
+  state[branch] = { handled: prev.handled || [], head, at: Date.now(), prHead: null, remote, ...entry };
   try {
     mkdirSync(join(ROOT, '.harness'), { recursive: true });
     writeFileSync(STATE_FILE, JSON.stringify(state));

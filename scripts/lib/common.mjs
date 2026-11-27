@@ -114,39 +114,47 @@ export function mdSection(md, title) {
 // 체크포인트 대상: 실제 작업 산출물 (하네스 자체, 기획서는 제외)
 const WORK_WATCH = /^(backend\/|frontend\/|docs\/specs\/)/;
 const WORK_IGNORE = /(^|\/)(node_modules|build|dist|\.gradle)\/|(^|\/)CLAUDE\.md$/;
+/** 체크포인트 대상 작업 파일인가 (저장소 기준 경로) */
+export const isWorkFile = (p) => WORK_WATCH.test(p) && !WORK_IGNORE.test(p);
 
-/** 내 NOW 파일보다 1초 넘게 나중에 바뀐 미커밋 작업 파일 경로. 최근 것부터. PC 미등록(nowFile null)이면 판정하지 않는다. timeout: git status 제한 시간 (세션 시작 예산) */
-export function workFilesNewerThanNow(cwd = ROOT, nowFile = myNowFile(), { timeout } = {}) {
-  if (!nowFile) return [];
+/** 미커밋 작업 파일과 mtime [{ path, mtime }] (지운 파일 제외). timeout: git status 제한 시간 */
+export function dirtyWorkFiles(cwd = ROOT, { timeout } = {}) {
   const st = git(['status', '--porcelain', '-z', '--untracked-files=all'], { cwd, timeout });
   if (!st.ok || !st.out) return [];
-
   // -z 형식: "XY path\0" (rename/copy는 뒤에 원래 경로가 하나 더 붙음)
   const tokens = st.out.split('\0').filter(Boolean);
-  const paths = [];
+  const out = [];
   for (let i = 0; i < tokens.length; i++) {
     const t = tokens[i];
-    paths.push(t.slice(3));
+    const p = t.slice(3);
     if (/[RC]/.test(t.slice(0, 2))) i++;
-  }
-
-  let nowMtime = 0;
-  try {
-    nowMtime = statSync(nowFile).mtimeMs;
-  } catch {
-    // NOW 파일 없음
-  }
-  const out = [];
-  for (const p of paths) {
-    if (!WORK_WATCH.test(p) || WORK_IGNORE.test(p)) continue;
+    if (!isWorkFile(p)) continue;
     try {
-      const m = statSync(join(cwd, p)).mtimeMs;
-      if (m > nowMtime + 1000) out.push({ path: p, mtime: m });
+      out.push({ path: p, mtime: statSync(join(cwd, p)).mtimeMs });
     } catch {
       // 삭제된 파일
     }
   }
-  return out.sort((a, b) => b.mtime - a.mtime).map((f) => f.path);
+  return out;
+}
+
+/** 파일 mtime(ms). 없으면 null */
+export function mtimeOf(path) {
+  try {
+    return statSync(path).mtimeMs;
+  } catch {
+    return null;
+  }
+}
+
+/** 내 NOW 파일보다 1초 넘게 나중에 바뀐 미커밋 작업 파일 경로. 최근 것부터. PC 미등록(nowFile null)이면 판정하지 않는다. timeout: git status 제한 시간 (세션 시작 예산) */
+export function workFilesNewerThanNow(cwd = ROOT, nowFile = myNowFile(), { timeout } = {}) {
+  if (!nowFile) return [];
+  const nowMtime = mtimeOf(nowFile) ?? 0;
+  return dirtyWorkFiles(cwd, { timeout })
+    .filter((f) => f.mtime > nowMtime + 1000)
+    .sort((a, b) => b.mtime - a.mtime)
+    .map((f) => f.path);
 }
 
 /** 로컬 시간 YYYY-MM-DD HH:mm */

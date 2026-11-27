@@ -13,7 +13,7 @@ description: PC를 옮기거나 세션을 마칠 때 내 NOW 파일 갱신, 작�
 
 0. **사실 모으기**: `node scripts/stamp.mjs --draft` 한 번으로 내 마지막 작업로그 뒤의 커밋, 바뀐 영역, 검증 상태, PR·CI를 본다. git·gh를 따로 여러 번 부르지 않는다.
 1. **내 NOW 파일 덮어쓰기** (기존 섹션 구조 유지, 30줄 이내)
-   - `갱신:` 줄은 `node scripts/stamp.mjs --now` 출력을 그대로 쓴다 (본문을 고치지 않고 갱신 줄만 바꿀 때는 `--touch-now`). 시각·PC를 짐작해 쓰지 않는다 (다음 세션 hook이 이 값으로 PC 전환을 감지한다). PC가 미등록이면 사용자에게 `node scripts/setup.mjs --pc <id>`를 요청한다.
+   - 본문(`## 현재 기능`부터 끝까지, `갱신:` 줄 없이)을 `.harness/now-body.md`에 쓰고 `node scripts/stamp.mjs --write-now .harness/now-body.md`로 바꾼다. 머리말(제목·`>` 안내)은 그대로 두고 `갱신:` 줄은 지금 값으로 쓴다 (NOW 파일을 통째로 Write하다 머리말을 깨뜨린 #166). 본문을 고치지 않고 갱신 줄만 바꿀 때는 `--touch-now`. 시각·PC를 짐작해 쓰지 않는다 (다음 세션 hook이 이 값으로 PC 전환을 감지한다). PC가 미등록이면 사용자에게 `node scripts/setup.mjs --pc <id>`를 요청한다.
    - `## 현재 기능`: 기능 ID, 이름, spec 경로 (첫 줄은 상대 세션에 요약으로 보이므로 한 줄로 상태까지)
    - `## 진행`: AC별 ✅ / 🟡(상태 설명) / ⬜
    - `## 바로 다음 할 일`: 번호 목록. 파일 경로, 메서드, 테스트 이름까지. 첫 항목은 30분 안에 끝낼 수 있는 크기로.

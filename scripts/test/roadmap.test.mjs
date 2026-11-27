@@ -13,6 +13,7 @@ import {
   loadView,
   newlyOverdue,
   overduePayload,
+  overdueOutcome,
   roadmapRefIssues,
   nextItem,
   nextItemLine,
@@ -309,10 +310,32 @@ test('overduePayload: Actions 알림 본문, 직전 커밋 시각이 없거나 �
   assert.ok(!overduePayload(MD, ok, '2026-11-28T15:30:00Z', { today: '2026-11-30' }).text.includes('V-2'));
   assert.deepEqual(overduePayload(MD, ok, '2026-11-30T01:00:00Z', { today: '2026-11-30' }), { text: null, reason: null });
   assert.deepEqual(overduePayload(MD, ok, '', { today: '2026-11-30' }), { text: null, reason: '직전 커밋 시각 없음' });
+  // 조회 실패는 failed로 구분한다 (HP-4 AC13: job을 실패시켜 Re-run하게)
   assert.deepEqual(overduePayload(MD, { ok: false, reason: 'gh 없음' }, '2026-11-28T01:00:00Z', { today: '2026-11-30' }), {
     text: null,
     reason: '상태 조회 실패: gh 없음',
+    failed: true,
   });
+});
+
+test('HP-4 AC13: 조회·전송이 실패하면 job을 실패시키고 Re-run을 안내한다 (#196)', () => {
+  const failLookup = overdueOutcome({ text: null, reason: '상태 조회 실패: gh 없음', failed: true, sent: null });
+  assert.equal(failLookup.exit, 1);
+  assert.match(failLookup.message, /상태 조회 실패: gh 없음.*Re-run으로 다시 보내기/);
+  const failSend = overdueOutcome({ text: '⚠️ …', reason: null, sent: false, error: 'HTTP 500' });
+  assert.equal(failSend.exit, 1);
+  assert.match(failSend.message, /Mattermost 전송 실패 \(HTTP 500\).*Re-run으로 다시 보내기/);
+  // 보냄·보낼 것 없음·직전 커밋 없음(새 브랜치)은 성공
+  assert.equal(overdueOutcome({ text: '⚠️ …', reason: null, sent: true }).exit, 0);
+  assert.deepEqual(overdueOutcome({ text: null, reason: null, sent: null }), { exit: 0, message: '새로 지난 넘겨주는 시점 없음' });
+  assert.deepEqual(overdueOutcome({ text: null, reason: '직전 커밋 시각 없음', sent: null }), { exit: 0, message: '알림 없음: 직전 커밋 시각 없음' });
+});
+
+test('HP-4 AC13: roadmap.yml은 실패를 삼키지 않고 node가 보낸다, 웹훅이 없으면 건너뛰기는 그대로', () => {
+  const yml = readFileSync(new URL('../../.github/workflows/roadmap.yml', import.meta.url), 'utf8');
+  assert.doesNotMatch(yml, /continue-on-error: true/);
+  assert.match(yml, /node scripts\/roadmap\.mjs --overdue-since "\$BEFORE" --send/);
+  assert.match(yml, /if: env\.WEBHOOK == ''/);
 });
 
 test('loadView는 PR 조회 결과와 브랜치로 보기를 만든다', () => {
