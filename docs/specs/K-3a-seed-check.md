@@ -112,20 +112,21 @@ List<Post> search(@Param("keyword") String keyword);
 ## 9. 결정 필요
 
 - (없음) 원본 형식·검사 강도·CI 판정은 11-27 사용자 선택으로 정했다 (결정로그).
+- **구현 중 보완 (11-27, PR에서 확인 요청)**: 기존 85장을 돌려 보니 AC7 오류 18건이 모두 조각 감싸기의 한계였다. 그래서 다음을 더했다. ⓐ 생략 표기 `{ ... }`·`...` 줄은 주석으로 바꿔 파싱한다(가변 인자 제외) ⓑ 그대로 형태에서 최상위 타입의 `public`을 지운다(여러 파일을 이어 붙인 조각의 파일 이름 규칙 오류 방지) ⓒ 메서드 본문 형태에서 값을 돌려주는 `return`이 있으면 `Object run() { if (true) { … } return null; }`로 감싼다 ⓓ 같은 조각에 심볼 없음 진단이 있을 때의 `@Override` 오류(`method.does.not.override.superclass`)는 경고로 본다(import 없는 상위 타입에서 이어진 진단). 상위 타입이 해석되는 잘못된 override는 그대로 오류다.
 - 알림: `R__seed_concepts.sql`(B 소유)이 생성 파일이 되어 손으로 고칠 수 없게 되고, `frontend/package.json`·`ci.yml`·`SeedConceptsTest`도 공통 파일이다 → PR에서 @JoonseobKim. `data/seed/`는 CODEOWNERS에 A로 추가한다.
 
 ## 10. 구현 체크리스트
 
 - [x] 브랜치 `feature/K-3a-seed-check`
-- [ ] Flyway 마이그레이션 (없음, R__ 생성본)
-- [ ] AC별 실패 테스트 작성 (red 확인)
-- [ ] 생성기·①형식 검사 (green)
-- [ ] 기존 85장 변환 + AC2 비교
-- [ ] ②BE 검사 `SeedExampleChecker`·`SeedExampleTest` (green)
-- [ ] ②FE 검사·`seed-check.mjs` 보고서 (green)
-- [ ] 85장 오류 0으로 수정 (PR 본문 표)
-- [ ] CI 경로 필터·단계, `verify.mjs`가 `data/seed` 변경을 be·fe 영역으로 판정
-- [ ] 산출물 09 DS-05(보관 방법·검증 결과) 갱신
+- [x] Flyway 마이그레이션 (없음, R__ 생성본)
+- [x] AC별 실패 테스트 작성 (red 확인)
+- [x] 생성기·①형식 검사 (green)
+- [x] 기존 85장 변환 + AC2 비교
+- [x] ②BE 검사 `SeedExampleChecker`·`SeedExampleTest` (green)
+- [x] ②FE 검사·`seed-check.mjs` 보고서 (green)
+- [x] 85장 오류 0으로 수정 (PR 본문 표)
+- [x] CI 경로 필터·단계, `verify.mjs`가 `data/seed` 변경을 be·fe 영역으로 판정
+- [x] 산출물 09 DS-05(보관 방법·검증 결과) 갱신
 - [ ] reviewer 지적 사항 반영
 - [ ] PR CI 초록
 - [ ] 상태 DONE (PR 머지 후)
