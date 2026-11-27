@@ -45,8 +45,9 @@ function onClick(event) {
 </script>
 
 <template>
+  <!-- disabled·loading이면 to가 있어도 버튼으로 그린다 (RouterLink는 클릭을 막아도 이동한다) -->
   <RouterLink
-    v-if="to"
+    v-if="to && !disabled && !loading"
     :to="to"
     :class="classes"
     :data-variant="variant"

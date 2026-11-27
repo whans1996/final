@@ -39,13 +39,16 @@ afterEach(() => {
 })
 
 describe('useTheme (F-29a)', () => {
-  it('AC4 저장된 테마가 없고 OS가 다크면 html에 dark가 붙는다', async () => {
+  // 11-27 결정: 옮기지 않은 화면에 하드코딩 색이 남아 있어, 화면 이전이 끝날 때까지 system은 라이트로 본다.
+  // 다시 켤 때는 useTheme.js FOLLOW_SYSTEM과 index.html 스크립트를 함께 바꾸고 이 테스트를 되돌린다.
+  it('AC4 저장된 테마가 없으면 OS가 다크여도 지금은 라이트로 보인다 (FOLLOW_SYSTEM=false)', async () => {
     mockMatchMedia(true)
-    const { initTheme, useTheme } = await loadTheme()
+    const { initTheme, useTheme, FOLLOW_SYSTEM } = await loadTheme()
     initTheme()
+    expect(FOLLOW_SYSTEM).toBe(false)
     expect(useTheme().theme.value).toBe('system')
-    expect(useTheme().resolved.value).toBe('dark')
-    expect(isDark()).toBe(true)
+    expect(useTheme().resolved.value).toBe('light')
+    expect(isDark()).toBe(false)
   })
 
   it('AC4 OS가 라이트면 dark가 붙지 않는다', async () => {
@@ -55,14 +58,11 @@ describe('useTheme (F-29a)', () => {
     expect(isDark()).toBe(false)
   })
 
-  it('AC4 system일 때 OS 설정이 바뀌면 새로고침 없이 따라간다', async () => {
+  it('AC4 system일 때 OS 설정이 다크로 바뀌어도 라이트를 유지한다 (FOLLOW_SYSTEM=false)', async () => {
     const os = mockMatchMedia(false)
     const { initTheme } = await loadTheme()
     initTheme()
     os.setDark(true)
-    await nextTick()
-    expect(isDark()).toBe(true)
-    os.setDark(false)
     await nextTick()
     expect(isDark()).toBe(false)
   })
@@ -105,7 +105,7 @@ describe('useTheme (F-29a)', () => {
     initTheme()
     const { theme, setTheme } = useTheme()
     expect(theme.value).toBe('system')
-    expect(isDark()).toBe(true)
+    expect(isDark()).toBe(false)
     setTheme('sepia')
     expect(theme.value).toBe('system')
   })
@@ -153,13 +153,11 @@ describe('index.html 테마 스크립트 (F-29a AC5 깜빡임 방지)', () => {
     expect(isDark()).toBe(false)
   })
 
-  it('AC5 저장값이 없거나 잘못되면 OS 설정을 따른다', () => {
+  it('AC5 저장값이 없거나 잘못되면 OS가 다크여도 라이트다 (FOLLOW_SYSTEM=false와 같은 규칙)', () => {
     mockMatchMedia(true)
     localStorage.setItem('vibenote.theme', 'purple')
     runInline()
-    expect(isDark()).toBe(true)
-    document.documentElement.className = ''
-    mockMatchMedia(false)
+    expect(isDark()).toBe(false)
     localStorage.clear()
     runInline()
     expect(isDark()).toBe(false)

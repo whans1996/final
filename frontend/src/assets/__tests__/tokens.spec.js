@@ -124,6 +124,11 @@ describe('디자인 토큰 (F-29a)', () => {
     )
   })
 
+  it('AC3 h4~h6도 굵기를 되돌린다 (개념 카드 본문 소제목)', () => {
+    const base = css.slice(css.indexOf('@layer base {'))
+    expect(base).toMatch(/h4,\s*h5,\s*h6 \{[^}]*font-weight: 700;/)
+  })
+
   it('AC2 다크 전환은 html.dark 클래스로 한다', () => {
     expect(css).toContain('@custom-variant dark (&:where(.dark, .dark *));')
   })

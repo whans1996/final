@@ -195,6 +195,12 @@
     font-weight: 700;
   }
 
+  h4,
+  h5,
+  h6 {
+    font-weight: 700;
+  }
+
   a {
     color: var(--color-primary);
     text-decoration: underline;

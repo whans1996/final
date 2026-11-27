@@ -3,8 +3,8 @@ import { mount } from '@vue/test-utils'
 import FormField from '@/components/common/FormField.vue'
 
 // 기본 슬롯이 받은 id·aria 속성을 입력에 단다
-const slot = `<template #default="{ id, describedBy, invalid }">
-  <input :id="id" :aria-describedby="describedBy" :aria-invalid="invalid" />
+const slot = `<template #default="{ id, describedBy, invalid, required }">
+  <input :id="id" :aria-describedby="describedBy" :aria-invalid="invalid" :required="required" />
 </template>`
 
 const mountField = (props) => mount(FormField, { props, slots: { default: slot } })
@@ -53,5 +53,12 @@ describe('FormField (F-29a AC8)', () => {
   it('AC8 required면 라벨에 필수 표시가 붙는다', () => {
     const wrapper = mountField({ label: '비밀번호', required: true })
     expect(wrapper.find('label [data-required]').exists()).toBe(true)
+  })
+
+  it('AC8 required를 슬롯으로 넘겨 입력에 달 수 있다 (* 표시는 스크린리더에 숨으므로)', () => {
+    expect(
+      mountField({ label: '비밀번호', required: true }).find('input').attributes('required'),
+    ).toBeDefined()
+    expect(mountField({ label: '닉네임' }).find('input').attributes('required')).toBeUndefined()
   })
 })

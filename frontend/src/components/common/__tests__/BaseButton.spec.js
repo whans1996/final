@@ -70,4 +70,16 @@ describe('BaseButton (F-29a AC7)', () => {
     expect(link.classes()).toContain('border-border')
     expect(wrapper.find('button').exists()).toBe(false)
   })
+
+  it.each([[{ disabled: true }], [{ loading: true }]])(
+    'AC7 to가 있어도 %o이면 링크 대신 비활성 버튼으로 그려 이동하지 않는다',
+    async (state) => {
+      const wrapper = mountButton({ to: '/concepts', ...state }, '카드 보기')
+      expect(wrapper.findComponent(RouterLinkStub).exists()).toBe(false)
+      const button = wrapper.find('button')
+      expect(button.attributes('disabled')).toBeDefined()
+      await button.trigger('click')
+      expect(wrapper.emitted('click')).toBeUndefined()
+    },
+  )
 })

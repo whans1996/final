@@ -49,6 +49,16 @@ async function pressEscape() {
   await flushPromises()
 }
 
+// 대화상자 바깥(연 버튼)을 누른다. Reka DismissableLayer는 열린 뒤 다음 틱부터 document의 pointerdown을 본다
+async function pressOutside() {
+  await new Promise((resolve) => setTimeout(resolve, 0))
+  const target = document.getElementById('opener')
+  target.dispatchEvent(new Event('pointerdown', { bubbles: true, cancelable: true }))
+  target.dispatchEvent(new Event('pointerup', { bubbles: true, cancelable: true }))
+  target.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+  await flushPromises()
+}
+
 let current
 afterEach(() => {
   current?.wrapper.unmount()
@@ -93,6 +103,22 @@ describe('ConfirmDialog (F-29a AC12)', () => {
     await pressEscape()
     expect(current.events).toEqual(['cancel'])
     expect(current.open.value).toBe(false)
+  })
+
+  it('AC12 바깥을 누르면 cancel을 내보내고 닫힌다', async () => {
+    current = mountHost()
+    await openWith()
+    await pressOutside()
+    expect(current.events).toEqual(['cancel'])
+    expect(current.open.value).toBe(false)
+  })
+
+  it('AC12 loading 동안은 바깥을 눌러도 닫히지 않는다', async () => {
+    current = mountHost({ loading: true })
+    await openWith()
+    await pressOutside()
+    expect(current.events).toEqual([])
+    expect(current.open.value).toBe(true)
   })
 
   it('AC12 loading 동안은 두 버튼이 비활성이고 Esc로 닫히지 않는다', async () => {

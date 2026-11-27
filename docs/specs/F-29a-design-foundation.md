@@ -26,7 +26,7 @@
 | AC1 | Tailwind v4(`@tailwindcss/vite`)·`reka-ui`·`lucide-vue-next`·폰트 패키지를 설치한 FE가 | `npm run build`·`lint:check`·`test:unit`을 돌리면 | 모두 통과하고, 기존 단위 테스트는 하나도 고치지 않고 통과한다 |
 | AC2 | `main.css`의 `@theme`에 4절 토큰이 정의되어 있고 | 컴포넌트가 `bg-primary`·`text-danger`·`rounded-md`·`text-hero`·`shadow-1` 같은 클래스를 쓰면 | 4절 값으로 그려진다. 기존 CSS 변수(`--color-primary`·`--color-text`·`--color-danger`·`--radius` 등)는 새 토큰을 가리키는 별칭으로 남아 옮기기 전 화면도 새 색으로 보인다 |
 | AC3 | preflight가 켜진 상태에서 | 아직 Tailwind로 옮기지 않은 기존 화면(예: 개념 카드 목록, 분석 상세)을 열면 | `@layer base` 보정으로 h1~h3 크기·굵기, 링크 색, 목록 들여쓰기가 남아 레이아웃이 깨지지 않는다 (ui-verifier 스크린샷으로 확인) |
-| AC4 | 처음 방문한 사용자가 (저장된 테마 없음) | OS가 다크 모드이면 | `<html>`에 `dark` 클래스가 붙어 다크 토큰으로 보이고, 라이트이면 붙지 않는다. OS 설정이 바뀌면 새로고침 없이 따라간다 |
+| AC4 | 처음 방문한 사용자가 (저장된 테마 없음) | OS가 다크 모드이면 | ~~`<html>`에 `dark` 클래스가 붙어 다크 토큰으로 보이고, 라이트이면 붙지 않는다. OS 설정이 바뀌면 새로고침 없이 따라간다~~ **11-27 수정 (PR 리뷰):** 화면 이전이 끝날 때까지 `useTheme.js` `FOLLOW_SYSTEM = false`로 두어 `system`은 라이트로 보인다 (`dark` 클래스 없음, OS 설정이 바뀌어도 라이트). 아직 옮기지 않은 화면의 하드코딩 색 때문이며, 다시 켜는 일은 #243. `index.html` 스크립트도 같은 규칙 |
 | AC5 | `useTheme()`로 테마를 `light`·`dark`·`system` 중 하나로 고르면 | 즉시 반영되고 `localStorage`의 `vibenote.theme`에 저장되며 | 새로고침 뒤에도 유지된다. `index.html`의 인라인 스크립트가 앱 마운트 전에 클래스를 붙여 라이트→다크 깜빡임이 없다. 저장값이 세 값이 아니면 `system`으로 본다 |
 | AC6 | 본문·코드 폰트가 | 네트워크가 끊긴 상태(시연장)에서 열어도 | Pretendard Variable·JetBrains Mono가 빌드 결과물(`dist/assets`)에서 로드된다. 외부 CDN 요청이 없다 |
 | AC7 | `Button`에 `variant`(`primary`·`secondary`·`ghost`·`danger`)·`size`(`sm`·`md`)·`loading`·`disabled`·`type`을 주면 | 렌더링·클릭하면 | variant별 클래스가 붙고, `loading`·`disabled`면 `click`을 내보내지 않고 `aria-busy`/`disabled`가 붙는다. `type` 기본값은 `button`이다. `to`를 주면 `RouterLink`로 그린다 |
@@ -136,8 +136,8 @@
 - [x] `main.css` 토큰·별칭·base 보정·폰트, `index.html` 테마 스크립트, `useTheme`
 - [x] 공통 컴포넌트 7개 + EmptyState·PageNav 이전 + `/dev/components`
 - [x] NOTICE 폰트 라이선스, `frontend/CLAUDE.md` 스타일 규칙
-- [ ] ui-verifier 통과 (데스크톱·모바일, 라이트·다크)
-- [ ] reviewer 지적 사항 반영
-- [ ] 산출물 반영: 화면 설계서 2-1절 "값은 F-29 spec" → F-29a 경로
+- [x] ui-verifier 통과 (데스크톱·모바일, 라이트·다크)
+- [x] reviewer 지적 사항 반영 (system → 라이트 #243, h4~h6 굵기, BaseButton to+disabled, FormField required, ConfirmDialog 바깥 클릭 테스트)
+- [x] 산출물 반영: 화면 설계서 2-1절 "값은 F-29 spec" → F-29a 경로, `/dev/components` 스크린샷
 - [ ] PR CI 초록 (A @멘션: 공통 컴포넌트)
 - [ ] 상태 DONE (PR 머지 후)

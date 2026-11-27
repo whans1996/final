@@ -101,7 +101,7 @@ const inputClass =
       <h2 class="text-lg font-bold">FormField</h2>
       <div class="grid gap-4 sm:grid-cols-2">
         <FormField
-          v-slot="{ id, describedBy, invalid }"
+          v-slot="{ id, describedBy, invalid, required }"
           label="이메일"
           hint="로그인에 씁니다."
           required
@@ -113,6 +113,7 @@ const inputClass =
             :class="inputClass"
             :aria-describedby="describedBy"
             :aria-invalid="invalid"
+            :required="required"
           />
         </FormField>
         <FormField

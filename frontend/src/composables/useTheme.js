@@ -5,6 +5,14 @@ import { computed, ref, watch } from 'vue'
 export const THEME_KEY = 'vibenote.theme'
 export const THEMES = ['light', 'dark', 'system']
 
+/**
+ * system일 때 OS 다크 설정을 따를지 (11-27 결정: 지금은 false).
+ * 아직 Tailwind로 옮기지 않은 화면에 하드코딩 색(#fff 글자, 밝은 코드 배경)이 남아 있어
+ * OS가 다크인 사용자가 읽을 수 없는 화면을 받지 않게, 화면 이전이 끝날 때까지 system은 라이트로 본다.
+ * 직접 고른 dark는 그대로 반영한다. 다시 켤 때는 index.html 인라인 스크립트도 같이 바꾼다.
+ */
+export const FOLLOW_SYSTEM = false
+
 function readStored() {
   try {
     const value = localStorage.getItem(THEME_KEY)
@@ -17,7 +25,7 @@ function readStored() {
 const theme = ref(readStored())
 const systemDark = ref(false)
 const resolved = computed(() =>
-  theme.value === 'system' ? (systemDark.value ? 'dark' : 'light') : theme.value,
+  theme.value === 'system' ? (FOLLOW_SYSTEM && systemDark.value ? 'dark' : 'light') : theme.value,
 )
 
 let started = false
