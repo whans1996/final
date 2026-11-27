@@ -5,6 +5,9 @@ export default [
     path: '/review-plans',
     name: 'review-plans',
     component: () => import('@/views/reviewplan/ReviewPlanView.vue'),
-    meta: { requiresAuth: true, nav: { label: '복습', order: 30, show: 'user' } },
+    meta: {
+      requiresAuth: true,
+      nav: { label: '복습', order: 30, show: 'user', group: 'learn', icon: 'RotateCcw' },
+    },
   },
 ]

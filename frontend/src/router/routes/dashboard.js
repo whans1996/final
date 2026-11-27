@@ -5,6 +5,15 @@ export default [
     path: '/dashboard',
     name: 'dashboard',
     component: () => import('@/views/dashboard/DashboardView.vue'),
-    meta: { requiresAuth: true, nav: { label: '대시보드', order: 1, show: 'user' } },
+    meta: {
+      requiresAuth: true,
+      nav: {
+        label: '대시보드',
+        order: 1,
+        show: 'user',
+        group: 'dashboard',
+        icon: 'LayoutDashboard',
+      },
+    },
   },
 ]

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { routes } from '@/router'
-import { adminNavItems, navItems } from '@/utils/navItems'
+import { adminNavItems, NAV_GROUPS, navGroups, navItems } from '@/utils/navItems'
 
 const loggedOut = { isLoggedIn: false, isAdmin: false }
 const user = { isLoggedIn: true, isAdmin: false }
@@ -98,5 +98,66 @@ describe('adminNavItems (F-00b AC9)', () => {
       [],
     )
     expect(adminNavItems(undefined)).toEqual([])
+  })
+})
+
+describe('navGroups (F-29b AC1)', () => {
+  const shape = (groups) => groups.map((g) => [g.key, labels(g.items)])
+
+  it('AC1 그룹 순서는 NAV_GROUPS(dashboard·learn·together·prepare)이고 label을 붙인다', () => {
+    expect(NAV_GROUPS.map((g) => g.key)).toEqual(['dashboard', 'learn', 'together', 'prepare'])
+    expect(navGroups(routes, user).map(({ key, label }) => ({ key, label }))).toEqual([
+      { key: 'dashboard', label: '대시보드' },
+      { key: 'learn', label: '학습' },
+      { key: 'together', label: '함께' },
+    ])
+  })
+
+  it('AC1 회원: 그룹 안은 order 순, 아이콘 이름을 함께 돌려준다', () => {
+    const groups = navGroups(routes, user)
+
+    expect(shape(groups)).toEqual([
+      ['dashboard', ['대시보드']],
+      ['learn', ['개념 카드', '분석 요청', '내 분석', '복습']],
+      ['together', ['커뮤니티', '피드', '팀', '챌린지']],
+    ])
+    expect(groups[0].items[0]).toEqual({
+      label: '대시보드',
+      to: '/dashboard',
+      icon: 'LayoutDashboard',
+    })
+    expect(groups[1].items.map((i) => i.icon)).toEqual([
+      'BookOpen',
+      'FilePlus2',
+      'FileSearch',
+      'RotateCcw',
+    ])
+    expect(groups[2].items.map((i) => i.icon)).toEqual(['MessagesSquare', 'Rss', 'Users', 'Trophy'])
+  })
+
+  it('AC1 group이 없는 항목(로그인·회원가입·관리자)은 그룹에 들어가지 않는다', () => {
+    const all = (auth) => navGroups(routes, auth).flatMap((g) => labels(g.items))
+
+    expect(all(admin)).not.toContain('관리자')
+    expect(all(loggedOut)).not.toContain('로그인')
+    expect(shape(navGroups(routes, loggedOut))).toEqual([
+      ['learn', ['개념 카드']],
+      ['together', ['커뮤니티', '챌린지']],
+    ])
+  })
+
+  it('AC1 보이는 항목이 없는 그룹은 빠지고, 모르는 group 값도 버린다', () => {
+    const fake = [
+      { path: '/i', meta: { nav: { label: 'I', order: 1, show: 'admin', group: 'prepare' } } },
+      { path: '/b', meta: { nav: { label: 'B', order: 20, show: 'user', group: 'learn' } } },
+      { path: '/a', meta: { nav: { label: 'A', order: 10, show: 'user', group: 'learn' } } },
+      { path: '/z', meta: { nav: { label: 'Z', order: 1, show: 'user', group: 'nope' } } },
+    ]
+
+    expect(shape(navGroups(fake, user))).toEqual([['learn', ['A', 'B']]])
+    expect(shape(navGroups(fake, admin))).toEqual([
+      ['learn', ['A', 'B']],
+      ['prepare', ['I']],
+    ])
   })
 })
