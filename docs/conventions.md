@@ -121,7 +121,7 @@
 
 - 모든 Controller에 `@Tag`, 모든 엔드포인트에 `@Operation(summary)`과 에러 `@ApiResponse`, 모든 요청·응답 DTO 필드에 `@Schema(description, example)`를 단다.
 - Tag 이름은 한국어 도메인 이름으로 통일한다: `인증`, `회원`, `팔로우`, `피드`, `분석`, `개념 카드`, `퀴즈`, `복습 계획`, `추천`, `커뮤니티`, `팀`, `챌린지`, `관리자`.
-- 정본은 테스트가 추출하는 `docs/api/openapi.json`이다. 제출용 REST API 명세(`docs/산출물/07-REST-API-명세.md`)는 제출 단계에 이 파일에서 생성한다 (생성 스크립트 `scripts/export-api-doc.mjs`는 아직 없고 WBS 5.3에서 만든다).
+- 정본은 테스트가 추출하는 `docs/api/openapi.json`이다. 제출용 REST API 명세(`docs/산출물/07-REST-API-명세.md`)는 제출 단계에 이 파일에서 생성한다 (`node scripts/export-api-doc.mjs`, 주간 `/progress`·제출 전. HP-5).
 
 ## 9. 병렬 개발 경계 (11-19)
 
@@ -129,7 +129,7 @@
 - 파일 영역 확인: `node scripts/owners.mjs <경로...>`, PR 전 `node scripts/owners.mjs --diff origin/develop`. Claude가 상대 영역·공통 파일을 고치면 `area-notice` hook이 알리고(차단하지 않음), 상대 NOW 파일은 `guard-files`가 막는다.
 - **공통 기반은 A가 먼저 만든다** (결정로그 11-19): concept 도메인·Mapper·카드 응답 DTO, ErrorCode·ActivityType 도메인 블록, 라우터·nav 영역별 분리, 공용 컴포넌트, 관리자 레이아웃. B는 공통 기반 PR이 develop에 머지된 뒤 그 위에서 작업한다.
 - **공통 enum·배열은 도메인 블록 안에만 추가한다** (ErrorCode, ActivityType, `PUBLIC_GET_PATHS`, `ConceptMapper` Java·XML). 블록은 `// ── 도메인 (영역 기능) ──` 주석으로 나누고 모든 항목 끝에 쉼표를 단다(enum의 `;`는 맨 아래 단독 줄). 파일 끝에 이어 붙이면 두 사람의 추가가 같은 줄에서 충돌한다.
-- **FE 라우트·메뉴는 도메인 파일과 route 메타로 나눈다** (F-00b): route는 `frontend/src/router/routes/<도메인>.js`, 헤더 메뉴는 `meta.nav`, 관리자 메뉴는 `/admin` 자식의 `meta.adminNav`. 상세는 `frontend/CLAUDE.md`.
+- **FE 라우트·메뉴는 도메인 파일과 route 메타로 나눈다** (F-00b): route는 `frontend/src/router/routes/<도메인>.js`, 메뉴(옆 메뉴·하단 탭, F-29b)는 `meta.nav`, 관리자 메뉴는 `/admin` 자식의 `meta.adminNav`. 상세는 `frontend/CLAUDE.md`.
 - **상대 테이블**은 상대 도메인의 Mapper·Service를 통해 읽는다. 쓰기(INSERT·UPDATE)는 그 테이블 주인의 Service만 한다. 필요한 메서드가 없으면 상대에게 요청하거나 PR에서 @멘션하고 최소로 추가한다.
 - **push 시점**: `/implement` 체크포인트 커밋, spec 승인 커밋, `/handoff` 뒤에 feature 브랜치를 push한다. 상대의 세션 시작·peer-watch hook과 Mattermost 알림은 원격의 NOW 파일을 본다.
 - **알림 경로**: Claude 세션 안(세션 시작 hook, 10분 간격 `peer-watch` hook. 둘 다 사람 화면에도 짧게 보인다), 상태 표시줄(`.claude/hooks/statusline.mjs`: 모델·PC·브랜치·컨텍스트 크기·5시간/7일 사용량, 내 PR의 CI·Codex, 다음 로드맵 항목, 넘겨주는 시점 D-n. PR·로드맵은 `.harness/status.json` 캐시를 `scripts/status-refresh.mjs`가 백그라운드로 2분·10분마다 채운다), Mattermost(`.github/workflows/notify.yml`, PR 열림·머지·NOW push). 급한 합의(공통 파일 동시 수정 등)는 Mattermost에서 직접 말한다.

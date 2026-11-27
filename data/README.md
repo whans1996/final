@@ -18,4 +18,4 @@
 4. **라이선스 고지**: 제출 zip에 서드파티 코드를 넣을 때는 원본 LICENSE(Apache-2.0은 NOTICE 포함)와 출처 URL·SHA를 함께 넣는다.
 5. 라이선스가 없는 저장소(예: spring-petclinic-vue)는 쓰지 않는다. LICENSE가 없으면 저작권이 그대로 유지된다.
 
-내려받기 스크립트 `scripts/fetch-datasets.mjs`는 분석 파이프라인(F-05) 구현 시점(W2)에 만든다.
+외부 저장소는 프롬프트 평가 러너(`.claude/agents/prompt-evaluator.md`, `-Pfixture=<id>`)가 `datasets.json`의 SHA로 codeload에서 받아 `.harness/prompt-eval/repos/`에 캐시한다. 별도 내려받기 스크립트(`scripts/fetch-datasets.mjs`)는 만들지 않았다.

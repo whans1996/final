@@ -1,6 +1,6 @@
 # 외부 API 및 생성형 AI 활용 — 바이브노트
 
-> 작성 상태: 🟡 3절(개발 과정 AI 활용 구조) 작성, 1·2절은 구현 후 작성 (WBS 5.5)
+> 작성 상태: 🟡 1절(서비스 AI: 모델·폴백·출력 형식·기준선)과 3절(개발 과정 AI 활용 구조) 작성, 2절과 v2 평가는 구현 후 작성 (WBS 5.5)
 > 소재 수집: `docs/작업로그.md`의 `AI 활용` 줄, git log, `llm_usage_logs` 통계, 프롬프트 평가 결과(`.harness/prompt-eval/`)
 
 이 프로젝트에서 생성형 AI는 두 곳에 쓰인다.
@@ -24,7 +24,7 @@
 | 평가 비교 | Gemini `gemini-3.5-flash-lite` (provider=gemini, 폴백 없음) |
 | 개발·테스트 | Mock 클라이언트 (결정적인 fixture 응답) |
 | 추상화 | `LlmClient` 인터페이스 — 설정(`llm.provider`)만 바꿔 교체 |
-| 비용 | GMS는 팀 키 하나의 크레딧 총량과 만료일로 관리한다 (모델마다 크레딧 단가가 다름). 잔여량: `GET https://gms.ssafy.io/gmsapi/key-info` |
+| 비용 | GMS는 팀 키 하나의 크레딧 총량으로 관리한다 (모델마다 크레딧 단가가 다름. 키가 만료되면 재발급한다, 결정로그 11-26). 잔여량: `GET https://gms.ssafy.io/gmsapi/key-info` |
 
 호출 흐름 (provider=gms, `backend/.../llm/LlmConfig.java`가 조립):
 

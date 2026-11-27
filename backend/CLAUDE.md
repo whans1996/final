@@ -86,7 +86,7 @@ com.vibenote
 
 ## 파일 업로드 (챌린지 이미지)
 
-- 저장 경로는 설정값 `app.upload-dir`(기본 `./uploads`, gitignore됨). 정적 경로 `/uploads/**`로 제공한다.
+- 저장 경로는 설정값 `app.upload-dir`(기본 `./uploads`, gitignore됨). 정적 경로는 `/uploads/challenges/**`만 제공한다 (`WebConfig`. Security 공개 규칙은 `/uploads/**`).
 - jpg·png·webp만 허용(확장자 + MIME + 매직 바이트 확인), 2MB 이하, 파일 이름은 UUID로 바꾼다. 경로 조작(`..`)을 막는다.
 
 ## LLM
@@ -115,7 +115,7 @@ com.vibenote
 - Controller: MockMvc로 상태 코드, 응답 JSON, 에러 코드를 검증한다.
 - Mapper: 실제 DB로 SQL을 검증한다. H2를 쓰지 않는다.
 - Service 단위 테스트는 로직이 복잡할 때만 Mockito로 쓴다 (예: 추천 점수 계산).
-- **테스트 메서드 이름에 spec의 AC 번호를 넣는다**: `AC1_파일이_200개를_넘으면_413을_반환한다()`. `@DisplayName`은 쓰지 않아도 된다.
+- **테스트 메서드 이름에 spec의 AC 번호를 넣는다**: `AC12_내_미삭제_분석만_최신순으로_페이지_응답을_준다()`. `@DisplayName`은 쓰지 않아도 된다.
 - **실제 외부 서비스(GMS·Gemini·Ollama 등)를 부르는 테스트는 `@Tag("live")`를 단다.** `test`(CI·git hook·verify)는 이 태그를 제외하고, 사람만 `./gradlew liveTest`로 돌린다. 개발 PC의 `~/.vibenote/.env`에 키가 있으므로, 태그 없이 쓰면 red 확인만으로도 무료 한도를 쓴다 (11-18 실제 발생). HTTP 동작 검증은 `MockRestServiceServer`로 한다 (`GeminiLlmClientTest` 참고).
 - 테스트끼리 데이터가 섞이지 않게 `@Transactional` 롤백 또는 `@Sql` 정리 스크립트를 쓴다.
 

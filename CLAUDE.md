@@ -1,9 +1,9 @@
 # 바이브노트 (VibeNote)
 
-AI로 코딩하는 주니어와 개발자 지망생이 **AI가 쓴 코드를 수준별 설명 → 개념 카드 → 퀴즈·복습**으로 이해하게 돕는 학습 플랫폼이다.
+AI로 개인·팀 프로젝트를 만드는 개발자 지망생과 주니어가 **AI가 쓴 코드를 수준별 설명 → 개념 카드 → 퀴즈·복습**으로 내 지식으로 만들고, 내 프로젝트를 근거를 들어 설명할 수 있게 돕는 학습 플랫폼이다 (한 줄 정의는 `docs/기획서.md` 1절, 11-26 개정).
 SSAFY 관통 프로젝트(2026-11-17 시작, 12-24 발표). Spring Boot 4 + MyBatis + MySQL 8 / Vue 3 + Pinia.
 
-2인이 **영역별로 병렬 개발**한다 (11-19부터. A 김동환 = AI·분석·학습 루프, B 김준섭 = 카드·소셜, `docs/기획서.md` 4절). 각자 PC 2대(SSAFY 교육장·집, id `dh-ssafy`·`dh-home`·`js-ssafy`·`js-home`)를 오가며 Claude Code로 작업하고, 같은 사람의 PC 사이에서는 사람별 NOW 파일로 교대한다. PC는 `setup.mjs --pc`로 등록하고, 세션 시작 hook이 PC·환경 점검·PC 전환·상대 작업 요약(원격 브랜치의 상대 NOW)을 알리고, 세션 중에는 `peer-watch` hook(10분 간격)과 Mattermost가 상대 변화를 알리고, 상태 표시줄이 PC·브랜치·컨텍스트 크기·내 PR CI/Codex·다음 로드맵 항목·넘겨주는 시점을 보인다 (`docs/환경설정.md` 0·7절, `docs/conventions.md` 9절). 세션은 토큰 소진으로 언제든 끊길 수 있다.
+2인이 **영역별로 병렬 개발**한다 (11-19부터. A 김동환 = AI·분석·학습 루프·팀·시드 카드·하네스·일정(로드맵), B 김준섭 = 카드·소셜·디자인 공통(F-29)·평가 실행, `docs/기획서.md` 4절. 11-26 합의로 팀·시드는 B→A). 각자 PC 2대(SSAFY 교육장·집, id `dh-ssafy`·`dh-home`·`js-ssafy`·`js-home`)를 오가며 Claude Code로 작업하고, 같은 사람의 PC 사이에서는 사람별 NOW 파일로 교대한다. PC는 `setup.mjs --pc`로 등록하고, 세션 시작 hook이 PC·환경 점검·PC 전환·상대 작업 요약(원격 브랜치의 상대 NOW)을 알리고, 세션 중에는 `peer-watch` hook(10분 간격)과 Mattermost가 상대 변화를 알리고, 상태 표시줄이 PC·브랜치·컨텍스트 크기·내 PR CI/Codex·다음 로드맵 항목·넘겨주는 시점을 보인다 (`docs/환경설정.md` 0·7절, `docs/conventions.md` 9절). 세션은 토큰 소진으로 언제든 끊길 수 있다.
 그래서 **상태를 파일에 남기는 일을 코드 작성만큼 중요하게** 다룬다.
 
 - 개발 저장소: **GitHub public** (`origin`, PR + Actions CI). Actions 한도 때문에 개발이 끝날 때까지 public으로 둔다 (11-26). 그래서 비밀값·eval 데이터 내용이 커밋·PR·이슈에 들어가지 않게 더 엄격히 본다. develop·main은 브랜치 보호(PR 필수, CI 5개 필수, 관리자 포함, force push·삭제 금지)
@@ -18,7 +18,8 @@ SSAFY 관통 프로젝트(2026-11-17 시작, 12-24 발표). Spring Boot 4 + MyBa
 | 일정 (기간 × 사람 × 트랙 할 일, 넘겨주는 시점, 공통 일정) | `docs/로드맵.md` (정본. 상태는 PR 본문 `Roadmap: <ID>` 줄로 계산, `node scripts/roadmap.mjs`. 세션 시작 배너 🗺️ 줄) |
 | 작업 이력 | `docs/작업로그.md` (두 사람 공용, 맨 아래 추가). 지난 주 항목은 `docs/기록/작업로그-W?.md` (주간 `/progress`가 옮긴다) |
 | 기획·운영 결정 기록 | `docs/결정로그.md` (맨 아래 추가) |
-| 기능 하나의 상세 요구사항 | `docs/specs/F-xx-*.md` |
+| 기능 하나의 상세 요구사항 | `docs/specs/<ID>-*.md` (기능 `F-xx`·로드맵 항목 `P-1a`·`K-3a` 등) |
+| Codex 리뷰 기준 (Codex가 읽음) | `AGENTS.md` |
 | 기능 목록, ERD, API 목록, 일정, 역할 분담 | `docs/기획서.md` (길다. 필요한 섹션만 읽는다) |
 | API 응답·에러 코드·네이밍·커밋·PR 규칙 | `docs/conventions.md` |
 | 현재 구현된 API (정본) | `docs/api/openapi.json` (테스트가 생성), 실행 중이면 http://localhost:8080/swagger-ui/index.html |
