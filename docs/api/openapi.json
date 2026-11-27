@@ -403,7 +403,7 @@
             },
             "maxItems" : 3,
             "minItems" : 0,
-            "type" : "array"
+            "type" : [ "array", "null" ]
           },
           "name" : {
             "description" : "개념 이름 (1~100자, 시드 카드는 바꿀 수 없음)",

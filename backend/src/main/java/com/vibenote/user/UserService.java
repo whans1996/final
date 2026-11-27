@@ -76,7 +76,6 @@ public class UserService {
         return userMapper.findByIdForShare(id);
     }
 
-    /** 인증된 회원 본인. Access 토큰이 남아 있어도 탈퇴했으면 AUTH_401 (필터는 DB를 보지 않는다). */
     /** 활성 회원의 수준. userId가 null이거나 없거나 탈퇴한 회원이면 null (공개 API가 토큰 주인을 확인할 때, K-1). */
     public Level findActiveLevel(Long userId) {
         return userId == null
@@ -88,6 +87,7 @@ public class UserService {
                         .orElse(null);
     }
 
+    /** 인증된 회원 본인. Access 토큰이 남아 있어도 탈퇴했으면 AUTH_401 (필터는 DB를 보지 않는다). */
     public User getActiveMember(long userId) {
         return userMapper
                 .findById(userId)

@@ -111,7 +111,7 @@ public final class ConceptResponseParser {
             NameKeys keys = NameKeys.of(draft.name());
             Concept same = names.find(keys);
             if (same != null) {
-                // 관리자가 숨긴 개념은 분석·퀴즈·복습에 다시 들어오지 않게 연결도 새 초안도 만들지 않는다 (K-1 AC10)
+                // 맞는 카드가 숨긴 카드뿐이면 분석·퀴즈·복습에 다시 들어오지 않게 연결도 새 초안도 만들지 않는다 (K-1 AC10)
                 if (same.getStatus() != ConceptStatus.HIDDEN && linked.add(same.getId())) {
                     result.add(new ExtractedConcept(same.getId(), null, fileId, lineHint, note));
                 }
@@ -250,44 +250,74 @@ public final class ConceptResponseParser {
     }
 
     /**
-     * 기존 카드의 이름 키 → 카드. 같은 키를 가진 카드가 여럿이면 먼저 나온 카드. 키 종류는 전체 이름 → 앞부분 → 괄호 안 순서로 이기고, 괄호 안 키가 다른
-     * 카드의 괄호 안 키와 겹치면 둘 다 쓰지 않는다 (K-1 AC9).
+     * 기존 카드의 이름 키 → 카드 (키 종류마다 따로). 같은 키를 가진 카드가 여럿이면 숨기지 않은 카드, 그다음 먼저 나온 카드. 괄호 안 키가 다른 카드의 괄호 안
+     * 키와 겹치면 둘 다 쓰지 않는다 (K-1 AC9).
      */
     private static final class NameIndex {
-        private final Map<String, Concept> byKey = new HashMap<>();
+        private final Map<String, Concept> byFull = new HashMap<>();
+        private final Map<String, Concept> byFront = new HashMap<>();
+        private final Map<String, Concept> byInner = new HashMap<>();
 
         NameIndex(List<Concept> concepts) {
-            List<NameKeys> keys = concepts.stream().map(c -> NameKeys.of(c.getName())).toList();
-            for (int i = 0; i < concepts.size(); i++) {
-                byKey.putIfAbsent(keys.get(i).full(), concepts.get(i));
-            }
-            for (int i = 0; i < concepts.size(); i++) {
-                if (keys.get(i).front() != null) {
-                    byKey.putIfAbsent(keys.get(i).front(), concepts.get(i));
-                }
-            }
             Map<String, Integer> innerCount = new HashMap<>();
+            List<NameKeys> keys = concepts.stream().map(c -> NameKeys.of(c.getName())).toList();
             keys.stream()
                     .map(NameKeys::inner)
                     .filter(k -> k != null)
                     .forEach(k -> innerCount.merge(k, 1, Integer::sum));
             for (int i = 0; i < concepts.size(); i++) {
-                String inner = keys.get(i).inner();
-                if (inner != null && innerCount.get(inner) == 1) {
-                    byKey.putIfAbsent(inner, concepts.get(i));
+                Concept c = concepts.get(i);
+                NameKeys k = keys.get(i);
+                put(byFull, k.full(), c);
+                put(byFront, k.front(), c);
+                if (k.inner() != null && innerCount.get(k.inner()) == 1) {
+                    put(byInner, k.inner(), c);
                 }
             }
         }
 
-        /** 초안의 키를 전체 이름 → 앞부분 → 괄호 안 순서로 찾는다. */
+        /** 먼저 나온 카드를 두되, 숨긴 카드는 나중에 온 숨기지 않은 카드에 자리를 내준다. */
+        private static void put(Map<String, Concept> map, String key, Concept c) {
+            if (key == null) {
+                return;
+            }
+            Concept old = map.get(key);
+            if (old == null
+                    || (old.getStatus() == ConceptStatus.HIDDEN
+                            && c.getStatus() != ConceptStatus.HIDDEN)) {
+                map.put(key, c);
+            }
+        }
+
+        /**
+         * 초안의 키를 전체 이름 → 앞부분 → 괄호 안 순서로, 각 키를 카드의 전체 이름 → 앞부분 → 괄호 안 순서로 찾는다. 괄호 안 키끼리는 비교하지 않는다
+         * ("파일 크기 제한 (MultipartFile)"이 "파일 업로드 (MultipartFile)"에 붙지 않게). 숨기지 않은 카드를 먼저 돌려주고, 맞는 카드가
+         * 숨긴 카드뿐이면 그 카드를 돌려준다 (호출자가 버린다).
+         */
         Concept find(NameKeys keys) {
-            for (String k : new String[] {keys.full(), keys.front(), keys.inner()}) {
-                Concept c = k == null ? null : byKey.get(k);
-                if (c != null) {
-                    return c;
+            Concept hidden = null;
+            String[] draftKeys = {keys.full(), keys.front(), keys.inner()};
+            for (int i = 0; i < draftKeys.length; i++) {
+                String k = draftKeys[i];
+                if (k == null) {
+                    continue;
+                }
+                List<Map<String, Concept>> maps =
+                        i == 2 ? List.of(byFull, byFront) : List.of(byFull, byFront, byInner);
+                for (Map<String, Concept> map : maps) {
+                    Concept c = map.get(k);
+                    if (c == null) {
+                        continue;
+                    }
+                    if (c.getStatus() != ConceptStatus.HIDDEN) {
+                        return c;
+                    }
+                    if (hidden == null) {
+                        hidden = c;
+                    }
                 }
             }
-            return null;
+            return hidden;
         }
     }
 }

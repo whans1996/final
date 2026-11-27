@@ -2,7 +2,6 @@ package com.vibenote.concept.admin.dto;
 
 import com.vibenote.common.Level;
 import com.vibenote.concept.ConceptStatus;
-import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -104,14 +103,11 @@ public record AdminConceptRequest(
                         regexp = "DRAFT|PUBLISHED|HIDDEN",
                         message = "상태는 DRAFT, PUBLISHED, HIDDEN 중 하나여야 합니다.")
                 String status,
-        @ArraySchema(
-                        arraySchema =
-                                @Schema(
-                                        nullable = true,
-                                        description =
-                                                "수준별 요약·본문 0~3개 (level은 서로 달라야 함). 있으면 6칸을 통째로 바꾸고"
-                                                        + " 배열에 없는 수준은 비운다. 없거나 null이면 PUT은 기존 값을"
-                                                        + " 유지하고 POST는 모두 비운다 (K-1)"))
+        @Schema(
+                        nullable = true,
+                        description =
+                                "수준별 요약·본문 0~3개 (level은 서로 달라야 함). 있으면 6칸을 통째로 바꾸고 배열에 없는 수준은"
+                                        + " 비운다. 없거나 null이면 PUT은 기존 값을 유지하고 POST는 모두 비운다 (K-1)")
                 @Size(max = 3, message = "수준별 요약·본문은 3개까지입니다.")
                 List<@NotNull(message = "수준별 항목이 비었습니다.") @Valid AdminConceptLevelRequest> levels) {
 

@@ -764,29 +764,38 @@ class AdminConceptApiTest extends IntegrationTestBase {
         return Stream.of(
                 Arguments.of(
                         java.util.List.of(level("JUNIOR", "가".repeat(301), null)),
-                        "levels[0].summary"),
+                        "levels[0].summary",
+                        "수준별 요약은 300자 이하로 입력하세요."),
                 Arguments.of(
                         java.util.List.of(
                                 level("BEGINNER", null, null),
                                 level("JUNIOR", null, "a".repeat(10_001))),
-                        "levels[1].body"),
+                        "levels[1].body",
+                        "수준별 본문은 10,000자 이하로 입력하세요."),
                 Arguments.of(
                         java.util.List.of(level("JUNIOR", "a", null), level("JUNIOR", "b", null)),
-                        "levels"),
-                Arguments.of(java.util.List.of(level("EXPERT", "a", null)), "levels[0].level"),
-                Arguments.of(java.util.List.of(level(null, "a", null)), "levels[0].level"),
+                        "levels",
+                        AdminConceptService.LEVELS_DUPLICATE),
+                Arguments.of(
+                        java.util.List.of(level("EXPERT", "a", null)),
+                        "levels[0].level",
+                        "수준은 BEGINNER, JUNIOR, SENIOR 중 하나여야 합니다."),
+                Arguments.of(
+                        java.util.List.of(level(null, "a", null)), "levels[0].level", "수준을 고르세요."),
                 Arguments.of(
                         java.util.List.of(
                                 level("BEGINNER", "a", null),
                                 level("JUNIOR", "b", null),
                                 level("SENIOR", "c", null),
                                 level("SENIOR", "d", null)),
-                        "levels"));
+                        "levels",
+                        "수준별 요약·본문은 3개까지입니다."));
     }
 
-    @ParameterizedTest(name = "{1}")
+    @ParameterizedTest(name = "{1} {2}")
     @MethodSource("invalidLevels")
-    void K1_AC4_levels가_잘못되면_400과_해당_칸_사유이고_카드는_그대로(Object levels, String field) throws Exception {
+    void K1_AC4_levels가_잘못되면_400과_해당_칸_사유이고_카드는_그대로(Object levels, String field, String message)
+            throws Exception {
         long id = insertWithLevels();
         Map<String, Object> before = row(id);
         long count = conceptCount();
@@ -794,7 +803,7 @@ class AdminConceptApiTest extends IntegrationTestBase {
         asAdmin(json(put(ONE, id), with("name", "수준 카드", "levels", levels)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("COMMON_400"))
-                .andExpect(jsonPath("$.details['" + field + "']").exists());
+                .andExpect(jsonPath("$.details['" + field + "']").value(message));
         assertThat(row(id)).isEqualTo(before);
 
         asAdmin(json(post(LIST), with("name", "새 카드", "levels", levels)))

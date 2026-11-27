@@ -498,4 +498,63 @@ class ConceptResponseParserTest {
 
         assertThat(linkOrDraft(result)).containsExactly("id 3");
     }
+
+    /** 리뷰 반영: 괄호 안 키끼리는 비교하지 않는다 (괄호 안만 같은 서로 다른 개념이 기존 카드에 붙지 않게). */
+    @Test
+    void AC9_괄호_안만_같은_초안은_그_카드에_연결하지_않는다() {
+        List<Concept> cards =
+                List.of(
+                        concept(60, "파일 업로드 (MultipartFile)", ConceptStatus.PUBLISHED),
+                        concept(61, "OpenAPI 문서화 (springdoc)", ConceptStatus.PUBLISHED));
+
+        assertThat(
+                        linkOrDraft(
+                                parseWith(
+                                        cards,
+                                        "파일 크기 제한 (MultipartFile)",
+                                        "Swagger UI 설정 (springdoc)",
+                                        "MultipartFile")))
+                .containsExactly(
+                        "new 파일 크기 제한 (MultipartFile)", "new Swagger UI 설정 (springdoc)", "id 60");
+    }
+
+    /** 리뷰 반영: 숨긴 카드가 더 높은 키로 맞아도 숨기지 않은 카드가 맞으면 그 카드에 연결한다. */
+    @Test
+    void AC10_숨긴_카드보다_숨기지_않은_카드에_먼저_연결한다() {
+        List<Concept> cards =
+                List.of(
+                        concept(70, "DI", ConceptStatus.HIDDEN),
+                        concept(71, "의존성 주입 (DI)", ConceptStatus.PUBLISHED),
+                        concept(72, "빈 (Bean)", ConceptStatus.HIDDEN),
+                        concept(73, "빈 (스프링 빈)", ConceptStatus.DRAFT));
+
+        assertThat(linkOrDraft(parseWith(cards, "DI", "빈"))).containsExactly("id 71", "id 73");
+    }
+
+    @Test
+    void AC8_버린_카테고리는_분석_id_이름_원래_값을_WARN으로_남기고_본문은_남기지_않는다() {
+        ch.qos.logback.classic.Logger logger =
+                (ch.qos.logback.classic.Logger)
+                        org.slf4j.LoggerFactory.getLogger(ConceptResponseParser.class);
+        ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent> appender =
+                new ch.qos.logback.core.read.ListAppender<>();
+        appender.start();
+        logger.addAppender(appender);
+        try {
+            parse(
+                    """
+                    {"concepts": [{"new": {"name": "코루틴", "category": "kotlin",
+                     "summary": "요약", "body": "비밀 본문"}}]}
+                    """);
+        } finally {
+            logger.detachAppender(appender);
+        }
+
+        assertThat(appender.list).hasSize(1);
+        ch.qos.logback.classic.spi.ILoggingEvent event = appender.list.get(0);
+        assertThat(event.getLevel()).isEqualTo(ch.qos.logback.classic.Level.WARN);
+        assertThat(event.getFormattedMessage())
+                .contains("42", "코루틴", "kotlin")
+                .doesNotContain("비밀 본문");
+    }
 }

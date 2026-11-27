@@ -3,28 +3,28 @@
 > 김동환(A 영역: AI·분석·학습 루프) 전용. 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
 > 머리 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
-갱신: 2026-11-28 00:08 · 작업자: whans1996 · PC: dh-home · 브랜치: feature/K-1-card-levels
+갱신: 2026-11-28 00:35 · 작업자: whans1996 · PC: dh-home · 브랜치: feature/K-1-card-levels
 
 ## 현재 기능
 
-**K-1 카테고리 12종·카드 수준별 요약·본문·매칭 버그** `docs/specs/K-1-card-levels.md` (APPROVED, AC1~13) · 브랜치 `feature/K-1-card-levels` · `/implement K-1` 진행 중
+**K-1 카테고리 12종·카드 수준별 요약·본문·매칭 버그** `docs/specs/K-1-card-levels.md` (APPROVED, AC1~13) · 브랜치 `feature/K-1-card-levels` · 구현 끝, `/pr-review` 단계
 
 ## 진행
 
-- ✅ 구현 (미커밋→커밋 중): V16, `ConceptCategories` 12종·별칭, 파서(levelSummaries·별칭·괄호 안 키·HIDDEN 버림), `ConceptLinkService`(UNIQUE로 HIDDEN 닿으면 연결 안 함), 상세 `viewerLevel`·`levels`, 관리자 `levels`(생략 시 유지·중복 400), 스키마 enum·프롬프트 3개·fixture, 시드 도구 선택 절 6개 + R__ 재생성, FE `categoryLabel` 4곳·12종
-- ✅ 테스트: BE 개념 관련 218개 green(AC11 상세 테스트는 main fixture 직접 읽게 수정), FE 193개 green, 시드 node:test 37개 green
-- ✅ 문서: F-08 AC5·5.4절, F-09·F-13·K-3a, 03 ERD V16, 01 K-1 행, 02·06·09, 기획서 ERD·F-13, datasets.json DS-05
+- ✅ AC1~AC13 구현·커밋·push (499be2d BE, 6f26232 시드 도구, 9f03d93 FE, d483418 문서, bec0e6b 계약 점검 반영)
+- ✅ verify: BE 전체(백필 테스트 2개는 `repeatableSqlMigrationPrefix("SKIP_REPEATABLE")`로 R__ 제외), FE lint·test·build, 하네스 347개 green
+- ✅ contract-checker: 중간 1(관리자 FE JSDoc levels)·낮음 1(응답 levels minItems·maxItems 3) 반영, 응답 category enum은 spec 요구 아님 → 유지
+- 🔨 ui-verifier(카드 목록·상세 라벨, 8080은 이전 BE가 떠 있어 FE만 점검)·reviewer 결과 대기
 
 ## 바로 다음 할 일
 
-1. `node scripts/verify.mjs be` 전체 결과 확인 → `docs/api/openapi.json` 갱신분 포함해 커밋·push
-2. contract-checker(상세·관리자 levels) → ui-verifier(카드 목록·상세·커뮤니티 첨부, 라벨) → `/pr-review`
-3. PR 본문 `Roadmap: K-1`, `Closes #163`, `Closes #204`, @JoonseobKim (공통: concept 패키지·UserService.findActiveLevel·FE 카드·커뮤니티 컴포넌트·conceptCategories.js). 머지는 EV-1 기준선(12/01) 뒤
+1. reviewer 지적 반영(파서 `NameIndex`·`ConceptLinkService.findHiddenIds`·`AdminConceptService.ensureDistinctLevels` 중심) → verify → 커밋·push
+2. PR 생성: base develop, 본문 `Roadmap: K-1`, `Closes #163`, `Closes #204`, 공통 코드 @JoonseobKim (concept 패키지·`UserService.findActiveLevel`·FE `ConceptCard`·`ConceptDetailView`·`PostAttachment`·`AttachmentPicker`·`conceptCategories.js`). 스크린샷은 ui-verifier 결과로
+3. CI·Codex 루프(`node scripts/codex-review.mjs <PR> --request --wait`) → COMPLETE. 머지는 사람이 EV-1 기준선(12/01) 뒤
 
 ## 막힌 점 / 결정 필요
-- 없음
+- 8080 BE(이전 빌드, PID 31640)를 내가 끌 권한이 없어 상세 `levels` 화면 확인은 BE 재시작 후 가능 (화면은 CD-1이라 필수 아님)
 - 사람: 노션 초대, F-05b liveTest + #226 실제 LLM 점검(12/08 전), #251 js PC `--move-env`
 
 ## 주의
-- 테스트 리소스 `llm-fixtures/concept.json`(빈 목록)이 클래스패스에서 main fixture를 가린다 → main fixture는 파일 경로로 읽는다
-- B 화면은 라벨만 바꿨다 (Tailwind 이전은 CD-1)
+- 테스트 리소스 `llm-fixtures/concept.json`(빈 목록)이 main fixture를 가린다 → 파일 경로로 읽는다. B 화면은 라벨만 바꿨다(Tailwind는 CD-1)
