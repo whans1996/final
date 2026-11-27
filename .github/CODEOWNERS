@@ -50,6 +50,7 @@
 /frontend/src/components/concept/            @whans1996 @JoonseobKim
 /frontend/src/layouts/                       @whans1996 @JoonseobKim
 /frontend/src/views/admin/                   @whans1996 @JoonseobKim
+/frontend/src/views/dev/                     @whans1996 @JoonseobKim
 /frontend/src/views/**/Admin*                @whans1996 @JoonseobKim
 /frontend/src/views/**/Concept*              @whans1996 @JoonseobKim
 /frontend/src/views/**/HomeView.*            @whans1996 @JoonseobKim

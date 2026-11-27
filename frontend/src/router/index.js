@@ -12,6 +12,17 @@ import reviewPlanRoutes from './routes/reviewplan'
 import teamRoutes from './routes/team'
 import userRoutes from './routes/user'
 
+// 공통 컴포넌트 미리보기 (F-29a). 개발 서버에서만 등록하고 빌드에서는 빠진다
+const devRoutes = import.meta.env.DEV
+  ? [
+      {
+        path: '/dev/components',
+        name: 'dev-components',
+        component: () => import('@/views/dev/ComponentGalleryView.vue'),
+      },
+    ]
+  : []
+
 // 라우트는 도메인 파일(routes/*.js)에 두고 여기서는 합치기만 한다 (F-00b). 기능 PR은 자기 도메인 파일만 고친다.
 // 헤더 메뉴는 route의 meta.nav, 관리자 사이드 메뉴는 /admin 자식의 meta.adminNav로 정한다 (utils/navItems.js)
 export const routes = [
@@ -26,6 +37,7 @@ export const routes = [
   ...teamRoutes,
   ...challengeRoutes,
   ...adminRoutes,
+  ...devRoutes,
   {
     path: '/:pathMatch(.*)*',
     name: 'not-found',

@@ -57,7 +57,7 @@ function onSubmit() {
       <button v-if="cancellable" type="button" data-action="cancel" @click="emit('cancel')">
         취소
       </button>
-      <button type="submit" class="primary" data-action="submit" :disabled="!canSubmit">
+      <button type="submit" data-action="submit" :disabled="!canSubmit">
         {{ submitLabel }}
       </button>
     </div>

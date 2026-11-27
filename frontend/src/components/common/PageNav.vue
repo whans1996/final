@@ -12,13 +12,21 @@ const props = defineProps({
 const emit = defineEmits(['change'])
 
 const lastPage = computed(() => Math.max(1, Math.ceil(props.total / props.size)))
+
+const buttonClass =
+  'h-8 rounded-sm border border-border bg-surface px-3 text-sm font-semibold text-text hover:bg-bg disabled:cursor-not-allowed disabled:opacity-50'
 </script>
 
 <template>
-  <nav v-if="total > size" class="pager" aria-label="페이지 이동">
+  <nav
+    v-if="total > size"
+    class="pager mt-6 flex items-center justify-center gap-4 text-sm"
+    aria-label="페이지 이동"
+  >
     <button
       type="button"
       data-action="prev"
+      :class="buttonClass"
       :disabled="page <= 1"
       @click="emit('change', page - 1)"
     >
@@ -28,6 +36,7 @@ const lastPage = computed(() => Math.max(1, Math.ceil(props.total / props.size))
     <button
       type="button"
       data-action="next"
+      :class="buttonClass"
       :disabled="page >= lastPage"
       @click="emit('change', page + 1)"
     >
@@ -35,27 +44,3 @@ const lastPage = computed(() => Math.max(1, Math.ceil(props.total / props.size))
     </button>
   </nav>
 </template>
-
-<style scoped>
-.pager {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-4);
-  margin-top: var(--space-6);
-}
-
-.pager button {
-  padding: var(--space-2) var(--space-4);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  background: var(--color-surface);
-  font: inherit;
-  cursor: pointer;
-}
-
-.pager button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-</style>
