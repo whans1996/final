@@ -3,7 +3,7 @@
 > 김동환(A 영역: AI·분석·학습 루프) 전용. 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
 > 머리 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
-갱신: 2026-11-27 08:51 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/K-3a-seed-check
+갱신: 2026-11-27 09:07 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/K-3a-seed-check
 
 ## 현재 기능
 
@@ -11,8 +11,9 @@
 
 ## 진행
 
-- ✅ L-1a #227·HP-3 #230·이슈 정리 ① #233 머지 확인 (로컬 `feature/L-1a-rerun-quiz-regen`은 머지된 낡은 브랜치)
-- ✅ spec 초안 AC1~AC11. 결정(11-27 결정로그): 카드별 Markdown + `seed-build.mjs` 생성기, 문법 + 맥락 무관 오류(심볼·모듈·테이블 없음은 경고), 오류만 CI 실패
+- ✅ spec APPROVED 11-27. ✅ AC1·AC3~AC6 파서·생성기·①형식 (b620f7e) ✅ AC2 85장 변환, develop과 85장 전부 동일 (37c966a)
+- ✅ AC9·AC10 ②FE 검사·`seed-check.mjs` 보고서. 실제 85장 FE 오류 1건 수정(vue/navigation-guards 라우트 조각 → `const routes = [...]`)
+- 일회 스크립트: scratchpad k3a/convert.mjs·compare.mjs, develop 원본 사본 `.harness/k3a-develop-seed.sql`
 
 ## 이슈 정리 순서 (11-26 사용자 승인)
 
@@ -20,9 +21,10 @@
 
 ## 바로 다음 할 일
 
-1. ✅ spec 승인 커밋·push
-2. `/clear` 후 `/implement K-3a` (Opus/high): 순서 = `scripts/seed-build.mjs`·`scripts/lib/seed/`(파서·①형식) 테스트 먼저(`scripts/test/seed-build.test.mjs`·`seed-format.test.mjs`) → 85장 변환(일회 스크립트는 scratchpad, AC2 비교 결과를 PR 본문에) → BE `SeedExampleChecker`·`SeedExampleTest`(com.vibenote.common) → FE 검사·`seed-check.mjs` 보고서 → ci.yml 경로 필터 `data/seed/**`·`data/datasets.json`
-3. 11/29부터 HP-4 (#165·#166 + ④ 묶음)
+1. AC7·AC8 BE: `backend/src/test/java/com/vibenote/common/SeedExampleChecker.java`(카드 md 파서·javac 3단계 감싸기·진단 분류·SQL 실행(IntegrationTestBase.MYSQL root, 카드마다 빈 스키마)·xml·yaml) + `SeedExampleCheckerTest#AC7_*·AC8_*` + `SeedExampleTest`(실제 카드, 오류면 실패, `backend/build/seed-check/result.json`, env SEED_SRC·SEED_CARD) → `node scripts/seed-check.mjs --be`로 85장 오류 0
+2. AC11: ci.yml 경로 필터(`data/seed/**`·`data/datasets.json` → be·fe), harness 잡 `seed-build.mjs --check`, verify.mjs fe에 seed-check·seed-examples 테스트, related.mjs areasOf(data/seed → be·fe), frontend/package.json typescript 6.0.3 명시, CODEOWNERS `/data/seed/` A
+3. 문서: backend/CLAUDE.md 시드 규칙(역슬래시 금지 → 카드 파일·생성기), 산출물 09 DS-05, spec 체크리스트 → /pr-review (AC2 비교 표 85장 동일 + 수정 카드 표)
+4. 11/29부터 HP-4 (#165·#166 + ④ 묶음)
 
 ## 막힌 점 / 결정 필요
 - 사람: 노션 팀원 초대, F-05b liveTest
