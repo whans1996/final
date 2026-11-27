@@ -7,7 +7,13 @@
 // 바로 따라가면 로그아웃·탈퇴(clear 뒤 home 이동) 사이에 지금 화면이 비회원 셸 안에서 다시 마운트되어
 // 토큰 없이 API를 부르고, 401 처리로 home 대신 로그인 화면에 간다. 로그인·로그아웃·탈퇴·401은 모두 이동을 동반한다.
 import { computed, onUnmounted, ref } from 'vue'
-import { RouterView, useRoute, useRouter } from 'vue-router'
+import {
+  isNavigationFailure,
+  NavigationFailureType,
+  RouterView,
+  useRoute,
+  useRouter,
+} from 'vue-router'
 import AppShell from '@/layouts/AppShell.vue'
 import GuestShell from '@/layouts/GuestShell.vue'
 import { useAuthStore } from '@/stores/auth'
@@ -19,8 +25,13 @@ const router = useRouter()
 const memberShell = ref(auth.isLoggedIn)
 onUnmounted(
   router.afterEach((to, from, failure) => {
-    // 취소·중단된 이동(떠나기 확인에서 머묾 등)은 지금 화면이 그대로이므로 셸도 그대로 둔다
-    if (failure) return
+    // 가드가 막거나(떠나기 확인에서 머묾) 새 이동에 밀린 이동은 지금 화면이 그대로이므로 셸도 그대로 둔다.
+    // 같은 곳으로의 이동(home에서 로그아웃 → home)은 화면이 그대로여도 셸은 로그인 상태를 따른다
+    const stayed = isNavigationFailure(
+      failure,
+      NavigationFailureType.aborted | NavigationFailureType.cancelled,
+    )
+    if (stayed) return
     memberShell.value = auth.isLoggedIn
   }),
 )

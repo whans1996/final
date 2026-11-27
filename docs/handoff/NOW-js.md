@@ -1,11 +1,11 @@
 # NOW — 김준섭 현재 작업 스냅샷
 
 > 김준섭(B 영역: 카드·소셜) 전용. 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
-갱신: 2026-11-27 15:48 · 작업자: JoonseobKim · PC: js-ssafy · 브랜치: feature/F-29b-app-shell
+갱신: 2026-11-27 15:51 · 작업자: JoonseobKim · PC: js-ssafy · 브랜치: feature/F-29b-app-shell
 
 ## 현재 기능
 
-**F-29b 앱 셸** `docs/specs/F-29b-app-shell.md` (APPROVED, AC14 모두 green) · 브랜치 `feature/F-29b-app-shell` · **PR #247** (head b4f29a3, `Roadmap: F-29`, 김동환 @멘션) · ~12/02 넘겨주기
+**F-29b 앱 셸** `docs/specs/F-29b-app-shell.md` (APPROVED, AC14 모두 green) · 브랜치 `feature/F-29b-app-shell` · **PR #247** (head 다음 커밋, `Roadmap: F-29`, 김동환 @멘션) · ~12/02 넘겨주기
 
 ## 진행
 

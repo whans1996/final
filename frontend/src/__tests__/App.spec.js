@@ -170,4 +170,19 @@ describe('App 셸 선택 (F-29b AC6·AC7, F-00b AC8)', () => {
     expect(wrapper.find('aside').exists()).toBe(true)
     expect(fetchReviewPlans).toHaveBeenCalledTimes(1)
   })
+
+  it('AC11 home(/)에서 로그아웃하면(같은 곳으로의 이동) 비회원 셸로 바뀐다 (Codex P2)', async () => {
+    const wrapper = await mountApp('/', 'USER')
+    expect(wrapper.find('aside').exists()).toBe(true)
+
+    await wrapper.find('header button[aria-haspopup="menu"]').trigger('keydown', { key: 'Enter' })
+    await flushPromises()
+    ;[...document.querySelectorAll('[role="menuitem"]')]
+      .find((el) => el.textContent.trim() === '로그아웃')
+      .click()
+    await flushPromises()
+
+    expect(wrapper.find('aside').exists()).toBe(false)
+    expect(wrapper.find('header a[href="/login"]').exists()).toBe(true)
+  })
 })
