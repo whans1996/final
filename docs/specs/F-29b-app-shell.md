@@ -111,7 +111,7 @@
 - [x] 셸 조각 7개 + `AppShell`·`GuestShell`·`App.vue` 셸 선택
 - [x] `frontend/CLAUDE.md` 메뉴·layout 규칙
 - [x] ui-verifier 통과 (1280·800·375, 회원·비회원, 라이트·다크, 키보드. 비회원 800 검색 찌그러짐 → 비회원 헤더는 1024 미만에서 🔍로 접음. ADMIN `/admin`은 App.spec AC13으로 확인, 화면은 관리자 계정 없어 미확인)
-- [ ] reviewer 지적 사항 반영
-- [ ] 산출물 반영: 화면 설계서 2-1절 스크린샷 3폭 (PR 스크린샷 `pr-screens.mjs`)
+- [x] reviewer 지적 사항 반영 (셸 전환을 afterEach로: 로그아웃 재마운트, 권장 4건)
+- [x] 산출물 반영: 화면 설계서 2-1절 스크린샷 3폭 (PR 스크린샷 `pr-screens.mjs`)
 - [ ] PR CI 초록 (김동환 @멘션: A route 파일 5개 `meta.nav`)
 - [ ] 상태 DONE (PR 머지 후)
