@@ -22,7 +22,7 @@ import { userInfo } from 'node:os';
 import { join } from 'node:path';
 import { ROOT, WORKLOG_FILE, currentBranch, git, localPcId, nowFileOf, nowRelPath, nowStamp, ownerKey, readText, recordStamp } from './lib/common.mjs';
 import { AREA_OF } from './lib/issues.mjs';
-import { lastEntryAt, logEntry, replaceNowBody, touchNowHeader, undoMsysPathConv, verifiedLine } from './lib/records.mjs';
+import { branchChangedFiles, lastEntryAt, logEntry, replaceNowBody, touchNowHeader, undoMsysPathConv, verifiedLine } from './lib/records.mjs';
 import { areasOf } from './lib/related.mjs';
 
 const args = process.argv.slice(2);
@@ -114,7 +114,7 @@ if (has('--file') || has('--area')) {
   needKey();
   const { since, commits } = commitsSinceMyLastEntry();
   const base = develop();
-  const changed = base ? git(['diff', '--name-only', base]).out.split('\n').filter(Boolean) : [];
+  const changed = branchChangedFiles(git, base);
   const areas = areasOf(changed);
   let verified = {};
   try {
@@ -139,7 +139,7 @@ if (has('--file') || has('--area')) {
       `내 마지막 작업로그: ${since || '없음'}`,
       `그 뒤 이 브랜치 커밋 ${commits.length}개:`,
       ...commits.slice(0, 12).map((c) => `  - ${c.subject} (${c.sha.slice(0, 7)})`),
-      `develop 대비 바뀐 파일 ${changed.length}개 · 영역: ${areas.join(' ') || '없음'} · 커밋 안 된 변경 ${dirty}개`,
+      `develop 갈라진 뒤 바뀐 파일 ${changed.length}개 · 영역: ${areas.join(' ') || '없음'} · 커밋 안 된 변경 ${dirty}개`,
       `검증: ${verifiedLine(verified, git(['rev-parse', 'HEAD']).out, areas)}`,
       `PR: ${prLine}`,
       '',

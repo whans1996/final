@@ -60,6 +60,19 @@ export function replaceNowBody(current, body, head) {
   return { text, error: null, warning: count > NOW_MAX_LINES ? `NOW 파일이 ${count}줄입니다 (${NOW_MAX_LINES}줄 이내로 줄이세요)` : null };
 }
 
+/**
+ * 이 브랜치에서 바뀐 파일 (stamp --draft의 영역 계산, #134): merge-base(base, HEAD) 대비 작업 트리까지의 변경 + 추적 안 된 새 파일.
+ * base 끝과 비교하면 브랜치가 뒤처졌을 때 develop에서만 바뀐 파일이 섞인다. run(args)은 git 실행기({ ok, out })다 (테스트는 임시 저장소)
+ */
+export function branchChangedFiles(run, base) {
+  if (!base) return [];
+  const mb = run(['merge-base', base, 'HEAD']);
+  if (!mb.ok || !mb.out) return [];
+  const lines = (r) => (r.ok ? r.out.split('\n').map((l) => l.trim()).filter(Boolean) : []);
+  const files = [...lines(run(['diff', '--name-only', mb.out])), ...lines(run(['ls-files', '--others', '--exclude-standard']))];
+  return [...new Set(files)];
+}
+
 /** 이 사람(key)의 마지막 작업로그 항목 시각 'YYYY-MM-DD HH:mm' (없으면 null) */
 export function lastEntryAt(log, key, pcs = {}) {
   return lastWorklogEntryOf(worklogEntries(log), key, pcs)?.at ?? null;

@@ -1,8 +1,11 @@
 // NOW·작업로그 자동 초안 (H-1)
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
 import { test } from 'node:test';
-import { commitsLine, lastEntryAt, logEntry, nowFormatProblems, replaceNowBody, touchNowHeader, undoMsysPathConv, verifiedLine } from '../lib/records.mjs';
+import { git } from '../lib/common.mjs';
+import { branchChangedFiles, commitsLine, lastEntryAt, logEntry, nowFormatProblems, replaceNowBody, touchNowHeader, undoMsysPathConv, verifiedLine } from '../lib/records.mjs';
 
 test('NOW 갱신 줄만 바꾸고, 없으면 맨 위에 넣는다', () => {
   assert.equal(touchNowHeader('# NOW\n갱신: 옛날\n본문', '갱신: 새것'), '# NOW\n갱신: 새것\n본문');
@@ -109,6 +112,47 @@ test('stamp·handoff는 메모 인자에 MSYS 되돌림을 쓴다 (#231)', () =>
     const src = readFileSync(new URL(`../${f}`, import.meta.url), 'utf8');
     assert.match(src, /undoMsysPathConv\(args\[/, f);
   }
+});
+
+test('HP-4 AC6: 바뀐 파일은 merge-base 대비 + 작업 트리 변경이고 develop에서만 바뀐 파일은 넣지 않는다 (#134)', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'vibenote-draft-'));
+  try {
+    const run = (args) => git(args, { cwd: dir });
+    const write = (f, s) => {
+      mkdirSync(dirname(join(dir, f)), { recursive: true });
+      writeFileSync(join(dir, f), s);
+    };
+    run(['init', '-q', '-b', 'develop']);
+    run(['config', 'user.email', 't@example.com']);
+    run(['config', 'user.name', 't']);
+    write('README.md', 'x');
+    run(['add', '-A']);
+    run(['commit', '-q', '-m', 'init']);
+    run(['switch', '-q', '-c', 'feature/x']);
+    write('scripts/lib/a.mjs', 'a');
+    run(['add', '-A']);
+    run(['commit', '-q', '-m', 'feat: a']);
+    // develop만 앞서 간다 (상대 PR 머지)
+    run(['switch', '-q', 'develop']);
+    write('frontend/src/B.vue', 'b');
+    run(['add', '-A']);
+    run(['commit', '-q', '-m', 'feat: b']);
+    run(['switch', '-q', 'feature/x']);
+    // 작업 트리 변경: 수정·새 파일
+    write('README.md', 'y');
+    write('backend/src/main/java/C.java', 'c');
+    assert.deepEqual(branchChangedFiles(run, 'develop').sort(), ['README.md', 'backend/src/main/java/C.java', 'scripts/lib/a.mjs']);
+    // 기준 브랜치가 없으면 빈 목록
+    assert.deepEqual(branchChangedFiles(run, null), []);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('HP-4 AC6: stamp --draft는 branchChangedFiles로 영역을 센다', () => {
+  const src = readFileSync(new URL('../stamp.mjs', import.meta.url), 'utf8');
+  assert.match(src, /branchChangedFiles\(/);
+  assert.doesNotMatch(src, /\['diff', '--name-only', base\]/);
 });
 
 test('검증 상태: HEAD가 verified.json에 있는 영역만 통과', () => {
