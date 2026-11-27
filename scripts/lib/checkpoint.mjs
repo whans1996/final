@@ -64,6 +64,14 @@ export function sessionTouchedFrom(texts, root) {
 }
 
 /**
+ * NOW 갱신 뒤 커밋을 읽는 git log 인자 (parseCommitLog 형식).
+ * --first-parent: develop 합치기로 들어온 다른 브랜치의 내 커밋(병렬 세션)을 이 브랜치 작업으로 보지 않는다 (reviewer 지적)
+ */
+export function commitLogArgs(nowMtime, limit) {
+  return ['log', '--first-parent', '--no-merges', `-${limit}`, `--since=${new Date(nowMtime).toISOString()}`, '--format=%x1e%H%x1f%ae%x1f%ct%x1f%P%x1f%s', '--name-only', 'HEAD'];
+}
+
+/**
  * `git log --format=%x1e%H%x1f%ae%x1f%ct%x1f%P%x1f%s --name-only` 출력 → [{ sha, email, time(ms), merge, subject, files }]
  */
 export function parseCommitLog(out) {

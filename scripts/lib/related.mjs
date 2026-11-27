@@ -13,7 +13,9 @@ const HARNESS_DATA = {
   '.claude/settings.json': ['scripts/test/settings.test.mjs'],
   'scripts/lib/pcs.json': ['scripts/test/env-check.test.mjs'],
   '.github/CODEOWNERS': ['scripts/test/codeowners.test.mjs', 'scripts/test/owners.test.mjs'],
-  '.github/workflows/ci.yml': ['scripts/test/ci-filter.test.mjs', 'scripts/test/roadmap.test.mjs'],
+  '.github/workflows/ci.yml': ['scripts/test/ci-changes.test.mjs', 'scripts/test/ci-filter.test.mjs', 'scripts/test/roadmap.test.mjs'],
+  '.github/workflows/roadmap.yml': ['scripts/test/roadmap.test.mjs'],
+  '.claude/agents/verifier.md': ['scripts/test/verify.test.mjs'],
 };
 /** 하네스 영역에 드는 문서·설정 경로 (verify.mjs가 검증 캐시의 미커밋 변경 검사에 쓴다, Codex 리뷰) */
 export const HARNESS_DATA_FILES = Object.keys(HARNESS_DATA);

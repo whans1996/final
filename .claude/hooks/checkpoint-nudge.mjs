@@ -12,7 +12,7 @@
 //    NOW 파일이 최신이면 /clear 후 SessionStart hook이 다시 주입하므로 이어받기 비용이 작다.
 import { mkdirSync, readdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { findMissingCheckpoint, parseCommitLog, sessionTouchedFrom, shouldCheck } from '../../scripts/lib/checkpoint.mjs';
+import { commitLogArgs, findMissingCheckpoint, parseCommitLog, sessionTouchedFrom, shouldCheck } from '../../scripts/lib/checkpoint.mjs';
 import {
   ROOT,
   dirtyWorkFiles,
@@ -54,7 +54,7 @@ function missingCheckpoint() {
   if (!nowFile) return null;
   const nowMtime = mtimeOf(nowFile) ?? 0;
   const texts = input.transcript_path ? transcriptsOf(input.transcript_path, input.session_id).map(readText) : [null];
-  const log = git(['log', '--no-merges', `-${RECENT_COMMITS}`, `--since=${new Date(nowMtime).toISOString()}`, '--format=%x1e%H%x1f%ae%x1f%ct%x1f%P%x1f%s', '--name-only', 'HEAD']);
+  const log = git(commitLogArgs(nowMtime, RECENT_COMMITS));
   return findMissingCheckpoint({
     dirty: dirtyWorkFiles(),
     commits: log.ok ? parseCommitLog(log.out) : [],

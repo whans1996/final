@@ -1,7 +1,7 @@
 // Stop hook checkpoint-nudge의 체크포인트 누락 판정 (HP-4 AC5, H-11)
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { findMissingCheckpoint, parseCommitLog, sessionTouchedFrom, shouldCheck } from '../lib/checkpoint.mjs';
+import { commitLogArgs, findMissingCheckpoint, parseCommitLog, sessionTouchedFrom, shouldCheck } from '../lib/checkpoint.mjs';
 
 const ROOT = '/repo';
 const NOW = 1_000_000;
@@ -65,6 +65,15 @@ test('HP-4 AC5: stop_hook_active(이미 한 번 막힘)와 계획 모드는 검�
   assert.equal(shouldCheck({}), true);
   assert.equal(shouldCheck({ stop_hook_active: true }), false);
   assert.equal(shouldCheck({ permission_mode: 'plan' }), false);
+});
+
+test('HP-4 AC5: 이 브랜치에 직접 생긴 커밋만 본다 (develop 합치기로 들어온 다른 브랜치의 내 커밋 제외)', () => {
+  const args = commitLogArgs(NOW, 30);
+  assert.ok(args.includes('--first-parent'));
+  assert.ok(args.includes('--no-merges'));
+  assert.ok(args.includes('-30'));
+  assert.ok(args.includes(`--since=${new Date(NOW).toISOString()}`));
+  assert.equal(args.at(-1), 'HEAD');
 });
 
 test('HP-4 AC5: git log 출력(커밋 머리 + 바뀐 파일) 해석', () => {

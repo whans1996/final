@@ -105,7 +105,9 @@ test('HP-4 AC3: 하네스가 읽는 설정·NOW 파일은 harness 영역이고 �
     'scripts/test/codeowners.test.mjs',
     'scripts/test/owners.test.mjs',
     'scripts/test/ci-filter.test.mjs',
+    'scripts/test/ci-changes.test.mjs',
     'scripts/test/roadmap.test.mjs',
+    'scripts/test/verify.test.mjs',
   ];
   const cases = {
     'docs/handoff/NOW-dh.md': ['scripts/test/common.test.mjs'],
@@ -113,8 +115,11 @@ test('HP-4 AC3: 하네스가 읽는 설정·NOW 파일은 harness 영역이고 �
     '.claude/settings.json': ['scripts/test/settings.test.mjs'],
     'scripts/lib/pcs.json': ['scripts/test/env-check.test.mjs'],
     '.github/CODEOWNERS': ['scripts/test/codeowners.test.mjs', 'scripts/test/owners.test.mjs'],
-    // ci.yml은 CI 필터 테스트(AC7)와 PR 제목 정규식을 읽는 로드맵 테스트
-    '.github/workflows/ci.yml': ['scripts/test/ci-filter.test.mjs', 'scripts/test/roadmap.test.mjs'],
+    // ci.yml은 CI 필터 테스트(AC7), changes job 출력(AC8), PR 제목 정규식을 읽는 로드맵 테스트
+    '.github/workflows/ci.yml': ['scripts/test/ci-changes.test.mjs', 'scripts/test/ci-filter.test.mjs', 'scripts/test/roadmap.test.mjs'],
+    // roadmap.yml은 넘겨주기 알림(AC13), verifier.md는 verify --tests 사용(AC1)
+    '.github/workflows/roadmap.yml': ['scripts/test/roadmap.test.mjs'],
+    '.claude/agents/verifier.md': ['scripts/test/verify.test.mjs'],
   };
   for (const [file, tests] of Object.entries(cases)) {
     assert.deepEqual(areasOf([file]), ['harness'], file);
@@ -123,7 +128,7 @@ test('HP-4 AC3: 하네스가 읽는 설정·NOW 파일은 harness 영역이고 �
     assert.ok(HARNESS_DATA_FILES.some((p) => file === p || file.startsWith(`${p}/`)), file);
   }
   // NOW 파일 밖의 handoff 문서, 다른 워크플로는 영역이 없다
-  assert.deepEqual(areasOf(['docs/handoff/README.md', '.github/workflows/roadmap.yml', '.claude/settings.local.json']), []);
+  assert.deepEqual(areasOf(['docs/handoff/README.md', '.github/workflows/codex-status.yml', '.claude/settings.local.json']), []);
 });
 
 test('pre-push: wip는 건너뛰고, 같은 커밋을 이미 통과한 영역은 다시 돌리지 않는다', () => {
