@@ -11,24 +11,22 @@
 
 ## 진행
 
-- ✅ AC1~AC6·AC9·AC10 커밋·push (e716b40). 85장 develop과 동일, 수정 1건(vue/navigation-guards 라우트 조각 → `const routes = [...]`)
-- ✅ AC7·AC8·AC11 커밋 (5e8d439·c549729). /pr-review: verifier 지적(seed-check --be UP-TO-DATE, baed368), reviewer 반드시 수정 2(javac 흐름 분석 생략·@Override 완화 범위, efb6957), 권장 전부(지어낸 API 오류·SQL 격리·DB 한도·ConceptCategories 필터, f4e6293, 결정로그) 반영. 85장 오류 0·경고 437. PR 설명 `.harness/pr-K-3a.md`
+- ✅ AC1~AC11 구현, /pr-review에서 verifier·reviewer 지적(반드시 3·권장 전부, 결정로그) 반영. 85장 오류 0·경고 437, 수정 카드 1건(navigation-guards)
 - ✅ **PR #234 CI 초록 + Codex ✅ eaf14e7** (Codex P2 3건 반영: vue script·setup 경로, js checker 문법, vue 매크로 실제 타입). 완료 표시 커밋 완료 → **머지 대기 (GitHub에서 직접)**
-- 🔨 **PR #236** (`feature/issue-235-codex-head-lag`, Closes #235): push 직후 codex-review가 이전 head로 판정하던 하네스 버그. Codex P2(hook 15초 제한) 반영 0c63e83, 재리뷰 대기
+- ✅ **PR #236** (`feature/issue-235-codex-head-lag`, Closes #235, push 직후 codex-review가 이전 head로 판정하던 하네스 버그): Codex ✅ 0c63e83, Backend CI 대기
 
 ## 이슈 정리 순서 (11-26 사용자 승인)
 
-① ✅ → K-3a 시드 검수(~11/28) → ② E-1 러너 #218·#219·#221·#223 (12/01 EV-1 전) → HP-4에 ④ #133·#134·#178·#196·#198·#224 흡수 → ③ A 버그 #168(500 먼저)·#200~#203·#155·#156·#150·#121, ⑤ 가드 우회 #188~#191·#193 한 PR. #163→F-27b, #204→K-1, #137→HP-5
+① ✅ → K-3a ✅(PR #234) → ② E-1 러너 #218·#219·#221·#223 (12/01 EV-1 전) → HP-4에 ④ #133·#134·#178·#196·#198·#224 흡수 → ③ A 버그 #168(500 먼저)·#200~#203·#155·#156·#150·#121, ⑤ 가드 우회 #188~#191·#193 한 PR. #163→F-27b, #204→K-1, #137→HP-5
 
 ## 바로 다음 할 일
 
 1. 사람: PR #234 GitHub에서 머지 (상대 PR이 먼저 머지됐으면 `git merge origin/develop` → push로 CI 재확인)
-2. PR #236 Codex 루프: `git switch feature/issue-235-codex-head-lag` → `node scripts/codex-review.mjs 236 --request --wait --status` (백그라운드). COMPLETE·CI 초록이면 머지
+2. PR #236: `gh pr checks 236`로 Backend 초록 확인 → GitHub에서 머지
 3. 11/29부터 HP-4 (#165·#166 + ④ 묶음)
 
 ## 막힌 점 / 결정 필요
 - 사람: 노션 팀원 초대, F-05b liveTest · 로드맵에 E-2(D·E 기준표·쌍 비교, 12/09 전) 행 추가 필요
-
 ## 주의
 - 공통: `R__seed_concepts.sql`(생성본)·`SeedConceptsTest`·CODEOWNERS(`/data/seed/`·`/backend/src/test/resources/seed/` A)·`frontend/package.json`·`ci.yml` → PR에 @JoonseobKim
 - Bash heredoc·`node -e` 안의 `\`가 줄어든다 → 역슬래시가 든 내용은 Write·Edit 도구로 · 다음 마이그레이션 V15
