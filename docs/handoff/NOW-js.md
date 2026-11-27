@@ -1,27 +1,27 @@
 # NOW — 김준섭 현재 작업 스냅샷
 
 > 김준섭(B 영역: 카드·소셜) 전용. 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
-갱신: 2026-11-27 13:22 · 작업자: JoonseobKim · PC: js-ssafy · 브랜치: feature/F-29-design-common
+갱신: 2026-11-27 13:30 · 작업자: JoonseobKim · PC: js-ssafy · 브랜치: feature/F-29-design-common
 
 ## 현재 기능
 
-**F-29 디자인 공통 PR (토큰·폰트·공통 컴포넌트·앱 셸)** — `feature/F-29-design-common` (11/29~12/02, `Roadmap: F-29`). spec 아직 없음 → 다음은 Figma 프레임 후 `/spec F-29`. EV-1 기준선은 **PR #240 머지로 끝남 (11/27)**
+**F-29 디자인 공통** — 두 PR로 나눔 (결정로그 11-27 마지막 줄). spec 2개 **APPROVED (11/27)**
+- F-29a 기반 `docs/specs/F-29a-design-foundation.md` (AC13, 이 브랜치 `feature/F-29-design-common`, ~11/30)
+- F-29b 앱 셸 `docs/specs/F-29b-app-shell.md` (AC14, F-29a 머지 뒤 `feature/F-29b-app-shell`, 12/02). 둘 다 PR 본문 `Roadmap: F-29`
 
 ## 진행
 
-- ✅ 11/27 Figma 세션: 토큰·폰트·Tailwind 이전·공통 컴포넌트 7개·앱 셸·알림(T1)·랜딩 3개·SD-1 범위 → 결정로그 11-27 5줄
-- ✅ EV-1 기준선: 9개 fixture × stage=all × level=all (GMS gpt-4.1-mini, 270호출·실패 0), Gemini 판정(gemini-3.5-flash-lite, seed 42) 독립 2회 채점, 판정 흔들림 ±2.3%p 이내·v2 하한 ✅/❌ 두 번 같음
-- ✅ 점수 기록: 산출물 08 1.3절·09 변경 이력 (PR #240 머지, 12/01 넘겨주는 시점 앞당겨 완료). 정본 `.harness/prompt-eval/ev1-20261127-v2/summary.md` (js-ssafy 로컬, 로그 `ev1-v3-grade.log`)
+- ✅ Figma 세션 결정 5줄·EV-1(#240) 끝. spec 질문 답: 두 PR 분할, preflight + `@layer base` 보정·기존 변수 별칭, 하단 탭 '분석' = `/analyses`, 알림은 `#notifications` 슬롯만
+- 🟡 spec 초안 작성 완료 (커밋 전). 다크 토큰 값은 F-29a 5.2절에서 새로 정함 (결정로그에 없음)
 
 ## 바로 다음 할 일
 
-1. Figma(11/28까지, B): 토큰 스타일·공통 컴포넌트 7개·앱 셸 3폭(≥1024 옆 메뉴 / 640~1024 아이콘 메뉴 / <640 하단 탭) 프레임
-2. 새 세션(Opus/high) `/spec F-29`: 결정로그 11-27 5줄 = 12/02 기반 PR 경계(Tailwind·Reka UI·Lucide·토큰·폰트·다크 토글·컴포넌트 7개·셸 2종·meta.nav group·검색은 있는 API만·알림 자리)
-3. 김동환에게 요청: 로드맵·기획서에 알림 항목(T1, B 12/09~12/14) 추가 docs PR, SD-1 범위 넓힘 반영
-4. /progress 때: 기획서 579·WBS 4.1의 DS 12/03 → 11/26 고정으로
+1. (완료) spec 승인 커밋·push
+2. 새 세션(Opus/high) `/implement F-29a`: `npm i tailwindcss @tailwindcss/vite reka-ui lucide-vue-next pretendard @fontsource-variable/jetbrains-mono` → AC별 red 테스트(`useTheme.spec.js`, `components/common/__tests__/BaseButton.spec.js` …) → `main.css` `@theme` 토큰
+3. Figma 프레임(토큰·컴포넌트 7개·셸 3폭)은 spec과 병행. 값이 어긋나면 spec 5.2절 표를 고친다
+4. 김동환에게: 알림 T1 로드맵·기획서 docs PR, SD-1 범위 반영, F-29b가 A route 파일 5개 `meta.nav`에 `group`·`icon`을 더함 (미리 알림)
 
 ## 막힌 점 / 결정 필요
-
 - GMS 키 만료 12/09 18:00 → EV-2(12/09~12/12) 전에 재발급·연장 확인
 
 ## 주의
