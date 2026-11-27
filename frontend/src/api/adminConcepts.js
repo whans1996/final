@@ -15,13 +15,14 @@ const isEmpty = (value) => value === undefined || value === null || value === ''
 /**
  * 상태·출처와 상관없는 카드 목록 (updated_at 최신순). 빈 값은 쿼리에서 뺀다. 400 COMMON_400(details.status·source).
  * @param {{ status?: ConceptStatus, source?: ConceptSource, keyword?: string, page?: number, size?: number }} query
+ * @param {{ signal?: AbortSignal }} [options] 취소용 signal (V-4)
  * @returns {Promise<{ items: AdminConceptSummary[], page: number, size: number, total: number }>}
  */
-export function fetchAdminConcepts({ status, source, keyword, page, size } = {}) {
+export function fetchAdminConcepts({ status, source, keyword, page, size } = {}, { signal } = {}) {
   const params = Object.fromEntries(
     Object.entries({ status, source, keyword, page, size }).filter(([, value]) => !isEmpty(value)),
   )
-  return http.get('/admin/concepts', { params }).then((res) => res.data)
+  return http.get('/admin/concepts', { params, signal }).then((res) => res.data)
 }
 
 /**

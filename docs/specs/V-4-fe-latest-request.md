@@ -157,9 +157,9 @@ async function load() {
 
 `/implement`가 진행하며 체크한다.
 
-- [ ] 브랜치 `feature/V-4-fe-latest-request`
-- [ ] AC1·AC2 composable 테스트 red → `useLatestRequest.js` green
-- [ ] AC3 api signal
+- [x] 브랜치 `feature/V-4-fe-latest-request`
+- [x] AC1·AC2 composable 테스트 red → `useLatestRequest.js` green
+- [x] AC3 api signal
 - [ ] AC4·AC5 목록 4+1곳 이관
 - [ ] AC6·AC7 상세·컴포넌트 이관
 - [ ] AC8 PostWriteView, AC9 WishButton 새 가드

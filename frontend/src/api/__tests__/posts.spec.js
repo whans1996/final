@@ -138,3 +138,22 @@ describe('api/posts 댓글 (F-18)', () => {
     expect(calls[1].url).toBe('/posts/42/comments/101')
   })
 })
+
+describe('api/posts signal (V-4)', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
+  it('AC3 fetchPosts는 두 번째 인자의 signal을 요청 설정에 싣고, 없으면 싣지 않는다', async () => {
+    const calls = capture({ items: [], page: 1, size: 20, total: 0 })
+    const controller = new AbortController()
+
+    await fetchPosts({ boardType: 'QNA' }, { signal: controller.signal })
+    await fetchPosts({ boardType: 'QNA' })
+
+    expect(calls[0].signal).toBe(controller.signal)
+    expect(calls[0].params).toEqual({ boardType: 'QNA' })
+    expect(calls[1].signal).toBeUndefined()
+    expect(calls[1].params).toEqual({ boardType: 'QNA' })
+  })
+})
