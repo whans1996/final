@@ -103,6 +103,6 @@
 - [x] 하네스 구현 (green, `node --test "scripts/test/*.test.mjs"`)
 - [x] 스킬·에이전트·CLAUDE.md·`docs/conventions.md` 문구 반영 (verifier.md, handoff·implement·pr-review SKILL.md)
 - [x] reviewer 지적 사항 반영 (반드시 1·권장 3, AC5 놓치는 경우는 PR 본문)
-- [ ] PR에서 AC8 실제 확인 (docs만 push → Backend·Frontend skipped, 필수 체크 통과)
+- [x] PR에서 AC8 실제 확인 (docs만 push → Backend·Frontend skipped, 필수 체크 통과) — #238 23aa26a: "직전 성공 9bd4c97 이후 문서만 변경 (3개)", mergeState CLEAN
 - [x] PR CI 초록, @JoonseobKim 멘션 (#238, Codex ✅ 9bd4c97)
 - [x] 상태 DONE (머지 직전 완료 표시)
