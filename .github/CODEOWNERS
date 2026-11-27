@@ -78,6 +78,9 @@
 /backend/src/main/resources/llm-fixtures/    @whans1996
 /backend/src/test/resources/llm-fixtures/    @whans1996
 /backend/src/test/resources/prompt-eval/     @whans1996
+# 시드 카드 원본·검수 (K-3 기간 A, 11-26 합의. 생성본 R__seed_concepts.sql은 db/ 공통 규칙 그대로)
+/data/seed/                                  @whans1996
+/backend/src/test/resources/seed/            @whans1996
 /backend/src/main/resources/llm-schemas/     @whans1996
 /frontend/src/api/**/analyses.*              @whans1996
 /frontend/src/api/**/quizzes.*               @whans1996
