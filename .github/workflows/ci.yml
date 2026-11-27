@@ -69,24 +69,39 @@ jobs:
       fe: ${{ steps.filter.outputs.fe }}
     steps:
       - uses: actions/checkout@v7
+      # scripts 항목은 BE·FE job이 실제로 실행하는 파일(verify.mjs·seed-check.mjs와 import 닫힘)만 나열한다 (H-12).
+      # 하네스 스크립트·hook·다른 워크플로만 바꾼 PR은 하네스 job이 검사한다. 새 import를 더하면 scripts/test/ci-filter.test.mjs가 실패한다
       - uses: dorny/paths-filter@v4
         id: filter
         with:
           filters: |
             be:
               - 'backend/**'
-              - 'scripts/**'
-              - '.github/workflows/**'
               - 'data/seed/**'
               - 'data/datasets.json'
+              - '.github/workflows/ci.yml'
+              - 'scripts/verify.mjs'
+              - 'scripts/lib/common.mjs'
+              - 'scripts/lib/lock.mjs'
+              - 'scripts/lib/related.mjs'
+              - 'scripts/lib/verify.mjs'
             fe:
               - 'frontend/**'
-              - 'scripts/**'
-              - '.github/workflows/**'
               - 'data/seed/**'
               - 'data/datasets.json'
               # 카드 ①형식 검사의 카테고리 목록 (K-1처럼 이것만 바꾼 PR에서도 카드 검사가 돈다)
               - 'backend/src/main/java/com/vibenote/analysis/concept/ConceptCategories.java'
+              - '.github/workflows/ci.yml'
+              - 'scripts/verify.mjs'
+              - 'scripts/lib/common.mjs'
+              - 'scripts/lib/lock.mjs'
+              - 'scripts/lib/related.mjs'
+              - 'scripts/lib/verify.mjs'
+              - 'scripts/seed-check.mjs'
+              - 'scripts/lib/seed/card.mjs'
+              - 'scripts/lib/seed/examples.mjs'
+              - 'scripts/lib/seed/format.mjs'
+              - 'scripts/test/seed-examples.test.mjs'
 
   backend:
     name: Backend 검증 (+ API 명세 일치)
