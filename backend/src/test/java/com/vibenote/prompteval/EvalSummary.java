@@ -113,7 +113,7 @@ final class EvalSummary {
         if (replaced > 0) {
             md.append("> 같은 공급자·모델·저장소·단계를 다시 채점한 결과 ")
                     .append(replaced)
-                    .append("개는 저장소마다 하나만 셌다 (돌린 수준이 가장 많은 것, 같으면 최신).\n");
+                    .append("개를 빼고 저장소마다 하나만 셌다 (돌린 수준이 가장 많은 것, 같으면 최신).\n");
         }
         md.append("\n## 지표\n\n| 공급자 | 단계 | 분할 | 오염 | 저장소 |");
         COLUMNS.forEach(c -> md.append(' ').append(c.header()).append(" |"));

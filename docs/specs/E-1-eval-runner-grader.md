@@ -127,7 +127,7 @@ LLM_PROVIDER=gms ./gradlew promptEval -Pstage=all -Plevel=all -Pfixture=<id|zip>
 | AC7 | `LevelJudgeTest#AC7_같은_seed면_섞는_순서가_같다`, `#AC7_판정_형식_오류는_한_번_더_묻고_빼고_센다` | 단위 (가짜 판정 클라이언트) |
 | AC8 | `QuizCheckTest#AC8_해설의_선지_위치_언급을_잡는다`, `#AC8_정답_유일률은_하나만_고르고_위치가_같을_때` | 단위 |
 | AC9 | `EvalGraderTest#AC9_판정을_끄면_판정_지표만_건너뛴다` | 단위 |
-| AC10 | `EvalSummaryTest#AC10_공급자와_오염_그룹으로_묶는다`, `#AC10_요약에_라벨_내용이_나오지_않는다`, `#AC10_같은_저장소를_수준_하나로_다시_돌려도_세_수준_결과를_남긴다` (#223) | 단위 |
+| AC10 | `EvalSummaryTest#AC10_공급자와_오염_그룹으로_묶는다`, `#AC10_요약에_라벨_내용이_나오지_않는다`, `#AC10_같은_저장소를_수준_하나로_다시_돌려도_세_수준_결과를_남긴다`, `EvalGraderTest#AC10_채점_결과에_돌린_수준을_남긴다` (#223) | 단위 |
 | AC11 | `EvalFixturesTest#AC11_테스트_fixture는_dev_분할에서만_만든다` | 단위 (`data/datasets.json` 읽기) |
 
 ## 8. 범위 밖

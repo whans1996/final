@@ -138,6 +138,24 @@ class EvalGraderTest {
     }
 
     @Test
+    void AC10_채점_결과에_돌린_수준을_남긴다() {
+        ObjectNode report = GradeFixtures.report(GradeFixtures.zip(dir));
+        report.putArray("levels").add("junior");
+
+        JsonNode grade = JSON.valueToTree(new EvalGrader(Optional.empty(), 42).grade(report, null));
+
+        // 요약이 같은 저장소 재실행 중 수준이 많은 것을 고를 때 쓴다 (#223)
+        assertThat(grade.path("levels").toString()).isEqualTo("[\"junior\"]");
+
+        // levels가 없는 보고서는 results의 수준 이름으로 대신한다
+        report.remove("levels");
+        JsonNode fallback =
+                JSON.valueToTree(new EvalGrader(Optional.empty(), 42).grade(report, null));
+        assertThat(fallback.path("levels").toString())
+                .isEqualTo("[\"beginner\",\"junior\",\"senior\"]");
+    }
+
+    @Test
     void AC6_라벨이_없으면_C와_커버리지는_라벨_없음() {
         JsonNode scores = scores(GradeFixtures.report(GradeFixtures.zip(dir)), null);
 
