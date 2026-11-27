@@ -76,7 +76,12 @@ public class FileExplainer {
         }
     }
 
-    private static List<FileExplanation> parse(JsonNode root, List<AnalysisFile> batch) {
+    /**
+     * 응답 검증·정리. 평가 러너(E-1)도 재시도 끝의 빈 결과가 형식 오류인지 정상 빈 목록인지 가리려고 마지막 응답을 이 메서드로 다시 읽는다 (#221).
+     *
+     * @throws InvalidResponseException 형식이 틀림
+     */
+    public static List<FileExplanation> parse(JsonNode root, List<AnalysisFile> batch) {
         JsonNode files = root.get("files");
         if (!root.isObject() || files == null || !files.isArray()) {
             throw new InvalidResponseException("files가 배열이 아님");

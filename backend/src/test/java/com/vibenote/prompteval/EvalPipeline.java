@@ -1,6 +1,8 @@
 package com.vibenote.prompteval;
 
 import com.vibenote.analysis.concept.ConceptExtractor;
+import com.vibenote.analysis.concept.ConceptPrompts;
+import com.vibenote.analysis.concept.ConceptResponseParser;
 import com.vibenote.analysis.concept.ExtractedConcept;
 import com.vibenote.analysis.concept.LinkedConcept;
 import com.vibenote.analysis.domain.Analysis;
@@ -10,6 +12,7 @@ import com.vibenote.analysis.explain.ApiDetector;
 import com.vibenote.analysis.explain.ApiEndpoint;
 import com.vibenote.analysis.explain.FileExplainer;
 import com.vibenote.analysis.explain.FileExplanation;
+import com.vibenote.analysis.explain.LlmJsonCall.InvalidResponseException;
 import com.vibenote.analysis.explain.OverviewExplainer;
 import com.vibenote.analysis.explain.PromptTemplates;
 import com.vibenote.analysis.flow.FlowGenerator;
@@ -27,6 +30,8 @@ import com.vibenote.concept.ConceptStatus;
 import com.vibenote.concept.domain.Concept;
 import com.vibenote.quiz.GeneratedQuestion;
 import com.vibenote.quiz.QuizGenerator;
+import com.vibenote.quiz.QuizPrompts;
+import com.vibenote.quiz.QuizResponseParser;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -43,6 +48,10 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * 평가 러너 파이프라인 (E-1 AC1~AC4). 앱과 같은 경로로 돈다: ZIP 읽기 → 선별 → 비밀 가림 → API 탐지 → 개요 → 파일 설명 → 흐름 → 개념 →
@@ -52,6 +61,8 @@ import java.util.function.Supplier;
  * 의존하는 단계만 건너뛴다 (개요 → 파일·흐름, 개념 → 퀴즈).
  */
 final class EvalPipeline {
+
+    private static final ObjectMapper JSON = JsonMapper.builder().build();
 
     static final List<String> STAGES =
             List.of("overview", "file", "flow", "concept", "quiz", "all");
@@ -199,6 +210,7 @@ final class EvalPipeline {
                                                             .map(AnalysisFile::getPath)
                                                             .toList()),
                                             () -> fileExplainer.explain(analysis, summary, batch),
+                                            root -> FileExplainer.parse(root, batch),
                                             errors)
                                     .orElse(List.of());
                     for (AnalysisFile f : batch) {
@@ -260,12 +272,21 @@ final class EvalPipeline {
 
         List<ExtractedConcept> extracted = null;
         if (options.runs("concept")) {
+            ConceptPrompts.Input input = ConceptPrompts.input(catalog, files, settings.concept());
             extracted =
                     swallowing(
                                     "concept",
                                     level,
                                     "concept",
                                     () -> conceptExtractor.extract(analysis, catalog, files),
+                                    root ->
+                                            ConceptResponseParser.parse(
+                                                    root,
+                                                    input,
+                                                    catalog,
+                                                    level,
+                                                    settings.concept().maxLinks(),
+                                                    settings.concept().maxDrafts()),
                                     errors)
                             .orElse(null);
             result.put("concepts", extracted == null ? List.of() : conceptRows(extracted, files));
@@ -279,12 +300,21 @@ final class EvalPipeline {
                 List<LinkedConcept> linked = linked(extracted);
                 Map<Long, String> names = new HashMap<>();
                 linked.forEach(c -> names.put(c.conceptId(), c.name()));
+                Set<Long> conceptIds =
+                        QuizPrompts.input(linked, files, settings.quiz()).conceptIds();
                 List<GeneratedQuestion> quiz =
                         swallowing(
                                         "quiz",
                                         level,
                                         "quiz",
                                         () -> quizGenerator.generate(analysis, linked, files),
+                                        root ->
+                                                QuizResponseParser.parse(
+                                                        root,
+                                                        conceptIds,
+                                                        analysis.getId(),
+                                                        settings.quiz().minQuestions(),
+                                                        settings.quiz().maxQuestions()),
                                         errors)
                                 .orElse(List.of());
                 for (GeneratedQuestion q : quiz) {
@@ -335,19 +365,29 @@ final class EvalPipeline {
     }
 
     /**
-     * 실패하면 빈 목록을 돌려주는 단계(파일 설명·개념·퀴즈) 하나. 마지막 시도가 응답 없이 끝났으면 LLM 실패, 응답을 두 번 받고 결과가 비었으면 형식 오류 2회로
-     * 본다 (형식이 맞은 빈 결과도 여기에 들어가지만 드물다).
+     * 실패하면 빈 목록을 돌려주는 단계(파일 설명·개념·퀴즈) 하나. 마지막 시도가 응답 없이 끝났으면 LLM 실패, 응답을 두 번 받고 결과가 비었으면 마지막 응답을 앱
+     * 파서({@code parse})로 다시 읽어 형식 오류 2회인지 형식이 맞은 빈 목록인지 가린다 (#221).
      *
+     * @param parse 생성기가 쓰는 앱 파서. 형식이 틀리면 {@link InvalidResponseException}을 던진다
      * @return 실패하면 empty
      */
     private <T extends Collection<?>> Optional<T> swallowing(
-            String stage, Level level, String key, Supplier<T> work, Map<String, String> errors) {
+            String stage,
+            Level level,
+            String key,
+            Supplier<T> work,
+            Function<JsonNode, ?> parse,
+            Map<String, String> errors) {
         Optional<T> value = unit(stage, level, key, work, v -> true, errors);
         if (value.isEmpty()) {
             return value;
         }
         RecordingLlmClient.UnitCalls calls = llm.unitCalls();
-        boolean ok = !calls.lastFailed() && (calls.responses() == 1 || !value.get().isEmpty());
+        boolean ok =
+                !calls.lastFailed()
+                        && (calls.responses() == 1
+                                || !value.get().isEmpty()
+                                || parses(calls.lastContent(), parse));
         if (ok) {
             return value;
         }
@@ -355,6 +395,19 @@ final class EvalPipeline {
         units.get(units.size() - 1).put("firstPass", false);
         errors.putIfAbsent(stage, calls.lastFailed() ? "LLM 실패" : "형식 오류 2회");
         return Optional.empty();
+    }
+
+    /** 앱의 {@code LlmJsonCall}처럼 원문을 JSON으로 읽어 파서가 받아들이는지. */
+    private static boolean parses(String content, Function<JsonNode, ?> parse) {
+        if (content == null) {
+            return false;
+        }
+        try {
+            parse.apply(JSON.readTree(content));
+            return true;
+        } catch (JacksonException | InvalidResponseException e) {
+            return false;
+        }
     }
 
     private void record(String stage, Level level, String key, boolean ok) {

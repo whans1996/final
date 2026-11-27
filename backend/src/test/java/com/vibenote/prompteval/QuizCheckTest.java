@@ -42,7 +42,8 @@ class QuizCheckTest {
                         "위의 보기 중 생성자만 맞습니다.",
                         "보기 4는 틀립니다.",
                         "②가 정답입니다.",
-                        "마지막 보기는 틀립니다.")) {
+                        "마지막 보기는 틀립니다.",
+                        "정답은 B) 생성자 주입입니다.")) {
             assertThat(QuizCheck.mentionsPosition(text)).as(text).isTrue();
         }
         for (String text :
@@ -50,7 +51,13 @@ class QuizCheckTest {
                         "생성자 주입은 final 필드로 바꿀 수 없게 합니다.",
                         "@Transactional은 런타임 예외에서 롤백합니다.",
                         "HTTP 200 응답을 돌려줍니다.",
-                        "두 번 호출하면 같은 결과입니다.")) {
+                        "두 번 호출하면 같은 결과입니다.",
+                        // 횟수 표현과 코드 인자는 선지 언급이 아니다 (#219)
+                        "초기화는 1번만 실행됩니다.",
+                        "2번 호출하면 캐시된 값을 돌려줍니다.",
+                        "3번씩 다시 시도합니다.",
+                        "max(a, b)는 큰 값을 돌려줍니다.",
+                        "f(x, y, c)처럼 인자를 넘깁니다.")) {
             assertThat(QuizCheck.mentionsPosition(text)).as(text).isFalse();
         }
 
