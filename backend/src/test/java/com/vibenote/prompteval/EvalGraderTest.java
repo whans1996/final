@@ -107,6 +107,7 @@ class EvalGraderTest {
         assertThat(c.path("wrongRate").asDouble()).isCloseTo(1.0 / 3, within(EPS));
         // 재현한 must 2개 중 근거 파일이 맞는 것은 @Transactional 하나 (DI는 ArticlesApi를 가리킴)
         assertThat(c.path("mustEvidenceMatch").asDouble()).isCloseTo(0.5, within(EPS));
+        assertThat(c.path("excluded").asInt()).isZero();
 
         // 커버리지: 라벨 파일 4개 중 선별 2개, FE(api layer) 1개 중 0개. API 라벨 2개·탐지 2개 중 1개 일치
         JsonNode coverage = scores.path("coverage");
@@ -117,6 +118,41 @@ class EvalGraderTest {
         // 금지 사실 문장은 판정 모델로만 센다 (ForbiddenJudgeTest). 판정이 꺼져 있으면 건너뛴다
         assertThat(scores.path("B").path("forbiddenHits").asString())
                 .isEqualTo(EvalGrader.JUDGE_SKIPPED);
+    }
+
+    @Test
+    void AC6_개념_단계가_실패한_수준은_C에서_빼고_뺀_수를_낸다() {
+        ObjectNode report = GradeFixtures.report(GradeFixtures.zip(dir));
+        // 앱처럼 개념 단계가 실패하면 빈 목록과 errors.concept이 남는다. 실패율은 A가 세므로 C에서 다시 깎지 않는다 (#218)
+        ObjectNode senior = (ObjectNode) report.path("results").path("senior");
+        senior.putArray("concepts");
+        ((ObjectNode) senior.path("errors")).put("concept", "형식 오류 2회");
+
+        JsonNode c = scores(report, GradeFixtures.label()).path("C");
+
+        // 입문·주니어만: must 6개 중 4개, 출력 6개 중 good 4개
+        assertThat(c.path("mustRecall").asDouble()).isCloseTo(2.0 / 3, within(EPS));
+        assertThat(c.path("precision").asDouble()).isCloseTo(2.0 / 3, within(EPS));
+        assertThat(c.path("outputs").asInt()).isEqualTo(6);
+        assertThat(c.path("excluded").asInt()).isEqualTo(1);
+    }
+
+    @Test
+    void AC10_채점_결과에_돌린_수준을_남긴다() {
+        ObjectNode report = GradeFixtures.report(GradeFixtures.zip(dir));
+        report.putArray("levels").add("junior");
+
+        JsonNode grade = JSON.valueToTree(new EvalGrader(Optional.empty(), 42).grade(report, null));
+
+        // 요약이 같은 저장소 재실행 중 수준이 많은 것을 고를 때 쓴다 (#223)
+        assertThat(grade.path("levels").toString()).isEqualTo("[\"junior\"]");
+
+        // levels가 없는 보고서는 results의 수준 이름으로 대신한다
+        report.remove("levels");
+        JsonNode fallback =
+                JSON.valueToTree(new EvalGrader(Optional.empty(), 42).grade(report, null));
+        assertThat(fallback.path("levels").toString())
+                .isEqualTo("[\"beginner\",\"junior\",\"senior\"]");
     }
 
     @Test

@@ -352,6 +352,48 @@ class EvalPipelineTest {
     }
 
     @Test
+    void AC4_재시도에서_형식이_맞은_빈_목록은_최종_통과로_센다() throws IOException {
+        LlmClient mock = fake();
+        int[] calls = {0, 0};
+        // 파일 설명·개념 모두 첫 응답은 형식 오류, 재시도는 형식이 맞은 빈 목록 (#221)
+        LlmClient llm =
+                request -> {
+                    if (request.stage() == LlmStage.FILE) {
+                        return new LlmResponse(
+                                calls[0]++ == 0 ? "JSON 아님" : "{\"files\":[]}", "fake", 1, 1);
+                    }
+                    if (request.stage() == LlmStage.CONCEPT) {
+                        return new LlmResponse(
+                                calls[1]++ == 0 ? "JSON 아님" : "{\"concepts\":[]}", "fake", 1, 1);
+                    }
+                    return mock.complete(request);
+                };
+
+        Map<String, Object> report =
+                pipeline(llm).run(fixture(todoZip()), options("all", List.of(Level.JUNIOR)));
+
+        for (String stage : List.of("file", "concept")) {
+            Map<String, Object> unit =
+                    list(report, "units").stream()
+                            .filter(u -> u.get("stage").equals(stage))
+                            .findFirst()
+                            .orElseThrow();
+            assertThat(unit)
+                    .as(stage)
+                    .containsEntry("calls", 2)
+                    .containsEntry("firstPass", false)
+                    .containsEntry("ok", true);
+        }
+        Map<String, Object> result = level(report, "junior");
+        assertThat(map(result, "errors")).doesNotContainKeys("file", "concept");
+        assertThat(list(result, "concepts")).isEmpty();
+        // 개념이 비어도 앱처럼 퀴즈 단계는 돈다
+        assertThat(map(result, "skipped")).doesNotContainKey("quiz");
+        assertThat(list(report, "units"))
+                .anySatisfy(u -> assertThat(u.get("stage")).isEqualTo("quiz"));
+    }
+
+    @Test
     void AC4_보고서에_index와_units가_있다() throws IOException {
         LlmClient mock = fake();
         int[] fileCalls = {0};

@@ -22,9 +22,9 @@
 |---|---|---|
 | A 스키마 적합률 | 단위(LLM 호출 묶음)별 첫 시도 통과율·최종 통과율 | 최종 100% |
 | B 환각률 | 기계 판정: 없는 파일 경로, 그 파일에 없는 심볼, 라벨 금지 사실 패턴 | - |
-| C 개념 재현율·정밀도 | must 재현율, (must+ok) 정밀도, wrong 비율, must 근거 파일 일치율 | - |
+| C 개념 재현율·정밀도 | must 재현율, (must+ok) 정밀도, wrong 비율, must 근거 파일 일치율. 개념 단계가 실패한 수준은 빼고 뺀 수준 수(`excluded`)를 낸다 (11-27, #218: 실패율은 A, 품질은 C) | - |
 | D 수준 구분도 | 세 수준 출력을 섞어 판정 LLM(Gemini)이 수준을 맞힌 비율 (우연 33%) | 70% |
-| E 퀴즈 품질 | 기계 검사(보기 4개 서로 다름, 정답 위치, 해설의 선지 번호·위치 언급) + 판정 LLM의 정답 유일률 | 정답 유일 100% |
+| E 퀴즈 품질 | 기계 검사(보기 4개 서로 다름, 정답 위치, 해설의 선지 번호·위치 언급. 횟수 "1번만 실행"·코드 인자 `max(a, b)`는 언급이 아니다, #219) + 판정 LLM의 정답 유일률 | 정답 유일 100% |
 | 커버리지 | 라벨 파일 선별률(전체·FE), API 탐지 재현율·정밀도 | - |
 | 근거 유효율 | 개념 `lineHint`가 파일 줄 수 안, 흐름 단계 경로·심볼이 실제로 있음 | 90% |
 
@@ -121,13 +121,13 @@ LLM_PROVIDER=gms ./gradlew promptEval -Pstage=all -Plevel=all -Pfixture=<id|zip>
 | AC1 | `EvalPipelineTest#AC1_흐름_단계는_탐지한_API_앞_N개를_수준마다_만든다`, `#AC1_API가_없으면_흐름을_건너뛴다`, `FlowGeneratorTest`(기존, 분리 후에도 green) | 단위 (mock LLM, 코드로 만든 ZIP) |
 | AC2 | `EvalPipelineCatalogTest#AC2_개념과_퀴즈를_시드_카탈로그로_만든다` | `IntegrationTestBase` (Testcontainers) |
 | AC3 | `EvalPipelineTest#AC3_all은_다섯_단계를_한_보고서에_남긴다`, `#AC3_개요가_실패하면_의존_단계만_건너뛴다` | 단위 |
-| AC4 | `EvalPipelineTest#AC4_보고서에_index와_units가_있다` | 단위 |
+| AC4 | `EvalPipelineTest#AC4_보고서에_index와_units가_있다`, `#AC4_재시도에서_형식이_맞은_빈_목록은_최종_통과로_센다` (#221) | 단위 |
 | AC5 | `EvalGraderTest#AC5_없는_경로와_심볼을_환각으로_센다`, `#AC5_lineHint가_줄_수를_넘으면_근거_무효` | 단위 |
-| AC6 | `EvalGraderTest#AC6_must_재현율과_정밀도를_계산한다`, `#AC6_라벨이_없으면_C와_커버리지는_라벨_없음`, `ForbiddenJudgeTest#AC6_금지_사실은_수준마다_판정하고_형식_오류는_뺀다` | 단위 (합성 라벨) |
+| AC6 | `EvalGraderTest#AC6_must_재현율과_정밀도를_계산한다`, `#AC6_라벨이_없으면_C와_커버리지는_라벨_없음`, `#AC6_개념_단계가_실패한_수준은_C에서_빼고_뺀_수를_낸다` (#218), `ForbiddenJudgeTest#AC6_금지_사실은_수준마다_판정하고_형식_오류는_뺀다` | 단위 (합성 라벨) |
 | AC7 | `LevelJudgeTest#AC7_같은_seed면_섞는_순서가_같다`, `#AC7_판정_형식_오류는_한_번_더_묻고_빼고_센다` | 단위 (가짜 판정 클라이언트) |
 | AC8 | `QuizCheckTest#AC8_해설의_선지_위치_언급을_잡는다`, `#AC8_정답_유일률은_하나만_고르고_위치가_같을_때` | 단위 |
 | AC9 | `EvalGraderTest#AC9_판정을_끄면_판정_지표만_건너뛴다` | 단위 |
-| AC10 | `EvalSummaryTest#AC10_공급자와_오염_그룹으로_묶는다`, `#AC10_요약에_라벨_내용이_나오지_않는다` | 단위 |
+| AC10 | `EvalSummaryTest#AC10_공급자와_오염_그룹으로_묶는다`, `#AC10_요약에_라벨_내용이_나오지_않는다`, `#AC10_같은_저장소를_수준_하나로_다시_돌려도_세_수준_결과를_남긴다`, `EvalGraderTest#AC10_채점_결과에_돌린_수준을_남긴다` (#223) | 단위 |
 | AC11 | `EvalFixturesTest#AC11_테스트_fixture는_dev_분할에서만_만든다` | 단위 (`data/datasets.json` 읽기) |
 
 ## 8. 범위 밖
@@ -157,6 +157,6 @@ LLM_PROVIDER=gms ./gradlew promptEval -Pstage=all -Plevel=all -Pfixture=<id|zip>
 - [x] BE 구현 (green)
 - [x] `prompt-evaluator` 에이전트(지원 단계·`promptGrade`), `docs/산출물/09-데이터셋.md` DS-04 "사용 기능" 갱신
 - [x] dev 실호출 1회 확인 (11-26, DS-02-01 `all` `-Pbatches=1` × GMS gpt-4.1-mini 21회, 판정 Gemini 27회, 개발용 참고): 오류·건너뜀 없음, A 전 단계 100%, B 없는 경로·심볼 0, 근거 유효율 100%(72), D 100%(27, 1묶음 제외), E 기계 86%(해설 위치 언급 3문항, 검사기 오탐 아님) · 정답 유일 100%(22). 금지 사실 판정은 이 실행 뒤 추가라 미확인
-- [x] reviewer 지적 사항 반영 (11-26: ZIP fixture는 파일 이름을 id로 datasets.json split·오염 조회, 요약 그룹에 분할 추가·같은 저장소 재채점은 최신만, 채점기 Docker 의존 제거, 폴더 채점 견고성. 후속 #218 #219)
+- [x] reviewer 지적 사항 반영 (11-26: ZIP fixture는 파일 이름을 id로 datasets.json split·오염 조회, 요약 그룹에 분할 추가·같은 저장소 재채점은 최신만(11-27 #223: 돌린 수준이 가장 많은 것, 같으면 최신), 채점기 Docker 의존 제거, 폴더 채점 견고성. 후속 #218 #219)
 - [x] PR CI 초록 (Codex ✅ 81873d4, 재리뷰 3회. P2 이관 #219 #221 #223)
 - [x] 상태 DONE (PR #220)

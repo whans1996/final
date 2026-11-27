@@ -112,10 +112,24 @@ final class EvalGrader {
             grade.put(key, report.path(key).asString(null));
         }
         grade.put("stage", report.path("stage").asString(null));
+        grade.put("levels", levels(report));
         grade.put("labeled", label != null);
         grade.put("scores", scores);
         grade.put("details", details);
         return grade;
+    }
+
+    /**
+     * 러너가 돌린 수준 ({@code levels}). 없으면 {@code results}의 수준 이름. 요약이 같은 저장소 재실행 중 하나를 고를 때 쓴다 (#223).
+     */
+    private static List<String> levels(JsonNode report) {
+        List<String> levels = new ArrayList<>();
+        if (report.path("levels").isArray()) {
+            report.path("levels").forEach(l -> levels.add(l.asString()));
+        } else {
+            report.path("results").properties().forEach(e -> levels.add(e.getKey()));
+        }
+        return levels;
     }
 
     /** A: 단계별 {@code units[]}의 첫 시도 통과율·최종 통과율. */
@@ -280,9 +294,17 @@ final class EvalGrader {
         int wrong = 0;
         int evidenceChecked = 0;
         int evidenceMatched = 0;
+        int excluded = 0;
         Map<String, Object> perLevel = new LinkedHashMap<>();
         for (Map.Entry<String, JsonNode> level : report.path("results").properties()) {
             if (!level.getValue().has("concepts")) {
+                continue;
+            }
+            // 개념 단계가 실패한 수준은 뺀다. 실패율은 A가 세므로 품질 지표 C에서 must 전부를 미재현으로 다시 깎지 않는다 (#218)
+            String failed = level.getValue().path("errors").path("concept").asString(null);
+            if (failed != null) {
+                excluded++;
+                perLevel.put(level.getKey(), Map.of("excluded", failed));
                 continue;
             }
             Map<String, Set<String>> out = new LinkedHashMap<>();
@@ -337,6 +359,7 @@ final class EvalGrader {
         c.put("wrongRate", ratio(wrong, outputs));
         c.put("mustEvidenceMatch", ratio(evidenceMatched, evidenceChecked));
         c.put("outputs", outputs);
+        c.put("excluded", excluded);
         return c;
     }
 
