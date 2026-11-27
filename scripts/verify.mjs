@@ -16,12 +16,12 @@
 // .harness/verified.json에 HEAD를 남긴다 (pre-push가 같은 커밋을 다시 돌리지 않게, #133).
 // 종료 코드: 0 = 모두 통과 또는 건너뜀, 1 = 실패, 2 = 사용법 오류
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { basename, join, relative } from 'node:path';
 import { ROOT, git, isWin } from './lib/common.mjs';
 import { acquireLock } from './lib/lock.mjs';
 import { HARNESS_DATA_FILES, SEED_CATEGORIES, SEED_DATA_PATHS, areasOf, isSeedData, frontendCodeFiles, relatedBackendTests, relatedHarnessTests } from './lib/related.mjs';
-import { parseVerifyArgs, shouldRecord } from './lib/verify.mjs';
+import { logsToPrune, parseVerifyArgs, shouldRecord } from './lib/verify.mjs';
 
 const args = process.argv.slice(2);
 const parsed = parseVerifyArgs(args);
@@ -225,6 +225,8 @@ if (targets.includes('fe')) verifyFrontend();
 if (targets.includes('harness')) verifyHarness();
 
 writeFileSync(logFile, fullLog || '(실행된 단계 없음)\n', 'utf8');
+// 오래된 verify 로그 정리 (#180). 다른 verify가 동시에 지웠으면 무시한다
+for (const name of logsToPrune(readdirSync(logDir), undefined, basename(logFile))) rmSync(join(logDir, name), { force: true });
 
 const failed = results.filter((r) => !r.ok);
 if (parsed.record) {
