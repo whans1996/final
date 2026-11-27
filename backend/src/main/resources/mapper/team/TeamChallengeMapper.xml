@@ -3,13 +3,13 @@
 <!-- F-20c 팀 기간 목표. analyses·quizzes·quiz_attempts 는 읽기만 하고, soft delete된 분석의 목표는 모든 곳에서 거른다 -->
 <mapper namespace="com.vibenote.team.TeamChallengeMapper">
 
+    <!-- 잠금 읽기라 스냅샷이 아닌 최신 행을 보고, 커밋 전인 공유 해제·탈퇴가 있으면 끝날 때까지 기다린다 (#168) -->
     <select id="isShared" resultType="boolean">
-        SELECT EXISTS (
-            SELECT 1
-            FROM team_analyses ta
-            JOIN analyses a ON a.id = ta.analysis_id AND a.deleted_at IS NULL
-            WHERE ta.team_id = #{teamId} AND ta.analysis_id = #{analysisId}
-        )
+        SELECT COUNT(*) &gt; 0
+        FROM team_analyses ta
+        JOIN analyses a ON a.id = ta.analysis_id AND a.deleted_at IS NULL
+        WHERE ta.team_id = #{teamId} AND ta.analysis_id = #{analysisId}
+        FOR SHARE OF ta
     </select>
 
     <select id="existsOpen" resultType="boolean">

@@ -105,7 +105,7 @@ describe('AnalysisDetailView (F-05a AC15)', () => {
   })
 
   it('AC15 FAILED면 errorMessage와 다시 요청하기 링크를 보여 주고 폴링을 멈춘다', async () => {
-    const message = '지원하는 코드 파일이 312개입니다. 200개 이하로 줄여서 다시 올려 주세요.'
+    const message = '저장소 압축 파일이 너무 큽니다. 크기를 줄여서 다시 올려 주세요.'
     analysesApi.fetchAnalysisStatus.mockResolvedValue(
       status({ status: 'FAILED', progress: 15, errorCode: 'ANALYSIS_413', errorMessage: message }),
     )
@@ -453,6 +453,31 @@ describe('AnalysisDetailView 결과 탭 (F-06 AC13~AC15)', () => {
 
     expect(wrapper.find('[role="tab"][aria-selected="true"]').text()).toBe('구조')
     expect(wrapper.find('[data-message="no-edges"]').exists()).toBe(true)
+  })
+
+  it('#200 "← 내 분석" 링크는 내 분석에만 있고, 남의 공개 분석에는 없다', async () => {
+    analysesApi.fetchAnalysisStatus.mockResolvedValue(status({ status: 'DONE', progress: 100 }))
+    analysesApi.fetchAnalysis.mockResolvedValue(detail())
+    const own = await mountDetail()
+    const back = own.wrapper.find('[data-action="back-to-mine"]')
+    expect(back.text()).toBe('← 내 분석')
+    expect(back.attributes('href')).toBe('/analyses')
+
+    analysesApi.fetchAnalysis.mockResolvedValue(
+      detail({ mine: false, owner: { id: 7, nickname: 'vibecoder' } }),
+    )
+    const other = await mountDetail()
+    expect(other.wrapper.find('[data-action="back-to-mine"]').exists()).toBe(false)
+    expect(other.wrapper.text()).not.toContain('내 분석')
+    expect(other.wrapper.find('[data-section="owner"]').text()).toBe('vibecoder님의 분석')
+  })
+
+  it('#200 상세를 못 받아 누구 것인지 모르면 "← 내 분석" 링크를 남긴다', async () => {
+    analysesApi.fetchAnalysisStatus.mockResolvedValue(status({ status: 'DONE', progress: 100 }))
+    analysesApi.fetchAnalysis.mockRejectedValue(apiError(500, { code: 'COMMON_500' }))
+    const { wrapper } = await mountDetail()
+    expect(wrapper.find('[data-error="detail"]').exists()).toBe(true)
+    expect(wrapper.find('[data-action="back-to-mine"]').exists()).toBe(true)
   })
 
   it('F-08 AC8 개념 탭은 실행 흐름 다음이고, ?tab=concepts로 열면 복원하며 위치를 누르면 파일 탭으로 간다', async () => {

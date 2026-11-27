@@ -120,8 +120,8 @@ async function onSubmit() {
           입력하세요.
         </small>
         <small class="hint">
-          하루 5회 · 지원 스택 Java/Spring/MyBatis/JavaScript/Vue · 코드 파일 200개 · 10MB 이하 ·
-          저장소 아카이브 30MB 이하
+          하루 5회 · 지원 스택 Java/Spring/MyBatis/JavaScript/Vue · 저장소 아카이브 30MB 이하 · 큰
+          저장소는 중요한 파일 30개를 골라 설명합니다
         </small>
       </label>
 
@@ -136,7 +136,8 @@ async function onSubmit() {
         />
         <small v-if="fileError" class="field-error" data-error="file">{{ fileError }}</small>
         <small v-else class="hint">
-          하루 5회 · 지원 스택 Java/Spring/MyBatis/JavaScript/Vue · 코드 파일 200개 · 10MB 이하
+          하루 5회 · 지원 스택 Java/Spring/MyBatis/JavaScript/Vue · ZIP 10MB 이하 · 큰 프로젝트는
+          중요한 파일 30개를 골라 설명합니다
         </small>
       </label>
 

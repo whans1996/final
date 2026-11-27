@@ -16,7 +16,10 @@ import org.apache.ibatis.annotations.Select;
 @Mapper
 public interface TeamChallengeMapper {
 
-    /** 그 팀에 미삭제 분석이 공유됐는가. */
+    /**
+     * 그 팀에 미삭제 분석이 공유됐는가. 공유 행을 공유 잠금으로 읽어 목표 insert까지 공유 해제·탈퇴가 그 행을 지우지 못하게 한다 (#168, insert의 FK
+     * 검사가 스냅샷과 다른 최신 행을 봐 500이 되던 경합).
+     */
     boolean isShared(@Param("teamId") long teamId, @Param("analysisId") long analysisId);
 
     /** 그 분석에 종료일이 today 이후(포함)인 목표가 있는가. */

@@ -7,9 +7,12 @@
         created_at, updated_at
     </sql>
 
+    <!-- 탈퇴 회원의 참여 행은 남기되 참여자 수에서 뺀다 (#202, ChallengeParticipantMapper.countByChallenge와 같은 기준) -->
     <sql id="withParticipantCount">
         <include refid="columns"/>,
-        (SELECT COUNT(*) FROM challenge_participants p WHERE p.challenge_id = c.id) AS participant_count
+        (SELECT COUNT(*) FROM challenge_participants p
+         JOIN users u ON u.id = p.user_id AND u.status = 'ACTIVE'
+         WHERE p.challenge_id = c.id) AS participant_count
     </sql>
 
     <!-- 상태는 저장하지 않으므로 오늘과 기간으로 거른다 (ChallengeStatus.of와 같은 기준) -->

@@ -25,8 +25,11 @@
         FOR UPDATE
     </select>
 
+    <!-- 탈퇴 회원의 참여는 세지 않는다 (#202, ChallengeMapper.withParticipantCount와 같은 기준) -->
     <select id="countByChallenge" resultType="long">
-        SELECT COUNT(*) FROM challenge_participants WHERE challenge_id = #{challengeId}
+        SELECT COUNT(*) FROM challenge_participants p
+        JOIN users u ON u.id = p.user_id AND u.status = 'ACTIVE'
+        WHERE p.challenge_id = #{challengeId}
     </select>
 
     <!-- 상태는 저장하지 않으므로 오늘과 기간으로 거른다 (ChallengeStatus.of와 같은 기준) -->
