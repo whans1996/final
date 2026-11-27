@@ -18,7 +18,9 @@ public record ConceptDetailResponse(
                 String name,
         @Schema(
                         requiredMode = Schema.RequiredMode.REQUIRED,
-                        description = "카테고리 (java, spring, security, mybatis, web, vue)",
+                        description =
+                                "카테고리 (java, spring, web, security, mybatis, vue, database,"
+                                        + " javascript, tooling, typescript, react, cs)",
                         example = "security")
                 String category,
         @Schema(
@@ -75,13 +77,29 @@ public record ConceptDetailResponse(
                                 @Schema(
                                         requiredMode = Schema.RequiredMode.REQUIRED,
                                         description = "관련 카드 최대 4개 (함께 등장한 횟수순, 모자라면 같은 카테고리 인기순)"))
-                List<ConceptSummaryResponse> related) {
+                List<ConceptSummaryResponse> related,
+        @Schema(
+                        requiredMode = Schema.RequiredMode.REQUIRED,
+                        nullable = true,
+                        description = "로그인 회원의 수준 (users.level). 비로그인·깨진 토큰이면 null (K-1)",
+                        example = "JUNIOR")
+                Level viewerLevel,
+        @ArraySchema(
+                        arraySchema =
+                                @Schema(
+                                        requiredMode = Schema.RequiredMode.REQUIRED,
+                                        description =
+                                                "수준별 요약·본문. 언제나 3개이고 BEGINNER·JUNIOR·SENIOR 순. 화면은"
+                                                    + " viewerLevel의 body가 있으면 그것을, 없으면 공통 body + 그"
+                                                    + " 수준 summary를 보인다 (K-1)"))
+                List<ConceptLevelResponse> levels) {
 
     public static ConceptDetailResponse of(
             Concept concept,
             boolean wished,
             List<ConceptAppearanceResponse> appearances,
-            List<ConceptSummaryResponse> related) {
+            List<ConceptSummaryResponse> related,
+            Level viewerLevel) {
         return new ConceptDetailResponse(
                 concept.getId(),
                 concept.getName(),
@@ -95,6 +113,8 @@ public record ConceptDetailResponse(
                 wished,
                 concept.getAvgRating().doubleValue(),
                 appearances,
-                related);
+                related,
+                viewerLevel,
+                ConceptLevelResponse.listOf(concept));
     }
 }

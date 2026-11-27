@@ -20,7 +20,9 @@ public record AdminConceptSummaryResponse(
                 String name,
         @Schema(
                         requiredMode = Schema.RequiredMode.REQUIRED,
-                        description = "카테고리 (java, spring, web, security, mybatis, vue)",
+                        description =
+                                "카테고리 (java, spring, web, security, mybatis, vue, database,"
+                                        + " javascript, tooling, typescript, react, cs)",
                         example = "spring")
                 String category,
         @Schema(

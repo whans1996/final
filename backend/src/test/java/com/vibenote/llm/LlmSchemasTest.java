@@ -2,6 +2,7 @@ package com.vibenote.llm;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.vibenote.analysis.concept.ConceptCategories;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -22,7 +23,7 @@ import tools.jackson.databind.json.JsonMapper;
  * (F-27 AC7).
  *
  * <p>스키마 검사기는 이 테스트가 쓰는 키워드({@code type}·{@code properties}·{@code required}·{@code
- * additionalProperties}·{@code items}·{@code anyOf})만 다룬다 (의존성 추가 없음, spec 7절).
+ * additionalProperties}·{@code items}·{@code anyOf}·{@code enum})만 다룬다 (의존성 추가 없음, spec 7절).
  */
 class LlmSchemasTest {
 
@@ -151,6 +152,13 @@ class LlmSchemasTest {
             errors.add(at + ": " + types + " 아님 (" + actual + ")");
             return;
         }
+        if (schema.has("enum") && actual.equals("string")) {
+            Set<String> allowed = new HashSet<>();
+            schema.get("enum").forEach(e -> allowed.add(e.asString()));
+            if (!allowed.contains(value.asString())) {
+                errors.add(at + ": enum 밖의 값 " + value.asString());
+            }
+        }
         if (actual.equals("object")) {
             JsonNode properties = schema.path("properties");
             for (String key : value.propertyNames()) {
@@ -217,5 +225,36 @@ class LlmSchemasTest {
             return "boolean";
         }
         return value.isIntegralNumber() ? "integer" : "number";
+    }
+
+    /** K-1 AC6(#163): 새 초안의 카테고리·난이도는 enum이고 수준별 요약 3개가 필수다. */
+    @Test
+    void K1_AC6_concept_스키마의_새_초안은_카테고리_난이도_enum과_수준_요약을_가진다() {
+        JsonNode draft =
+                schemas.of(LlmStage.CONCEPT)
+                        .at("/properties/concepts/items/properties/new/anyOf/0");
+
+        List<String> categories = new ArrayList<>();
+        draft.at("/properties/category/enum").forEach(e -> categories.add(e.asString()));
+        assertThat(categories).containsExactlyElementsOf(ConceptCategories.ORDERED);
+        assertThat(draft.at("/properties/difficulty/enum").valueStream().map(JsonNode::asString))
+                .containsExactly("BEGINNER", "JUNIOR", "SENIOR");
+
+        JsonNode levels = draft.at("/properties/levelSummaries");
+        assertThat(levels.path("type").asString()).isEqualTo("object");
+        assertThat(levels.path("required").valueStream().map(JsonNode::asString))
+                .containsExactlyInAnyOrder("beginner", "junior", "senior");
+        assertThat(draft.path("required").valueStream().map(JsonNode::asString))
+                .contains("levelSummaries");
+    }
+
+    @Test
+    void K1_AC6_enum_밖의_값은_스키마_검사에서_걸린다() {
+        JsonNode schema = JSON.readTree("{\"type\": \"string\", \"enum\": [\"a\"]}");
+        List<String> errors = new ArrayList<>();
+
+        validate(schema, JSON.readTree("\"b\""), "$", errors);
+
+        assertThat(errors).hasSize(1);
     }
 }

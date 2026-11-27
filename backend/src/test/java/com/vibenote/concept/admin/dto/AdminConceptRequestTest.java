@@ -3,6 +3,7 @@ package com.vibenote.concept.admin.dto;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.vibenote.analysis.concept.ConceptCategories;
+import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 
@@ -10,7 +11,9 @@ import org.junit.jupiter.api.Test;
 class AdminConceptRequestTest {
 
     @Test
-    void AC5_카테고리_regex는_ConceptCategories_ALL과_같다() {
+    void K1_AC5_카테고리_regex는_ConceptCategories_ORDERED와_같은_12종이다() {
+        assertThat(List.of(AdminConceptRequest.CATEGORY_REGEX.split("\\|")))
+                .containsExactlyElementsOf(ConceptCategories.ORDERED);
         assertThat(Set.of(AdminConceptRequest.CATEGORY_REGEX.split("\\|")))
                 .isEqualTo(ConceptCategories.ALL);
     }

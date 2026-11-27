@@ -1,5 +1,6 @@
 package com.vibenote.user;
 
+import com.vibenote.common.Level;
 import com.vibenote.common.exception.BusinessException;
 import com.vibenote.common.exception.ErrorCode;
 import com.vibenote.user.domain.User;
@@ -76,6 +77,17 @@ public class UserService {
     }
 
     /** 인증된 회원 본인. Access 토큰이 남아 있어도 탈퇴했으면 AUTH_401 (필터는 DB를 보지 않는다). */
+    /** 활성 회원의 수준. userId가 null이거나 없거나 탈퇴한 회원이면 null (공개 API가 토큰 주인을 확인할 때, K-1). */
+    public Level findActiveLevel(Long userId) {
+        return userId == null
+                ? null
+                : userMapper
+                        .findById(userId)
+                        .filter(User::isActive)
+                        .map(User::getLevel)
+                        .orElse(null);
+    }
+
     public User getActiveMember(long userId) {
         return userMapper
                 .findById(userId)

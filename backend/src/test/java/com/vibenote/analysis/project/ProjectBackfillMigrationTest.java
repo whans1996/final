@@ -36,6 +36,9 @@ class ProjectBackfillMigrationTest extends IntegrationTestBase {
                 .dataSource(dataSource(SCHEMA))
                 .locations("classpath:db/migration")
                 .placeholderReplacement(false)
+                // 반복 마이그레이션(R__seed_concepts.sql)은 늘 최신 스키마의 열을 쓰므로 target보다 새 V 파일의 열이 없으면 실패한다
+                // (K-1 V16). 백필 검사에는 시드가 필요 없어 R__ 파일을 읽지 않는다
+                .repeatableSqlMigrationPrefix("SKIP_REPEATABLE")
                 .target(target)
                 .load();
     }

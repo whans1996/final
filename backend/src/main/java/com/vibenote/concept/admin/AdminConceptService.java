@@ -1,5 +1,6 @@
 package com.vibenote.concept.admin;
 
+import com.vibenote.common.Level;
 import com.vibenote.common.exception.BusinessException;
 import com.vibenote.common.exception.ErrorCode;
 import com.vibenote.common.page.PageQuery;
@@ -9,6 +10,7 @@ import com.vibenote.concept.ConceptService;
 import com.vibenote.concept.ConceptSource;
 import com.vibenote.concept.ConceptStatus;
 import com.vibenote.concept.admin.dto.AdminConceptDetailResponse;
+import com.vibenote.concept.admin.dto.AdminConceptLevelRequest;
 import com.vibenote.concept.admin.dto.AdminConceptRequest;
 import com.vibenote.concept.admin.dto.AdminConceptSearchRequest;
 import com.vibenote.concept.admin.dto.AdminConceptStatusCountsResponse;
@@ -17,8 +19,10 @@ import com.vibenote.concept.domain.Concept;
 import com.vibenote.concept.domain.ConceptStatusCount;
 import com.vibenote.concept.review.ConceptReviewMapper;
 import java.util.EnumMap;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,6 +35,7 @@ public class AdminConceptService {
     static final String NAME_TAKEN = "같은 이름의 개념 카드가 이미 있습니다.";
     static final String SEED_NAME_FIXED = "시드 카드의 이름은 바꿀 수 없습니다.";
     static final String CREATE_STATUS = "새 카드는 DRAFT 또는 PUBLISHED로만 만들 수 있습니다.";
+    static final String LEVELS_DUPLICATE = "수준별 항목의 수준이 겹칩니다.";
 
     private final ConceptMapper conceptMapper;
     private final ConceptReviewMapper conceptReviewMapper;
@@ -87,6 +92,7 @@ public class AdminConceptService {
         if (request.statusValue() == ConceptStatus.HIDDEN) {
             throw new BusinessException(ErrorCode.COMMON_400, Map.of("status", CREATE_STATUS));
         }
+        ensureDistinctLevels(request);
         ensureNameAvailable(request.name(), null);
         Concept concept = new Concept();
         apply(concept, request);
@@ -104,6 +110,7 @@ public class AdminConceptService {
      */
     @Transactional
     public AdminConceptDetailResponse update(long id, AdminConceptRequest request) {
+        ensureDistinctLevels(request);
         Concept concept = lockOrThrow(id);
         if (request.statusValue() == ConceptStatus.DRAFT
                 && concept.getStatus() != ConceptStatus.DRAFT) {
@@ -145,6 +152,20 @@ public class AdminConceptService {
         }
     }
 
+    /** 같은 수준이 두 번 오면 400 (K-1 AC4). 개수·값 검증은 Bean Validation이 먼저 한다. */
+    private static void ensureDistinctLevels(AdminConceptRequest request) {
+        if (request.levels() == null) {
+            return;
+        }
+        Set<Level> seen = EnumSet.noneOf(Level.class);
+        for (AdminConceptLevelRequest level : request.levels()) {
+            if (!seen.add(level.levelValue())) {
+                throw new BusinessException(
+                        ErrorCode.COMMON_400, Map.of("levels", LEVELS_DUPLICATE));
+            }
+        }
+    }
+
     private static BusinessException nameTaken() {
         return new BusinessException(ErrorCode.CONCEPT_002, Map.of("name", NAME_TAKEN));
     }
@@ -158,6 +179,14 @@ public class AdminConceptService {
         concept.setExampleCode(request.exampleCode());
         concept.setReferenceUrl(request.referenceUrl());
         concept.setStatus(request.statusValue());
+        // levels가 없으면 PUT은 잠그고 읽은 기존 값을 그대로 다시 쓴다 (K-1 AC3. 지금 관리자 폼은 이 칸을 모른다)
+        if (request.levels() != null) {
+            for (Level level : Level.values()) {
+                concept.setLevelText(level, null, null);
+            }
+            request.levels()
+                    .forEach(l -> concept.setLevelText(l.levelValue(), l.summary(), l.body()));
+        }
     }
 
     private AdminConceptDetailResponse detailOf(Concept concept) {

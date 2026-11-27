@@ -12,7 +12,21 @@ import com.vibenote.common.Level;
 public record ExtractedConcept(
         Long conceptId, NewConcept draft, Long fileId, String lineHint, String contextNote) {
 
-    /** AI 초안 카드의 내용 (F-08 AC5). */
+    /** AI 초안 카드의 내용 (F-08 AC5). 수준별 한 줄 요약은 없으면 null이다 (K-1 AC7). 수준별 본문은 AI 초안이 만들지 않는다. */
     public record NewConcept(
-            String name, String category, Level difficulty, String summary, String body) {}
+            String name,
+            String category,
+            Level difficulty,
+            String summary,
+            String body,
+            String summaryBeginner,
+            String summaryJunior,
+            String summarySenior) {
+
+        /** 수준별 요약이 없는 초안. */
+        public NewConcept(
+                String name, String category, Level difficulty, String summary, String body) {
+            this(name, category, difficulty, summary, body, null, null, null);
+        }
+    }
 }

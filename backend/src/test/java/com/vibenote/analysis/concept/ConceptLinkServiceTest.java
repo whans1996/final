@@ -111,11 +111,17 @@ class ConceptLinkServiceTest extends IntegrationTestBase {
                         existing + " null null 기존 카드", createdId + " " + fileId + " L1-L3 맥락");
     }
 
+    /** K-1 AC10에서 바뀜: 파서를 지나 UNIQUE 충돌로 숨긴 카드에 닿아도(콜레이션만 같은 이름 등) 연결하지 않는다. */
     @Test
-    void AC5_같은_이름의_카드가_있으면_HIDDEN이라도_만들지_않고_그_카드에_연결한다() {
+    void K1_AC10_같은_이름의_카드가_HIDDEN이면_만들지도_연결하지도_않는다() {
         long hidden = insertConcept("f08-test-숨김", "HIDDEN");
+        long kept = insertConcept("f08-test-남음", "PUBLISHED");
 
-        service.save(analysisId, List.of(draft("f08-test-숨김", null, null, null)));
+        service.save(
+                analysisId,
+                List.of(
+                        draft("F08-TEST-숨김", null, null, null),
+                        new ExtractedConcept(kept, null, null, null, "남음")));
 
         assertThat(
                         jdbc.queryForObject(
@@ -126,7 +132,39 @@ class ConceptLinkServiceTest extends IntegrationTestBase {
                         jdbc.queryForObject(
                                 "SELECT status FROM concepts WHERE id = ?", String.class, hidden))
                 .isEqualTo("HIDDEN");
-        assertThat(links()).extracting(r -> r.get("concept_id")).containsExactly(hidden);
+        assertThat(links())
+                .extracting(r -> ((Number) r.get("concept_id")).longValue())
+                .containsExactly(kept);
+    }
+
+    @Test
+    void K1_AC7_새_초안의_수준별_요약은_summary_칸에_넣고_수준별_본문은_비운다() {
+        service.save(
+                analysisId,
+                List.of(
+                        new ExtractedConcept(
+                                null,
+                                new NewConcept(
+                                        "f08-test-수준",
+                                        "cs",
+                                        Level.JUNIOR,
+                                        "요약",
+                                        null,
+                                        "입문",
+                                        "주니어",
+                                        null),
+                                null,
+                                null,
+                                null)));
+
+        assertThat(jdbc.queryForMap("SELECT * FROM concepts WHERE name = 'f08-test-수준'"))
+                .containsEntry("category", "cs")
+                .containsEntry("summary_beginner", "입문")
+                .containsEntry("summary_junior", "주니어")
+                .containsEntry("summary_senior", null)
+                .containsEntry("body_beginner", null)
+                .containsEntry("body_junior", null)
+                .containsEntry("body_senior", null);
     }
 
     @Test

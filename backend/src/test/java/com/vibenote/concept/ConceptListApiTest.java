@@ -271,6 +271,18 @@ class ConceptListApiTest extends IntegrationTestBase {
                 .andExpect(jsonPath("$.total").value(0));
     }
 
+    @Test
+    void K1_AC5_새_카테고리로_거르면_그_카테고리_카드만_받는다() throws Exception {
+        insert(Card.published("zqk1 훅").category("react"));
+        insert(Card.published("zqk1 제네릭").category("typescript"));
+
+        list("keyword=zqk1&category=react")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.total").value(1))
+                .andExpect(jsonPath("$.items[*].name", contains("zqk1 훅")))
+                .andExpect(jsonPath("$.items[0].category").value("react"));
+    }
+
     // ── AC5 ──
 
     @Test

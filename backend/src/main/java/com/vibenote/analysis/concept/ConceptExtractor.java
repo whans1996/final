@@ -74,7 +74,8 @@ public class ConceptExtractor {
                                             concepts,
                                             analysis.getLevel(),
                                             properties.maxLinks(),
-                                            properties.maxDrafts()))
+                                            properties.maxDrafts(),
+                                            analysis.getId()))
                     .orElseGet(
                             () -> {
                                 log.warn("분석 {} 개념 추출: 형식 오류로 연결 없이 계속", analysis.getId());

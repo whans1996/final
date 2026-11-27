@@ -19,7 +19,8 @@ public record ConceptSearchRequest(
                 String keyword,
         @Schema(
                         description =
-                                "카테고리 (java, spring, web, security, mybatis, vue). 없는 값이면 빈 목록",
+                                "카테고리 (java, spring, web, security, mybatis, vue, database,"
+                                    + " javascript, tooling, typescript, react, cs). 없는 값이면 빈 목록",
                         example = "security")
                 @Size(max = 50, message = "카테고리는 50자 이하여야 합니다.")
                 String category,

@@ -2,13 +2,18 @@ package com.vibenote.concept.admin.dto;
 
 import com.vibenote.common.Level;
 import com.vibenote.concept.ConceptStatus;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import java.util.List;
 
 /**
- * 관리자 카드 생성·수정 요청 (F-13 AC4·AC5). PUT은 전체 교체다. source·wishCount·avgRating은 받지 않는다 (AC7).
+ * 관리자 카드 생성·수정 요청 (F-13 AC4·AC5). PUT은 전체 교체다. source·wishCount·avgRating은 받지 않는다 (AC7). 단 {@code
+ * levels}는 없거나 null이면 PUT이 기존 수준별 요약·본문을 그대로 둔다 (K-1 AC3).
  *
  * <p>허용값 검증 실패를 {@code details}에 필드별로 담으려고 category·difficulty·status는 문자열로 받는다. 모든 값은 검증 전에
  * trim하고, 선택 값(body·exampleCode·referenceUrl)은 비면 null이 된다.
@@ -25,12 +30,28 @@ public record AdminConceptRequest(
         @Schema(
                         requiredMode = Schema.RequiredMode.REQUIRED,
                         description = "카테고리",
-                        allowableValues = {"java", "spring", "web", "security", "mybatis", "vue"},
+                        allowableValues = {
+                            "java",
+                            "spring",
+                            "web",
+                            "security",
+                            "mybatis",
+                            "vue",
+                            "database",
+                            "javascript",
+                            "tooling",
+                            "typescript",
+                            "react",
+                            "cs"
+                        },
                         example = "spring")
                 @NotBlank(message = "카테고리를 고르세요.")
                 @Pattern(
                         regexp = CATEGORY_REGEX,
-                        message = "카테고리는 java, spring, web, security, mybatis, vue 중 하나여야 합니다.")
+                        message =
+                                "카테고리는 java, spring, web, security, mybatis, vue, database,"
+                                        + " javascript, tooling, typescript, react, cs 중 하나여야"
+                                        + " 합니다.")
                 String category,
         @Schema(
                         requiredMode = Schema.RequiredMode.REQUIRED,
@@ -82,10 +103,21 @@ public record AdminConceptRequest(
                 @Pattern(
                         regexp = "DRAFT|PUBLISHED|HIDDEN",
                         message = "상태는 DRAFT, PUBLISHED, HIDDEN 중 하나여야 합니다.")
-                String status) {
+                String status,
+        @ArraySchema(
+                        arraySchema =
+                                @Schema(
+                                        nullable = true,
+                                        description =
+                                                "수준별 요약·본문 0~3개 (level은 서로 달라야 함). 있으면 6칸을 통째로 바꾸고"
+                                                        + " 배열에 없는 수준은 비운다. 없거나 null이면 PUT은 기존 값을"
+                                                        + " 유지하고 POST는 모두 비운다 (K-1)"))
+                @Size(max = 3, message = "수준별 요약·본문은 3개까지입니다.")
+                List<@NotNull(message = "수준별 항목이 비었습니다.") @Valid AdminConceptLevelRequest> levels) {
 
-    /** {@code ConceptCategories.ALL}과 같은 6종 (F-08 AC5, FE utils/conceptCategories.js). */
-    static final String CATEGORY_REGEX = "java|spring|web|security|mybatis|vue";
+    /** {@code ConceptCategories.ALL}과 같은 12종 (K-1 AC5, FE utils/conceptCategories.js). */
+    static final String CATEGORY_REGEX =
+            "java|spring|web|security|mybatis|vue|database|javascript|tooling|typescript|react|cs";
 
     public AdminConceptRequest {
         name = strip(name);

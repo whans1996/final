@@ -19,7 +19,9 @@ public record ConceptSummaryResponse(
                 String name,
         @Schema(
                         requiredMode = Schema.RequiredMode.REQUIRED,
-                        description = "카테고리 (java, spring, security, mybatis, web, vue)",
+                        description =
+                                "카테고리 (java, spring, web, security, mybatis, vue, database,"
+                                        + " javascript, tooling, typescript, react, cs)",
                         example = "security")
                 String category,
         @Schema(

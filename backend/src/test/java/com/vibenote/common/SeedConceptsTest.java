@@ -2,6 +2,7 @@ package com.vibenote.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.vibenote.analysis.concept.ConceptCategories;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -17,7 +18,8 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * 시드 개념 카드(DS-05, {@code R__seed_concepts.sql})가 데이터셋 규칙대로 들어갔는지 확인한다.
  *
- * <p>출처는 DS-01(split {@code content}) 도메인만 허용한다. 카테고리는 F-09 필터 값과 같은 소문자 6종이다.
+ * <p>출처는 DS-01(split {@code content}) 도메인만 허용한다. 카테고리는 12종({@code ConceptCategories.ALL}, K-1) 안에
+ * 있다.
  */
 class SeedConceptsTest extends IntegrationTestBase {
 
@@ -31,9 +33,6 @@ class SeedConceptsTest extends IntegrationTestBase {
                     "developer.mozilla.org",
                     "springdoc.org",
                     "docs.oracle.com");
-
-    private static final Set<String> CATEGORIES =
-            Set.of("java", "spring", "security", "mybatis", "web", "vue");
 
     @Autowired JdbcTemplate jdbc;
 
@@ -71,7 +70,7 @@ class SeedConceptsTest extends IntegrationTestBase {
     }
 
     @Test
-    void 카테고리는_6종_난이도는_3단계가_모두_있다() {
+    void K1_AC1_카테고리는_12종_안에_있고_난이도는_3단계가_모두_있다() {
         List<String> categories =
                 jdbc.queryForList(
                         "SELECT DISTINCT category FROM concepts WHERE source = 'SEED'",
@@ -81,7 +80,7 @@ class SeedConceptsTest extends IntegrationTestBase {
                         "SELECT DISTINCT difficulty FROM concepts WHERE source = 'SEED'",
                         String.class);
 
-        assertThat(categories).containsExactlyInAnyOrderElementsOf(CATEGORIES);
+        assertThat(categories).isNotEmpty().allMatch(ConceptCategories.ALL::contains);
         assertThat(difficulties).containsExactlyInAnyOrder("BEGINNER", "JUNIOR", "SENIOR");
     }
 
@@ -167,5 +166,37 @@ class SeedConceptsTest extends IntegrationTestBase {
         assertThat(jdbc.queryForMap("SELECT status, source FROM concepts WHERE name = ?", name))
                 .containsEntry("status", "PUBLISHED")
                 .containsEntry("source", "SEED");
+    }
+
+    /** K-1 AC1: V16의 수준별 칸 6개. 기존 시드 카드는 수준별 절이 없어 모두 NULL이다 (내용은 K-3c). */
+    @Test
+    void K1_AC1_수준별_요약_본문_칸이_있고_기존_시드_카드는_모두_NULL이다() {
+        List<java.util.Map<String, Object>> columns =
+                jdbc.queryForList(
+                        "SELECT column_name AS name, data_type AS type, character_maximum_length AS"
+                                + " len, is_nullable AS nullable FROM information_schema.columns"
+                                + " WHERE table_schema = DATABASE() AND table_name = 'concepts' AND"
+                                + " (column_name LIKE 'summary\\_%' OR column_name LIKE 'body\\_%')"
+                                + " ORDER BY ordinal_position");
+
+        assertThat(columns)
+                .extracting(c -> c.get("name") + " " + c.get("type") + " " + c.get("nullable"))
+                .containsExactly(
+                        "summary_beginner varchar YES",
+                        "summary_junior varchar YES",
+                        "summary_senior varchar YES",
+                        "body_beginner text YES",
+                        "body_junior text YES",
+                        "body_senior text YES");
+        assertThat(columns.subList(0, 3))
+                .allSatisfy(c -> assertThat(((Number) c.get("len")).intValue()).isEqualTo(300));
+        assertThat(
+                        jdbc.queryForObject(
+                                "SELECT COUNT(*) FROM concepts WHERE source = 'SEED' AND"
+                                    + " (summary_beginner IS NOT NULL OR summary_junior IS NOT NULL"
+                                    + " OR summary_senior IS NOT NULL OR body_beginner IS NOT NULL"
+                                    + " OR body_junior IS NOT NULL OR body_senior IS NOT NULL)",
+                                Integer.class))
+                .isZero();
     }
 }
