@@ -95,7 +95,12 @@ public record AnalysisDetailResponse(
                         description = "퀴즈 다시 만들기 남은 횟수 (분석당 3회 − 사용, 최소 0, L-1a)",
                         example = "2",
                         minimum = "0")
-                int quizRegenerationsLeft) {
+                int quizRegenerationsLeft,
+        @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "붙은 프로젝트 (P-1a)")
+                AnalysisProjectRefResponse project,
+        // overview와 같은 이유로 $ref에 nullable=true를 붙이지 않는다
+        @Schema(description = "붙은 버전 (P-1a). 저장소 분석이 아직 FETCHING이거나 받기 전에 실패했으면 null")
+                AnalysisVersionRefResponse version) {
 
     /**
      * viewerId가 주인이 아니면 메모를 숨긴다 (F-19 AC9).
@@ -126,6 +131,19 @@ public record AnalysisDetailResponse(
                 a.isLiteMode(),
                 a.getOverview(),
                 a.getQuizStatus(),
-                Math.max(0, maxRegenerations - a.getQuizRegenerations()));
+                Math.max(0, maxRegenerations - a.getQuizRegenerations()),
+                new AnalysisProjectRefResponse(a.getProjectId(), a.getProjectRefName()),
+                a.getProjectVersionId() == null
+                        ? null
+                        : new AnalysisVersionRefResponse(
+                                a.getProjectVersionId(),
+                                a.getVersionNumber(),
+                                a.getVersionCommitSha(),
+                                a.getVersionCommitMessage(),
+                                a.getVersionCommittedAt() == null
+                                        ? null
+                                        : a.getVersionCommittedAt()
+                                                .atZone(ClockConfig.ZONE)
+                                                .toOffsetDateTime()));
     }
 }

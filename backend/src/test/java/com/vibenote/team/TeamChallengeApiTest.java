@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.vibenote.common.TestProjects;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -52,10 +53,11 @@ class TeamChallengeApiTest extends TeamTestSupport {
 
     private long insertAnalysis(long userId, String title, boolean deleted) {
         jdbc.update(
-                "INSERT INTO analyses (user_id, source_type, project_name, title, level, status,"
-                        + " progress, created_at, deleted_at) VALUES (?, 'ZIP', ?, ?, 'JUNIOR',"
-                        + " 'DONE', 100, ?, IF(?, NOW(), NULL))",
+                "INSERT INTO analyses (user_id, project_id, source_type, project_name, title,"
+                    + " level, status, progress, created_at, deleted_at) VALUES (?, ?, 'ZIP', ?, ?,"
+                    + " 'JUNIOR', 'DONE', 100, ?, IF(?, NOW(), NULL))",
                 userId,
+                TestProjects.zip(jdbc, userId),
                 "proj-" + title,
                 title,
                 BASE,

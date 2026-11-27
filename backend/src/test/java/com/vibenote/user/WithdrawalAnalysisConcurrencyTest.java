@@ -3,6 +3,7 @@ package com.vibenote.user;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.vibenote.common.IntegrationTestBase;
+import com.vibenote.common.TestProjects;
 import com.vibenote.user.dto.SignupRequest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -54,11 +55,12 @@ class WithdrawalAnalysisConcurrencyTest extends IntegrationTestBase {
                     request.executeWithoutResult(
                             r -> {
                                 jdbc.update(
-                                        "INSERT INTO analyses (user_id, source_type, project_name,"
-                                                + " title, level, status) VALUES (?, 'ZIP',"
-                                                + " 'todo-app', 'todo-app', 'BEGINNER',"
-                                                + " 'SELECTING')",
-                                        me);
+                                        "INSERT INTO analyses (user_id, project_id, source_type,"
+                                            + " project_name, title, level, status) VALUES (?, ?,"
+                                            + " 'ZIP', 'todo-app', 'todo-app', 'BEGINNER',"
+                                            + " 'SELECTING')",
+                                        me,
+                                        TestProjects.zip(jdbc, me));
                                 jdbc.update(
                                         "INSERT INTO analysis_files (analysis_id, path, layer,"
                                                 + " content) VALUES (LAST_INSERT_ID(), 'A.java',"

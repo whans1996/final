@@ -16,6 +16,7 @@ import com.vibenote.analysis.concept.ExtractedConcept;
 import com.vibenote.analysis.pipeline.Layer;
 import com.vibenote.analysis.pipeline.SelectedFile;
 import com.vibenote.auth.RefreshTokenMapper;
+import com.vibenote.common.TestProjects;
 import jakarta.servlet.http.Cookie;
 import java.util.List;
 import java.util.Map;
@@ -118,9 +119,10 @@ class WithdrawalApiTest extends UserTestSupport {
 
     private long analysis(long userId, String status) {
         jdbc.update(
-                "INSERT INTO analyses (user_id, source_type, project_name, title, level, status)"
-                        + " VALUES (?, 'ZIP', 'todo-app', 'todo-app', 'BEGINNER', ?)",
+                "INSERT INTO analyses (user_id, project_id, source_type, project_name, title,"
+                    + " level, status) VALUES (?, ?, 'ZIP', 'todo-app', 'todo-app', 'BEGINNER', ?)",
                 userId,
+                TestProjects.zip(jdbc, userId),
                 status);
         long id = count("SELECT MAX(id) FROM analyses WHERE user_id = ?", userId);
         jdbc.update(
@@ -190,9 +192,11 @@ class WithdrawalApiTest extends UserTestSupport {
     void AC6_탈퇴_뒤에_실행기가_저장하려는_파일과_개념_연결은_들어가지_않는다() throws Exception {
         long me = createUser("user@example.com", "코딩초보");
         jdbc.update(
-                "INSERT INTO analyses (user_id, source_type, project_name, title, level, status)"
-                        + " VALUES (?, 'ZIP', 'todo-app', 'todo-app', 'BEGINNER', 'SELECTING')",
-                me);
+                "INSERT INTO analyses (user_id, project_id, source_type, project_name, title,"
+                        + " level, status) VALUES (?, ?, 'ZIP', 'todo-app', 'todo-app', 'BEGINNER',"
+                        + " 'SELECTING')",
+                me,
+                TestProjects.zip(jdbc, me));
         long id = count("SELECT MAX(id) FROM analyses WHERE user_id = ?", me);
 
         withdraw(me, "{\"password\":\"" + PASSWORD + "\"}").andExpect(status().isNoContent());
@@ -210,9 +214,11 @@ class WithdrawalApiTest extends UserTestSupport {
     void AC6_탈퇴한_회원의_분석은_실행기가_완료하려_해도_DONE이_되지_않고_활동도_남지_않는다() throws Exception {
         long me = createUser("user@example.com", "코딩초보");
         jdbc.update(
-                "INSERT INTO analyses (user_id, source_type, project_name, title, level, status)"
-                        + " VALUES (?, 'ZIP', 'todo-app', 'todo-app', 'BEGINNER', 'QUIZ')",
-                me);
+                "INSERT INTO analyses (user_id, project_id, source_type, project_name, title,"
+                        + " level, status) VALUES (?, ?, 'ZIP', 'todo-app', 'todo-app', 'BEGINNER',"
+                        + " 'QUIZ')",
+                me,
+                TestProjects.zip(jdbc, me));
         long id = count("SELECT MAX(id) FROM analyses WHERE user_id = ?", me);
         // complete()가 users 행 잠금을 기다리는 동안 탈퇴가 커밋된 경우: users는 WITHDRAWN인데 분석은 아직 진행 중으로 보인다
         jdbc.update("UPDATE users SET status = 'WITHDRAWN' WHERE id = ?", me);

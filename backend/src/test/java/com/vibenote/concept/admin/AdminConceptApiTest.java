@@ -12,6 +12,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.vibenote.common.IntegrationTestBase;
+import com.vibenote.common.TestProjects;
 import com.vibenote.common.security.JwtTokenProvider;
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -83,9 +84,10 @@ class AdminConceptApiTest extends IntegrationTestBase {
 
     long insertAnalysis(long userId) {
         jdbc.update(
-                "INSERT INTO analyses (user_id, source_type, project_name, title, level, status)"
-                        + " VALUES (?, 'ZIP', 'p', 't', 'BEGINNER', 'DONE')",
-                userId);
+                "INSERT INTO analyses (user_id, project_id, source_type, project_name, title,"
+                        + " level, status) VALUES (?, ?, 'ZIP', 'p', 't', 'BEGINNER', 'DONE')",
+                userId,
+                TestProjects.zip(jdbc, userId));
         return lastId();
     }
 

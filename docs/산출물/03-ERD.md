@@ -1,13 +1,13 @@
 # ER Diagram — 바이브노트
 
-> 작성 상태: 🟡 초안 (Flyway **V1~V14** 반영, 2026-11-27). **DDL 정본은 `backend/src/main/resources/db/migration/`**(`V1__init.sql` 이후 V2+)이고, 이 문서는 그 DDL을 읽어 그린 것이다. `docs/기획서.md` 3절 "ERD 초안"은 기획 단계의 설계 기록이라 V7 이후(카드 출처 ADMIN, 팀·팀 챌린지)를 담고 있지 않다.
+> 작성 상태: 🟡 초안 (Flyway **V1~V15** 반영, 2026-11-27). **DDL 정본은 `backend/src/main/resources/db/migration/`**(`V1__init.sql` 이후 V2+)이고, 이 문서는 그 DDL을 읽어 그린 것이다. `docs/기획서.md` 3절 "ERD 초안"은 기획 단계의 설계 기록이라 V7 이후(카드 출처 ADMIN, 팀·팀 챌린지)를 담고 있지 않다.
 > **최종본**은 구현이 끝난 뒤 실제 DB(Flyway 적용 후)에서 MySQL Workbench Reverse Engineer로 만든 이미지(`diagrams/erd.png`)를 아래 도메인별 다이어그램 앞에 붙인다 (W5).
 
 <!-- 최종: ![ERD](diagrams/erd.png) -->
 
 ## 다이어그램
 
-테이블 26개를 도메인 세 묶음으로 나눠 그린다. 묶음 사이를 잇는 `users`·`analyses`·`concepts`는 각 그림에 키만 다시 적었다. 컬럼은 키와 업무상 의미가 있는 것만 적고, `created_at`·`updated_at`은 생략했다 (전체 컬럼은 DDL).
+테이블 28개를 도메인 세 묶음으로 나눠 그린다. 묶음 사이를 잇는 `users`·`analyses`·`concepts`는 각 그림에 키만 다시 적었다. 컬럼은 키와 업무상 의미가 있는 것만 적고, `created_at`·`updated_at`은 생략했다 (전체 컬럼은 DDL).
 
 ### 1. 회원·소셜·커뮤니티 (F-01~04, F-17·18, NF-07)
 
@@ -87,11 +87,15 @@ erDiagram
     }
 ```
 
-### 2. 분석·개념 카드·학습 루프 (F-05~16, F-19)
+### 2. 분석·개념 카드·학습 루프 (F-05~16, F-19, P-1a)
 
 ```mermaid
 erDiagram
     users ||--o{ analyses : "요청"
+    users ||--o{ projects : "소유 (CASCADE)"
+    projects ||--o{ project_versions : "버전 (CASCADE)"
+    projects ||--o{ analyses : "묶음 (CASCADE)"
+    project_versions |o--o{ analyses : "커밋별 분석 (CASCADE)"
     analyses ||--o{ analysis_files : "인덱스 파일 (CASCADE)"
     analyses ||--o{ analysis_flows : "실행 흐름 (CASCADE)"
     analyses ||--o{ analysis_concepts : "개념 연결"
@@ -116,9 +120,28 @@ erDiagram
     users {
         bigint id PK
     }
+    projects {
+        bigint id PK
+        bigint user_id FK
+        enum source_type "URL|ZIP"
+        varchar source_url "정규화 주소, ZIP NULL"
+        varchar name "100자"
+        char latest_commit_sha "배지 캐시"
+        datetime latest_checked_at "5분 캐시"
+    }
+    project_versions {
+        bigint id PK
+        bigint project_id FK
+        int number "프로젝트 안 1부터"
+        char commit_sha "NULL 가능"
+        varchar commit_message "첫 줄 200자"
+        datetime committed_at
+    }
     analyses {
         bigint id PK
         bigint user_id FK
+        bigint project_id FK "V15 NOT NULL"
+        bigint project_version_id FK "V15 FETCHING에서"
         enum source_type "URL|ZIP"
         varchar source_url
         varchar project_name
@@ -309,7 +332,9 @@ erDiagram
 | refresh_tokens | Refresh 토큰. 원문 대신 SHA-256 해시(`token_hash` UNIQUE)와 만료 시각을 저장한다 | users 1:N | F-02 |
 | follows | 팔로우 PK `(follower_id, following_id)`, 역방향 조회용 `idx_follows_following`. 팔로우 수는 반정규화 없이 `COUNT(*)`로 센다. 팔로우 자체는 활동을 남기지 않는다 | users N:M users | F-04 |
 | activities | 공개 활동 기록(팔로우 피드의 원천). `type`은 `ANALYSIS`·`REVIEW`·`WISH`·`POST`·`CHALLENGE_JOIN`·`CHALLENGE_COMPLETE`(V2에서 챌린지를 참여·달성으로 나눔). `target_id`는 type에 따라 분석·리뷰·카드·게시글·챌린지 id를 가리키는 **다형 참조라 FK가 없다**. 대상이 지워지거나 비공개가 돼도 행은 남기고, 피드 쿼리가 대상 테이블과 `LEFT JOIN`해 보일 것만 고른다. 예외로 챌린지 참여를 취소하면 그 `CHALLENGE_JOIN` 행은 지운다(F-25) | users 1:N | F-04, F-05a, F-11, F-12, F-17, F-25 |
-| analyses | 분석 요청과 결과 개요(JSON: summary·techStack·layers·readingOrder·apis, F-06 5.3절), 상태·진행률·실패 사유(error_code·error_message, V3), 인덱스 수치(`indexed_files`·`dropped_files`, V12), 퀴즈 상태·재생성 수(`quiz_status`·`quiz_regenerations`, V14), 공개 여부, 제목·메모, 삭제 시각(soft delete, V2). 삭제하면 서비스가 파일·흐름·개념 연결을 지우고 `deleted_at`을 채운다. 퀴즈·풀이는 남는다(통계·챌린지·일일 한도가 읽음) | users 1:N | F-05a, F-06, F-19, L-1a |
+| analyses | 분석 요청과 결과 개요(JSON: summary·techStack·layers·readingOrder·apis, F-06 5.3절), 상태·진행률·실패 사유(error_code·error_message, V3), 인덱스 수치(`indexed_files`·`dropped_files`, V12), 퀴즈 상태·재생성 수(`quiz_status`·`quiz_regenerations`, V14), 프로젝트·버전(`project_id` NOT NULL·`project_version_id` 수집 전·수집 실패면 NULL, V15), 공개 여부, 제목·메모, 삭제 시각(soft delete, V2). 삭제하면 서비스가 파일·흐름·개념 연결을 지우고 `deleted_at`을 채운다. 퀴즈·풀이는 남는다(통계·챌린지·일일 한도가 읽음) | users·projects 1:N, project_versions 0..1:N | F-05a, F-06, F-19, L-1a, P-1a |
+| projects | 분석 묶음 단위(저장소·ZIP 프로젝트, V15). 저장소 프로젝트는 (회원, 정규화한 주소)마다 하나(UNIQUE `(user_id, source_url)`), ZIP은 `source_url` NULL이라 요청마다 새로 생기고 `projectId`를 보내면 그 프로젝트에 붙는다. 이름 100자(바꿀 수 있음, 분석 `title`과 별개). 새 커밋 배지 조회 결과(`latest_commit_*`·`latest_checked_at`)를 5분 캐시로 둔다(조회 실패도 저장). 목록·상세는 삭제하지 않은 분석이 있는 프로젝트만 보인다 | users 1:N | P-1a |
+| project_versions | 프로젝트 버전. 번호는 프로젝트 안에서 최대 + 1(UNIQUE `(project_id, number)`), 저장소 분석은 FETCHING에서 기본 브랜치 최신 커밋으로 찾거나 만들고(UNIQUE `(project_id, commit_sha)`, 같은 커밋을 다른 수준으로 분석하면 같은 버전), 커밋 정보가 없는 버전(ZIP·커밋 조회 실패·V15 백필)은 `commit_sha` NULL로 여럿 있을 수 있다 | projects 1:N | P-1a |
 | analysis_files | 저장소 인덱스 전체(코드·test·migration·doc, 최대 2,000개, 키 마스킹된 content). 그중 설명 대상으로 고른 최대 30개만 `selected = TRUE`(중요도 `importance`, V12)이고 설명·개념·퀴즈·흐름·구조·파일 API는 이 행만 본다. 한 줄 역할(role, V4)과 설명(summary) | analyses 1:N | F-05a, F-06, F-26a |
 | analysis_flows | API 실행 흐름(endpoint `"{METHOD} {path}"`, 분석 안에서 UNIQUE, 상태 PENDING·DONE·FAILED, 요약·단계 JSON 캐시·실패 코드, V5) | analyses 1:N | F-07 |
 | concepts | 개념 카드 (상태 DRAFT/PUBLISHED/HIDDEN, 출처 SEED/AI/ADMIN — ADMIN은 관리자가 직접 만든 카드, V7). AI 초안은 분석의 EXTRACTING 단계가 `DRAFT·AI`로 만들고 예제 코드·출처는 비워 둔다(관리자 검수 F-13에서 채움). `name` UNIQUE라 같은 이름이면 기존 카드를 쓴다. 관리자는 DRAFT만 삭제할 수 있고(연결은 FK CASCADE), 시드 재적용(`R__seed_concepts.sql`)은 내용만 덮어쓰고 상태·`wish_count`·`avg_rating`은 유지한다 | - | F-08~13 |
@@ -348,6 +373,7 @@ erDiagram
 | V12 | `analysis_files.selected`·`importance`, `analyses.indexed_files`·`dropped_files` (기존 행은 `selected = TRUE`) | F-26a |
 | V13 | `llm_usage_logs.provider`, 인덱스 `idx_llm_usage_logs_analysis(analysis_id)` (V13 이전 행은 `provider` NULL) | F-27 |
 | V14 | `analyses.quiz_status`·`quiz_regenerations` (기존 행: 퀴즈가 있으면 READY, 없고 DONE이면 FAILED, 나머지 NULL) | L-1a |
+| V15 | `projects`, `project_versions`, `analyses.project_id`·`project_version_id`. 백필: 저장소 분석은 (회원, 주소)마다 프로젝트 하나, ZIP 분석은 분석마다 프로젝트 하나, 삭제하지 않은 분석마다 커밋 정보 없는 버전(요청 순 번호), 삭제한 분석은 프로젝트에만 붙음 | P-1a |
 | R | `R__seed_concepts.sql` 시드 카드 (반복 적용, 내용만 덮어씀, DS-05) | F-09 |
 
 ## 정규화 메모

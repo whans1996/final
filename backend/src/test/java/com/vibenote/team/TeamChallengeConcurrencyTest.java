@@ -3,6 +3,7 @@ package com.vibenote.team;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.vibenote.common.IntegrationTestBase;
+import com.vibenote.common.TestProjects;
 import com.vibenote.common.exception.BusinessException;
 import com.vibenote.common.exception.ErrorCode;
 import com.vibenote.team.dto.CreateTeamChallengeRequest;
@@ -72,9 +73,11 @@ class TeamChallengeConcurrencyTest extends IntegrationTestBase {
                 team,
                 sharer);
         jdbc.update(
-                "INSERT INTO analyses (user_id, source_type, project_name, title, level, status,"
-                        + " progress) VALUES (?, 'ZIP', 'race', '경합 분석', 'JUNIOR', 'DONE', 100)",
-                sharer);
+                "INSERT INTO analyses (user_id, project_id, source_type, project_name, title,"
+                    + " level, status, progress) VALUES (?, ?, 'ZIP', 'race', '경합 분석', 'JUNIOR',"
+                    + " 'DONE', 100)",
+                sharer,
+                TestProjects.zip(jdbc, sharer));
         long analysis = lastId();
         jdbc.update(
                 "INSERT INTO team_analyses (team_id, analysis_id) VALUES (?, ?)", team, analysis);

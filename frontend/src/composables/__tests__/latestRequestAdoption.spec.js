@@ -22,6 +22,13 @@ const ADOPTED = [
   'composables/useMoreList.js',
   'views/community/PostWriteView.vue',
   'components/concept/WishButton.vue',
+  // A 영역 (P-1a, #250)
+  'views/AnalysisListView.vue',
+  'views/AnalysisDetailView.vue',
+  'views/AnalysisRequestView.vue',
+  'views/project/ProjectListView.vue',
+  'views/project/ProjectDetailView.vue',
+  'components/project/LatestCommitBadge.vue',
 ]
 
 // 직접 쓴 순번 가드: `let lastRequest = 0` / `++lastHead` / `request !== lastSearch`, 주소 id 비교

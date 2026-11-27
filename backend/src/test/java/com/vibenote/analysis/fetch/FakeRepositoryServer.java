@@ -21,8 +21,8 @@ import java.util.concurrent.Executors;
  */
 public final class FakeRepositoryServer implements AutoCloseable {
 
-    /** 받은 요청 하나. */
-    public record Recorded(String method, String rawPath, Headers headers) {}
+    /** 받은 요청 하나. {@code rawQuery}는 쿼리가 없으면 null이다. */
+    public record Recorded(String method, String rawPath, String rawQuery, Headers headers) {}
 
     /** 응답을 만든다. */
     @FunctionalInterface
@@ -51,6 +51,7 @@ public final class FakeRepositoryServer implements AutoCloseable {
                             new Recorded(
                                     exchange.getRequestMethod(),
                                     rawPath,
+                                    exchange.getRequestURI().getRawQuery(),
                                     exchange.getRequestHeaders()));
                     Handler handler = handlers.get(rawPath);
                     try (exchange) {

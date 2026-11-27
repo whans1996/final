@@ -1,6 +1,7 @@
 package com.vibenote.recommendation;
 
 import com.vibenote.common.IntegrationTestBase;
+import com.vibenote.common.TestProjects;
 import com.vibenote.common.security.JwtTokenProvider;
 import com.vibenote.user.UserService;
 import com.vibenote.user.dto.SignupRequest;
@@ -92,10 +93,11 @@ abstract class RecommendationTestSupport extends IntegrationTestBase {
 
     long insertAnalysis(long userId, boolean deleted) {
         jdbc.update(
-                "INSERT INTO analyses (user_id, source_type, project_name, title, level, status,"
-                        + " progress, created_at, deleted_at) VALUES (?, 'ZIP', 'p', 'p', 'JUNIOR',"
-                        + " 'DONE', 100, ?, IF(?, NOW(), NULL))",
+                "INSERT INTO analyses (user_id, project_id, source_type, project_name, title,"
+                    + " level, status, progress, created_at, deleted_at) VALUES (?, ?, 'ZIP', 'p',"
+                    + " 'p', 'JUNIOR', 'DONE', 100, ?, IF(?, NOW(), NULL))",
                 userId,
+                TestProjects.zip(jdbc, userId),
                 FIXED_NOW.minusDays(1),
                 deleted);
         return jdbc.queryForObject("SELECT LAST_INSERT_ID()", Long.class);

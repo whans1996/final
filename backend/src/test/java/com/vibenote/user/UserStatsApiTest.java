@@ -4,6 +4,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.vibenote.common.TestProjects;
 import org.junit.jupiter.api.Test;
 
 /** F-03 학습 통계 (docs/specs/F-03-profile.md AC3, AC2의 /stats). */
@@ -18,9 +19,10 @@ class UserStatsApiTest extends UserTestSupport {
 
     private long analysis(long userId, String status, boolean deleted) {
         return insert(
-                "INSERT INTO analyses (user_id, source_type, level, status, deleted_at)"
-                        + " VALUES (?, 'ZIP', 'BEGINNER', ?, IF(?, NOW(), NULL))",
+                "INSERT INTO analyses (user_id, project_id, source_type, level, status, deleted_at)"
+                        + " VALUES (?, ?, 'ZIP', 'BEGINNER', ?, IF(?, NOW(), NULL))",
                 userId,
+                TestProjects.zip(jdbc, userId),
                 status,
                 deleted);
     }

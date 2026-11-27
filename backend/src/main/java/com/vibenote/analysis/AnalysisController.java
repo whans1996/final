@@ -68,7 +68,7 @@ public class AnalysisController {
     @ApiResponse(responseCode = "202", description = "접수됨")
     @ApiResponse(
             responseCode = "400",
-            description = "검증 실패 (COMMON_400, details.file·sourceUrl·consent·level)",
+            description = "검증 실패 (COMMON_400, details.file·sourceUrl·consent·level·projectId)",
             content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     @ApiResponse(
             responseCode = "401",
@@ -77,6 +77,10 @@ public class AnalysisController {
     @ApiResponse(
             responseCode = "413",
             description = "업로드 10MB 초과 (COMMON_413)",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(
+            responseCode = "404",
+            description = "projectId가 없거나 남의 프로젝트 (PROJECT_404)",
             content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     @ApiResponse(
             responseCode = "429",
@@ -116,9 +120,17 @@ public class AnalysisController {
                                             type = "string",
                                             allowableValues = {"true"}))
                     @RequestPart(value = "consent", required = false)
-                    String consent) {
+                    String consent,
+            @Parameter(
+                            description =
+                                    "붙일 내 프로젝트 ID (P-1a). 없으면 저장소는 같은 주소의 내 프로젝트(없으면 새로),"
+                                            + " ZIP은 새 프로젝트에 붙는다. 저장소 프로젝트에는 같은 주소만, ZIP 프로젝트에는"
+                                            + " ZIP만 보낼 수 있다",
+                            schema = @Schema(type = "string", example = "12"))
+                    @RequestPart(value = "projectId", required = false)
+                    String projectId) {
         return analysisService.request(
-                user.id(), CreateAnalysisRequest.of(file, sourceUrl, level, consent));
+                user.id(), CreateAnalysisRequest.of(file, sourceUrl, level, consent, projectId));
     }
 
     @Operation(

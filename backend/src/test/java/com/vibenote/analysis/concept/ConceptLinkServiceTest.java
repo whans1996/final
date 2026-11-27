@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.vibenote.analysis.concept.ExtractedConcept.NewConcept;
 import com.vibenote.common.IntegrationTestBase;
 import com.vibenote.common.Level;
+import com.vibenote.common.TestProjects;
 import com.vibenote.user.UserService;
 import com.vibenote.user.dto.SignupRequest;
 import java.util.List;
@@ -31,9 +32,10 @@ class ConceptLinkServiceTest extends IntegrationTestBase {
                 userService.signup(
                         new SignupRequest("link@f08.test", "vibe1234", "f08link", "JUNIOR"));
         jdbc.update(
-                "INSERT INTO analyses (user_id, source_type, project_name, title, level, status)"
-                        + " VALUES (?, 'ZIP', 'p', 'p', 'JUNIOR', 'EXTRACTING')",
-                userId);
+                "INSERT INTO analyses (user_id, project_id, source_type, project_name, title,"
+                        + " level, status) VALUES (?, ?, 'ZIP', 'p', 'p', 'JUNIOR', 'EXTRACTING')",
+                userId,
+                TestProjects.zip(jdbc, userId));
         analysisId = jdbc.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
         jdbc.update(
                 "INSERT INTO analysis_files (analysis_id, path, layer, content) VALUES (?,"

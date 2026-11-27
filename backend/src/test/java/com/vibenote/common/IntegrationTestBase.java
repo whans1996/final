@@ -38,7 +38,10 @@ public abstract class IntegrationTestBase {
                             "--character-set-server=utf8mb4",
                             "--collation-server=utf8mb4_0900_ai_ci",
                             // 배포·CI MySQL처럼 UTC로 띄운다. 세션 시간대는 앱이 연결마다 +09:00으로 맞춘다 (#17)
-                            "--default-time-zone=+00:00");
+                            "--default-time-zone=+00:00",
+                            // 설정이 다른 테스트 컨텍스트마다 Hikari 풀(최대 10)이 캐시에 남는다. 기본 151이면 컨텍스트가
+                            // 15개쯤에서 Too many connections로 깨진다 (P-1a ProjectControllerTest 추가 때 발생)
+                            "--max-connections=500");
 
     static {
         MYSQL.start();

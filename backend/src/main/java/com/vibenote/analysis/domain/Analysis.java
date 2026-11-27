@@ -12,6 +12,13 @@ public class Analysis {
 
     private Long id;
     private Long userId;
+
+    /** 묶인 프로젝트 (P-1a AC1·AC4). */
+    private Long projectId;
+
+    /** 묶인 버전. 저장소 분석은 FETCHING에서 정하므로 그 전·수집 실패면 null (P-1a AC2·AC3). */
+    private Long projectVersionId;
+
     private SourceType sourceType;
     private String sourceUrl;
     private String projectName;
@@ -62,6 +69,8 @@ public class Analysis {
         analysis.sourceUrl = failed.sourceUrl;
         analysis.title = failed.title;
         analysis.memo = failed.memo;
+        // 같은 프로젝트에 붙고 버전은 FETCHING에서 다시 정한다 (P-1a AC12)
+        analysis.projectId = failed.projectId;
         return analysis;
     }
 
@@ -79,6 +88,22 @@ public class Analysis {
 
     public void setUserId(Long userId) {
         this.userId = userId;
+    }
+
+    public Long getProjectId() {
+        return projectId;
+    }
+
+    public void setProjectId(Long projectId) {
+        this.projectId = projectId;
+    }
+
+    public Long getProjectVersionId() {
+        return projectVersionId;
+    }
+
+    public void setProjectVersionId(Long projectVersionId) {
+        this.projectVersionId = projectVersionId;
     }
 
     public SourceType getSourceType() {

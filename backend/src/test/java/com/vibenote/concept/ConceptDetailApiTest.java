@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.vibenote.common.IntegrationTestBase;
+import com.vibenote.common.TestProjects;
 import com.vibenote.common.security.JwtProperties;
 import com.vibenote.common.security.JwtTokenProvider;
 import io.jsonwebtoken.Jwts;
@@ -77,10 +78,11 @@ class ConceptDetailApiTest extends IntegrationTestBase {
             String title,
             String projectName) {
         jdbc.update(
-                "INSERT INTO analyses (user_id, source_type, project_name, title, level, status,"
-                        + " is_public, created_at, deleted_at) VALUES (?, 'ZIP', ?, ?, 'BEGINNER',"
-                        + " ?, TRUE, ?, IF(?, NOW(), NULL))",
+                "INSERT INTO analyses (user_id, project_id, source_type, project_name, title,"
+                    + " level, status, is_public, created_at, deleted_at) VALUES (?, ?, 'ZIP', ?,"
+                    + " ?, 'BEGINNER', ?, TRUE, ?, IF(?, NOW(), NULL))",
                 userId,
+                TestProjects.zip(jdbc, userId),
                 projectName,
                 title,
                 status,

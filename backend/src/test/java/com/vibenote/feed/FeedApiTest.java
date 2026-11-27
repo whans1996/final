@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.vibenote.common.IntegrationTestBase;
+import com.vibenote.common.TestProjects;
 import com.vibenote.common.security.JwtTokenProvider;
 import java.time.LocalDateTime;
 import org.junit.jupiter.api.Test;
@@ -76,9 +77,11 @@ class FeedApiTest extends IntegrationTestBase {
             String status,
             LocalDateTime deletedAt) {
         jdbc.update(
-                "INSERT INTO analyses (user_id, source_type, project_name, title, level, status,"
-                        + " is_public, deleted_at) VALUES (?, 'ZIP', ?, ?, 'JUNIOR', ?, ?, ?)",
+                "INSERT INTO analyses (user_id, project_id, source_type, project_name, title,"
+                    + " level, status, is_public, deleted_at) VALUES (?, ?, 'ZIP', ?, ?, 'JUNIOR',"
+                    + " ?, ?, ?)",
                 userId,
+                TestProjects.zip(jdbc, userId),
                 projectName,
                 title,
                 status,

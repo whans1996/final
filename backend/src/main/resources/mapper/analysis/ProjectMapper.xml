@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.vibenote.analysis.project.ProjectMapper">
+
+    <sql id="columns">
+        id, user_id, source_type, source_url, name, latest_commit_sha, latest_commit_message,
+        latest_committed_at, latest_checked_at, created_at
+    </sql>
+
+    <!-- created_at·updated_at은 DB 세션 시간대의 기본값 대신 서비스 Clock 값(Asia/Seoul)으로 쓴다 -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO projects (user_id, source_type, source_url, name, created_at, updated_at)
+        VALUES (#{userId}, #{sourceType}, #{sourceUrl}, #{name}, #{createdAt}, #{createdAt})
+    </insert>
+
+    <select id="lockOwned" resultType="com.vibenote.analysis.project.Project">
+        SELECT <include refid="columns"/> FROM projects
+        WHERE id = #{id} AND user_id = #{userId}
+        FOR UPDATE
+    </select>
+
+    <select id="lock" resultType="long">
+        SELECT id FROM projects WHERE id = #{id} FOR UPDATE
+    </select>
+
+    <!-- uk_projects_user_url. 열 정렬(utf8mb4_0900_ai_ci)이 대소문자를 구분하지 않아 경로 대소문자만 다른 주소는 같은 프로젝트다 -->
+    <select id="findByUrl" resultType="com.vibenote.analysis.project.Project">
+        SELECT <include refid="columns"/> FROM projects
+        WHERE user_id = #{userId} AND source_url = #{sourceUrl}
+    </select>
+
+    <!-- 버전 조회·번호 계산은 프로젝트 행 잠금 뒤에 부르고, 잠금 읽기(FOR UPDATE)로 최신 커밋을 본다. REPEATABLE READ에서 일반 SELECT는
+         잠금 전에 잡힌 스냅샷을 보므로 동시에 커밋된 다른 분석의 버전을 놓쳐 유니크 키에 걸린다 (PR #258 Codex P1, ProjectVersionConcurrencyTest) -->
+    <select id="nextVersionNumber" resultType="int">
+        SELECT COALESCE(MAX(number), 0) + 1 FROM project_versions WHERE project_id = #{projectId} FOR UPDATE
+    </select>
+
+    <insert id="insertVersion" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO project_versions (project_id, number, commit_sha, commit_message, committed_at, created_at)
+        VALUES (#{projectId}, #{number}, #{commitSha}, #{commitMessage}, #{committedAt}, #{createdAt})
+    </insert>
+
+    <select id="findVersionIdByCommit" resultType="long">
+        SELECT id FROM project_versions WHERE project_id = #{projectId} AND commit_sha = #{commitSha} FOR UPDATE
+    </select>
+
+    <!-- ── 프로젝트 API (AC6~AC10) ── -->
+
+    <sql id="hasLiveAnalysis">
+        EXISTS (SELECT 1 FROM analyses a WHERE a.project_id = p.id AND a.deleted_at IS NULL)
+    </sql>
+
+    <sql id="versionHasLiveAnalysis">
+        EXISTS (SELECT 1 FROM analyses a WHERE a.project_version_id = v.id AND a.deleted_at IS NULL)
+    </sql>
+
+    <select id="findVisible" resultType="com.vibenote.analysis.project.Project">
+        SELECT <include refid="columns"/> FROM projects p
+        WHERE p.id = #{id} AND p.user_id = #{userId} AND <include refid="hasLiveAnalysis"/>
+    </select>
+
+    <select id="findVisibleByUser" resultType="com.vibenote.analysis.project.ProjectListRow">
+        SELECT p.id, p.name, p.source_type, p.source_url, MAX(a.created_at) AS last_analyzed_at
+        FROM projects p
+        JOIN analyses a ON a.project_id = p.id AND a.deleted_at IS NULL
+        WHERE p.user_id = #{userId}
+        GROUP BY p.id, p.name, p.source_type, p.source_url
+        ORDER BY last_analyzed_at DESC, p.id DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="countVisibleByUser" resultType="long">
+        SELECT COUNT(*) FROM projects p WHERE p.user_id = #{userId} AND <include refid="hasLiveAnalysis"/>
+    </select>
+
+    <select id="findLiveVersions" resultType="com.vibenote.analysis.project.ProjectVersion">
+        SELECT v.id, v.project_id, v.number, v.commit_sha, v.commit_message, v.committed_at, v.created_at
+        FROM project_versions v
+        WHERE v.project_id IN
+            <foreach collection="projectIds" item="projectId" open="(" separator="," close=")">#{projectId}</foreach>
+          AND <include refid="versionHasLiveAnalysis"/>
+        ORDER BY v.project_id, v.number DESC
+    </select>
+
+    <select id="findLiveLevels" resultType="com.vibenote.analysis.domain.Analysis">
+        SELECT DISTINCT project_id, level FROM analyses
+        WHERE project_id IN
+            <foreach collection="projectIds" item="projectId" open="(" separator="," close=")">#{projectId}</foreach>
+          AND deleted_at IS NULL
+    </select>
+
+    <select id="findLiveAnalyses" resultType="com.vibenote.analysis.domain.Analysis">
+        SELECT id, project_id, project_version_id, level, status, quiz_status, title, created_at
+        FROM analyses
+        WHERE project_id = #{projectId} AND deleted_at IS NULL
+        ORDER BY created_at DESC, id DESC
+    </select>
+
+    <select id="findAnalyzedSha" resultType="string">
+        SELECT v.commit_sha FROM project_versions v
+        WHERE v.project_id = #{projectId} AND v.commit_sha IS NOT NULL AND <include refid="versionHasLiveAnalysis"/>
+        ORDER BY v.number DESC
+        LIMIT 1
+    </select>
+
+    <update id="updateName">
+        UPDATE projects SET name = #{name}, updated_at = #{updatedAt} WHERE id = #{id}
+    </update>
+
+    <update id="updateLatestCommit">
+        UPDATE projects
+        SET latest_commit_sha = #{sha}, latest_commit_message = #{message},
+            latest_committed_at = #{committedAt}, latest_checked_at = #{checkedAt}
+        WHERE id = #{id}
+    </update>
+</mapper>

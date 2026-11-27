@@ -58,7 +58,10 @@ class FlywayMigrationTest extends IntegrationTestBase {
                         "team_members",
                         "team_analyses", // F-20b (V9)
                         "team_challenges", // F-20c (V10)
-                        "llm_usage_logs");
+                        "llm_usage_logs",
+                        // P-1a 프로젝트·버전 (V15)
+                        "projects",
+                        "project_versions");
     }
 
     @Test
@@ -77,8 +80,10 @@ class FlywayMigrationTest extends IntegrationTestBase {
         long userId = insertUser("solver");
         long conceptId = insertConcept("test-트랜잭션");
         jdbc.update(
-                "INSERT INTO analyses (user_id, source_type, level) VALUES (?, 'ZIP', 'BEGINNER')",
-                userId);
+                "INSERT INTO analyses (user_id, project_id, source_type, level) VALUES (?, ?,"
+                        + " 'ZIP', 'BEGINNER')",
+                userId,
+                TestProjects.zip(jdbc, userId));
         long analysisId = lastId();
         jdbc.update("INSERT INTO quizzes (analysis_id) VALUES (?)", analysisId);
         long quizId = lastId();

@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.vibenote.common.TestProjects;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -36,10 +37,11 @@ class TeamAnalysisApiTest extends TeamTestSupport {
 
     private long insertAnalysis(long userId, String status, boolean deleted, String title) {
         jdbc.update(
-                "INSERT INTO analyses (user_id, source_type, project_name, title, level, status,"
-                        + " progress, created_at, deleted_at) VALUES (?, 'ZIP', ?, ?, 'JUNIOR', ?,"
-                        + " 100, ?, IF(?, NOW(), NULL))",
+                "INSERT INTO analyses (user_id, project_id, source_type, project_name, title,"
+                    + " level, status, progress, created_at, deleted_at) VALUES (?, ?, 'ZIP', ?, ?,"
+                    + " 'JUNIOR', ?, 100, ?, IF(?, NOW(), NULL))",
                 userId,
+                TestProjects.zip(jdbc, userId),
                 "proj-" + title,
                 title,
                 status,
@@ -509,10 +511,11 @@ class TeamAnalysisApiTest extends TeamTestSupport {
         long u = insertUser("f20bu");
         long team = insertTeam(u, "팀", "TEAM0001", BASE);
         jdbc.update(
-                "INSERT INTO analyses (user_id, source_type, project_name, title, level, status,"
-                        + " progress, created_at) VALUES (?, 'ZIP', 'todo-app', NULL, 'JUNIOR',"
-                        + " 'DONE', 100, ?)",
+                "INSERT INTO analyses (user_id, project_id, source_type, project_name, title,"
+                    + " level, status, progress, created_at) VALUES (?, ?, 'ZIP', 'todo-app', NULL,"
+                    + " 'JUNIOR', 'DONE', 100, ?)",
                 u,
+                TestProjects.zip(jdbc, u),
                 BASE);
         long a = lastId();
         insertQuestion(insertQuiz(a), null);

@@ -8,6 +8,7 @@ import challengeRoutes from './routes/challenge'
 import communityRoutes from './routes/community'
 import conceptRoutes from './routes/concept'
 import dashboardRoutes from './routes/dashboard'
+import projectRoutes from './routes/project'
 import reviewPlanRoutes from './routes/reviewplan'
 import teamRoutes from './routes/team'
 import userRoutes from './routes/user'
@@ -31,6 +32,7 @@ export const routes = [
   ...dashboardRoutes,
   ...userRoutes,
   ...analysisRoutes,
+  ...projectRoutes,
   ...conceptRoutes,
   ...reviewPlanRoutes,
   ...communityRoutes,

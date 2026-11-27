@@ -3,6 +3,7 @@ package com.vibenote.analysis;
 import com.vibenote.analysis.domain.Analysis;
 import com.vibenote.analysis.domain.AnalysisDetail;
 import com.vibenote.analysis.domain.AnalysisFile;
+import com.vibenote.analysis.domain.AnalysisListItem;
 import com.vibenote.analysis.explain.AnalysisOverview;
 import com.vibenote.quiz.QuizStatus;
 import java.time.LocalDateTime;
@@ -15,14 +16,17 @@ import org.apache.ibatis.annotations.Param;
 @Mapper
 public interface AnalysisMapper {
 
+    /** 분석을 버전에 붙인다 (P-1a FETCHING). */
+    void updateVersion(@Param("id") long id, @Param("versionId") long versionId);
+
     /** 생성된 id를 {@code analysis.id}에 채운다. created_at·updated_at은 서비스의 Clock 값으로 넣는다. */
     void insert(Analysis analysis);
 
     /** since 이후 만든 분석 중 FAILED가 아닌 것의 수. 일일 한도용이라 soft delete된 분석도 센다 (V2 규칙). */
     long countRequestedSince(@Param("userId") long userId, @Param("since") LocalDateTime since);
 
-    /** 내 미삭제 분석, created_at 최신순(같으면 id 내림차순). */
-    List<Analysis> findByUser(
+    /** 내 미삭제 분석, created_at 최신순(같으면 id 내림차순). 붙은 버전 번호를 함께 준다 (P-1a AC12). */
+    List<AnalysisListItem> findByUser(
             @Param("userId") long userId, @Param("size") int size, @Param("offset") long offset);
 
     long countByUser(long userId);
