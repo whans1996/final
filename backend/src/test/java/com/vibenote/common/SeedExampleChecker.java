@@ -1,6 +1,11 @@
 package com.vibenote.common;
 
+import com.sun.source.tree.ClassTree;
+import com.sun.source.tree.CompilationUnitTree;
 import com.sun.source.util.JavacTask;
+import com.sun.source.util.SourcePositions;
+import com.sun.source.util.TreePathScanner;
+import com.sun.source.util.Trees;
 import java.io.IOException;
 import java.io.StringReader;
 import java.net.URI;
@@ -11,6 +16,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -19,6 +25,10 @@ import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
+import javax.lang.model.element.Element;
+import javax.lang.model.element.TypeElement;
+import javax.lang.model.type.TypeKind;
+import javax.lang.model.type.TypeMirror;
 import javax.tools.Diagnostic;
 import javax.tools.DiagnosticCollector;
 import javax.tools.JavaCompiler;
@@ -187,6 +197,11 @@ final class SeedExampleChecker {
     /** 생략 표기 {@code { ... }}·{@code ...} 줄 (가변 인자 {@code String... args}는 앞이 이름이라 제외) */
     private static final Pattern ELISION = Pattern.compile("(?<![\\w\\]>)])\\.\\.\\.(?!\\w)");
 
+    /**
+     * 본문 전체를 생략한 {@code { ... }} (한 줄 안). 흐름 분석이 missing return으로 보지 않게 {@code throw null;}로 바꾼다
+     */
+    private static final Pattern ELIDED_BODY = Pattern.compile("\\{[ \\t]*\\.\\.\\.[ \\t]*\\}");
+
     /** 값을 돌려주는 return (메서드 본문 조각이면 반환형을 Object로 감싼다) */
     private static final Pattern RETURN_VALUE = Pattern.compile("\\breturn\\s+[^;\\s]");
 
@@ -194,13 +209,16 @@ final class SeedExampleChecker {
      * 조각을 컴파일할 수 있게 감싼다. 줄 번호를 지키려고 앞에 붙이는 것은 모두 첫 줄 하나에 둔다.
      *
      * <ul>
-     *   <li>생략 표기 {@code ...}는 주석으로 바꾼다 (본문을 줄인 예제의 관례)
+     *   <li>생략 표기: 본문 전체 {@code { ... }}는 {@code { throw null; }}, 그 밖의 {@code ...}는 공백으로 바꾼다 (본문을
+     *       줄인 예제의 관례. 주석으로 바꾸면 블록 주석 안에서 겹친다)
      *   <li>그대로: 여러 파일을 이어 붙인 조각이 많아 최상위 타입의 {@code public}을 지운다 (파일 이름 규칙 오류 방지)
      *   <li>메서드 본문: 값을 돌려주는 return이 있으면 {@code Object run() { if (true) { 조각 } return null; }}
      * </ul>
      */
     static Wrapped wrap(String original, Form form, int n) {
-        String code = ELISION.matcher(original).replaceAll("/*...*/");
+        String code =
+                ELISION.matcher(ELIDED_BODY.matcher(original).replaceAll("{ throw null; }"))
+                        .replaceAll("   ");
         String cls = "Snippet" + n;
         return switch (form) {
             case UNIT -> {
@@ -252,6 +270,9 @@ final class SeedExampleChecker {
                 "-proc:none",
                 "-Xlint:none",
                 "-implicit:none",
+                // 기본값은 속성 단계(ATTR)에 오류가 있으면 흐름 분석을 건너뛴다. 심볼 없음(경고)만 있어도 missing return·
+                // checked 예외 같은 오류가 사라지므로 흐름 분석까지 간다
+                "-XDshould-stop.ifError=FLOW",
                 "-classpath",
                 System.getProperty("java.class.path"));
     }
@@ -319,21 +340,16 @@ final class SeedExampleChecker {
         if (units.isEmpty()) return issues;
 
         DiagnosticCollector<JavaFileObject> diags = new DiagnosticCollector<>();
+        List<ClassSpan> classes = new ArrayList<>();
         try (StandardJavaFileManager fm =
                 JAVAC.getStandardFileManager(diags, Locale.ROOT, StandardCharsets.UTF_8)) {
             JavacTask task =
                     (JavacTask) JAVAC.getTask(null, fm, diags, options(), null, units.keySet());
+            Iterable<? extends CompilationUnitTree> trees = task.parse();
             task.analyze();
+            classes = classSpans(task, trees);
         } catch (IOException e) {
             throw new IllegalStateException(e);
-        }
-        // 상위 타입을 못 찾은 조각의 @Override 오류는 맥락 없음에서 이어진 진단이다 → 같은 조각에 심볼 없음이 있으면 경고
-        java.util.Set<JavaFileObject> unresolved = new java.util.HashSet<>();
-        for (Diagnostic<? extends JavaFileObject> d : diags.getDiagnostics()) {
-            if (d.getKind() == Diagnostic.Kind.ERROR
-                    && JAVA_CONTEXT.matcher(d.getCode()).matches()) {
-                unresolved.add(d.getSource());
-            }
         }
         for (Diagnostic<? extends JavaFileObject> d : diags.getDiagnostics()) {
             if (d.getKind() != Diagnostic.Kind.ERROR) continue;
@@ -346,12 +362,18 @@ final class SeedExampleChecker {
                                         (int) d.getLineNumber() - unit.getValue().prefixLines(), 1)
                                 - 1;
             }
+            // 맥락 없음에서 이어진 진단 → 경고: 상위 타입을 못 찾은 클래스 안의 @Override 오류, 생략한 생성자 때문에 초기화되지
+            // 않은 final 필드, 타입을 못 찾은 예외(<any>)의 처리 누락
+            String code = d.getCode();
             boolean contextual =
-                    JAVA_CONTEXT.matcher(d.getCode()).matches()
-                            || (d.getCode()
-                                            .equals(
-                                                    "compiler.err.method.does.not.override.superclass")
-                                    && unresolved.contains(d.getSource()));
+                    JAVA_CONTEXT.matcher(code).matches()
+                            || (code.equals("compiler.err.method.does.not.override.superclass")
+                                    && unresolvedSuper(classes, d))
+                            || code.equals(
+                                    "compiler.err.var.not.initialized.in.default.constructor")
+                            || (code.equals(
+                                            "compiler.err.unreported.exception.need.to.catch.or.throw")
+                                    && d.getMessage(Locale.ROOT).contains("<any>"));
             issues.add(
                     issue(
                             card,
@@ -363,6 +385,54 @@ final class SeedExampleChecker {
                                     + d.getMessage(Locale.ROOT).replace('\n', ' ')));
         }
         return issues;
+    }
+
+    /** 클래스(익명 포함) 하나의 소스 범위와, 상위 클래스·인터페이스 중 해석되지 않은 것이 있는지 */
+    record ClassSpan(JavaFileObject file, long start, long end, boolean unresolvedSuper) {}
+
+    private static List<ClassSpan> classSpans(
+            JavacTask task, Iterable<? extends CompilationUnitTree> units) {
+        Trees trees = Trees.instance(task);
+        SourcePositions pos = trees.getSourcePositions();
+        List<ClassSpan> spans = new ArrayList<>();
+        for (CompilationUnitTree unit : units) {
+            new TreePathScanner<Void, Void>() {
+                @Override
+                public Void visitClass(ClassTree node, Void v) {
+                    Element e = trees.getElement(getCurrentPath());
+                    boolean unresolved = false;
+                    if (e instanceof TypeElement t) {
+                        unresolved = t.getSuperclass().getKind() == TypeKind.ERROR;
+                        for (TypeMirror i : t.getInterfaces()) {
+                            unresolved |= i.getKind() == TypeKind.ERROR;
+                        }
+                    }
+                    spans.add(
+                            new ClassSpan(
+                                    unit.getSourceFile(),
+                                    pos.getStartPosition(unit, node),
+                                    pos.getEndPosition(unit, node),
+                                    unresolved));
+                    return super.visitClass(node, v);
+                }
+            }.scan(unit, null);
+        }
+        return spans;
+    }
+
+    /** 진단 위치를 감싸는 가장 안쪽 클래스의 상위 타입이 해석되지 않았는가 */
+    private static boolean unresolvedSuper(
+            List<ClassSpan> classes, Diagnostic<? extends JavaFileObject> d) {
+        return classes.stream()
+                .filter(
+                        c ->
+                                d.getSource() != null
+                                        && c.file().toUri().equals(d.getSource().toUri())
+                                        && c.start() <= d.getPosition()
+                                        && d.getPosition() < c.end())
+                .min(Comparator.comparingLong(c -> c.end() - c.start()))
+                .map(ClassSpan::unresolvedSuper)
+                .orElse(false);
     }
 
     // ───────────── sql (AC8) ─────────────

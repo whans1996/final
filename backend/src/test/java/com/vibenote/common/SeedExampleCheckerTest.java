@@ -67,7 +67,7 @@ class SeedExampleCheckerTest {
         assertThat(formOf("System.out.println(1);\nfor (int i = 0; i < 3; i++) {}"))
                 .isEqualTo(Form.METHOD_BODY);
         assertThat(formOf("int a = ;")).isNull();
-        // 생략 표기 { ... }·... 줄은 주석으로 본다 (가변 인자는 그대로)
+        // 생략 표기 { ... }·... 줄은 지우고 본다 (가변 인자는 그대로)
         assertThat(formOf("@GetMapping(\"/a\")\npublic String a(@PathVariable long id) { ... }"))
                 .isEqualTo(Form.CLASS_BODY);
         assertThat(formOf("try {\n    ...\n} catch (Exception e) {\n    throw e;\n}"))
@@ -154,6 +154,71 @@ class SeedExampleCheckerTest {
         // 줄 번호는 카드 파일 기준 (감싼 줄을 뺀다)
         List<Issue> line = SeedExampleChecker.checkJava(card("java", "int a = 1;\nString s = a;"));
         assertThat(line).singleElement().extracting(Issue::line).isEqualTo(11);
+    }
+
+    @Test
+    void AC7_심볼_없음이_있어도_흐름_분석_오류는_오류() {
+        // 심볼 없음(속성 단계 오류)이 있으면 javac가 흐름 분석을 건너뛰어 missing return·checked 예외를 놓친다 (PR 리뷰)
+        List<Issue> issues =
+                SeedExampleChecker.checkJava(
+                        card(
+                                "java",
+                                "class A { void a() { userMapper.find(); } }",
+                                "class B {\n"
+                                        + "    int f(boolean x) { if (x) return 1; }\n"
+                                        + "    void g() { Thread.sleep(1); }\n}"));
+        assertThat(issues)
+                .filteredOn(i -> i.severity().equals("error"))
+                .extracting(Issue::message)
+                .anySatisfy(m -> assertThat(m).startsWith("missing.ret.stmt"))
+                .anySatisfy(m -> assertThat(m).startsWith("unreported.exception"));
+    }
+
+    @Test
+    void AC7_생략한_본문_생성자_못_찾은_예외_타입에서_이어진_흐름_진단은_경고() {
+        // { ... } 본문은 missing return이 아니다
+        assertThat(
+                        SeedExampleChecker.checkJava(
+                                card("java", "int find(long id) { ... }\nString name() {...}")))
+                .isEmpty();
+        // 블록 주석 안의 ...는 주석을 겹치게 하지 않는다
+        assertThat(SeedExampleChecker.checkJava(card("java", "/* 생략... */\nint a = 1;"))).isEmpty();
+        // 생성자를 생략한 final 필드, 타입을 못 찾은 예외 → 경고
+        assertThat(
+                        severities(
+                                SeedExampleChecker.checkJava(
+                                        card(
+                                                "java",
+                                                "class P { private final long id; }",
+                                                "class Q { void q() { throw new NotFound(); } }"))))
+                .isNotEmpty()
+                .containsOnly("warn");
+        // 타입을 아는 checked 예외는 그대로 오류
+        assertThat(
+                        severities(
+                                SeedExampleChecker.checkJava(
+                                        card(
+                                                "java",
+                                                "class R { void r() { throw new"
+                                                        + " java.io.IOException(); } }"))))
+                .containsExactly("error");
+    }
+
+    @Test
+    void AC7_상위_타입이_해석되는_잘못된_override는_같은_조각에_심볼_없음이_있어도_오류() {
+        List<Issue> issues =
+                SeedExampleChecker.checkJava(
+                        card(
+                                "java",
+                                "class D {\n"
+                                    + "    @Override public String tostring() { return \"\"; }\n"
+                                    + "    void z() { userMapper.x(); }\n"
+                                    + "}"));
+        assertThat(issues)
+                .filteredOn(i -> i.message().startsWith("method.does.not.override.superclass"))
+                .singleElement()
+                .extracting(Issue::severity)
+                .isEqualTo("error");
     }
 
     @Test
