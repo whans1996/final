@@ -89,7 +89,35 @@ class EvalSummaryTest {
         assertThat(dev).as(md).isGreaterThan(eval);
         // eval 줄의 하한은 dev 합성 결과(❌)에 끌려 내려가지 않는다
         assertThat(line(md, "| gms | all | eval | high |", 1)).doesNotContain("❌");
-        assertThat(md).contains("최신 것으로 바꿔 셌다");
+        assertThat(md).contains("하나만 셌다");
+    }
+
+    @Test
+    void AC10_같은_저장소를_수준_하나로_다시_돌려도_세_수준_결과를_남긴다() {
+        Map<String, Object> all = passing("gms", "high");
+        all.put("levels", List.of("beginner", "junior", "senior"));
+        // 수준 하나로 다시 돌린 결과: D(수준 구분)를 계산할 수 없고 최종 통과도 낮다
+        Map<String, Object> junior = passing("gms", "high");
+        junior.put("levels", List.of("junior"));
+        Map<String, Object> scores = new LinkedHashMap<>(castScores(junior));
+        scores.put("A", Map.of("overview", Map.of("firstPass", 0.0, "ok", 0.0)));
+        scores.put("D", EvalGrader.JUDGE_SKIPPED);
+        junior.put("scores", scores);
+
+        // 뒤에 온 junior가 all을 대신하지 않고, 순서를 바꿔도 같다 (#223)
+        for (List<Map<String, Object>> grades :
+                List.of(List.of(all, junior), List.of(junior, all))) {
+            String md = EvalSummary.markdown(grades);
+
+            assertThat(md).as(md).contains("| gms | all | eval | high | 1 |");
+            String floors = line(md, "| gms | all | eval | high |", 1);
+            assertThat(floors).doesNotContain("❌").contains("✅ 80.0%");
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    static Map<String, Object> castScores(Map<String, Object> grade) {
+        return (Map<String, Object>) grade.get("scores");
     }
 
     @Test

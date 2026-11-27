@@ -38,6 +38,7 @@ final class EvalSummary {
                     new Column("C 정밀도", s -> number(s, "C", "precision"), false),
                     new Column("C wrong", s -> number(s, "C", "wrongRate"), false),
                     new Column("C 근거 일치", s -> number(s, "C", "mustEvidenceMatch"), false),
+                    new Column("C 뺀 수준(합)", s -> number(s, "C", "excluded"), true),
                     new Column("D 수준 구분", s -> number(s, "D", "accuracy"), false),
                     new Column("E 기계 검사", s -> number(s, "E", "mechanical"), false),
                     new Column("E 정답 유일", s -> number(s, "E", "uniqueAnswer"), false),
@@ -60,10 +61,12 @@ final class EvalSummary {
     private EvalSummary() {}
 
     /**
-     * @param grades 채점 결과. 같은 공급자·모델·fixture·단계가 여럿이면 목록에서 마지막 것(보고서 파일 이름이 시각순이라 최신)만 쓴다
+     * @param grades 채점 결과. 같은 공급자·모델·fixture·단계가 여럿이면 하나만 쓴다: 돌린 수준이 가장 많은 것, 같으면 목록에서 마지막 것(보고서 파일
+     *     이름이 시각순이라 최신)
      */
     static String markdown(List<Map<String, Object>> grades) {
-        // 다시 돌린 보고서가 평균에 두 번 들어가지 않게 최신 하나만 남긴다
+        // 다시 돌린 보고서가 평균에 두 번 들어가지 않게 하나만 남긴다. 세 수준 보고서 뒤에 수준 하나로 다시 돌린 보고서가 와도
+        // 세 수준 결과(D 수준 구분)를 버리지 않는다 (#223)
         Map<List<String>, JsonNode> latest = new LinkedHashMap<>();
         for (Map<String, Object> grade : grades) {
             JsonNode node = JSON.valueToTree(grade);
@@ -73,6 +76,10 @@ final class EvalSummary {
                             text(node, "model"),
                             text(node, "fixture"),
                             text(node, "stage"));
+            JsonNode kept = latest.get(run);
+            if (kept != null && kept.path("levels").size() > node.path("levels").size()) {
+                continue;
+            }
             latest.remove(run);
             latest.put(run, node);
         }
@@ -106,7 +113,7 @@ final class EvalSummary {
         if (replaced > 0) {
             md.append("> 같은 공급자·모델·저장소·단계를 다시 채점한 결과 ")
                     .append(replaced)
-                    .append("개는 최신 것으로 바꿔 셌다.\n");
+                    .append("개를 빼고 저장소마다 하나만 셌다 (돌린 수준이 가장 많은 것, 같으면 최신).\n");
         }
         md.append("\n## 지표\n\n| 공급자 | 단계 | 분할 | 오염 | 저장소 |");
         COLUMNS.forEach(c -> md.append(' ').append(c.header()).append(" |"));
