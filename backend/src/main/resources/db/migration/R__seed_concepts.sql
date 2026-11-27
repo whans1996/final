@@ -2322,7 +2322,7 @@ router.beforeEach((to) => {
 });
 
 // 라우트 정의
-{ path: "/analyses", component: AnalysisList, meta: { requiresAuth: true } }',
+const routes = [{ path: "/analyses", component: AnalysisList, meta: { requiresAuth: true } }];',
  'PUBLISHED', 'SEED', 'https://router.vuejs.org/guide/advanced/navigation-guards.html'),
 
 -- data/seed/concepts/vue/pinia-store.md
