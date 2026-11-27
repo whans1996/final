@@ -57,6 +57,7 @@ function parseList(src, start, nested, out, shell) {
   const heredocs = [];
   const blockOpeners = []; // PowerShell { 를 연 명령
   let lastClosed = null; // 방금 닫힌 PowerShell 블록·괄호의 명령 (그 뒤 파이프가 이어받는다)
+  let cond = false; // 지금 명령이 && || 뒤라 실행되지 않을 수 있는가 (seg.cond)
 
   const endWord = () => {
     if (word === null) return;
@@ -72,6 +73,7 @@ function parseList(src, start, nested, out, shell) {
     if (words.length || redirects.length) {
       seg = { words, redirects };
       if (pipeFrom) seg.pipeFrom = pipeFrom;
+      if (cond) seg.cond = true;
       out.push(seg);
       for (const h of heredocs) if (!h.seg) h.seg = seg;
       lastClosed = null;
@@ -130,6 +132,7 @@ function parseList(src, start, nested, out, shell) {
       i++;
     } else if (c === '\n') {
       endSegment();
+      cond = false;
       i++;
       readHeredocBodies();
     } else if (c === '#' && word === null) {
@@ -149,8 +152,10 @@ function parseList(src, start, nested, out, shell) {
       i++;
       if (src[i] === c || (c === '|' && src[i] === '&')) {
         if (c === '|' && src[i] === '&') pipeFrom = seg;
+        else cond = c !== ';'; // && || 뒤는 조건부로 실행된다 (;; 는 case 분기 끝)
         i++;
       } else if (c === '|') pipeFrom = seg;
+      else cond = false;
     } else if (c === '(' && word === null) {
       // bash의 ( )만 서브셸이다. PowerShell·cmd의 ( )는 묶음일 뿐이라 cd가 바깥에 남는다
       const before = endSegment();
@@ -543,6 +548,7 @@ function searchSpec(name, args) {
       if (raw === '--unrestricted') unrestricted++;
       if (raw === '--hidden') s.hidden = true;
       if (NAMES_ONLY_LONG.has(raw)) s.namesOnly = true;
+      if (raw === '--json') s.json = true;
     } else if (a.startsWith('-') && a.length > 1) {
       for (let j = 1; j < a.length; j++) {
         const c = a[j];
@@ -563,6 +569,8 @@ function searchSpec(name, args) {
   // rg -u: .gitignore 무시, -uu: 숨김 파일까지
   if (unrestricted >= 1) s.noIgnore = true;
   if (unrestricted >= 2) s.hidden = true;
+  // rg --json은 -l·-c와 함께여도 일치한 줄 내용을 낸다 (Codex)
+  if (s.json) s.namesOnly = false;
   s.roots = pattern ? positional : positional.slice(1);
   if (!s.roots.length) s.roots = ['.'];
   return s;
@@ -628,9 +636,13 @@ function findEmitsSecret(seg, cwd, ctx) {
   return roots.some((r) => {
     const root = searchRoot(cwd, r, ctx);
     return (ctx.secretFiles?.(root) ?? []).some((f) => {
-      const hit = (t) => globMatch(t.glob, t.kind === 'name' ? basename(f.path.replace(/\\/g, '/')) : `./${relative(root, f.path).replace(/\\/g, '/')}`, { icase: true });
+      // -name은 이름, -path는 find가 출력하는 경로(./backend/.env.local)로 맞춘다. 고르는 쪽은 보수적으로, 빼는 쪽은 엄격하게 (Codex)
+      const subject = (t) => (t.kind === 'name' ? basename(f.path.replace(/\\/g, '/')) : `${r.replace(/\/+$/, '')}/${relative(root, f.path).replace(/\\/g, '/')}`);
       const pos = tests.filter((t) => !t.neg);
-      return (!pos.length || pos.some(hit)) && !tests.filter((t) => t.neg).some((t) => globMatch(t.glob, basename(f.path.replace(/\\/g, '/')), { strict: true, icase: t.icase }));
+      return (
+        (!pos.length || pos.some((t) => globMatch(t.glob, subject(t), { icase: true }))) &&
+        !tests.filter((t) => t.neg).some((t) => globMatch(t.glob, subject(t), { strict: true, icase: t.icase }))
+      );
     });
   });
 }
@@ -1160,6 +1172,9 @@ export function resolvePath(cwd, p, platform = process.platform) {
  * ctx.isDir(path): 디렉터리인지 (되돌리기 범위 판정), ctx.evalDir: 열람을 막을 eval 폴더 절대 경로 (김동환 PC만),
  * ctx.secretFiles(dir): dir 아래 비밀 파일 [{ path, ignored: .gitignore 대상인가 }] (재귀 검색 판정, 없으면 판정하지 않는다)
  */
+// 값을 알 수 없는 변수 (searchRoot가 $가 남은 경로로 보고 / 로 판정한다)
+const UNKNOWN_VAR = '$?';
+
 export function checkCommand(command, context = {}, depth = 0) {
   const ctx = { ...context, vars: { ...context.vars } }; // vars: 이 명령 안에서 할당한 셸 변수 (searchRoot가 펼친다)
   let cwd = ctx.cwd || process.cwd();
@@ -1185,9 +1200,14 @@ export function checkCommand(command, context = {}, depth = 0) {
     if (seg.redirects.some((r) => r.op.startsWith('<') && isSecretFile(r.target))) return R.envRead;
     // GIT_CONFIG_KEY_n=core.hooksPath, GIT_CONFIG_PARAMETERS로 hook 경로를 바꾸는 환경변수 (할당·export·$env: 모두)
     if (seg.words.some((w) => /GIT_CONFIG/i.test(w)) && seg.words.some((w) => /core\.hookspath/i.test(w))) return R.hooksPath;
-    // 명령 없는 할당(D=…)·export는 뒤 명령의 검색 경로를 펼칠 때 쓴다 (`D=docs; grep -rn x $D`)
+    // 명령 없는 할당(D=…)·export는 뒤 명령의 검색 경로를 펼칠 때 쓴다 (`D=docs; grep -rn x $D`).
+    // 실행되지 않을 수 있는 할당(&& || 뒤, if·while 안), 명령 앞 할당, for·read로 바뀌는 변수는 값을 모르는 것으로 둔다 (Codex)
     const assigns = seg.words[0] === 'export' ? seg.words.slice(1) : seg.words;
-    if (assigns.length && assigns.every(isAssign)) for (const w of assigns) ctx.vars[w.slice(0, w.indexOf('='))] = w.slice(w.indexOf('=') + 1);
+    const simple = assigns.length > 0 && assigns.every(isAssign) && !seg.cond;
+    for (const w of seg.words) if (isAssign(w)) ctx.vars[w.slice(0, w.indexOf('='))] = simple ? w.slice(w.indexOf('=') + 1) : UNKNOWN_VAR;
+    if (/^(for|select)$/.test(seg.words[0] ?? '') && seg.words[1]) ctx.vars[seg.words[1]] = UNKNOWN_VAR;
+    const head = unwrap(seg.words);
+    if (head.name === 'read') for (const a of head.args) if (!a.startsWith('-')) ctx.vars[a] = UNKNOWN_VAR;
     // 환경변수 할당 값도 경로로 본다: GIT_DIR=data/raw/eval/.git git log, export GIT_DIR=…, $env:GIT_DIR='…' (#189)
     const assigned = (w, i) => isAssign(w) || PS_VAR_EQ.test(w) || (PS_ASSIGN_OP.test(seg.words[i - 1] ?? '') && PS_VAR.test(seg.words[i - 2] ?? ''));
     if (ctx.evalDir && seg.words.some((w, i) => assigned(w, i) && evalHit(w.includes('=') ? w.slice(w.indexOf('=') + 1) : w, cwd, ctx))) return R.evalRead;

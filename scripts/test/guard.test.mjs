@@ -605,6 +605,24 @@ test('Codex 반영: rg -g + eval, rg -L, grep --exclude 브레이스, 서브셸 
   for (const cmd of ['rg -uu -t java KEY .', 'rg -uu -tjs -tts KEY .', "rg -uu --type-add 'j:*.java' -tj KEY", 'D=scripts; (D=.); grep -r KEY $D']) ok(cmd, sf);
 });
 
+// PR #246 Codex 2회차
+test('Codex 반영: find 제외 -path는 전체 경로, 조건부·재할당 변수는 모름, rg --json은 내용을 낸다', () => {
+  const sf = { secretFiles };
+  for (const cmd of [
+    "find . -type f ! -path '.env' -exec cat {} +",
+    'D=.; false && D=scripts; grep -r KEY "$D"',
+    'D=.; true || D=scripts; grep -r KEY $D',
+    'D=scripts; if true; then D=.; fi; grep -r KEY $D',
+    'D=scripts; for D in .; do grep -r KEY $D; done',
+    'D=scripts; read D; grep -r KEY $D',
+    'rg -uu -l --json KEY .',
+    'rg -uu -c --json KEY .',
+  ])
+    no(cmd, sf);
+  for (const cmd of ["find backend -type f ! -path 'backend/.env.local' -exec cat {} +","find . -type f -not -name '.env*' | xargs grep KEY", 'D=scripts; grep -r KEY $D && D=.', 'D=docs; D=scripts; grep -r KEY $D'])
+    ok(cmd, sf);
+});
+
 // #245: 가드 우회 잔여 (PR #246 reviewer가 재현, 같은 PR에서 처리)
 test('#245: 읽기·검색 인자의 셸 글롭 (bash는 * 가 점으로 시작하는 이름에 맞지 않는다)', () => {
   const sf = { secretFiles };
