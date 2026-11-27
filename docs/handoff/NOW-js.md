@@ -1,7 +1,7 @@
 # NOW — 김준섭 현재 작업 스냅샷
 
 > 김준섭(B 영역: 카드·소셜) 전용. 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
-갱신: 2026-11-27 15:18 · 작업자: JoonseobKim · PC: js-ssafy · 브랜치: feature/F-29b-app-shell
+갱신: 2026-11-27 15:25 · 작업자: JoonseobKim · PC: js-ssafy · 브랜치: feature/F-29b-app-shell
 
 ## 현재 기능
 
@@ -14,9 +14,8 @@
 
 ## 바로 다음 할 일
 
-1. (완료) 커밋·push. 기존 헤더 테스트 2개(AnalysisListView AC16, UserProfileView AC9)는 새 셸 셀렉터로 고침
-2. ui-verifier: FE 5173·BE 8080 떠 있음. 1280·800·375 × 비회원(`/concepts`)·회원(`/dashboard`, `/analyses/1` wide)·ADMIN(`/admin`) × 라이트·다크. 확인: 사이드바 툴팁(800), 접기(1280), 하단 탭이 본문 가리지 않음(375), 드로어 포커스, 건너뛰기 링크 포커스 링. 로그인 storage는 `.harness/auth.json`(테스트 계정 `ui-f29a-…@example.com`)
-3. spec 체크리스트 갱신 → 화면 설계서 2-1절 스크린샷 3폭 → `/pr-review` (PR에서 김동환 @멘션: A route 파일 5개 `meta.nav` group·icon + analysis·team `wide`)
+1. `/pr-review` (verify all → reviewer·ui 스크린샷 → 화면 설계서 2-1절 앱 셸 3폭 스크린샷 `docs/산출물/screens/` → PR 본문 `Roadmap: F-29`, 김동환 @멘션: A route 파일 5개 `meta.nav` group·icon + analysis·team `wide`, 공통 App.vue·layouts·components/shell)
+2. ui-verifier 결과: 회원·비회원 1280·800·375·다크·키보드 OK. 비회원 800 검색 찌그러짐은 고침(AppHeader `inlineSearchFrom="lg"`). 미확인: ADMIN 화면(관리자 계정 없음), `/analyses/:id` wide(분석 데이터 없음). 임시 계정 `ui-f29b-31835@example.com` (로컬 DB)
 
 ## 막힌 점 / 결정 필요
 - 없음. GMS 키 만료 12/09 18:00 → EV-2 전에 재발급·연장 확인

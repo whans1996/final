@@ -32,7 +32,7 @@ const drawerOpen = ref(false)
 
 <template>
   <SkipLink />
-  <AppHeader>
+  <AppHeader inline-search-from="lg">
     <template #menu-button>
       <button
         type="button"

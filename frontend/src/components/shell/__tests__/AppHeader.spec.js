@@ -5,14 +5,14 @@ import AppHeader from '@/components/shell/AppHeader.vue'
 
 const Blank = { template: '<div />' }
 
-async function mountHeader(slots = {}) {
+async function mountHeader(slots = {}, props = {}) {
   const router = createRouter({
     history: createMemoryHistory(),
     routes: ['/', '/concepts', '/community'].map((path) => ({ path, component: Blank })),
   })
   router.push('/')
   await router.isReady()
-  return mount(AppHeader, { slots, global: { plugins: [router] } })
+  return mount(AppHeader, { slots, props, global: { plugins: [router] } })
 }
 
 describe('AppHeader (F-29b AC2·AC9·AC12)', () => {
@@ -52,5 +52,15 @@ describe('AppHeader (F-29b AC2·AC9·AC12)', () => {
     await row.find('form').trigger('submit')
     await flushPromises()
     expect(wrapper.find('#mobile-search').exists()).toBe(false)
+  })
+
+  it('AC6 비회원 헤더(inlineSearchFrom="lg")는 1024 미만에서 검색 줄을 접고 🔍 버튼을 보인다', async () => {
+    const guest = await mountHeader({}, { inlineSearchFrom: 'lg' })
+    const member = await mountHeader()
+
+    expect(guest.find('form[role="search"]').element.parentElement.className).toContain('lg:flex')
+    expect(guest.find('button[aria-controls="mobile-search"]').classes()).toContain('lg:hidden')
+    expect(member.find('form[role="search"]').element.parentElement.className).toContain('sm:flex')
+    expect(member.find('button[aria-controls="mobile-search"]').classes()).toContain('sm:hidden')
   })
 })

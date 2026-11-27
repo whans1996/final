@@ -51,7 +51,7 @@ const field =
       type="search"
       aria-label="검색어"
       placeholder="검색어"
-      :class="[field, 'min-w-0 flex-1']"
+      :class="[field, 'min-w-28 flex-1']"
     />
     <button
       type="submit"
