@@ -92,9 +92,38 @@ test('하네스: 테스트 자신과, 바뀐 모듈을 import하는 테스트', 
   assert.deepEqual(areasOf(['docs/로드맵.md']), ['harness']);
   assert.deepEqual(areasOf(['docs/기획서.md']), []);
   // 검증 캐시(verify.mjs recordVerified)의 미커밋 변경 검사도 같은 문서를 본다 (Codex 리뷰)
-  assert.deepEqual(HARNESS_DATA_FILES, ['docs/로드맵.md']);
+  assert.ok(HARNESS_DATA_FILES.includes('docs/로드맵.md'));
   const verifySrc = readFileSync(new URL('../verify.mjs', import.meta.url), 'utf8');
   assert.match(verifySrc, /harness: \[[^\]]*\.\.\.HARNESS_DATA_FILES\]/);
+});
+
+test('HP-4 AC3: 하네스가 읽는 설정·NOW 파일은 harness 영역이고 그 파일을 읽는 테스트를 고른다 (#166, H-10)', () => {
+  const testFiles = [
+    'scripts/test/common.test.mjs',
+    'scripts/test/settings.test.mjs',
+    'scripts/test/env-check.test.mjs',
+    'scripts/test/codeowners.test.mjs',
+    'scripts/test/owners.test.mjs',
+    'scripts/test/ci-filter.test.mjs',
+    'scripts/test/roadmap.test.mjs',
+  ];
+  const cases = {
+    'docs/handoff/NOW-dh.md': ['scripts/test/common.test.mjs'],
+    'docs/handoff/NOW-js.md': ['scripts/test/common.test.mjs'],
+    '.claude/settings.json': ['scripts/test/settings.test.mjs'],
+    'scripts/lib/pcs.json': ['scripts/test/env-check.test.mjs'],
+    '.github/CODEOWNERS': ['scripts/test/codeowners.test.mjs', 'scripts/test/owners.test.mjs'],
+    // ci.yml은 CI 필터 테스트(AC7)와 PR 제목 정규식을 읽는 로드맵 테스트
+    '.github/workflows/ci.yml': ['scripts/test/ci-filter.test.mjs', 'scripts/test/roadmap.test.mjs'],
+  };
+  for (const [file, tests] of Object.entries(cases)) {
+    assert.deepEqual(areasOf([file]), ['harness'], file);
+    assert.deepEqual(relatedHarnessTests([file], testFiles, () => ''), tests, file);
+    // 검증 캐시의 미커밋 변경 검사(AREA_PATHS)에도 든다
+    assert.ok(HARNESS_DATA_FILES.some((p) => file === p || file.startsWith(`${p}/`)), file);
+  }
+  // NOW 파일 밖의 handoff 문서, 다른 워크플로는 영역이 없다
+  assert.deepEqual(areasOf(['docs/handoff/README.md', '.github/workflows/roadmap.yml', '.claude/settings.local.json']), []);
 });
 
 test('pre-push: wip는 건너뛰고, 같은 커밋을 이미 통과한 영역은 다시 돌리지 않는다', () => {
