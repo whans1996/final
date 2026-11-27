@@ -72,6 +72,91 @@ export function isSecretFile(path) {
   return /\.(pem|key|p12|pfx|jks|keystore)$/.test(b) || /^id_(rsa|dsa|ecdsa|ed25519)$/.test(b);
 }
 
+/** 글롭 한 조각(구분자 없는 이름)의 정규식. *·?는 점으로 시작하는 이름에도 맞는다 (grep --include·rg -g·bash dotglob과 같게 보수적으로) */
+// 대괄호 안 POSIX 문자 클래스 ([[:alpha:]])
+const POSIX_CLASSES = { alpha: 'a-zA-Z', digit: '0-9', alnum: 'a-zA-Z0-9', upper: 'A-Z', lower: 'a-z', space: '\\s', xdigit: '0-9a-fA-F', punct: '!-\\/:-@\\[-`{-~', word: '\\w' };
+
+/** braces: {a,b}를 고르기로 볼지 (rg·bash는 그렇고 grep --include·--exclude는 글자 그대로다) */
+function segmentRegex(glob, flags, braces = true) {
+  let re = '';
+  let depth = 0;
+  for (let i = 0; i < glob.length; i++) {
+    const c = glob[i];
+    if (c === '*') re += '.*';
+    else if (c === '?') re += '.';
+    else if (c === '[') {
+      // [abc], [!abc]·[^abc], [[:alpha:]]. 여는 괄호 바로 뒤의 ]는 글자 그대로다 ([]a], [!]])
+      let j = i + 1;
+      const neg = glob[j] === '!' || glob[j] === '^';
+      if (neg) j++;
+      let body = '';
+      let k = j;
+      for (; k < glob.length; k++) {
+        const m = /^\[:(\w+):\]/.exec(glob.slice(k));
+        if (m) {
+          body += POSIX_CLASSES[m[1]] ?? '';
+          k += m[0].length - 1;
+        } else if (glob[k] === ']' && k > j) break;
+        else body += glob[k].replace(/[\\\]^]/, '\\$&');
+      }
+      if (k >= glob.length) re += '\\[';
+      else {
+        re += `[${neg ? '^' : ''}${body}]`;
+        i = k;
+      }
+    } else if (braces && c === '{') (re += '(?:'), depth++;
+    else if (braces && c === '}' && depth) (re += ')'), depth--;
+    else if (braces && c === ',' && depth) re += '|';
+    else re += c.replace(/[.+^$()|\\{}]/g, '\\$&');
+  }
+  try {
+    return new RegExp(`^${re}$`, flags);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 이름(경로 구분자 없음)이 글롭 조각에 맞는가. 고르는 쪽(포함 글롭)은 보수적으로 대소문자를 무시하고 해석할 수 없으면 맞는다고 본다.
+ * 빼는 쪽(--exclude, rg !글롭)은 strict: grep·rg처럼 대소문자를 구분하고 해석할 수 없으면 맞지 않는다고 본다.
+ * braces: false면 {a,b}를 글자 그대로(grep). shell: bash 펼치기처럼 * ? [ ]가 점으로 시작하는 이름에 맞지 않는다 (dotglob 꺼짐)
+ */
+export function globMatch(glob, name, { strict = false, icase = !strict, braces = true, shell = false } = {}) {
+  const g = String(glob ?? '');
+  const n = String(name ?? '');
+  if (shell && n.startsWith('.') && !g.startsWith('.') && !/^\{[^}]*\./.test(g)) return false;
+  const re = segmentRegex(g, icase ? 'i' : '', braces);
+  return re ? re.test(n) : !strict;
+}
+
+/** 상대 경로가 글롭에 맞는가. /가 없는 글롭은 어느 깊이든 이름(basename)으로, 있으면 경로 전체로 맞춘다 (** 는 0개 이상의 조각) */
+export function globMatchPath(glob, relPath, opts) {
+  const g = String(glob ?? '').replace(/\\/g, '/');
+  const parts = String(relPath ?? '')
+    .replace(/\\/g, '/')
+    .split('/')
+    .filter((p) => p && p !== '.');
+  const gs = g.split('/').filter(Boolean);
+  if (gs.length <= 1 && !g.startsWith('/')) return globMatch(gs[0] ?? '', parts[parts.length - 1] ?? '', opts);
+  const match = (a, b) => {
+    if (!a.length) return !b.length;
+    if (a[0] === '**') return match(a.slice(1), b) || (b.length > 0 && match(a, b.slice(1)));
+    return b.length > 0 && globMatch(a[0], b[0], opts) && match(a.slice(1), b.slice(1));
+  };
+  return match(gs, parts);
+}
+
+// 실제 파일 목록이 없을 때 글롭이 비밀 파일을 고르는지 볼 대표 경로 (#188. 저장소 루트의 이름들)
+export const SECRET_SAMPLES = ['.env', '.env.local', '.env.production', 'server.pem', 'server.key', 'cert.p12', 'id_rsa'];
+
+/** 검색 글롭이 비밀 파일을 고르는가. files: 검색 폴더 기준 상대 경로 목록(없으면 대표 경로). !로 시작하는 제외 글롭은 고르지 않는다 */
+export function globHitsSecret(glob, files = SECRET_SAMPLES) {
+  const g = String(glob ?? '').replace(/\\/g, '/');
+  if (!g || g.startsWith('!')) return false;
+  if (files === SECRET_SAMPLES && isSecretFile(g.split('/').filter(Boolean).pop() ?? '')) return true;
+  return files.some((rel) => globMatchPath(g, rel));
+}
+
 /** 코드 안의 문자열 리터럴 ('…', "…", `…`). 인라인 코드(node -e·python -c·REPL 입력) 판정에 쓴다 */
 export function stringLiterals(code) {
   const out = [];

@@ -12,6 +12,7 @@ import { join } from 'node:path';
 import { PROTECTED_BRANCHES, ROOT, currentBranch, hasCommits, isMerging, localPcId, ownerKey, readStdinJson } from '../../scripts/lib/common.mjs';
 import { checkTool } from '../../scripts/lib/guard.mjs';
 import { EVAL_DIR_REL, evalBlockedFor } from '../../scripts/lib/protect.mjs';
+import { secretFilesUnder } from '../../scripts/lib/secret-files.mjs';
 
 const input = readStdinJson();
 const reason = checkTool(input?.tool_name, input?.tool_input || {}, {
@@ -24,6 +25,8 @@ const reason = checkTool(input?.tool_name, input?.tool_input || {}, {
       return false;
     }
   },
+  // 검색 폴더 아래 실제 비밀 파일 (#188 재귀 검색. git 조회는 재귀 검색일 때만)
+  secretFiles: secretFilesUnder,
   // eval 블라인드 (HX-2): 김동환 PC에서만 data/raw/eval 접근을 막는다
   evalDir: evalBlockedFor(ownerKey(localPcId())) ? join(ROOT, EVAL_DIR_REL) : null,
   // 보호 브랜치 직접 커밋 (첫 커밋, merge 진행 중은 예외)
