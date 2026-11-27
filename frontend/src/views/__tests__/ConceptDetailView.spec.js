@@ -6,7 +6,7 @@ import { routes } from '@/router'
 import ConceptDetailView from '@/views/concept/ConceptDetailView.vue'
 import * as conceptsApi from '@/api/concepts'
 import { useAuthStore } from '@/stores/auth'
-import { apiError, mountAt } from './viewTestUtils'
+import { apiError, deferred, mountAt } from './viewTestUtils'
 
 vi.mock('@/api/concepts')
 
@@ -450,5 +450,33 @@ describe('ConceptDetailView 찜 버튼 (F-12 AC12)', () => {
     const button = wrapper.find('[data-action="toggle-wish"]')
     expect(button.text()).toBe('♥ 20')
     expect(button.attributes('aria-pressed')).toBe('true')
+  })
+})
+
+describe('ConceptDetailView 늦은 응답 (V-4 AC6·AC7)', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+    window.scrollTo = vi.fn()
+    conceptsApi.fetchReviews.mockResolvedValue({ items: [], page: 1, size: 10, total: 0 })
+  })
+
+  it('AC6·AC7 이전 id의 늦은 실패와 화면을 떠난 뒤 온 응답은 화면 상태를 바꾸지 않는다', async () => {
+    const first = deferred()
+    const second = deferred()
+    conceptsApi.fetchConcept.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise)
+    const { wrapper, router } = await mountDetail('/concepts/57')
+
+    await router.push('/concepts/58')
+    first.reject(apiError(500, { code: 'COMMON_500', message: '옛 카드 실패' }))
+    await flushPromises()
+    const vm = wrapper.vm
+    expect(vm.loadError).toBe('')
+    expect(vm.loading).toBe(true)
+
+    wrapper.unmount()
+    second.resolve(detail({ id: 58 }))
+    await flushPromises()
+    expect(vm.concept).toBeNull()
+    expect(vm.loading).toBe(true)
   })
 })

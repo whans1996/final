@@ -7,7 +7,7 @@ import * as conceptsApi from '@/api/concepts'
 import * as followsApi from '@/api/follows'
 import * as challengesApi from '@/api/challenges'
 import { useAuthStore } from '@/stores/auth'
-import { apiError, mountAt } from './viewTestUtils'
+import { apiError, deferred, mountAt } from './viewTestUtils'
 
 vi.mock('@/api/users')
 vi.mock('@/api/concepts')
@@ -330,5 +330,40 @@ describe('UserProfileView 팔로우 영역 (F-04 AC9)', () => {
     expect(wrapper.find('[data-section="follow"] [role="alert"]').text()).toBe(
       '서버에서 오류가 발생했습니다.',
     )
+  })
+})
+
+describe('UserProfileView 늦은 응답 (V-4 AC6·AC7)', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+    followsApi.fetchFollowStatus.mockResolvedValue({
+      following: false,
+      followerCount: 0,
+      followingCount: 0,
+    })
+    conceptsApi.fetchUserWishes.mockResolvedValue({ items: [], page: 1, size: 12, total: 0 })
+    challengesApi.fetchUserChallenges.mockResolvedValue({ items: [], page: 1, size: 6, total: 0 })
+    usersApi.fetchUserStats.mockResolvedValue({})
+  })
+
+  it('AC6·AC7 이전 id의 늦은 실패와 화면을 떠난 뒤 온 응답은 화면 상태를 바꾸지 않는다', async () => {
+    const first = deferred()
+    const second = deferred()
+    usersApi.fetchUser.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise)
+    const { wrapper, router } = await mountAt(UserProfileView, '/users/3')
+    await flushPromises()
+
+    await router.push('/users/4')
+    first.reject(apiError(500, { code: 'COMMON_500', message: '옛 프로필 실패' }))
+    await flushPromises()
+    const vm = wrapper.vm
+    expect(vm.loadError).toBe('')
+    expect(vm.loading).toBe(true)
+
+    wrapper.unmount()
+    second.resolve({ ...PROFILE, id: 4 })
+    await flushPromises()
+    expect(vm.profile).toBeNull()
+    expect(vm.loading).toBe(true)
   })
 })

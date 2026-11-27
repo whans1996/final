@@ -48,3 +48,14 @@ export function untilAborted(_query, { signal } = {}) {
     signal?.addEventListener('abort', () => reject(canceledError()))
   })
 }
+
+/** 테스트가 원하는 때에 끝내는 promise (V-4 AC6·AC7) */
+export function deferred() {
+  let resolve
+  let reject
+  const promise = new Promise((res, rej) => {
+    resolve = res
+    reject = rej
+  })
+  return { promise, resolve, reject }
+}

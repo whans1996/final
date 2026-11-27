@@ -161,7 +161,7 @@ async function load() {
 - [x] AC1·AC2 composable 테스트 red → `useLatestRequest.js` green
 - [x] AC3 api signal
 - [x] AC4·AC5 목록 4+1곳 이관
-- [ ] AC6·AC7 상세·컴포넌트 이관
+- [x] AC6·AC7 상세·컴포넌트 이관
 - [ ] AC8 PostWriteView, AC9 WishButton 새 가드
 - [ ] AC10 useMoreList, AC11 가드 테스트
 - [ ] `frontend/CLAUDE.md` 규칙 한 줄

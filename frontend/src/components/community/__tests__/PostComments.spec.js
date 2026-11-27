@@ -4,6 +4,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import PostComments from '@/components/community/PostComments.vue'
 import * as postsApi from '@/api/posts'
 import { useAuthStore } from '@/stores/auth'
+import { deferred } from '@/views/__tests__/viewTestUtils'
 
 vi.mock('@/api/posts')
 
@@ -249,5 +250,31 @@ describe('PostComments (F-18 AC11~AC13)', () => {
     expect(postsApi.deleteComment).toHaveBeenCalledWith(42, 1)
     expect(wrapper.find('h2').text()).toBe('댓글 1')
     expect(ids(wrapper)).toEqual([2])
+  })
+})
+
+describe('PostComments 늦은 응답 (V-4 AC6·AC7)', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+  })
+
+  it('AC6·AC7 이전 글의 늦은 실패와 사라진 뒤 온 응답은 상태를 바꾸지 않고 count를 올리지 않는다', async () => {
+    const first = deferred()
+    const second = deferred()
+    postsApi.fetchComments.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise)
+    const wrapper = await mountComments()
+
+    await wrapper.setProps({ postId: 43 })
+    first.reject(apiError(500, { code: 'COMMON_500', message: '옛 댓글 실패' }))
+    await flushPromises()
+    const vm = wrapper.vm
+    expect(vm.loadError).toBe('')
+    expect(vm.loading).toBe(true)
+
+    wrapper.unmount()
+    second.resolve({ items: [comment(1)], total: 1 })
+    await flushPromises()
+    expect(vm.items).toEqual([])
+    expect(wrapper.emitted('count')).toBeUndefined()
   })
 })

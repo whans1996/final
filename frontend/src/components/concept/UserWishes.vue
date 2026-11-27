@@ -7,6 +7,7 @@ import { fetchUserWishes } from '@/api/concepts'
 import { errorMessage } from '@/api/http'
 import ConceptCard from '@/components/concept/ConceptCard.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
+import { useLatestRequest } from '@/composables/useLatestRequest'
 
 const PAGE_SIZE = 12
 
@@ -27,16 +28,16 @@ const hasMore = computed(
   () => !ended.value && total.value !== null && items.value.length < total.value,
 )
 
-// userId를 빠르게 바꿀 때 늦게 도착한 이전 요청의 응답은 버린다
-let lastRequest = 0
+// userId를 빠르게 바꾸거나 컴포넌트가 사라지면 늦게 도착한 이전 요청의 응답은 버린다 (V-4)
+const latest = useLatestRequest()
 
 async function load(nextPage) {
-  const request = ++lastRequest
+  const request = latest.begin()
   loading.value = true
   error.value = ''
   try {
     const result = await fetchUserWishes(props.userId, { page: nextPage, size: PAGE_SIZE })
-    if (request !== lastRequest) return
+    if (!request.isCurrent()) return
     if (nextPage === 1) {
       items.value = result.items
     } else {
@@ -48,10 +49,10 @@ async function load(nextPage) {
     total.value = result.total
     page.value = nextPage
   } catch (e) {
-    if (request !== lastRequest) return
+    if (!request.isCurrent()) return
     error.value = errorMessage(e)
   } finally {
-    if (request === lastRequest) loading.value = false
+    if (request.isCurrent()) loading.value = false
   }
 }
 
