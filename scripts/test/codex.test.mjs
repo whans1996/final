@@ -5,6 +5,7 @@ import {
   STUCK_MS,
   isDocPath,
   isRetryLine,
+  headLagging,
   judgeReview,
   loopAction,
   loopSkipReason,
@@ -318,4 +319,15 @@ test('Stop hook: 실패·정체 재요청은 같은 head의 일반 STALE과 따�
   assert.equal(stuck.kind, 'request');
   assert.notEqual(stuck.key, plain.key);
   assert.equal(loopAction({ line: 'ERROR head abc1234 Codex 리뷰 실패가 재시도 뒤에도 반복 (재리뷰 1회)', pr: 7 }).kind, 'error');
+});
+
+test('push 직후 PR head가 방금 push한 커밋의 조상이면 반영을 기다린다 (#235)', () => {
+  // a ← b ← c (c가 최신)
+  const order = ['a', 'b', 'c'];
+  const isAncestor = (x, y) => order.indexOf(x) <= order.indexOf(y);
+  assert.equal(headLagging('b', 'c', isAncestor), true); // GitHub가 아직 b
+  assert.equal(headLagging('c', 'c', isAncestor), false); // 반영됨
+  assert.equal(headLagging('c', 'b', isAncestor), false); // 다른 PC가 더 새 커밋을 push함
+  assert.equal(headLagging('b', null, isAncestor), false); // 원격 추적 브랜치 없음
+  assert.equal(headLagging('x', 'c', () => false), false); // force push 등 갈라짐
 });
