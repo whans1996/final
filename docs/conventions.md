@@ -114,7 +114,8 @@
   - **차단**: 누군가의 작업(커밋·머지·다음 기능)을 막는 이슈에는 `blocker` 라벨을 더한다(`follow-up`과 함께). 세션 시작 배너는 영역과 무관하게 차단 이슈를 🔴로 맨 앞에 보여 주고, `/pickup`·`/spec`은 차단 이슈가 열려 있으면 멈추고 사용자에게 묻는다. 해결되면 닫고, 막지 않게 되면 라벨만 뗀다.
   - **순환**: 세션 시작 배너와 `/pickup`이 차단·내 영역·공통·분류 필요 이슈를 보여 주고, `/spec`은 그 기능에 흡수할 이슈를 spec "관련 이슈"에 적고, `/progress`는 영역별 열림·7일 넘음을 점검한다. 기능 사이 남는 시간에는 내 영역 이슈를 `feature/issue-<번호>-slug` 브랜치에서 처리한다. 이슈 브랜치는 spec 대신 이슈 본문 "제안"을 수용 기준으로 삼고(실패하는 테스트부터), 커밋 범위에는 이슈의 원래 기능 F-xx(없으면 `common`·`harness`)를 쓰며, `/pr-review`의 PR 설명 파일은 `.harness/pr-issue-<번호>.md`로 한다.
   - **닫기**: 해결 PR 본문 "해결 이슈"에 이슈마다 `Closes #n`을 적는다. develop은 기본 브랜치가 아니라 GitHub가 닫지 않으므로 `close-issues` 워크플로가 develop 머지 때 닫는다. 고치지 않기로 하면 이유를 댓글로 남기고 `gh issue close <n> --reason "not planned"`.
-- **완료 표시(spec DONE)는 머지 전 마지막 커밋으로 PR 안에서 한다.** 머지 후 정리 PR은 만들지 않는다. 진행현황·WBS·간트 실적은 기능 PR에서 고치지 않고 주간 `/progress` docs PR이 develop 기준으로 맞춘다 (두 PR이 같은 표를 고치면 충돌한다, 11-19 결정).
+- **완료 표시(spec DONE)는 머지 전 마지막 커밋으로 PR 안에서 한다.** 머지 후 정리 PR은 만들지 않는다. 같은 커밋에서 **자기 항목 행과 재조정한 뒤 항목**의 `docs/로드맵.md`·WBS(04)·간트(05) 날짜를 실제로 고친다(끝 = 머지 예정일 KST. 머지일이 다르면 다음 `/pickup`이 다음 브랜치 첫 커밋으로 바로잡는다). 상대 항목 행은 고치지 않아 충돌을 줄인다. `docs/진행현황.md` 집계는 주간 `/progress` docs PR이 develop 기준으로 맞춘다 (11-19 결정을 11-27에 고침: 일정은 바로 반영).
+- **바뀌면 그 즉시 관련 문서를 모두 고친다** (11-27): 담당·넘겨주기·일정·범위·규칙·이슈 흡수처가 바뀌면 같은 PR에서 그 사실이 적힌 문서·산출물·이슈를 모두 고친다 (목록은 `CLAUDE.md` 작업 흐름). PR 설명 "후속 작업"으로 미루지 않는다.
 - API를 바꾼 PR은 `docs/api/openapi.json` 변경을 포함해야 한다 (CI가 불일치를 실패 처리).
 - GitLab(lab.ssafy.com)은 최종 제출 전용이다. 개발 중에는 push하지 않는다.
 
@@ -122,7 +123,7 @@
 
 - 모든 Controller에 `@Tag`, 모든 엔드포인트에 `@Operation(summary)`과 에러 `@ApiResponse`, 모든 요청·응답 DTO 필드에 `@Schema(description, example)`를 단다.
 - Tag 이름은 한국어 도메인 이름으로 통일한다: `인증`, `회원`, `팔로우`, `피드`, `분석`, `개념 카드`, `퀴즈`, `복습 계획`, `추천`, `커뮤니티`, `팀`, `챌린지`, `관리자`.
-- 정본은 테스트가 추출하는 `docs/api/openapi.json`이다. 제출용 REST API 명세(`docs/산출물/07-REST-API-명세.md`)는 제출 단계에 이 파일에서 생성한다 (생성 스크립트 `scripts/export-api-doc.mjs`는 아직 없고 WBS 5.3에서 만든다).
+- 정본은 테스트가 추출하는 `docs/api/openapi.json`이다. 제출용 REST API 명세(`docs/산출물/07-REST-API-명세.md`)는 제출 단계에 이 파일에서 생성한다 (`node scripts/export-api-doc.mjs`, 주간 `/progress`·제출 전. HP-5).
 
 ## 9. 병렬 개발 경계 (11-19)
 
@@ -130,10 +131,10 @@
 - 파일 영역 확인: `node scripts/owners.mjs <경로...>`, PR 전 `node scripts/owners.mjs --diff origin/develop`. Claude가 상대 영역·공통 파일을 고치면 `area-notice` hook이 알리고(차단하지 않음), 상대 NOW 파일은 `guard-files`가 막는다.
 - **공통 기반은 A가 먼저 만든다** (결정로그 11-19): concept 도메인·Mapper·카드 응답 DTO, ErrorCode·ActivityType 도메인 블록, 라우터·nav 영역별 분리, 공용 컴포넌트, 관리자 레이아웃. B는 공통 기반 PR이 develop에 머지된 뒤 그 위에서 작업한다.
 - **공통 enum·배열은 도메인 블록 안에만 추가한다** (ErrorCode, ActivityType, `PUBLIC_GET_PATHS`, `ConceptMapper` Java·XML). 블록은 `// ── 도메인 (영역 기능) ──` 주석으로 나누고 모든 항목 끝에 쉼표를 단다(enum의 `;`는 맨 아래 단독 줄). 파일 끝에 이어 붙이면 두 사람의 추가가 같은 줄에서 충돌한다.
-- **FE 라우트·메뉴는 도메인 파일과 route 메타로 나눈다** (F-00b): route는 `frontend/src/router/routes/<도메인>.js`, 헤더 메뉴는 `meta.nav`, 관리자 메뉴는 `/admin` 자식의 `meta.adminNav`. 상세는 `frontend/CLAUDE.md`.
+- **FE 라우트·메뉴는 도메인 파일과 route 메타로 나눈다** (F-00b): route는 `frontend/src/router/routes/<도메인>.js`, 메뉴(옆 메뉴·하단 탭, F-29b)는 `meta.nav`, 관리자 메뉴는 `/admin` 자식의 `meta.adminNav`. 상세는 `frontend/CLAUDE.md`.
 - **상대 테이블**은 상대 도메인의 Mapper·Service를 통해 읽는다. 쓰기(INSERT·UPDATE)는 그 테이블 주인의 Service만 한다. 필요한 메서드가 없으면 상대에게 요청하거나 PR에서 @멘션하고 최소로 추가한다.
 - **push 시점**: `/implement` 체크포인트 커밋, spec 승인 커밋, `/handoff` 뒤에 feature 브랜치를 push한다. 상대의 세션 시작·peer-watch hook과 Mattermost 알림은 원격의 NOW 파일을 본다.
 - **알림 경로**: Claude 세션 안(세션 시작 hook, 10분 간격 `peer-watch` hook. 둘 다 사람 화면에도 짧게 보인다), 상태 표시줄(`.claude/hooks/statusline.mjs`: 모델·PC·브랜치·컨텍스트 크기·5시간/7일 사용량, 내 PR의 CI·Codex, 다음 로드맵 항목, 넘겨주는 시점 D-n. PR·로드맵은 `.harness/status.json` 캐시를 `scripts/status-refresh.mjs`가 백그라운드로 2분·10분마다 채운다), Mattermost(`.github/workflows/notify.yml`, PR 열림·머지·NOW push). 급한 합의(공통 파일 동시 수정 등)는 Mattermost에서 직접 말한다.
 - **세션 시작 시간 예산**: 세션 시작 hook은 제한(15초)을 넘기면 출력이 통째로 버려지므로 11초 예산 안에서 fetch → 자동 병합 → gh 조회(이슈·로드맵·환경) → 내 원격 브랜치 조회 순으로 남은 시간을 보고 건너뛰며, 건너뛴 것은 ⚠️로 알린다 (`scripts/lib/budget.mjs`, peer-watch도 같다).
 - **git 사용자 이름**: PC마다 `user.name`을 그 PC의 GitHub 계정(`scripts/lib/pcs.json` `github`)과 같게 둔다. 다르면 세션 시작 환경 점검이 ⚠️로 알린다. peer-watch는 develop의 PR 병합 커밋 작성자로 내 머지인지 판정하므로 git 이름이 달라도 내 다른 PC의 머지를 상대 변화로 알리지 않는다. 병합 커밋 작성자는 GitHub 프로필 Name(비어 있으면 계정)이라, 프로필 Name을 계정과 다르게 정하면 내 머지도 상대 변화로 알린다(안전한 쪽). 그래서 프로필 Name은 비우거나 계정과 같게 둔다.
-- 이슈 라벨: `area:A`, `area:B`, `area:common`을 `follow-up`과 함께 단다. 이슈 담당은 라벨의 영역 오너다 (공통은 만든 사람). 만드는 명령: `gh issue create --label follow-up --label area:<A|B|common> --assignee @me` (내 영역 라벨은 `node scripts/stamp.mjs --area`). 세션 시작 배너는 area 라벨이 없는 이슈를 "분류 필요"로 센다.
+- 이슈 라벨: `area:A`, `area:B`, `area:common`을 `follow-up`과 함께 단다. 이슈 담당은 라벨의 영역 오너다 (공통은 만든 사람. 고치는 사람이 따로 있으면 그 사람도 담당에 넣는다). 하네스(`scripts/`·`.claude/`·hook) 이슈는 두 사람의 작업 흐름에 걸리므로 `area:common`이다 (파일 주인은 CODEOWNERS대로 A, 11-27). 만드는 명령: `gh issue create --label follow-up --label area:<A|B|common> --assignee @me` (내 영역 라벨은 `node scripts/stamp.mjs --area`). 세션 시작 배너는 area 라벨이 없는 이슈를 "분류 필요"로 센다.

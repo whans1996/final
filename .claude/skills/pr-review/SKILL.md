@@ -49,6 +49,7 @@ description: develop에 합치기 전 현재 feature 브랜치를 verifier·revi
    - 머지되면 PR 본문의 `Closes #n` 이슈는 `close-issues` 워크플로가 닫는다 (develop은 기본 브랜치가 아니라 GitHub가 자동으로 닫지 않아서 둔 워크플로). 다음 `/pickup`에서 아직 열려 있으면 워크플로 실행 기록을 확인하고 `gh issue close <n> --comment "PR #<번호>로 해결"`을 제안한다.
 10. **완료 표시는 PR 안에서 한다 (정리 PR 없음)**: Codex가 COMPLETE(또는 8-3 이관 완료)이고 CI가 초록이 되면, 머지 전 마지막 커밋 `docs(F-xx): 완료 표시 (spec DONE)`에 **내 spec만** 넣는다. `docs/` 아래만 바뀌므로 Codex 재리뷰는 돌지 않는다.
     - spec 헤더 `DONE (PR #n)`, 구현 체크리스트 마지막 칸
-    - `docs/산출물/04-WBS.md`·`05-간트차트.md`·`docs/진행현황.md`는 **고치지 않는다.** 두 PR이 같은 표를 고치면 충돌하므로 주간 `/progress` docs PR이 develop 기준으로 한 번에 맞춘다 (11-19 결정).
+    - **일정 바로 반영 (11-27)**: `docs/로드맵.md`의 이 PR 항목 행 시작·끝을 실제 날짜로(끝 = 오늘, 머지 예정일 KST) 고치고, 계획보다 일찍·늦게 끝났으면 의존이 풀리거나 밀리는 뒤 항목과 넘겨주는 시점을 재조정한다. `docs/산출물/04-WBS.md`·`05-간트차트.md`의 같은 항목 행도 같이 고친다. **상대 항목 행은 고치지 않는다** (충돌 방지, 필요하면 PR 설명에 적고 @멘션). `docs/진행현황.md`는 주간 `/progress`만 고친다.
+    - **관련 문서 점검**: 이 PR이 바꾼 담당·일정·범위·규칙·이슈 흡수처가 적힌 곳을 grep으로 찾아 같은 커밋에서 고친다 (`CLAUDE.md` 작업 흐름 "바뀌면 그 즉시").
 11. PR 생성과 CI·Codex 확인 결과를 내 NOW 파일에 남긴다. Codex가 `COMPLETE`가 아니면 `/clear`를 권하지 않고 8단계 루프를 이어 간다. `COMPLETE`가 되었거나 컨텍스트가 200k를 넘었으면 NOW 파일에 루프 위치(PR 번호, head, 남은 지적)를 적고 `/clear`를 권한다. 새 세션의 `/pickup`이 루프를 이어받는다 (CLAUDE.md "세션 운영").
     - **10·11의 문서(spec DONE·NOW·작업로그)는 한 커밋으로 묶어 한 번만 push한다.** push마다 CI가 돈다. 직전 성공 이후 문서만 바뀐 push는 Backend·Frontend를 건너뛰지만(#224) 하네스·PR 제목 job과 Codex 판정은 다시 돈다.
