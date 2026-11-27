@@ -183,9 +183,24 @@ GMS 실측 (2026-11-25 집 PC, 같은 입력, strict 스키마 `overview`, 키 �
 |---|---|---|
 | 1. 컨텍스트 | AI가 처음에 읽는 규칙과 지도 | 루트·backend·frontend `CLAUDE.md`, `docs/conventions.md`, 기능별 spec(`docs/specs/`), 사람별 현재 상태 `docs/handoff/NOW-dh.md`·`NOW-js.md` |
 | 2. 워크플로 스킬 | 반복 작업을 정해진 절차로 | `/pickup`(이어받기), `/spec`(기능 명세), `/implement`(TDD 구현), `/pr-review`(PR 전 리뷰), `/handoff`(인수인계), `/progress`(진척·산출물 점검) |
-| 3. 가드레일 | 위험한 행동을 기계적으로 차단 | Claude Code hooks: main 직접 커밋·강제 push·`--no-verify`·`.env` 접근·커밋된 DB 마이그레이션 수정·API 키 작성 차단. git `commit-msg` hook: 커밋 규칙·테스트 게이트 |
+| 3. 가드레일 | 위험한 행동을 기계적으로 차단 | Claude Code hooks: 셸 명령을 토큰으로 나눠 판정하는 guard(main·develop 직접 커밋·push, 강제 push, `--no-verify`, `.env` 읽기, 커밋된 DB 마이그레이션 수정, API 키 작성 차단). git hook: 커밋 메시지 규칙, 커밋 때 빠른 검사, push 전 전체 검증 (3.2.1) |
 | 4. 피드백 루프 | AI가 스스로 결과를 확인 | `verify.mjs`(테스트·빌드 실패만 요약), `ui-check.mjs`(실제 화면 점검), Testcontainers MySQL, LLM Mock, GitHub Actions CI, Swagger openapi.json 일치 검사 |
 | 5. 서브에이전트 | 역할 분리와 토큰 절약 | verifier(검증, Haiku·low), reviewer(spec·보안 리뷰, Opus·high), contract-checker(FE·BE API 계약, Sonnet·medium), ui-verifier(화면, Sonnet·medium), prompt-evaluator(프롬프트 품질, Sonnet·medium) |
+
+### 3.2.1 가드 구조 (H-1, 11-25 개편)
+
+처음 가드는 명령 문자열에 정규식을 거는 방식이라 두 가지 문제가 있었다. heredoc·따옴표 안의 글자(예: 문서에 적은 `cat .env`)를 실제 명령으로 보고 막는 오탐, 그리고 `bash -c`·명령 치환·`git -C`처럼 한 번 감싼 명령을 놓치는 우회다. H-1 하네스 개편(PR #138)에서 구조를 바꿨다.
+
+| 부분 | 방식 |
+|---|---|
+| 셸 토큰 파서 (`scripts/lib/guard.mjs`) | 명령을 따옴표·heredoc·파이프·`;`·`&&` 단위로 나눠 **실제로 실행되는 명령만** 판정한다. `cd`·`git -C`·`bash -c`·명령 치환 안까지 들어가 본다 |
+| 차단 대상 | main·develop 직접 커밋과 push(refspec 대상까지), 강제 push, `--no-verify`, `.env`·키 파일 읽기, 커밋된 Flyway 파일 수정, GitLab push, `gh pr merge` |
+| 커밋 hook | 바뀐 영역의 포맷·린트·관련 단위 테스트만 (빠른 검사, `verify.mjs --staged`) |
+| pre-push hook | push하는 커밋의 바뀐 영역 전체 검증(BE·FE·하네스). 검증할 커밋이 HEAD가 아니거나 그 영역에 커밋 안 된 변경이 있으면 거부한다 (작업 트리가 아니라 push하는 커밋을 검증하기 위해서, Codex 리뷰 P1). 사람의 push에도 걸린다 |
+
+- **리뷰어가 퇴행을 재현해 잡았다**: 정규식을 파서로 바꾸자 예전에 막히던 형태 일부가 통과하게 됐다. reviewer 에이전트가 가드 판정 함수(`checkCommand`)에 우회 명령을 직접 넣어 `if/then`·`timeout` 같은 래퍼, PowerShell 경로, heredoc 본문, 옵션 축약, `GIT_CONFIG_*` 퇴행을 재현했고, 이것을 테스트로 고정한 뒤 고쳤다. 수정 뒤 그동안 기록된 명령 10,988개를 다시 판정해 새로 막히거나 풀리는 것이 0개임을 확인했다 (작업로그 11-25, PR #138).
+- 다음 날 가드 보강(11-26)에서도 reviewer가 PowerShell 괄호 범위 퇴행·`gh api -XPUT`·`node -pe` 우회를, Codex가 `grep --reg=` 축약 퇴행·`curl` 여러 URL 우회를 찾았다.
+- 한계: 문자열을 해석하는 가드라 표기 변형 우회가 계속 나온다. 찾은 것은 follow-up 이슈로 모아 처리한다 (#188~#191·#193).
 
 ### 3.3 체크포인트 설계 (릴레이 → 병렬)
 
@@ -223,6 +238,8 @@ AI는 턴마다 대화 전체를 다시 읽으므로 비용은 대화 길이에 
 | 2026-11-17 | 하네스 E2E 테스트 | guard-bash가 hook 경로 우회 옵션을 차단 | 우회 없이 정상 경로로 테스트하도록 수정 |
 | 2026-11-18 | 시드 개념 카드 85개(DS-05) 작성 | Claude가 카드 본문·예제 초안을 쓰고, 참조 URL 82개를 일괄 점검해 404·리다이렉트 6건을 발행 전에 고침. reviewer 에이전트가 85개를 전부 읽고 시큐리티 6에서 403이 나는 CSRF SPA 예제, 같은 시드의 다른 카드와 모순되는 예제를 찾아냄 | 사람이 카테고리별로 검수하고 방향(최신 문법·실무 위주)을 정함. 카드 본문은 AI 초안임을 09 데이터셋 문서에 명시 |
 | 2026-11-18 | LlmClient TDD 중 `@Tag("live")` 테스트를 먼저 쓰고 red 확인 | 일반 `test`에 섞여 개발 PC `.env`의 키로 실제 Gemini가 1회 호출됨(규칙 위반). Claude가 결과 XML에서 발견해 바로 보고 | `build.gradle`에서 `live` 태그를 제외하고 `liveTest` 태스크로 분리. 키를 비운 채 `liveTest`로 건너뛰기를 확인. "외부 호출 테스트는 태그 제외를 먼저" 규칙을 backend/CLAUDE.md에 추가 |
+| 2026-11-25 | H-1 가드 개편 PR 리뷰 | reviewer가 가드 판정 함수에 우회 명령을 넣어 파서 교체로 생긴 퇴행을 재현, Codex가 pre-push가 push 커밋이 아닌 작업 트리를 검증하는 문제(P1)를 찾음 | 퇴행을 테스트로 고정하고 수정, 지난 명령 10,988개 재판정 오탐 0 (3.2.1) |
+| 2026-11-25 | 새 가드 적용 직후 | 예전 문자열 가드라면 heredoc 안의 `cat .env` 글자를 막았을 명령을 새 토큰 파서는 통과시킴 | 개편 효과(오탐 제거) 확인 |
 
 ### 3.6 효과와 한계
 

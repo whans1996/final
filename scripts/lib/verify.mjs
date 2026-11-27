@@ -43,3 +43,14 @@ export function shouldRecord({ startHead, endHead, dirty }) {
   if (dirty) return { record: false, reason: 'dirty' };
   return { record: true, reason: null };
 }
+
+/** .harness/logs에 남길 verify 로그 수 (#180: 정리 규칙이 없어 한 PC에 413개·7.7MB 쌓였다) */
+export const VERIFY_LOG_KEEP = 50;
+
+/**
+ * 지울 verify 로그 이름 (오래된 것부터). 이름의 ISO 시각이 정렬 순서다. verify- 아닌 파일과 방금 쓴 로그(current)는 고르지 않는다
+ */
+export function logsToPrune(names, keep = VERIFY_LOG_KEEP, current = null) {
+  const logs = names.filter((n) => /^verify-.*\.log$/.test(n)).sort();
+  return logs.slice(0, Math.max(0, logs.length - keep)).filter((n) => n !== current);
+}

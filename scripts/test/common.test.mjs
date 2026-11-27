@@ -1,6 +1,8 @@
 // 사람별 NOW 파일·작업로그·PC 전환 판정 (11-19 병렬 전환)
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { test } from 'node:test';
 import {
   lastWorklogEntryOf,
@@ -9,6 +11,7 @@ import {
   otherOwnerKey,
   ownerKey,
   previousPc,
+  readWorklog,
   recordStamp,
   sessionBanner,
   worklogEntries,
@@ -134,4 +137,34 @@ test('세션 배너: 자동 동기화 결과는 경고 다음 줄에 🔄로 보
   }).split('\n');
   assert.equal(b[2], '⚠️ 경고');
   assert.equal(b[3], '🔄 ✅ origin/develop의 새 커밋 2개를 자동으로 합쳤습니다.');
+});
+
+test('HP-5 AC5 readWorklog는 작업로그와 가장 최근 보관 파일만 읽는다 (보관 파일에만 있는 내 항목, 직전 PC)', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'common-worklog-'));
+  try {
+    const file = join(dir, '작업로그.md');
+    const archiveDir = join(dir, '기록');
+    // 보관 파일도 작업로그도 없으면 빈 문자열
+    assert.equal(readWorklog({ file, archiveDir }), '');
+    mkdirSync(archiveDir);
+    writeFileSync(join(archiveDir, '작업로그-W1.md'), '# 작업로그 W1\n\n## 2026-11-20 09:00 · whans1996 · dh-ssafy · feature/old\n- 한 일: 오래된 주\n');
+    writeFileSync(join(archiveDir, '작업로그-W2.md'), '# 작업로그 W2\n\n## 2026-11-30 21:00 · whans1996 · dh-home · feature/a\n- 한 일: 지난 주 마지막\n');
+    writeFileSync(file, '# 작업로그\n\n## 2026-12-01 09:00 · JoonseobKim · js-ssafy · feature/b\n- 한 일: 상대 이번 주\n');
+    const text = readWorklog({ file, archiveDir });
+    assert.doesNotMatch(text, /오래된 주/);
+    const mine = lastWorklogEntryOf(worklogEntries(text), 'dh');
+    assert.equal(mine.at, '2026-11-30 21:00');
+    assert.equal(previousPc({ nowText: null, entry: mine, knownIds: ['dh-ssafy', 'dh-home'], key: 'dh' }), 'dh-home');
+    assert.equal(lastWorklogEntryOf(worklogEntries(text), 'js').pcId, 'js-ssafy');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('HP-5 AC5 session-start·stamp는 readWorklog로 읽고, 항목 추가는 작업로그 파일 끝에 한다', () => {
+  const hook = readFileSync(new URL('../../.claude/hooks/session-start.mjs', import.meta.url), 'utf8');
+  const stamp = readFileSync(new URL('../stamp.mjs', import.meta.url), 'utf8');
+  assert.match(hook, /worklogEntries\(readWorklog\(\)\)/);
+  assert.match(stamp, /lastEntryAt\(readWorklog\(\)/);
+  assert.match(stamp, /appendFileSync\(WORKLOG_FILE/);
 });
