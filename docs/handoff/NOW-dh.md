@@ -14,7 +14,6 @@
 - ✅ AC13·1·4·5 (`fa4ce26`), AC2·3·11 수집기·파이프라인 테스트 25개
 - ✅ AC6~10 (`e9710dc`) `project/ProjectController`·`ProjectService`·`dto/`, `ProjectControllerTest` 17개 (보이는 프로젝트 = 내 것 + 삭제 안 한 분석 있음)
 - ✅ AC12 (`ee2b23b`) 상세 `project`·`version`(`AnalysisDetail.projectRefName·version*`, 서브쿼리), 목록 `projectId`·`versionNumber`(`AnalysisListItem`), 테스트 `AnalysisProjectRequestTest#AC12_*` 4개·`AnalysisRerunApiTest#P1a_AC12_*`
-- ✅ `IntegrationTestBase` MySQL `--max-connections=500` (`950893d`)
 - ⬜ FE AC14~16, 산출물(ERD 03, 화면 설계서 06)
 
 ## 바로 다음 할 일
