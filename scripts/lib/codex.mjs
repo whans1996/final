@@ -87,6 +87,17 @@ export const MAX_REVIEW_ROUNDS = 5;
 export const isRetryLine = (line) => /^STALE .*(실패|정체).*→ 재요청/.test(line || '');
 
 /**
+ * GitHub의 PR head가 방금 push한 커밋을 아직 반영하지 못했는가 (#235).
+ * pushed = push로 갱신된 origin/<headRefName>. PR head가 pushed의 조상(더 오래됨)일 때만 true다.
+ * PR head가 더 새것(다른 PC가 push함)이거나 pushed를 모르면 기다리지 않는다.
+ * @param isAncestor (a, b) => a가 b의 조상인가 (git merge-base --is-ancestor)
+ */
+export function headLagging(prSha, pushedSha, isAncestor) {
+  if (!prSha || !pushedSha || prSha === pushedSha) return false;
+  return isAncestor(prSha, pushedSha);
+}
+
+/**
  * 다시 확인하지 않아도 되는가. prev = { head(로컬 HEAD), prHead(판정한 PR head 7자), verdict, at }.
  * COMPLETE는 그 판정의 PR head가 지금 로컬 HEAD일 때만 확정으로 본다: 커밋만 하고 push 전에 판정하면
  * PR head는 이전 커밋이라, push 뒤의 STALE을 놓치지 않게 한다 (reviewer). 그 밖에는 recheckMs마다 다시 본다.

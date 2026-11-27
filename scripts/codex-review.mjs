@@ -40,7 +40,7 @@
 
 import { spawnSync } from 'node:child_process';
 import { NON_INTERACTIVE_GIT_ENV, git } from './lib/common.mjs';
-import { CODEX_BOT, judgeReview, onlyDocsChanged, requestCount } from './lib/codex.mjs';
+import { CODEX_BOT, headLagging, judgeReview, onlyDocsChanged, requestCount } from './lib/codex.mjs';
 
 const CODE = { COMPLETE: 0, ERROR: 1, FINDINGS: 2, RUNNING: 3, STALE: 4, TIMEOUT: 5, CLOSED: 6 };
 const BOT = CODEX_BOT;
@@ -76,9 +76,32 @@ const repo = remote.match(/github\.com[:/](.+?)(\.git)?$/)?.[1];
 if (!repo) fail(`origin이 GitHub 저장소가 아닙니다: ${remote || '(없음)'}`);
 
 /** PR head 커밋 */
-function head() {
+function headOnce() {
   const v = ghJson(['pr', 'view', pr, '--json', 'headRefOid,headRefName,state,author']);
   return { sha: v.headRefOid, ref: v.headRefName, state: v.state, author: v.author?.login };
+}
+
+const HEAD_LAG_MS = 60_000;
+const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
+const isAncestor = (a, b) => git(['merge-base', '--is-ancestor', a, b]).ok;
+
+/**
+ * PR head 커밋. push 직후에는 GitHub가 이전 head를 잠깐 돌려준다. 그대로 판정하면 이전 커밋의 지적을 FINDINGS로
+ * 읽고 재리뷰를 요청하지 않은 채 끝난다 (#235). 그래서 push로 갱신된 origin/<브랜치>가 더 새것이면 최대 60초 다시 본다
+ */
+async function head() {
+  let h = headOnce();
+  if (h.state !== 'OPEN') return h;
+  const pushed = git(['rev-parse', '--verify', '-q', `refs/remotes/origin/${h.ref}`]);
+  if (!pushed.ok || !headLagging(h.sha, pushed.out, isAncestor)) return h;
+  console.error(`(GitHub PR head ${h.sha.slice(0, 7)}가 push한 ${pushed.out.slice(0, 7)}보다 이전이라 반영을 기다립니다…)`);
+  const until = Date.now() + HEAD_LAG_MS;
+  while (Date.now() < until && headLagging(h.sha, pushed.out, isAncestor)) {
+    await sleep(5_000);
+    h = headOnce();
+  }
+  if (headLagging(h.sha, pushed.out, isAncestor)) console.error(`(${HEAD_LAG_MS / 1000}초 뒤에도 PR head가 ${h.sha.slice(0, 7)}: 이 head로 판정)`);
+  return h;
 }
 
 /** 모든 페이지를 읽어 하나의 배열로 (댓글이 100개를 넘어도 영수증·요청 마커를 놓치지 않게, Codex 리뷰) */
@@ -139,8 +162,8 @@ function developMergeBase(h) {
   return { mb: mb.ok ? mb.out : null };
 }
 
-function judge() {
-  const h = head();
+async function judge() {
+  const h = await head();
   const comments = issueComments();
   // 문서 판정은 필요할 때만 head·develop을 받는다 (head를 못 받으면 문서만 변경으로 보지 않는다)
   let dev;
@@ -174,7 +197,7 @@ function report(r) {
   process.exit(CODE[r.verdict]);
 }
 
-let r = judge();
+let r = await judge();
 if (r.verdict === 'CLOSED') report(r);
 
 // retry: 실패·정체한 같은 head의 재시도 표시 (재리뷰 횟수는 늘지 않는다. 재시도 뒤 또 실패·정체하면 ERROR, #48)
@@ -211,8 +234,8 @@ if (!wait || done(r.verdict)) report(r);
 
 const deadline = Date.now() + timeoutMin * 60_000;
 while (Date.now() < deadline) {
-  await new Promise((res) => setTimeout(res, 30_000));
-  r = judge();
+  await sleep(30_000);
+  r = await judge();
   if (done(r.verdict)) report(r);
   // 대기 중 리뷰가 실패·정체했으면 --request일 때 한 번 재시도하고 계속 기다린다 (재시도 뒤 또 그러면 ERROR).
   // 그 밖의 STALE(새 커밋 push 등)은 기다려도 결과가 오지 않으므로 바로 끝낸다 (#48)
