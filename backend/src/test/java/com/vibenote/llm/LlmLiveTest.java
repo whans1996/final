@@ -17,8 +17,9 @@ import tools.jackson.databind.ObjectMapper;
  * 실제 GMS·Gemini·Ollama 연결 확인 (F-00 AC9, F-27 9절). <b>사람이 수동으로</b> {@code ./gradlew liveTest}로만
  * 실행한다. {@code test}(CI·git hook·verify)에서는 제외된다.
  *
- * <p>설정은 {@code application.yml}과 저장소 루트 {@code .env}에서 읽는다. 키가 비었거나 Ollama 서버가 없으면 실패 대신 건너뛴다. 출력된
- * 모델·지연·토큰을 {@code docs/산출물/08-외부API-생성형AI-활용.md} §1.5·§2에 적는다. GMS 크레딧·Gemini 무료 한도를 쓴다.
+ * <p>설정은 {@code application.yml}과 {@code ~/.vibenote/.env}(옮기기 전에는 루트 {@code .env})에서 읽는다. 키가 비었거나
+ * Ollama 서버가 없으면 실패 대신 건너뛴다. 출력된 모델·지연·토큰을 {@code docs/산출물/08-외부API-생성형AI-활용.md} §1.5·§2에 적는다. GMS
+ * 크레딧·Gemini 무료 한도를 쓴다.
  */
 @Tag("live")
 class LlmLiveTest {
@@ -125,7 +126,7 @@ class LlmLiveTest {
         }
     }
 
-    /** 앱과 같은 방식(application.yml + ../.env)으로 {@code llm.*}을 읽는다. */
+    /** 앱과 같은 방식(application.yml + ~/.vibenote/.env)으로 {@code llm.*}을 읽는다. */
     private static LlmProperties loadProperties() {
         StandardEnvironment environment = new StandardEnvironment();
         ConfigDataEnvironmentPostProcessor.applyTo(environment);

@@ -13,6 +13,7 @@ import {
   onlyDocsChanged,
   requestCount,
   setupNotice,
+  STOP_LABEL,
   skipRecheck,
   unresolvedFindingAt,
   waitingInTranscript,
@@ -43,6 +44,13 @@ test('codex-loop는 draft·닫힌 PR과 docs만 바꾼 PR을 보지 않는다 (#
   assert.equal(loopSkipReason({ state: 'OPEN', isDraft: false, files: files('docs/a.md', '.claude/hooks/x.mjs') }), null);
   // 파일 목록을 못 받으면 루프를 건너뛰지 않는다
   assert.equal(loopSkipReason({ state: 'OPEN', isDraft: false }), null);
+});
+
+test('사람이 PR에 codex-stopped 라벨을 붙이면 codex-loop가 재요청을 지시하지 않는다 (#249)', () => {
+  const files = [{ path: 'scripts/lib/guard.mjs' }];
+  assert.equal(loopSkipReason({ state: 'OPEN', isDraft: false, files, labels: [{ name: 'follow-up' }, { name: STOP_LABEL }] }), 'STOPPED');
+  assert.equal(loopSkipReason({ state: 'OPEN', isDraft: false, files, labels: [{ name: 'follow-up' }] }), null);
+  assert.equal(STOP_LABEL, 'codex-stopped');
 });
 
 test('이관 마커보다 이른 지적은 해결된 것으로 본다', () => {

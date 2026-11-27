@@ -49,7 +49,7 @@
 - 키가 비었는데 provider=gms면 기동이 실패한다 (원인에 `GMS_API_KEY` 표시). `stage-models`에 없는 단계 키가 있어도 기동 실패
 - 사용량 기록: 시도마다 `llm_usage_logs`에 공급자(`provider`, V13)·모델·토큰·지연·성공 여부를 남긴다. 분석 상세의 `liteMode`는 성공한 `ollama` 행이 있는지로 계산한다
 
-설정 예시 (`application.yml`, 값은 저장소 루트 `.env`의 환경변수로 바꾼다):
+설정 예시 (`application.yml`, 값은 PC마다 저장소 밖 `~/.vibenote/.env`의 환경변수로 바꾼다):
 
 ```yaml
 llm:

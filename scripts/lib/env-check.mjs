@@ -5,6 +5,7 @@ import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { hostname } from 'node:os';
 import { join } from 'node:path';
 import { ROOT, git, isGitRepo, isWin, ownerKey, readText } from './common.mjs';
+import { envFileCheck } from './env-file.mjs';
 import { EVAL_FETCH_EXCLUDE, evalBlockedFor, evalFetchExcluded } from './protect.mjs';
 
 const HARNESS_DIR = join(ROOT, '.harness');
@@ -156,7 +157,8 @@ export async function runChecks({ fast = false } = {}) {
   );
 
   // 로컬 파일 (존재만 본다. .env 내용은 읽지 않는다)
-  add(existsSync(join(ROOT, '.env')) ? 'ok' : 'warn', '.env', existsSync(join(ROOT, '.env')) ? '있음' : '없음 → .env.example을 복사해 채움 (bootRun에 필요)');
+  const envRow = envFileCheck();
+  add(envRow.status, envRow.item, envRow.detail);
   const nm = existsSync(join(ROOT, 'frontend', 'node_modules'));
   add(nm ? 'ok' : 'warn', 'FE 의존성', nm ? 'frontend/node_modules 있음' : '없음 → cd frontend && npm ci');
 
