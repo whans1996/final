@@ -67,11 +67,12 @@ com.vibenote
 - 스키마 변경: `V{n}__{설명}.sql` (예: `V3__add_quiz_tables.sql`). **커밋된 V 파일은 수정 금지**이다 (hook이 막는다).
 - 시드 데이터: `R__seed_concepts.sql` (반복 실행 마이그레이션. 내용이 바뀌면 다시 적용된다). `INSERT ... ON DUPLICATE KEY UPDATE`로 작성한다 (row alias `AS seed`, MySQL 8.0.19+).
   - `name` 기준 upsert라 파일을 고치면 관리자가 화면에서 수정한 시드 카드 내용이 덮어써진다 (`status`는 검수 전 `DRAFT`일 때만 파일 값으로 바꿔 관리자가 숨긴 카드는 숨김 그대로, F-13 AC12). **카드 이름을 바꾸지 않는다** (새 카드가 생긴다). 공개 후 카드를 빼려면 DELETE 말고 `status='HIDDEN'`으로 둔다 (리뷰·찜 등이 CASCADE로 지워진다).
-  - 문자열 안 작은따옴표는 두 번(`''`) 쓰고, **백슬래시는 쓰지 않는다** (MySQL 기본 모드에서 이스케이프 문자).
-  - 출처(`reference_url`)는 `data/datasets.json` DS-01 도메인만 쓴다. `SeedConceptsTest`가 검사한다.
+  - **이 파일은 생성본이다 (K-3a). 직접 고치지 않는다.** 원본은 카드별 Markdown `data/seed/concepts/<category>/<slug>.md`이고 `node scripts/seed-build.mjs`로 다시 만든다. 작은따옴표·백슬래시는 생성기가 이스케이프한다. CI가 `seed-build.mjs --check`로 원본과 같은지 확인한다.
+  - 카드 검수: `node scripts/seed-check.mjs [--be] [--card <slug>]` (①형식 + ②예제 실행, 보고서 `.harness/seed-check/report.md`). java·sql·xml·yaml 예제는 `SeedExampleTest`가 javac·Testcontainers MySQL·XML·SnakeYAML로 검사하고 오류가 있으면 실패한다.
+  - 출처(`reference_url`)는 `data/datasets.json` DS-01 도메인만 쓴다. 형식 검사와 `SeedConceptsTest`가 검사한다.
 - Flyway 플레이스홀더 치환은 꺼 두었다 (`spring.flyway.placeholder-replacement: false`). 시드 본문의 `${}` 예제가 그대로 들어가야 하기 때문이다. 마이그레이션에서 플레이스홀더를 쓰지 않는다.
 - 두 사람이 병렬로 마이그레이션을 만들므로 새 V 파일을 만들기 전에 `git merge origin/develop` 후 `node scripts/next-migration.mjs`로 번호를 확인한다 (develop과 원격 feature 브랜치까지 본다). 그래도 상대가 같은 번호를 먼저 머지하면 CI `check-migrations`가 실패한다. 그때는 develop을 합친 뒤 develop에 없는 내 파일만 `git mv`로 다음 번호로 바꾼다 (내용은 그대로). 로컬 DB에 옛 번호로 적용된 기록이 남았으면 `flyway_schema_history`의 그 행을 지우거나 로컬 DB를 다시 만든다.
-- `R__seed_concepts.sql`(시드 카드)은 카드 영역(B 김준섭) 소유다. A 영역에서 고칠 일이 있으면 상대에게 알린다.
+- 시드 카드 원본(`data/seed/`)은 K-3 기간 A 김동환이 관리한다 (11-26 합의). 생성본 `R__seed_concepts.sql`은 공통 파일이므로 카드를 바꾼 PR은 상대에게 알린다.
 
 ## API 문서 (Swagger, springdoc-openapi)
 

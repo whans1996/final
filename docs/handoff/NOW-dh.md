@@ -3,7 +3,7 @@
 > 김동환(A 영역: AI·분석·학습 루프) 전용. 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
 > 머리 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
-갱신: 2026-11-27 09:07 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/K-3a-seed-check
+갱신: 2026-11-27 09:25 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/K-3a-seed-check
 
 ## 현재 기능
 
@@ -11,8 +11,8 @@
 
 ## 진행
 
-- ✅ AC1·AC3~AC6 파서·생성기·①형식 · ✅ AC2 85장 변환(develop과 85장 전부 동일) · ✅ AC9·AC10 ②FE·`seed-check.mjs` 보고서
-- 85장 수정: vue/navigation-guards 라우트 조각이 JS 문법 오류 → `const routes = [...]` (PR 표에). 일회 스크립트는 scratchpad k3a/, develop 원본 사본 `.harness/k3a-develop-seed.sql`
+- ✅ AC1~AC6·AC9·AC10 커밋·push (e716b40). 85장 develop과 동일, 수정 1건(vue/navigation-guards 라우트 조각 → `const routes = [...]`)
+- ✅ AC7·AC8 BE green (SeedExampleCheckerTest 9·SeedExampleTest 1). 85장 java 115·sql 1·xml 11·yaml 9 오류 0·경고 432 (감싸기 보완 4가지는 spec 9절, PR에서 확인 요청). AC11 ci.yml·related·verify·package.json, 문서(backend/CLAUDE.md·09 DS-05·spec 체크리스트) 작성 — 전부 미커밋
 
 ## 이슈 정리 순서 (11-26 사용자 승인)
 
@@ -20,10 +20,9 @@
 
 ## 바로 다음 할 일
 
-1. AC7·AC8 BE: `backend/src/test/java/com/vibenote/common/SeedExampleChecker.java`(javac 3단계 감싸기·진단 분류, sql은 IntegrationTestBase.MYSQL root로 카드마다 빈 스키마, xml·yaml) + `SeedExampleCheckerTest`·`SeedExampleTest`(결과 `backend/build/seed-check/result.json`, env SEED_SRC·SEED_CARD) → `node scripts/seed-check.mjs --be`로 85장 오류 0
-2. AC11: ci.yml 경로 필터(`data/seed/**`·`data/datasets.json` → be·fe), harness 잡 `seed-build.mjs --check`, verify.mjs fe에 seed-check·seed-examples 테스트, related.mjs areasOf, frontend/package.json typescript 6.0.3
-3. 문서: backend/CLAUDE.md 시드 규칙(역슬래시 금지 → 카드 파일·생성기), 산출물 09 DS-05, spec 체크리스트 → /pr-review
-4. 11/29부터 HP-4 (#165·#166 + ④ 묶음)
+1. `node scripts/seed-check.mjs --be` 결과 확인(오류 0) 후 커밋 3개: `feat(K-3a): AC7·AC8`(backend/src/test/java/com/vibenote/common/SeedExample*.java + spec 9절), `feat(K-3a): AC11`(ci.yml·scripts/lib/related.mjs·scripts/verify.mjs·scripts/test/related.test.mjs·frontend/package*.json), `docs(K-3a)`(backend/CLAUDE.md·09·spec·NOW) → push
+2. /pr-review (PR 본문: AC2 85장 동일 + 수정 카드 1건 표 + 감싸기 보완 확인 요청, 공통 파일 @JoonseobKim)
+3. 11/29부터 HP-4 (#165·#166 + ④ 묶음)
 
 ## 막힌 점 / 결정 필요
 - 사람: 노션 팀원 초대, F-05b liveTest · 로드맵에 E-2(D·E 기준표·쌍 비교, 12/09 전) 행 추가 필요
