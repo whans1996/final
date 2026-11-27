@@ -3,7 +3,7 @@
 > 김동환(A 영역: AI·분석·학습 루프) 전용. 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
 > 머리 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
-갱신: 2026-11-27 10:57 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/issue-218-e1-runner
+갱신: 2026-11-27 11:02 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/issue-218-e1-runner
 
 ## 현재 기능
 
@@ -13,7 +13,7 @@
 
 - ✅ K-3a PR #234·하네스 PR #236 머지 (#235 닫힘)
 - ✅ 커밋 56dad21: #218 C에서 개념 실패 수준 제외(`C.excluded`, 요약 "C 뺀 수준(합)"), #219 `QuizCheck.POSITION` 횟수·코드 인자 제외, #221 `EvalPipeline.swallowing`이 마지막 응답을 앱 파서로 재판정(`FileExplainer.parse` public), #223 `EvalSummary` 중복 제거는 수준 많은 것 우선(grade에 `levels`). 결정로그 1행. verify all 통과
-- ✅ reviewer 반드시 0·권장 3 반영(17bd23b: 명사 보기 이름 미탐, grade levels 테스트, 요약 문구) → **PR #237** 생성, Codex·CI 대기
+- ✅ reviewer 반드시 0·권장 3 반영(17bd23b: 명사 보기 이름 미탐, grade levels 테스트, 요약 문구) → **PR #237 CI 초록 + Codex ✅ 17bd23b** → **머지 대기 (GitHub에서 직접)**
 
 ## 이슈 정리 순서 (11-26 사용자 승인)
 
@@ -21,7 +21,7 @@
 
 ## 바로 다음 할 일
 
-1. PR #237 Codex 루프: `node scripts/codex-review.mjs 237 --request --wait --status` (백그라운드) → COMPLETE + CI 초록이면 GitHub에서 머지 (spec은 이미 DONE이라 완료 표시 커밋 없음)
+1. 사람: PR #237 GitHub에서 머지 (상대 PR이 먼저 머지됐으면 `git merge origin/develop` → push로 CI 재확인). spec은 이미 DONE이라 완료 표시 커밋 없음. 머지 뒤 #218·#219·#221·#223 닫혔는지 확인
 2. 머지 후 HP-4 (로드맵 11/28~11/29, #165·#166 + ④ 묶음) `/spec HP-4`
 
 ## 막힌 점 / 결정 필요
