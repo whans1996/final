@@ -72,10 +72,13 @@ function runBackend() {
     onWait: (info) => console.log(`⏳ 다른 Gradle 실행이 끝나기를 기다립니다 (pid ${info?.pid}, ${info?.label || '?'})…`),
   });
   if (!release) return void issues.push({ file: '-', stage: '②', severity: 'error', item: 'be', message: '.harness/gradle.lock 대기 시간 초과' });
+  const logFile = join(ROOT, '.harness', 'seed-check', 'gradle.log');
+  let run;
   try {
     console.log('⏳ BE 검사 (SeedExampleTest)…');
     const gradlew = isWin ? '.\\gradlew.bat' : './gradlew';
-    spawnSync(`${gradlew} --console=plain test --tests "*SeedExampleTest"`, {
+    // --rerun: 카드·환경변수가 그대로면 test가 UP-TO-DATE로 건너뛰어 result.json(위에서 지움)이 다시 생기지 않는다
+    run = spawnSync(`${gradlew} --console=plain test --tests "*SeedExampleTest" --rerun`, {
       cwd: join(ROOT, 'backend'),
       shell: true,
       encoding: 'utf8',
@@ -86,8 +89,12 @@ function runBackend() {
   } finally {
     release();
   }
+  mkdirSync(join(ROOT, '.harness', 'seed-check'), { recursive: true });
+  writeFileSync(logFile, `${run?.stdout ?? ''}${run?.stderr ?? ''}${run?.error ? `\n${run.error}` : ''}`);
   if (!existsSync(resultFile)) {
-    return void issues.push({ file: '-', stage: '②', severity: 'error', item: 'be', message: 'BE 검사 결과 파일이 없음 (Gradle 실패: backend에서 ./gradlew test --tests "*SeedExampleTest")' });
+    const tail = `${run?.stdout ?? ''}${run?.stderr ?? ''}`.trim().split(/\r?\n/).slice(-15).join('\n');
+    if (tail) console.error(tail);
+    return void issues.push({ file: '-', stage: '②', severity: 'error', item: 'be', message: `BE 검사 결과 파일이 없음 (Gradle 종료 코드 ${run?.status ?? '?'}, 로그 ${rel(logFile)})` });
   }
   const be = JSON.parse(readFileSync(resultFile, 'utf8'));
   issues.push(...be.issues.map((i) => ({ ...i, file: rel(resolve(ROOT, i.file)) })).filter((i) => matches(i.file)));
