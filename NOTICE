@@ -1,0 +1,6 @@
+바이브노트 (VibeNote) — 제3자 자산 표기
+
+이 저장소의 빌드 결과물에는 아래 글꼴이 포함된다 (npm 패키지에서 가져와 Vite가 dist/assets로 복사, F-29a).
+
+- Pretendard (npm `pretendard`) — Copyright (c) Kil Hyung-jin (package.json author). SIL Open Font License 1.1 (OFL-1.1). https://github.com/orioncactus/pretendard
+- JetBrains Mono (npm `@fontsource-variable/jetbrains-mono`) — Copyright 2020 The JetBrains Mono Project Authors. SIL Open Font License 1.1 (OFL-1.1). https://github.com/JetBrains/JetBrainsMono
