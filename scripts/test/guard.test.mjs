@@ -666,6 +666,19 @@ test('Codex 반영: rg --type-add로 내장 타입을 넓혀도 내장 규칙은
   for (const cmd of ["rg -uu --type-clear sh --type-add 'sh:*.foo' -t sh KEY .", "rg -uu --type-add 'java:*.foo' -t java KEY .", "rg -uu --type-add 'mine:*.foo' -t mine KEY ."]) ok(cmd, rootOnly);
 });
 
+// #248: PR #246 Codex 6회차 (같은 PR에서 처리)
+test('#248: 파이프라인 안 변수 할당은 바깥 값을 모르게 하고, find의 모든 -exec 동작을 본다', () => {
+  const rootOnly = { secretFiles: (dir) => [{ path: '/repo/.env', ignored: true }].filter((f) => isWithin(f.path, dir)) };
+  for (const cmd of [
+    'D=.; printf x | D=scripts; grep -r KEY "$D"',
+    'D=.; D=scripts | cat; grep -r KEY $D',
+    'find . -type f -exec true {} \\; -exec cat {} +',
+    'find . -type f -ok echo {} \\; -execdir grep KEY {} +',
+  ])
+    no(cmd, rootOnly);
+  for (const cmd of ['D=scripts; printf x | cat; grep -r KEY $D', 'find . -type f -exec true {} \\; -exec ls {} +']) ok(cmd, rootOnly);
+});
+
 // #245: 가드 우회 잔여 (PR #246 reviewer가 재현, 같은 PR에서 처리)
 test('#245: 읽기·검색 인자의 셸 글롭 (bash는 * 가 점으로 시작하는 이름에 맞지 않는다)', () => {
   const sf = { secretFiles };

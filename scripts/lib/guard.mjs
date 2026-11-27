@@ -150,12 +150,16 @@ function parseList(src, start, nested, out, shell) {
       const seg = endSegment() ?? (c === '|' ? lastClosed : null);
       lastClosed = null;
       i++;
+      const piped = (c === '|' && src[i] !== '|') || (c === '|' && src[i] === '&');
+      if (piped) {
+        // 파이프의 각 명령은 서브셸에서 돈다: 그 안의 변수 할당은 바깥에 남지 않는다 (seg.piped, #248)
+        pipeFrom = seg;
+        if (seg) seg.piped = true;
+      }
       if (src[i] === c || (c === '|' && src[i] === '&')) {
-        if (c === '|' && src[i] === '&') pipeFrom = seg;
-        else cond = c !== ';'; // && || 뒤는 조건부로 실행된다 (;; 는 case 분기 끝)
+        if (!piped) cond = c !== ';'; // && || 뒤는 조건부로 실행된다 (;; 는 case 분기 끝)
         i++;
-      } else if (c === '|') pipeFrom = seg;
-      else cond = false;
+      } else if (c !== '|') cond = false;
     } else if (c === '(' && word === null) {
       // bash의 ( )만 서브셸이다. PowerShell·cmd의 ( )는 묶음일 뿐이라 cd가 바깥에 남는다
       const before = endSegment();
@@ -1232,7 +1236,7 @@ export function checkCommand(command, context = {}, depth = 0) {
     // 명령 없는 할당(D=…)·export는 뒤 명령의 검색 경로를 펼칠 때 쓴다 (`D=docs; grep -rn x $D`).
     // 실행되지 않을 수 있는 할당(&& || 뒤, if·while 안), 명령 앞 할당, for·read로 바뀌는 변수는 값을 모르는 것으로 둔다 (Codex)
     const assigns = seg.words[0] === 'export' ? seg.words.slice(1) : seg.words;
-    const simple = assigns.length > 0 && assigns.every(isAssign) && !seg.cond;
+    const simple = assigns.length > 0 && assigns.every(isAssign) && !seg.cond && !seg.piped && !seg.pipeFrom;
     for (const w of seg.words) if (isAssign(w)) ctx.vars[w.slice(0, w.indexOf('='))] = simple ? w.slice(w.indexOf('=') + 1) : UNKNOWN_VAR;
     if (/^(for|select)$/.test(seg.words[0] ?? '') && seg.words[1]) ctx.vars[seg.words[1]] = UNKNOWN_VAR;
     const head = unwrap(seg.words);
@@ -1288,10 +1292,8 @@ export function checkCommand(command, context = {}, depth = 0) {
     const reads = (n) => READERS.has(n) || SEARCHERS.has(n);
     if (reads(name) && seg.pipeFrom && seg.words.some((w) => cmdName(w) === 'xargs') && findEmitsSecret(seg.pipeFrom, cwd, ctx)) return R.envRead;
     if (reads(name) && args.some((a) => a.includes(SUBST)) && lastScope?.some((s) => findEmitsSecret(s, cwd, ctx))) return R.envRead;
-    if (name === 'find') {
-      const x = args.findIndex((a) => /^-(exec|execdir|ok|okdir)$/.test(a));
-      if (x !== -1 && reads(cmdName(args[x + 1])) && findEmitsSecret(seg, cwd, ctx)) return R.envRead;
-    }
+    // find의 실행 동작은 모두 본다: -exec true {} \; -exec cat {} + (#248)
+    if (name === 'find' && args.some((a, x) => /^-(exec|execdir|ok|okdir)$/.test(a) && reads(cmdName(args[x + 1]))) && findEmitsSecret(seg, cwd, ctx)) return R.envRead;
     if (name === 'findstr' && findstrReadsSecret(args, cwd, ctx)) return R.envSearch;
     // PowerShell 괄호로 넘긴 목록을 읽는다: Get-Content (gci -Filter .env*), sls KEY (gci -r) (#245)
     if (shell === 'powershell' && seg.argOf && READERS.has(unwrap(seg.argOf.words).name) && psPipeReadsSecret(seg, cwd, ctx)) return R.envRead;
