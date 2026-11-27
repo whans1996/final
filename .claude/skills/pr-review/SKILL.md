@@ -50,3 +50,4 @@ description: develop에 합치기 전 현재 feature 브랜치를 verifier·revi
     - spec 헤더 `DONE (PR #n)`, 구현 체크리스트 마지막 칸
     - `docs/산출물/04-WBS.md`·`05-간트차트.md`·`docs/진행현황.md`는 **고치지 않는다.** 두 PR이 같은 표를 고치면 충돌하므로 주간 `/progress` docs PR이 develop 기준으로 한 번에 맞춘다 (11-19 결정).
 11. PR 생성과 CI·Codex 확인 결과를 내 NOW 파일에 남긴다. Codex가 `COMPLETE`가 아니면 `/clear`를 권하지 않고 8단계 루프를 이어 간다. `COMPLETE`가 되었거나 컨텍스트가 200k를 넘었으면 NOW 파일에 루프 위치(PR 번호, head, 남은 지적)를 적고 `/clear`를 권한다. 새 세션의 `/pickup`이 루프를 이어받는다 (CLAUDE.md "세션 운영").
+    - **10·11의 문서(spec DONE·NOW·작업로그)는 한 커밋으로 묶어 한 번만 push한다.** push마다 CI가 돈다. 직전 성공 이후 문서만 바뀐 push는 Backend·Frontend를 건너뛰지만(#224) 하네스·PR 제목 job과 Codex 판정은 다시 돈다.
