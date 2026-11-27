@@ -3,6 +3,7 @@ package com.vibenote.common.config;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
@@ -11,6 +12,7 @@ import org.junit.jupiter.api.io.TempDir;
 import org.springframework.boot.context.config.ConfigDataEnvironmentPostProcessor;
 import org.springframework.core.env.MapPropertySource;
 import org.springframework.core.env.StandardEnvironment;
+import org.springframework.core.io.ClassPathResource;
 
 /**
  * application.yml이 PC마다 두는 {@code ~/.vibenote/.env}를 읽는지 본다 (#249). 비밀 파일을 AI가 검색하는 저장소 폴더 밖에 둔다.
@@ -53,6 +55,17 @@ class EnvFileImportTest {
                 load(Map.of("user.home", home.toString(), "spring.config.import", imports));
 
         assertThat(environment.getProperty("VIBENOTE_ENV_IMPORT_TEST")).isEqualTo("second");
+    }
+
+    @Test
+    void application_yml은_루트_env_다음에_홈_env를_적는다() throws IOException {
+        String yml =
+                new ClassPathResource("application.yml").getContentAsString(StandardCharsets.UTF_8);
+        int root = yml.indexOf("optional:file:../.env[.properties]");
+        int userHome = yml.indexOf("optional:file:${user.home}/.vibenote/.env[.properties]");
+
+        assertThat(root).isNotNegative();
+        assertThat(userHome).isGreaterThan(root);
     }
 
     private static StandardEnvironment load(Path userHome) {

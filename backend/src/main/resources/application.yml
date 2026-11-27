@@ -3,7 +3,8 @@ spring:
     name: vibenote
   config:
     # PC마다 저장소 밖 ~/.vibenote/.env를 읽는다 (#249. 비밀을 AI가 검색하는 저장소 폴더에 두지 않는다). 없으면 무시한다.
-    # 옮기는 동안은 저장소 루트 .env(backend 폴더에서 실행 기준)도 읽는다. 뒤에 적은 파일이 이기므로 둘 다 있으면 ~/.vibenote가 쓰인다.
+    # 옮기는 동안은 저장소 루트 .env(backend 폴더에서 실행 기준)도 읽는다. 키 단위로 합쳐지고 같은 키는 뒤에 적은 ~/.vibenote가 이긴다
+    # (루트에만 있는 키는 계속 쓰인다). 순서는 EnvFileImportTest가 지킨다.
     import:
       - optional:file:../.env[.properties]
       - optional:file:${user.home}/.vibenote/.env[.properties]

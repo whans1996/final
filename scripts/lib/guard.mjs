@@ -4,6 +4,7 @@
 // 완전한 셸 파서가 아니라 가드용 근사다. 모르는 형태는 단어로 남겨 규칙이 보게 한다.
 import { homedir } from 'node:os';
 import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path';
+import { STOP_LABEL } from './codex.mjs';
 import { SECRET_SAMPLES, codeReadsSecret, globHitsSecret, globMatch, globMatchPath, isSecretFile, isWithin, stringLiterals } from './protect.mjs';
 
 const SUBST = '$()'; // 명령 치환 자리 표시
@@ -802,6 +803,7 @@ const R = {
   addForce: 'git add --force는 금지입니다. .gitignore된 비밀 파일이 커밋될 수 있습니다.',
   hooksPath: 'git hook 경로 변경은 금지입니다.',
   merge: 'PR 머지는 영역 오너가 CI 초록을 확인하고 GitHub에서 직접 합니다.',
+  codexStop: `Codex 루프를 멈추는 ${STOP_LABEL} 라벨은 사람이 정하고 붙입니다 (#249). 사용자에게 GitHub PR 화면이나 '! gh pr edit <번호> --add-label ${STOP_LABEL}'로 붙여 달라고 요청하세요.`,
   ghApi: 'GitHub API로 머지·브랜치(ref)·저장소 설정·시크릿을 바꾸는 요청은 금지입니다 (gh pr merge 차단 우회, #130). 사람이 GitHub에서 직접 합니다.',
   repo: '저장소 설정 변경·삭제는 사람이 직접 합니다.',
   secret: '릴리스·시크릿·변수 변경은 사람이 직접 합니다.',
@@ -961,6 +963,16 @@ function checkGhApi(args) {
   return githubWrite(path, method || (body ? 'POST' : 'GET'), args.join(' ')) ? R.ghApi : null;
 }
 
+/** AI가 스스로 Codex 루프를 끄지 않게 한다: pr·issue edit --add-label, api로 라벨 추가 (#249) */
+function addsStopLabel(group, action, rest) {
+  if (group === 'api') return rest.some((a) => a.includes(STOP_LABEL));
+  if (!['pr', 'issue'].includes(group) || action !== 'edit') return false;
+  return rest.some((a, i) => {
+    const value = a.startsWith('--add-label=') ? a.slice(12) : a === '--add-label' ? rest[i + 1] : null;
+    return !!value && value.split(',').some((l) => l.trim() === STOP_LABEL);
+  });
+}
+
 // 하위 명령에 따라 막는 gh 그룹 (별칭 판정용)
 const GH_GUARDED = new Set(['pr', 'repo', 'release', 'secret', 'variable']);
 // gh 내장 명령 (gh 2.x help 기준, co는 내장 별칭)
@@ -993,6 +1005,7 @@ function checkGh(args, ctx = {}, depth = 0) {
   // 모르는 하위 명령은 이미 만들어 둔 별칭이나 확장일 수 있다 (gh alias list를 hook에서 읽지 않는다, #245)
   if (group && !group.startsWith('-') && !GH_COMMANDS.has(group)) return R.ghUnknown;
   if (group === 'pr' && action === 'merge') return R.merge;
+  if (addsStopLabel(group, action, args.slice(2))) return R.codexStop;
   if (group === 'api') return checkGhApi(args.slice(1));
   if (group === 'repo' && ['delete', 'edit', 'rename', 'archive'].includes(action)) return R.repo;
   if (['release', 'secret', 'variable'].includes(group) && ['delete', 'remove', 'set'].includes(action)) return R.secret;

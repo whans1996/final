@@ -60,3 +60,31 @@ test('--move-env는 이미 있는 ~/.vibenote/.env를 덮어쓰지 않고, 옮�
     rmSync(p.dir, { recursive: true, force: true });
   }
 });
+
+test('--move-env는 파일이 잠겨 옮기지 못하거나, 다른 드라이브에 복사한 뒤 지우지 못하면 예외 대신 할 일을 알린다', () => {
+  const p = tempPaths();
+  const fail = (code) => () => {
+    throw Object.assign(new Error(code), { code });
+  };
+  try {
+    mkdirSync(join(p.dir, 'repo'));
+    writeFileSync(p.root, 'K=1\n');
+    const locked = moveEnv(p, { renameSync: fail('EBUSY') });
+    assert.equal(locked.ok, false);
+    assert.match(locked.message, /EBUSY/);
+    assert.ok(existsSync(p.root) && !existsSync(p.home));
+
+    // 저장소와 홈이 다른 드라이브(EXDEV): 복사는 됐는데 원본을 지우지 못함 → 두 파일이 키 단위로 합쳐지므로 직접 지우라고 알린다
+    const copied = moveEnv(p, { renameSync: fail('EXDEV'), unlinkSync: fail('EPERM') });
+    assert.equal(copied.ok, false);
+    assert.match(copied.message, /직접 지우/);
+    assert.equal(readFileSync(p.home, 'utf8'), 'K=1\n');
+
+    rmSync(p.home);
+    const crossDrive = moveEnv(p, { renameSync: fail('EXDEV') });
+    assert.equal(crossDrive.ok, true);
+    assert.ok(!existsSync(p.root));
+  } finally {
+    rmSync(p.dir, { recursive: true, force: true });
+  }
+});

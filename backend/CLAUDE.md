@@ -130,6 +130,6 @@ com.vibenote
 
 루트에서 `node scripts/verify.mjs be`를 쓰면 포맷 검사와 테스트를 돌리고 실패만 요약해 준다.
 
-- 설정: `application.yml`(공통, PC마다 저장소 밖 `~/.vibenote/.env`를 자동으로 읽음. 옮기는 동안은 루트 `.env`도 읽고 둘 다 있으면 `~/.vibenote`가 이긴다, #249), `application-local.yml`(개발용 JWT 키, debug 로그). 테스트는 `IntegrationTestBase`의 `properties`가 우선한다.
+- 설정: `application.yml`(공통, PC마다 저장소 밖 `~/.vibenote/.env`를 자동으로 읽음. 옮기는 동안은 루트 `.env`도 읽는다. 키 단위로 합쳐져 같은 키만 `~/.vibenote`가 이긴다, #249), `application-local.yml`(개발용 JWT 키, debug 로그). 테스트는 `IntegrationTestBase`의 `properties`가 우선한다.
 - Gradle 실행은 **`JAVA_HOME`(JDK 17 이상)** 을 쓰고, 컴파일·테스트는 **Java 21 toolchain**으로 한다. JDK 21이 없으면 첫 빌드 때 Gradle(foojay resolver)이 `~/.gradle/jdks`에 자동으로 받는다. PATH의 `java`가 8이어도 상관없다. 설정 방법은 `docs/환경설정.md`.
 - STS에서는 Installed JREs에 **JDK 21**을 추가하고 프로젝트 JRE로 지정한다.
