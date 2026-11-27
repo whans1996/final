@@ -1,6 +1,7 @@
 package com.vibenote.analysis.flow;
 
 import com.vibenote.common.IntegrationTestBase;
+import com.vibenote.common.TestProjects;
 import com.vibenote.common.security.JwtTokenProvider;
 import com.vibenote.user.UserService;
 import com.vibenote.user.dto.SignupRequest;
@@ -60,9 +61,11 @@ abstract class FlowTestSupport extends IntegrationTestBase {
      */
     long analysis(long userId, String status, String level, List<String> apis) {
         jdbc.update(
-                "INSERT INTO analyses (user_id, source_type, project_name, title, level, status,"
-                        + " created_at) VALUES (?, 'ZIP', 'todo-app', 'todo-app', ?, ?, ?)",
+                "INSERT INTO analyses (user_id, project_id, source_type, project_name, title,"
+                    + " level, status, created_at) VALUES (?, ?, 'ZIP', 'todo-app', 'todo-app', ?,"
+                    + " ?, ?)",
                 userId,
+                TestProjects.zip(jdbc, userId),
                 level,
                 status,
                 LocalDateTime.now(KST).withNano(0));

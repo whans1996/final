@@ -80,6 +80,10 @@ public enum ErrorCode {
     /** ZIP 분석이거나 FAILED가 아닌 분석의 재실행 (L-1a AC3). */
     ANALYSIS_008(HttpStatus.CONFLICT, "실패한 저장소 주소 분석만 다시 실행할 수 있습니다. ZIP은 파일을 다시 올려 주세요."),
 
+    // ── PROJECT (A P-1a) ──
+    /** 없는 프로젝트, 다른 회원의 프로젝트, 분석을 모두 삭제한 프로젝트(조회). 존재 여부를 드러내지 않는다 (P-1a AC5·AC7). */
+    PROJECT_404(HttpStatus.NOT_FOUND, "프로젝트를 찾을 수 없습니다."),
+
     // ── CONCEPT (A F-08 · B F-09~13) ──
     /** 없는 카드, 또는 PUBLISHED가 아닌 카드(DRAFT·HIDDEN)를 일반 사용자가 조회 (F-00b, NF-04). */
     CONCEPT_404(HttpStatus.NOT_FOUND, "개념 카드를 찾을 수 없습니다."),

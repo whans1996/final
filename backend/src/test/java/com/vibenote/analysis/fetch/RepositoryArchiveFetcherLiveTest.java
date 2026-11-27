@@ -33,7 +33,8 @@ class RepositoryArchiveFetcherLiveTest {
                         DataSize.ofMegabytes(30),
                         Duration.ofSeconds(5),
                         Duration.ofSeconds(60),
-                        3);
+                        3,
+                        Duration.ofSeconds(5));
         Path target = dir.resolve("analysis-tmp").resolve("1.zip");
 
         new RepositoryArchiveFetcher(properties)

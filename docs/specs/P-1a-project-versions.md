@@ -244,15 +244,16 @@ ALTER TABLE analyses MODIFY project_id BIGINT NOT NULL;
 ## 9. 결정 필요
 
 - 없음 (11-27 사용자 선택: FE 최소 화면 포함, ZIP은 요청 때 프로젝트 선택)
+- 구현 메모 (11-27): F-05a·F-05b 테스트의 AC 번호와 섞이지 않게 AC1·4·5는 `AnalysisProjectRequestTest`, AC2·3·11 수집기는 `fetch/RepositoryCommitFetchTest`로 나눈다. 커밋 조회 시간 상한은 `analysis.fetch.commit-timeout`(5s)
 
 ## 10. 구현 체크리스트
 
 `/implement`가 진행하며 체크한다.
 
-- [ ] 브랜치 `feature/P-1a-project-versions`
-- [ ] Flyway `V15__projects.sql` + 백필 테스트
+- [x] 브랜치 `feature/P-1a-project-versions`
+- [x] Flyway `V15__projects.sql` + 백필 테스트
 - [ ] AC별 실패 테스트 작성 (red 확인)
-- [ ] BE 구현 (green): 요청 묶기 → FETCHING 커밋 조회·버전 → 프로젝트 API → 배지
+- [ ] BE 구현 (green): 요청 묶기(AC1·4·5 ✅) → FETCHING 커밋 조회·버전(구현됨, 테스트 남음) → 프로젝트 API → 배지
 - [ ] FE 구현 (green)
 - [ ] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
 - [ ] contract-checker 통과

@@ -3,7 +3,7 @@
 <mapper namespace="com.vibenote.analysis.AnalysisMapper">
 
     <sql id="columns">
-        id, user_id, source_type, source_url, project_name, title, memo, level, status, progress, is_public,
+        id, user_id, project_id, project_version_id, source_type, source_url, project_name, title, memo, level, status, progress, is_public,
         error_code, error_message, created_at, updated_at, quiz_status, quiz_regenerations
     </sql>
 
@@ -17,8 +17,9 @@
 
     <!-- updated_at은 DB 세션 시간대의 기본값·ON UPDATE 대신 서비스 Clock 값(Asia/Seoul)으로 쓴다 -->
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO analyses (user_id, source_type, source_url, project_name, title, memo, level, status, created_at, updated_at)
-        VALUES (#{userId}, #{sourceType}, #{sourceUrl}, #{projectName}, #{title}, #{memo}, #{level}, #{status}, #{createdAt}, #{createdAt})
+        INSERT INTO analyses (user_id, project_id, project_version_id, source_type, source_url, project_name, title, memo,
+                              level, status, created_at, updated_at)
+        VALUES (#{userId}, #{projectId}, #{projectVersionId}, #{sourceType}, #{sourceUrl}, #{projectName}, #{title}, #{memo}, #{level}, #{status}, #{createdAt}, #{createdAt})
     </insert>
 
     <!-- idx_analyses_user_created. deleted_at 조건 없음: 삭제해도 한도는 돌아오지 않는다 (V2 주석) -->
@@ -171,6 +172,11 @@
     <!-- L-1a AC8. 재시작 때 재생성 중이던 퀴즈를 모두 실패로 (삭제된 분석 포함) -->
     <update id="failInterruptedQuizRegenerations">
         UPDATE analyses SET quiz_status = 'FAILED' WHERE quiz_status = 'GENERATING'
+    </update>
+
+    <!-- P-1a AC2·AC3. 호출자가 lockInProgress로 행을 잠근 뒤 부른다 -->
+    <update id="updateVersion">
+        UPDATE analyses SET project_version_id = #{versionId} WHERE id = #{id}
     </update>
 
     <select id="lockInProgress" resultType="long">

@@ -1,6 +1,7 @@
 package com.vibenote.post;
 
 import com.vibenote.common.IntegrationTestBase;
+import com.vibenote.common.TestProjects;
 import com.vibenote.common.security.JwtProperties;
 import com.vibenote.common.security.JwtTokenProvider;
 import io.jsonwebtoken.Jwts;
@@ -55,10 +56,11 @@ abstract class PostApiTestBase extends IntegrationTestBase {
 
     protected long insertAnalysis(long userId, String status, boolean isPublic, boolean deleted) {
         jdbc.update(
-                "INSERT INTO analyses (user_id, source_type, project_name, title, level, status,"
-                        + " is_public, deleted_at) VALUES (?, 'ZIP', 'shop-backend', '쇼핑몰 과제',"
-                        + " 'JUNIOR', ?, ?, ?)",
+                "INSERT INTO analyses (user_id, project_id, source_type, project_name, title,"
+                    + " level, status, is_public, deleted_at) VALUES (?, ?, 'ZIP', 'shop-backend',"
+                    + " '쇼핑몰 과제', 'JUNIOR', ?, ?, ?)",
                 userId,
+                TestProjects.zip(jdbc, userId),
                 status,
                 isPublic,
                 deleted ? BASE : null);

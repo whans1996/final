@@ -1,6 +1,7 @@
 package com.vibenote.analysis;
 
 import com.vibenote.common.IntegrationTestBase;
+import com.vibenote.common.TestProjects;
 import com.vibenote.common.security.JwtTokenProvider;
 import com.vibenote.user.UserService;
 import com.vibenote.user.dto.SignupRequest;
@@ -57,10 +58,11 @@ abstract class AnalysisTestSupport extends IntegrationTestBase {
     long insertAnalysis(
             long userId, String status, LocalDateTime createdAt, boolean deleted, String title) {
         jdbc.update(
-                "INSERT INTO analyses (user_id, source_type, project_name, title, level, status,"
-                        + " created_at, deleted_at) VALUES (?, 'ZIP', ?, ?, 'BEGINNER', ?, ?,"
-                        + " IF(?, NOW(), NULL))",
+                "INSERT INTO analyses (user_id, project_id, source_type, project_name, title,"
+                        + " level, status, created_at, deleted_at) VALUES (?, ?, 'ZIP', ?, ?,"
+                        + " 'BEGINNER', ?, ?, IF(?, NOW(), NULL))",
                 userId,
+                TestProjects.zip(jdbc, userId),
                 title,
                 title,
                 status,
@@ -73,10 +75,11 @@ abstract class AnalysisTestSupport extends IntegrationTestBase {
     /** 막 접수된 저장소 URL 분석 행 (F-05b). sourceUrl은 정규화한 주소로 넣는다. */
     long insertUrlAnalysis(long userId, String sourceUrl) {
         jdbc.update(
-                "INSERT INTO analyses (user_id, source_type, source_url, project_name, title,"
-                    + " level, status, created_at) VALUES (?, 'URL', ?, 'repo', 'repo', 'BEGINNER',"
-                    + " 'FETCHING', ?)",
+                "INSERT INTO analyses (user_id, project_id, source_type, source_url, project_name,"
+                    + " title, level, status, created_at) VALUES (?, ?, 'URL', ?, 'repo', 'repo',"
+                    + " 'BEGINNER', 'FETCHING', ?)",
                 userId,
+                TestProjects.url(jdbc, userId, sourceUrl),
                 sourceUrl,
                 LocalDateTime.now(KST).withNano(0));
         return jdbc.queryForObject(

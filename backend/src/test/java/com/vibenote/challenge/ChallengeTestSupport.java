@@ -1,6 +1,7 @@
 package com.vibenote.challenge;
 
 import com.vibenote.common.IntegrationTestBase;
+import com.vibenote.common.TestProjects;
 import com.vibenote.common.security.JwtTokenProvider;
 import java.time.Clock;
 import java.time.LocalDateTime;
@@ -149,10 +150,11 @@ abstract class ChallengeTestSupport extends IntegrationTestBase {
     /** {@code createdAt}은 {@code yyyy-MM-dd HH:mm:ss}. */
     long insertAnalysis(long userId, String status, String createdAt, boolean deleted) {
         jdbc.update(
-                "INSERT INTO analyses (user_id, source_type, project_name, title, level, status,"
-                        + " progress, created_at, deleted_at) VALUES (?, 'ZIP', 'p', 'p', 'JUNIOR',"
-                        + " ?, 0, ?, IF(?, NOW(), NULL))",
+                "INSERT INTO analyses (user_id, project_id, source_type, project_name, title,"
+                    + " level, status, progress, created_at, deleted_at) VALUES (?, ?, 'ZIP', 'p',"
+                    + " 'p', 'JUNIOR', ?, 0, ?, IF(?, NOW(), NULL))",
                 userId,
+                TestProjects.zip(jdbc, userId),
                 status,
                 createdAt,
                 deleted);

@@ -17,6 +17,7 @@ import org.springframework.util.unit.DataSize;
  * @param connectTimeout 연결 시간 상한
  * @param timeout 첫 요청부터 본문 끝까지의 시간 상한. 넘으면 ANALYSIS_502
  * @param maxRedirects 따라가는 리다이렉트 수 상한
+ * @param commitTimeout 최신 커밋 조회(공개 확인 포함)의 시간 상한. 넘으면 조회 실패로 본다 (P-1a AC3·AC9)
  */
 @ConfigurationProperties("analysis.fetch")
 public record FetchProperties(
@@ -28,7 +29,8 @@ public record FetchProperties(
         @DefaultValue("30MB") DataSize maxArchiveBytes,
         @DefaultValue("5s") Duration connectTimeout,
         @DefaultValue("60s") Duration timeout,
-        @DefaultValue("3") int maxRedirects) {
+        @DefaultValue("3") int maxRedirects,
+        @DefaultValue("5s") Duration commitTimeout) {
 
     public FetchProperties {
         allowedHosts = List.copyOf(allowedHosts);
@@ -41,7 +43,7 @@ public record FetchProperties(
 
     @Override
     public String toString() {
-        return "FetchProperties[githubApiBase=%s, gitlabApiBase=%s, allowedHosts=%s, githubToken=%s, maxArchiveBytes=%s, connectTimeout=%s, timeout=%s, maxRedirects=%d]"
+        return "FetchProperties[githubApiBase=%s, gitlabApiBase=%s, allowedHosts=%s, githubToken=%s, maxArchiveBytes=%s, connectTimeout=%s, timeout=%s, maxRedirects=%d, commitTimeout=%s]"
                 .formatted(
                         githubApiBase,
                         gitlabApiBase,
@@ -50,6 +52,7 @@ public record FetchProperties(
                         maxArchiveBytes,
                         connectTimeout,
                         timeout,
-                        maxRedirects);
+                        maxRedirects,
+                        commitTimeout);
     }
 }

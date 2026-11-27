@@ -11,6 +11,7 @@ import com.vibenote.analysis.explain.ExplainProperties;
 import com.vibenote.analysis.explain.FileExplainer;
 import com.vibenote.analysis.explain.OverviewExplainer;
 import com.vibenote.analysis.fetch.RepositoryArchiveFetcher;
+import com.vibenote.analysis.fetch.RepositoryCommit;
 import com.vibenote.analysis.fetch.RepositoryUrl;
 import com.vibenote.analysis.pipeline.AnalysisFailedException;
 import com.vibenote.analysis.pipeline.ImportanceRanker;
@@ -138,12 +139,18 @@ public class AnalysisPipeline {
     /**
      * ZIP은 요청 때 이미 받아 두었다. 저장소 URL(F-05b)은 여기서 기본 브랜치 아카이브를 같은 임시 경로로 받으므로, 이후 단계·{@code finally}
      * 삭제·재시작 복구가 그대로 적용된다.
+     *
+     * <p>저장소는 기본 브랜치 최신 커밋을 먼저 조회해 그 커밋의 아카이브를 받고, 받은 뒤에 그 커밋의 버전에 붙인다 (P-1a AC2). 조회가 실패하면 기본 브랜치
+     * 아카이브를 받아 커밋 정보 없는 새 버전에 붙고(AC3), 받기가 실패하면 버전을 만들지 않는다. 외부 요청은 트랜잭션 밖이다.
      */
     private void fetch(Context context) {
         Path archive = tempFiles.path(context.analysisId);
         Analysis analysis = analysisService.findForPipeline(context.analysisId);
         if (analysis.getSourceType() == SourceType.URL) {
-            archiveFetcher.download(RepositoryUrl.parse(analysis.getSourceUrl()), archive);
+            RepositoryUrl repository = RepositoryUrl.parse(analysis.getSourceUrl());
+            RepositoryCommit commit = archiveFetcher.latestCommit(repository).orElse(null);
+            archiveFetcher.download(repository, commit == null ? null : commit.sha(), archive);
+            analysisService.attachVersion(context.analysisId, commit);
         } else if (!Files.isRegularFile(archive)) {
             throw new IllegalStateException("분석 임시 파일 없음: " + archive);
         }

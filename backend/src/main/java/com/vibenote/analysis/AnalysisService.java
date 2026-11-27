@@ -14,7 +14,9 @@ import com.vibenote.analysis.dto.UpdateAnalysisRequest;
 import com.vibenote.analysis.dto.VisibilityResponse;
 import com.vibenote.analysis.explain.AnalysisOverview;
 import com.vibenote.analysis.explain.FileExplanation;
+import com.vibenote.analysis.fetch.RepositoryCommit;
 import com.vibenote.analysis.pipeline.SelectedFile;
+import com.vibenote.analysis.project.ProjectService;
 import com.vibenote.common.Level;
 import com.vibenote.common.exception.BusinessException;
 import com.vibenote.common.exception.ErrorCode;
@@ -71,6 +73,7 @@ public class AnalysisService {
     private final ApplicationEventPublisher events;
     private final ActivityService activityService;
     private final QuizProperties quizProperties;
+    private final ProjectService projectService;
     private final Clock clock;
 
     public AnalysisService(
@@ -81,6 +84,7 @@ public class AnalysisService {
             ApplicationEventPublisher events,
             ActivityService activityService,
             QuizProperties quizProperties,
+            ProjectService projectService,
             Clock clock) {
         this.analysisMapper = analysisMapper;
         this.userService = userService;
@@ -89,6 +93,7 @@ public class AnalysisService {
         this.events = events;
         this.activityService = activityService;
         this.quizProperties = quizProperties;
+        this.projectService = projectService;
         this.clock = clock;
     }
 
@@ -96,28 +101,38 @@ public class AnalysisService {
      * 한도 확인 → 행 INSERT → (ZIP만) 임시 파일 저장을 한 트랜잭션으로 하고, 커밋된 뒤 파이프라인이 시작된다
      * (AnalysisPipelineLauncher). 회원 행을 잠가 같은 회원의 동시 요청이 한도를 함께 통과하지 못하게 한다. 저장소 URL은 여기서 외부 요청을 하지
      * 않고 FETCHING 단계에서 받는다 (F-05b AC1).
+     *
+     * <p>분석은 프로젝트에 붙는다 (P-1a AC1·AC4·AC5). 프로젝트를 먼저 정해 잘못된 {@code projectId}는 한도보다 먼저 거절하고, 실패하면
+     * 프로젝트·버전·분석이 모두 롤백된다.
      */
     @Transactional
     public CreateAnalysisResponse request(long userId, CreateAnalysisRequest request) {
         User user = userService.lockActiveMember(userId);
         LocalDateTime now = now();
+        Level level = request.level() != null ? request.level() : user.getLevel();
+        Analysis analysis;
+        if (request.repository() != null) {
+            analysis = Analysis.newUrl(userId, request.repository(), level, now);
+            analysis.setProjectId(
+                    projectService.assignUrl(
+                            userId, request.projectId(), request.repository(), now));
+        } else {
+            String name = projectName(request.file().getOriginalFilename());
+            analysis = Analysis.newZip(userId, name, level, now);
+            ProjectService.Assignment assignment =
+                    projectService.assignZip(userId, request.projectId(), name, now);
+            analysis.setProjectId(assignment.projectId());
+            analysis.setProjectVersionId(assignment.versionId());
+        }
         checkDailyLimit(userId, now);
 
-        Level level = request.level() != null ? request.level() : user.getLevel();
-        Analysis analysis =
-                request.repository() != null
-                        ? Analysis.newUrl(userId, request.repository(), level, now)
-                        : Analysis.newZip(
-                                userId,
-                                projectName(request.file().getOriginalFilename()),
-                                level,
-                                now);
         analysisMapper.insert(analysis);
         if (request.file() != null) {
             tempFiles.save(analysis.getId(), request.file());
         }
         events.publishEvent(new AnalysisRequestedEvent(analysis.getId()));
-        return new CreateAnalysisResponse(analysis.getId(), analysis.getStatus());
+        return new CreateAnalysisResponse(
+                analysis.getId(), analysis.getStatus(), analysis.getProjectId());
     }
 
     /**
@@ -140,7 +155,8 @@ public class AnalysisService {
         analysisMapper.insert(analysis);
         deleteChildren(analysisId);
         events.publishEvent(new AnalysisRequestedEvent(analysis.getId()));
-        return new CreateAnalysisResponse(analysis.getId(), analysis.getStatus());
+        return new CreateAnalysisResponse(
+                analysis.getId(), analysis.getStatus(), analysis.getProjectId());
     }
 
     /** 오늘(Asia/Seoul) FAILED가 아닌 분석이 한도만큼이면 ANALYSIS_429. 호출자가 회원 행을 잠근 뒤 부른다. */
@@ -251,6 +267,20 @@ public class AnalysisService {
             chunks.add(files.subList(from, files.size()));
         }
         return chunks;
+    }
+
+    /**
+     * 저장소 아카이브를 받은 분석을 그 커밋의 버전에 붙인다 (P-1a AC2·AC3). 커밋을 조회하지 못했으면 커밋 정보 없는 새 버전이다. 그사이 중단·삭제됐으면
+     * 버전을 만들지 않는다. 분석 → 프로젝트 순서로 잠근다.
+     */
+    @Transactional
+    public void attachVersion(long analysisId, RepositoryCommit commit) {
+        if (!lockInProgress(analysisId)) {
+            return;
+        }
+        Analysis analysis = findForPipeline(analysisId);
+        analysisMapper.updateVersion(
+                analysisId, projectService.versionFor(analysis.getProjectId(), commit, now()));
     }
 
     /** 파이프라인이 처리할 분석 (삭제 여부와 상관없음). 없으면 예기치 못한 오류다. */

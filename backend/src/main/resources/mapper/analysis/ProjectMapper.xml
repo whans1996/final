@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.vibenote.analysis.project.ProjectMapper">
+
+    <sql id="columns">
+        id, user_id, source_type, source_url, name, latest_commit_sha, latest_commit_message,
+        latest_committed_at, latest_checked_at, created_at
+    </sql>
+
+    <!-- created_at·updated_at은 DB 세션 시간대의 기본값 대신 서비스 Clock 값(Asia/Seoul)으로 쓴다 -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO projects (user_id, source_type, source_url, name, created_at, updated_at)
+        VALUES (#{userId}, #{sourceType}, #{sourceUrl}, #{name}, #{createdAt}, #{createdAt})
+    </insert>
+
+    <select id="lockOwned" resultType="com.vibenote.analysis.project.Project">
+        SELECT <include refid="columns"/> FROM projects
+        WHERE id = #{id} AND user_id = #{userId}
+        FOR UPDATE
+    </select>
+
+    <select id="lock" resultType="long">
+        SELECT id FROM projects WHERE id = #{id} FOR UPDATE
+    </select>
+
+    <!-- uk_projects_user_url. 열 정렬(utf8mb4_0900_ai_ci)이 대소문자를 구분하지 않아 경로 대소문자만 다른 주소는 같은 프로젝트다 -->
+    <select id="findByUrl" resultType="com.vibenote.analysis.project.Project">
+        SELECT <include refid="columns"/> FROM projects
+        WHERE user_id = #{userId} AND source_url = #{sourceUrl}
+    </select>
+
+    <select id="nextVersionNumber" resultType="int">
+        SELECT COALESCE(MAX(number), 0) + 1 FROM project_versions WHERE project_id = #{projectId}
+    </select>
+
+    <insert id="insertVersion" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO project_versions (project_id, number, commit_sha, commit_message, committed_at, created_at)
+        VALUES (#{projectId}, #{number}, #{commitSha}, #{commitMessage}, #{committedAt}, #{createdAt})
+    </insert>
+
+    <select id="findVersionIdByCommit" resultType="long">
+        SELECT id FROM project_versions WHERE project_id = #{projectId} AND commit_sha = #{commitSha}
+    </select>
+</mapper>

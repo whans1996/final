@@ -58,6 +58,10 @@ class RepositoryArchiveFetcherTest {
     }
 
     private FetchProperties properties(String token, Duration timeout) {
+        return properties(token, timeout, Duration.ofSeconds(5));
+    }
+
+    private FetchProperties properties(String token, Duration timeout, Duration commitTimeout) {
         return new FetchProperties(
                 server.base(),
                 server.base() + "/api/v4",
@@ -66,7 +70,8 @@ class RepositoryArchiveFetcherTest {
                 MAX,
                 Duration.ofSeconds(2),
                 timeout,
-                3);
+                3,
+                commitTimeout);
     }
 
     private RepositoryArchiveFetcher fetcher() {
@@ -296,7 +301,8 @@ class RepositoryArchiveFetcherTest {
                                 MAX,
                                 Duration.ofSeconds(2),
                                 Duration.ofSeconds(5),
-                                3));
+                                3,
+                                Duration.ofSeconds(5)));
 
         assertFails(() -> fetcher.download(github(), target), ErrorCode.ANALYSIS_502);
     }

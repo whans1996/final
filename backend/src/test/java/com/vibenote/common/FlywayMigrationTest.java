@@ -77,8 +77,10 @@ class FlywayMigrationTest extends IntegrationTestBase {
         long userId = insertUser("solver");
         long conceptId = insertConcept("test-트랜잭션");
         jdbc.update(
-                "INSERT INTO analyses (user_id, source_type, level) VALUES (?, 'ZIP', 'BEGINNER')",
-                userId);
+                "INSERT INTO analyses (user_id, project_id, source_type, level) VALUES (?, ?,"
+                        + " 'ZIP', 'BEGINNER')",
+                userId,
+                TestProjects.zip(jdbc, userId));
         long analysisId = lastId();
         jdbc.update("INSERT INTO quizzes (analysis_id) VALUES (?)", analysisId);
         long quizId = lastId();

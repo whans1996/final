@@ -15,6 +15,9 @@ import org.apache.ibatis.annotations.Param;
 @Mapper
 public interface AnalysisMapper {
 
+    /** 분석을 버전에 붙인다 (P-1a FETCHING). */
+    void updateVersion(@Param("id") long id, @Param("versionId") long versionId);
+
     /** 생성된 id를 {@code analysis.id}에 채운다. created_at·updated_at은 서비스의 Clock 값으로 넣는다. */
     void insert(Analysis analysis);
 
