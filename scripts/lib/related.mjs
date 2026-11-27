@@ -1,11 +1,23 @@
 // 바뀐 파일에서 검증 영역과 "관련 테스트"를 고른다 (H-1: 커밋 hook은 빠른 검사만, 전체는 pre-push·CI).
 // git·파일 시스템 호출 없이 계산하는 부분이다 (scripts/test/related.test.mjs).
 import { posix } from 'node:path';
+import { OWNER_KEYS, nowRelPath } from './common.mjs';
 
 const HARNESS_RE = /^(scripts|\.claude\/hooks|\.githooks)\/.*\.mjs$/;
-// 하네스가 읽는 문서: 형식이 깨지면 표시가 틀리므로 하네스 영역으로 보고 그 파일을 파싱하는 테스트를 고른다 (로드맵 R-1)
-const HARNESS_DATA = { 'docs/로드맵.md': 'scripts/test/roadmap.test.mjs' };
-/** 하네스 영역에 드는 문서 경로 (verify.mjs가 검증 캐시의 미커밋 변경 검사에 쓴다, Codex 리뷰) */
+// 하네스가 읽는 문서·설정: 형식이 깨지면 표시·판정이 틀리므로 하네스 영역으로 보고 그 파일을 읽는 테스트를 고른다
+// (로드맵 R-1, HP-4 AC3: NOW 머리말이 깨진 커밋이 커밋 hook·pre-push를 지나 CI에서만 잡혔다 #166, 설정 파일 H-10)
+const NOW_FILES = OWNER_KEYS.map(nowRelPath);
+const HARNESS_DATA = {
+  'docs/로드맵.md': ['scripts/test/roadmap.test.mjs'],
+  ...Object.fromEntries(NOW_FILES.map((f) => [f, ['scripts/test/common.test.mjs']])),
+  '.claude/settings.json': ['scripts/test/settings.test.mjs'],
+  'scripts/lib/pcs.json': ['scripts/test/env-check.test.mjs'],
+  '.github/CODEOWNERS': ['scripts/test/codeowners.test.mjs', 'scripts/test/owners.test.mjs'],
+  '.github/workflows/ci.yml': ['scripts/test/ci-changes.test.mjs', 'scripts/test/ci-filter.test.mjs', 'scripts/test/roadmap.test.mjs'],
+  '.github/workflows/roadmap.yml': ['scripts/test/roadmap.test.mjs'],
+  '.claude/agents/verifier.md': ['scripts/test/verify.test.mjs'],
+};
+/** 하네스 영역에 드는 문서·설정 경로 (verify.mjs가 검증 캐시의 미커밋 변경 검사에 쓴다, Codex 리뷰) */
 export const HARNESS_DATA_FILES = Object.keys(HARNESS_DATA);
 const isHarness = (f) => HARNESS_RE.test(f) || Object.hasOwn(HARNESS_DATA, f);
 // 실제 Gemini·Ollama를 부르는 테스트는 `test` 태스크에서 빠진다 (build.gradle 태그 제외). 필터에 넣으면 "No tests found"로 실패한다
@@ -91,7 +103,7 @@ export function frontendCodeFiles(files) {
  */
 export function relatedHarnessTests(files, testFiles, readTest) {
   const picked = new Set();
-  for (const f of files) if (HARNESS_DATA[f] && testFiles.includes(HARNESS_DATA[f])) picked.add(HARNESS_DATA[f]);
+  for (const f of files) for (const t of Object.hasOwn(HARNESS_DATA, f) ? HARNESS_DATA[f] : []) if (testFiles.includes(t)) picked.add(t);
   const changed = files.filter((f) => HARNESS_RE.test(f));
   for (const f of changed) if (testFiles.includes(f)) picked.add(f);
   const names = changed.filter((f) => !testFiles.includes(f)).map((f) => posix.basename(f));

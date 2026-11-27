@@ -1,12 +1,55 @@
 // NOW·작업로그 자동 초안 (H-1)
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
 import { test } from 'node:test';
-import { commitsLine, lastEntryAt, logEntry, touchNowHeader, undoMsysPathConv, verifiedLine } from '../lib/records.mjs';
+import { git } from '../lib/common.mjs';
+import { branchChangedFiles, commitsLine, lastEntryAt, logEntry, nowFormatProblems, replaceNowBody, touchNowHeader, undoMsysPathConv, verifiedLine } from '../lib/records.mjs';
 
 test('NOW 갱신 줄만 바꾸고, 없으면 맨 위에 넣는다', () => {
   assert.equal(touchNowHeader('# NOW\n갱신: 옛날\n본문', '갱신: 새것'), '# NOW\n갱신: 새것\n본문');
   assert.equal(touchNowHeader('본문', '갱신: 새것'), '갱신: 새것\n\n본문');
+});
+
+const NOW_HEAD = '# NOW — 김동환 현재 작업 스냅샷\n\n> 안내 1. 머리 줄은 `stamp --now` 출력으로 쓴다. 갱신: 줄을 짐작해 쓰지 않는다\n> 안내 2';
+const BODY = '## 현재 기능\n\nHP-4\n\n## 바로 다음 할 일\n\n1. AC5\n';
+
+test('HP-4 AC4: NOW 본문 교체는 머리말을 지키고 갱신 줄을 새로 쓴다 (#166)', () => {
+  const current = `${NOW_HEAD}\n갱신: 2026-11-26 10:00 · 옛날\n\n## 현재 기능\n\n옛 본문\n`;
+  const r = replaceNowBody(current, BODY, '갱신: 2026-11-27 11:00 · 새것');
+  assert.equal(r.error, null);
+  assert.equal(r.text, `${NOW_HEAD}\n갱신: 2026-11-27 11:00 · 새것\n\n${BODY}`);
+  assert.equal(r.warning, null);
+  // 갱신 줄이 없어진(깨진) 파일도 머리말 뒤에 갱신 줄을 넣는다
+  assert.equal(replaceNowBody(`${NOW_HEAD}\n\n## 현재 기능\n옛\n`, BODY, '갱신: 새것').text, `${NOW_HEAD}\n갱신: 새것\n\n${BODY}`);
+  assert.deepEqual(nowFormatProblems(r.text), []);
+});
+
+test('HP-4 AC4: 갱신 줄이 든 본문, 필수 섹션이 없는 본문은 거부하고 30줄을 넘으면 경고만 한다', () => {
+  const current = `${NOW_HEAD}\n갱신: 옛날\n\n${BODY}`;
+  assert.match(replaceNowBody(current, `갱신: 짐작\n\n${BODY}`, '갱신: 새것').error, /갱신:/);
+  assert.match(replaceNowBody(current, '## 현재 기능\n\nx\n', '갱신: 새것').error, /## 바로 다음 할 일/);
+  assert.match(replaceNowBody(current, '## 바로 다음 할 일\n\nx\n', '갱신: 새것').error, /## 현재 기능/);
+  assert.equal(replaceNowBody(current, '갱신: x', '갱신: 새것').text, null);
+  const long = replaceNowBody(current, `${BODY}${'- 줄\n'.repeat(30)}`, '갱신: 새것');
+  assert.equal(long.error, null);
+  assert.match(long.warning, /30줄/);
+});
+
+test('HP-4 AC4: NOW 형식 검사 (제목·갱신 줄·필수 섹션)', () => {
+  assert.deepEqual(nowFormatProblems(`${NOW_HEAD}\n갱신: 2026-11-27 11:00 · x\n\n${BODY}`), []);
+  // #166 실제 사례: 머리말 안내 줄의 "갱신:" 지점에서 잘려 갱신 줄이 사라짐
+  assert.ok(nowFormatProblems(`${NOW_HEAD}\n\n${BODY}`).some((p) => /갱신/.test(p)));
+  assert.ok(nowFormatProblems(`갱신: 2026-11-27 11:00 · x\n\n${BODY}`).some((p) => /제목/.test(p)));
+  assert.ok(nowFormatProblems(`${NOW_HEAD}\n갱신: 2026-11-27 11:00 · x\n\n## 현재 기능\n`).some((p) => /바로 다음 할 일/.test(p)));
+});
+
+test('HP-4 AC4: 스킬·CLAUDE.md는 NOW 갱신에 stamp --write-now를 쓴다', () => {
+  for (const f of ['.claude/skills/handoff/SKILL.md', '.claude/skills/implement/SKILL.md', 'CLAUDE.md']) {
+    const src = readFileSync(new URL(`../../${f}`, import.meta.url), 'utf8');
+    assert.match(src, /stamp\.mjs --write-now/, f);
+  }
 });
 
 test('내 마지막 작업로그 시각 (상대 항목은 건너뜀)', () => {
@@ -69,6 +112,47 @@ test('stamp·handoff는 메모 인자에 MSYS 되돌림을 쓴다 (#231)', () =>
     const src = readFileSync(new URL(`../${f}`, import.meta.url), 'utf8');
     assert.match(src, /undoMsysPathConv\(args\[/, f);
   }
+});
+
+test('HP-4 AC6: 바뀐 파일은 merge-base 대비 + 작업 트리 변경이고 develop에서만 바뀐 파일은 넣지 않는다 (#134)', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'vibenote-draft-'));
+  try {
+    const run = (args) => git(args, { cwd: dir });
+    const write = (f, s) => {
+      mkdirSync(dirname(join(dir, f)), { recursive: true });
+      writeFileSync(join(dir, f), s);
+    };
+    run(['init', '-q', '-b', 'develop']);
+    run(['config', 'user.email', 't@example.com']);
+    run(['config', 'user.name', 't']);
+    write('README.md', 'x');
+    run(['add', '-A']);
+    run(['commit', '-q', '-m', 'init']);
+    run(['switch', '-q', '-c', 'feature/x']);
+    write('scripts/lib/a.mjs', 'a');
+    run(['add', '-A']);
+    run(['commit', '-q', '-m', 'feat: a']);
+    // develop만 앞서 간다 (상대 PR 머지)
+    run(['switch', '-q', 'develop']);
+    write('frontend/src/B.vue', 'b');
+    run(['add', '-A']);
+    run(['commit', '-q', '-m', 'feat: b']);
+    run(['switch', '-q', 'feature/x']);
+    // 작업 트리 변경: 수정·새 파일
+    write('README.md', 'y');
+    write('backend/src/main/java/C.java', 'c');
+    assert.deepEqual(branchChangedFiles(run, 'develop').sort(), ['README.md', 'backend/src/main/java/C.java', 'scripts/lib/a.mjs']);
+    // 기준 브랜치가 없으면 빈 목록
+    assert.deepEqual(branchChangedFiles(run, null), []);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('HP-4 AC6: stamp --draft는 branchChangedFiles로 영역을 센다', () => {
+  const src = readFileSync(new URL('../stamp.mjs', import.meta.url), 'utf8');
+  assert.match(src, /branchChangedFiles\(/);
+  assert.doesNotMatch(src, /\['diff', '--name-only', base\]/);
 });
 
 test('검증 상태: HEAD가 verified.json에 있는 영역만 통과', () => {

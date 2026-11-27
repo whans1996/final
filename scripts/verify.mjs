@@ -3,29 +3,38 @@
 // 전체 로그는 .harness/logs/ 에 저장한다. AI 컨텍스트(토큰)를 아끼기 위한 도구다.
 //
 // 사용법: node scripts/verify.mjs [be|fe|harness|all] [--fix] [--staged]
+//        node scripts/verify.mjs be --tests <패턴> [--tests <패턴>…]
 //   be       backend: (spotlessCheck | --fix면 spotlessApply) → test
 //   fe       frontend: lint → test:unit/test (--run) → build
 //   harness  scripts/test 단위 테스트
 //   all      be·fe (기본값)
 //   --staged 커밋 hook용 빠른 검사 (H-1): 스테이징된 파일의 영역만, 포맷·린트와 관련 테스트만 돈다
 //            (scripts/lib/related.mjs). 빌드와 전체 테스트는 pre-push·CI가 한다
+//   --tests  BE 테스트 일부만 gradle `test --tests <패턴>`으로 돈다 (H-9, be 전용). verifier가 gradlew를 직접 불러 잠금을 우회하지 않게 한다
 // BE 단계는 .harness/gradle.lock으로 직렬화한다 (같은 PC에서 Gradle 동시 실행 방지).
-// --staged·--fix 없이 통과하고 그 영역에 커밋 안 된 변경이 없으면 .harness/verified.json에 HEAD를 남긴다 (pre-push가 같은 커밋을 다시 돌리지 않게).
-// 종료 코드: 0 = 모두 통과 또는 건너뜀, 1 = 실패
+// --staged·--fix·--tests 없이 통과하고, 그 영역에 커밋 안 된 변경이 없고, 검증하는 동안 HEAD가 그대로면
+// .harness/verified.json에 HEAD를 남긴다 (pre-push가 같은 커밋을 다시 돌리지 않게, #133).
+// 종료 코드: 0 = 모두 통과 또는 건너뜀, 1 = 실패, 2 = 사용법 오류
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { ROOT, git, isWin } from './lib/common.mjs';
 import { acquireLock } from './lib/lock.mjs';
 import { HARNESS_DATA_FILES, SEED_CATEGORIES, SEED_DATA_PATHS, areasOf, isSeedData, frontendCodeFiles, relatedBackendTests, relatedHarnessTests } from './lib/related.mjs';
+import { parseVerifyArgs, shouldRecord } from './lib/verify.mjs';
 
 const args = process.argv.slice(2);
-const fix = args.includes('--fix');
-const staged = args.includes('--staged');
-let targets = args.filter((a) => !a.startsWith('--'));
+const parsed = parseVerifyArgs(args);
+if (parsed.error) {
+  console.error(parsed.error);
+  process.exit(2);
+}
+const { fix, staged, tests: testFilters } = parsed;
+let targets = parsed.targets;
 const stagedFiles = staged ? git(['diff', '--cached', '--name-only', '--diff-filter=ACMR']).out.split('\n').filter(Boolean) : [];
 if (staged) targets = targets.length ? areasOf(stagedFiles).filter((a) => targets.includes(a)) : areasOf(stagedFiles);
-else if (targets.length === 0 || targets.includes('all')) targets = [...new Set([...targets.filter((t) => t !== 'all'), 'be', 'fe'])];
+// 검증 기록은 시작 때의 HEAD로 판정한다: 검증 중에 생긴 커밋을 통과로 남기지 않는다 (#133)
+const startHead = git(['rev-parse', 'HEAD']).out;
 
 const MAX_LINES_PER_STEP = 15;
 const harnessDir = join(ROOT, '.harness');
@@ -114,6 +123,7 @@ function verifyBackend() {
     return;
   }
   try {
+    if (testFilters.length) return void run('be', `test ${testFilters.join(' ')}`, `${base} test ${testFilters.map((t) => `--tests ${quote(t)}`).join(' ')}`, dir);
     const usesSpotless = /spotless/.test(readFileSync(buildFile, 'utf8'));
     if (usesSpotless) {
       if (!run('be', fix ? 'spotlessApply' : 'spotlessCheck', `${base} ${fix ? 'spotlessApply' : 'spotlessCheck'}`, dir)) {
@@ -186,10 +196,12 @@ function verifyHarness() {
 // 하네스가 읽는 문서(로드맵)도 넣는다: 작업 트리에서만 고친 로드맵으로 통과한 결과를 HEAD에 남기지 않게 (Codex 리뷰)
 const AREA_PATHS = { be: ['backend', ...SEED_DATA_PATHS], fe: ['frontend', ...SEED_DATA_PATHS, SEED_CATEGORIES], harness: ['scripts', '.claude/hooks', '.githooks', ...HARNESS_DATA_FILES] };
 
-// 전체 검증을 통과한 커밋을 남긴다. 그 영역에 커밋 안 된 변경이 있으면 HEAD와 검증한 내용이 달라 남기지 않는다
+// 전체 검증을 통과한 커밋을 남긴다. 검증 중 HEAD가 바뀌었거나 그 영역에 커밋 안 된 변경이 있으면 HEAD와 검증한 내용이 달라 남기지 않는다
 function recordVerified(areas) {
   const head = git(['rev-parse', 'HEAD']).out;
-  if (!head) return;
+  const { reason } = shouldRecord({ startHead, endHead: head, dirty: false });
+  if (reason === 'head-changed') console.log(`ℹ️  검증 중 HEAD가 바뀌어(${startHead.slice(0, 7)} → ${head.slice(0, 7)}) 검증 기록을 남기지 않음`);
+  if (reason) return;
   const path = join(harnessDir, 'verified.json');
   let data = {};
   try {
@@ -198,8 +210,8 @@ function recordVerified(areas) {
     data = {};
   }
   for (const a of areas) {
-    const dirty = git(['status', '--porcelain', '--', ...AREA_PATHS[a]]).out;
-    if (!dirty) data[a] = head;
+    const dirty = !!git(['status', '--porcelain', '--', ...AREA_PATHS[a]]).out;
+    if (shouldRecord({ startHead, endHead: head, dirty }).record) data[a] = head;
   }
   writeFileSync(path, JSON.stringify(data, null, 2));
 }
@@ -215,7 +227,7 @@ if (targets.includes('harness')) verifyHarness();
 writeFileSync(logFile, fullLog || '(실행된 단계 없음)\n', 'utf8');
 
 const failed = results.filter((r) => !r.ok);
-if (!staged && !fix) {
+if (parsed.record) {
   const ran = targets.filter((t) => results.some((r) => r.area === t && !r.skipped));
   const passed = ran.filter((t) => !failed.some((r) => r.area === t));
   if (passed.length) recordVerified(passed);

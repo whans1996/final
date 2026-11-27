@@ -98,12 +98,14 @@ export function headLagging(prSha, pushedSha, isAncestor) {
 }
 
 /**
- * 다시 확인하지 않아도 되는가. prev = { head(로컬 HEAD), prHead(판정한 PR head 7자), verdict, at }.
+ * 다시 확인하지 않아도 되는가. prev = { head(로컬 HEAD), prHead(판정한 PR head 7자), verdict, at, remote(판정 때 origin/<브랜치> sha) }.
  * COMPLETE는 그 판정의 PR head가 지금 로컬 HEAD일 때만 확정으로 본다: 커밋만 하고 push 전에 판정하면
  * PR head는 이전 커밋이라, push 뒤의 STALE을 놓치지 않게 한다 (reviewer). 그 밖에는 recheckMs마다 다시 본다.
+ * remote(지금 origin/<브랜치> sha)가 판정 때와 다르면 push가 있었으므로 바로 다시 본다: 커밋한 턴 뒤 3분 안에 push하고 멈추면 STALE을 놓쳤다 (#178)
  */
-export function skipRecheck(prev, head, now, recheckMs) {
+export function skipRecheck(prev, head, now, recheckMs, remote = null) {
   if (!prev || prev.head !== head) return false;
+  if (remote && prev.remote !== remote) return false;
   if (prev.verdict === 'COMPLETE' && prev.prHead && head.startsWith(prev.prHead)) return true;
   return now - (prev.at || 0) < recheckMs;
 }
@@ -225,9 +227,10 @@ const minutes = (ms) => Math.floor(ms / 60_000);
  * PR의 Codex 리뷰 판정 → { verdict, msg, retry?, envMissing? }. msg는 "head <7자>"로 시작한다 (codex-loop가 읽는다).
  * h = { sha, state, author }, comments = 이슈 댓글(작성 순서), findingTimes() = 봇 인라인 지적 시각(필요할 때만 조회),
  * docsOnlySince(base) = base 이후 head까지 이 PR 자신의 변경이 문서뿐인가(git, 필요할 때만).
+ * prDocsOnly() = PR 전체(develop merge-base 대비)가 문서뿐인가(git, 필요할 때만, #165).
  * retry: 같은 head의 리뷰가 실패·정체해 재시도 표시를 붙여 다시 요청해야 한다. 재시도 뒤 또 실패·정체하면 ERROR (#48).
  */
-export function judgeReview({ pr, h, comments, findingTimes = () => [], docsOnlySince = () => false, now = Date.now() }) {
+export function judgeReview({ pr, h, comments, findingTimes = () => [], docsOnlySince = () => false, prDocsOnly = () => false, now = Date.now() }) {
   if (h.state !== 'OPEN') return { verdict: 'CLOSED', msg: `PR #${pr}이 ${h.state} 상태 (Codex 루프 불필요)` };
   const short = h.sha.slice(0, 7);
   const st = codexState(comments);
@@ -253,6 +256,10 @@ export function judgeReview({ pr, h, comments, findingTimes = () => [], docsOnly
   if (clean && !(st?.commit_sha === h.sha && st.status === 'completed')) {
     return { verdict: 'COMPLETE', msg: `head ${short} 지적 없음 (영수증 댓글)` };
   }
+  // 문서만 바꾼 PR은 Codex 루프를 생략하고 CI 초록이면 머지한다 (conventions 7절, #129). 리뷰가 없거나 실패해도
+  // "Codex" 체크가 ⏳로 남아 오류처럼 보이지 않게 COMPLETE로 둔다 (#165). head 리뷰가 지적을 남겼으면 사람이 읽고 판단하므로 FINDINGS 그대로
+  const headReviewed = st?.commit_sha === h.sha && st.status === 'completed';
+  if (!headReviewed && prDocsOnly()) return { verdict: 'COMPLETE', msg: `head ${short} 문서만 PR, Codex 생략 (conventions 7절)` };
 
   /**
    * target 커밋의 리뷰가 진행 중이거나 요청을 기다리는 중일 때의 판정 (요청도 진행도 없으면 null).
@@ -294,7 +301,9 @@ export function judgeReview({ pr, h, comments, findingTimes = () => [], docsOnly
     // 지적이 남았거나 리뷰 중이면 영수증으로 건너뛰어 그 결과를 덮지 않는다.
     // 영수증·상태 댓글 뒤에 미해결 인라인 지적이 달렸으면 그것은 마지막 리뷰가 아니므로 쓰지 않는다.
     // 상태 댓글도 갱신이 늦을 수 있어 같은 기준을 적용한다 (Codex 리뷰)
-    if (!st || stClean || stResolved) {
+    // 상태 댓글이 지적 있던 이전 커밋에 머물러 있어도 그보다 늦은 영수증은 더 뒤의 리뷰 결과다 (#198, cleanBases가 지적 시각으로 거른다)
+    const receiptAfterState = !!st && receipts.some((r) => r.at > st.at);
+    if (!st || stClean || stResolved || receiptAfterState) {
       const findingAt = unresolvedFindingAt(allFindings(), resolved.map((m) => m.at));
       const base = cleanBases(st, stClean || stResolved, receipts, resolved, findingAt).find((b) => docsOnlySince(b));
       if (base) return { verdict: 'COMPLETE', msg: `head ${short} 문서만 변경 (Codex ✅ ${base.slice(0, 7)} 이후)` };
