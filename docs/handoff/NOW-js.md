@@ -1,27 +1,28 @@
 # NOW — 김준섭 현재 작업 스냅샷
 
 > 김준섭(B 영역: 카드·소셜) 전용. 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
-갱신: 2026-11-26 23:07 · 작업자: JoonseobKim · PC: js-home · 브랜치: feature/F-29-design-common
+갱신: 2026-11-27 09:07 · 작업자: JoonseobKim · PC: js-ssafy · 브랜치: feature/F-29-design-common
 
 ---
 
 ## 현재 기능
 
-**F-29 디자인 공통 PR (토큰·폰트·공통 컴포넌트·앱 셸)** — `feature/F-29-design-common` (11/29~12/02, `Roadmap: F-29`). spec 아직 없음. 11/27 Figma 공동 세션 뒤 `/spec F-29`로 시작
+**F-29 디자인 공통 PR (토큰·폰트·공통 컴포넌트·앱 셸)** — `feature/F-29-design-common` (11/29~12/02, `Roadmap: F-29`). spec 아직 없음. 11/27 Figma 공동 세션 뒤 `/spec F-29`. 병행: **EV-1 기준선** (11/29~12/01)
 
 ## 진행
 
-- ✅ 11/27 세션 준비 문서 작성 (claude.ai 문서 "11/27 Figma 세션 준비: F-29 현황 조사 · 랜딩 결정 3개", 김동환에게 공유 필요): FE 스타일 현황, 토큰 질문, 공통 컴포넌트 후보 7개, 앱 셸, 랜딩 결정 3개 추천, 체크리스트
-- ⛔ EV-1 시범(DS-03-02, GMS)은 1단계에서 멈춤: js-home `.env`에 `GMS_API_KEY` 없음. 크레딧 소모 0, 산출물 없음
-- 브랜치에 코드 변경 없음. 로컬(js-home) DB에 화면 점검용 테스트 관리자 회원 있음, `.harness/auth.json`은 무효(다시 만들 것)
+- ✅ 11/27 Figma 세션 준비 문서 (claude.ai "11/27 Figma 세션 준비: F-29 현황 조사 · 랜딩 결정 3개", 김동환에게 공유 필요)
+- ✅ EV-1 시범 (js-ssafy): GMS gpt-4.1-mini, DS-03-02 stage=all level=all, 33호출·실패 0, **크레딧 918** (남은 29,078). 채점 `-Pjudge=none`, 라벨=true. 보고서 `.harness/prompt-eval/20261127-085903-*` (js-ssafy 로컬)
+- ✅ V-2 넘김: 김동환에게 "평가 세트 고정(3ab0db0, 9세트)" 알림 보냄 (11/27 Mattermost, 12/01 기준선 점수 전 AI 출력 PR 머지 보류 요청)
+- js-ssafy: eval 저장소 `data/raw/eval/` clone(3ab0db0), ZIP `data/raw/eval-zips/DS-03-02.zip` (`git -C data/raw/eval archive --format=zip -o … 3ab0db0:repos/<id>-<slug>`)
+- 러너 `-Pfixture`는 **저장소 루트 기준** 경로 (`data/raw/eval-zips/<id>.zip`, `../` 붙이면 datasets.json에 없다고 실패)
 
 ## 바로 다음 할 일
 
 1. 11/27 Figma 세션: 준비 문서 체크리스트대로 진행 → 결정을 결정로그에 한 줄씩
 2. 새 세션(Opus/high) `/spec F-29`: 세션 결정 + 준비 문서의 토큰 표·컴포넌트 후보 표 기준
-3. EV-1: js-home `.env`에 `GMS_API_KEY` 넣고 `prompt-evaluator`로 DS-03-02 시범(전후 `liveTest --tests '*LlmLiveTest.gms_구조화_출력'`로 key-info) → 크레딧 ×9로 전체 판단. Ollama는 js-home 미설치. 12/01 B→A 점수
-4. 김동환에게 "평가 세트 고정(3ab0db0)" 알림 확인 (11/28 B→A)
-5. /progress 때: 기획서 579·WBS 4.1의 DS 12/03 → 11/26 고정으로
+3. EV-1 전체 (**11/27 승인: Figma 세션 끝나면 실행, Gemini 판정 켬**): 남은 8개 fixture(DS-02-05~10은 id, DS-03-01·03은 ZIP) × stage=all × level=all, 예상 크레딧 8~10k. 채점 `-Pjudge=gemini`(DS-03-02 시범도 다시 채점), `eval/` 브랜치에 기록. `summary.md` 점수만 12/01 김동환에게
+4. /progress 때: 기획서 579·WBS 4.1의 DS 12/03 → 11/26 고정으로
 
 ## 막힌 점 / 결정 필요
 
