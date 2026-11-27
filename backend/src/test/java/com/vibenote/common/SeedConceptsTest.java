@@ -98,6 +98,31 @@ class SeedConceptsTest extends IntegrationTestBase {
     }
 
     /**
+     * K-3a AC1: 생성기(seed-build.mjs)가 작은따옴표와 역슬래시를 이스케이프해서 DB 값이 카드 원본과 같다. 픽스처 SQL은 {@code
+     * seed/cards}의 카드로 만든 생성본이고, 하네스 테스트(seed-build.test.mjs)가 생성기 출력과 같은지 확인한다.
+     */
+    @Test
+    @Transactional
+    void AC1_역슬래시와_작은따옴표가_원본_그대로_들어간다() throws IOException {
+        String sql =
+                new ClassPathResource("seed/escape-seed.sql")
+                        .getContentAsString(StandardCharsets.UTF_8)
+                        .strip();
+        jdbc.execute(sql.endsWith(";") ? sql.substring(0, sql.length() - 1) : sql);
+
+        assertThat(
+                        jdbc.queryForMap(
+                                "SELECT summary, body, example_code FROM concepts WHERE name = ?",
+                                "이스케이프 검사 카드 (테스트 전용)"))
+                .containsEntry("summary", "It's 테스트 전용 카드다. 정규식 '\\d+'와 경로 C:\\temp가 그대로 들어가야 한다.")
+                .containsEntry("body", "- 작은따옴표: It's, 'quoted'\n- 역슬래시: \\d+ \\\\ \\n \\' 끝\\")
+                .containsEntry(
+                        "example_code",
+                        "Pattern digits = Pattern.compile(\"\\\\d+\");\n"
+                                + "String path = \"C:\\\\temp\\\\It's\";");
+    }
+
+    /**
      * F-13 AC12: 관리자가 숨긴 시드 카드는 시드 파일이 다시 적용돼도 HIDDEN 그대로이고, 내용은 파일 기준으로 덮어써진다. Flyway처럼 파일 전체를 한
      * 문장으로 실행한다 (끝의 세미콜론만 뗀다).
      */
