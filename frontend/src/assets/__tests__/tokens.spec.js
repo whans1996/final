@@ -106,6 +106,24 @@ describe('디자인 토큰 (F-29a)', () => {
     for (const n of [1, 2, 3, 4, 6, 8]) expect(aliases[`--space-${n}`]).toBe(`${n * 4}px`)
   })
 
+  it('AC3 preflight 보정이 @layer base에 있다 (제목·링크·목록·클래스 없는 버튼)', () => {
+    const base = css.slice(css.indexOf('@layer base {'))
+    for (const selector of [
+      'h1 {',
+      'h2 {',
+      'h3 {',
+      'a {',
+      'ul {',
+      'ol {',
+      'button:not([class]) {',
+    ]) {
+      expect(base).toContain(selector)
+    }
+    expect(base).toMatch(
+      /button:not\(\[class\]\) \{[^}]*border: revert;[^}]*background-color: revert;/,
+    )
+  })
+
   it('AC2 다크 전환은 html.dark 클래스로 한다', () => {
     expect(css).toContain('@custom-variant dark (&:where(.dark, .dark *));')
   })

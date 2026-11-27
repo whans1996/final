@@ -39,7 +39,7 @@ src/
 - mermaid 렌더링(F-21)은 해당 화면에서만 동적 import한다.
 - **스타일은 Tailwind 클래스 + 토큰**으로 쓴다 (F-29a). 토큰 정본은 `src/assets/main.css`(`@theme inline`)와 `docs/specs/F-29a-design-foundation.md` 5.2절: 색 `primary`·`primary-soft`·`accent`·`highlight`·`bg`·`surface`·`surface-raised`·`text`·`text-muted`·`border`·`code-bg`·`code-text`·`on-solid`·`success|warning|info|danger`(+`-soft`), 글자 `text-xs|sm|base|lg|xl|hero`, 굵기 `font-normal|semibold|bold`, 반경 `rounded-sm|md|full`, 그림자 `shadow-1|2`, 반응형 `sm:`(640)·`lg:`(1024)만. Tailwind 기본 팔레트(`indigo-500` 등)는 지웠다. 다크는 토큰이 바꾸므로 대개 `dark:`가 필요 없다.
 - **새 화면·컴포넌트에 `<style scoped>`를 쓰지 않는다.** 예외: 토큰으로 안 되는 애니메이션·mermaid·코드 하이라이트. 아직 옮기지 않은 화면의 scoped 스타일과 별칭 변수(`--color-primary`·`--color-background`·`--space-*`·`--radius`)는 각자 개편 PR에서 Tailwind로 옮길 때 지운다.
-- preflight가 켜져 있고 `main.css` `@layer base`가 h1~h3 크기, 링크 색·밑줄, 목록 들여쓰기·불릿을 되돌린다. 새 코드에서 필요 없으면 `no-underline`·`list-none`·`ps-0`처럼 클래스로 끈다.
+- preflight가 켜져 있고 `main.css` `@layer base`가 h1~h3 크기, 링크 색·밑줄, 목록 들여쓰기·불릿, **클래스 없는 `<button>`의 브라우저 기본 모양**을 되돌린다 (Tailwind로 그리는 버튼은 클래스가 있어 영향 없음). 새 코드에서 필요 없으면 `no-underline`·`list-none`·`ps-0`처럼 클래스로 끈다.
 
 ## 테스트
 

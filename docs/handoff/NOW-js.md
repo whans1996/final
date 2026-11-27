@@ -1,7 +1,7 @@
 # NOW — 김준섭 현재 작업 스냅샷
 
 > 김준섭(B 영역: 카드·소셜) 전용. 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
-갱신: 2026-11-27 13:52 · 작업자: JoonseobKim · PC: js-ssafy · 브랜치: feature/F-29-design-common
+갱신: 2026-11-27 14:11 · 작업자: JoonseobKim · PC: js-ssafy · 브랜치: feature/F-29-design-common
 
 ## 현재 기능
 
@@ -12,15 +12,14 @@
 ## 진행
 
 - ✅ AC1·AC2·AC4~AC12 (597d574): Tailwind v4 `main.css` 토큰·별칭·base 보정·폰트, `useTheme`+`index.html` 스크립트, 공통 컴포넌트 7개, EmptyState·PageNav 이전(`.empty`·`.pager` 클래스 유지 — AdminChallengeListView 테스트가 씀), `/dev/components`, NOTICE, `frontend/CLAUDE.md`. FE verify 통과. 토큰 조정: 라이트 success `#3a7535`, `on-solid` 추가(spec 5.2절)
-- ✅ AC3·AC5·AC13 화면 (ui-verifier, BE 없이): `/dev/components` 라이트·다크×1280·375 문제 0, `/`·`/login`·`/signup`·`/concepts`·`/community` develop과 색·폰트만 다름
+- ✅ AC3·AC5·AC13 화면 (ui-verifier, BE 켜고 로그인): `/dev/components` 라이트·다크×1280·375, 데이터 화면 8개 develop(5176)과 색·폰트만 다름. 리뷰 '등록' 버튼 회귀 → `@layer base` `button:not([class])` revert 보정 + ReviewForm 미사용 `class="primary"` 제거
 
 ## 바로 다음 할 일
 
-1. (BE를 띄울 수 있으면) 데이터가 있는 `/concepts`·`/community`·`/analyses/:id`도 develop과 비교
-2. `/pr-review` → PR (`Roadmap: F-29`, 공통 컴포넌트·main.css·router/index.js 변경이라 @whans1996 멘션)
+1. `/pr-review` → PR (`Roadmap: F-29`, 공통 컴포넌트·main.css·router/index.js 변경이라 @whans1996 멘션)
 
 ## 막힌 점 / 결정 필요
-- js-ssafy BE `bootRun` 실패: MySQL `Access denied for user 'vibenote'@'localhost'` → 로컬 DB 계정·`.env` 비밀번호 확인 필요 (사람)
+- 없음 (js-ssafy `.env` 새로 만들고 MySQL vibenote 비밀번호 맞춤 → BE 기동 OK). 로컬 테스트 계정 `ui-f29a-…@example.com`
 - GMS 키 만료 12/09 18:00 → EV-2(12/09~12/12) 전에 재발급·연장 확인
 
 ## 주의

@@ -224,4 +224,14 @@
   [role='button']:not(:disabled) {
     cursor: pointer;
   }
+
+  /* 클래스 없는 버튼은 옮기기 전 화면이 브라우저 기본 모양에 기대던 것이다 (리뷰 등록·수정·삭제 등).
+     Tailwind로 그리는 버튼은 항상 클래스가 있어 영향이 없다. revert는 브라우저 기본값으로 되돌린다 */
+  button:not([class]) {
+    padding: revert;
+    border: revert;
+    border-radius: revert;
+    background-color: revert;
+    color: revert;
+  }
 }
