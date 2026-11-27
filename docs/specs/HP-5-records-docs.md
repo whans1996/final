@@ -106,7 +106,7 @@
 - [x] 브랜치 `feature/HP-5-records-docs`
 - [ ] AC별 실패 테스트 작성 (red 확인)
 - [x] 보관 스크립트·`readWorklog` (AC1~5, green)
-- [ ] 07 생성 스크립트 + 07 재생성 (AC6~8)
+- [x] 07 생성 스크립트 + 07 재생성 (AC6~8)
 - [ ] Schema.sql 스크립트 + 실측 1회 (AC9~12)
 - [ ] `/progress`·CLAUDE.md·README·08·verify 로그 정리 (AC13~15)
 - [ ] reviewer 지적 사항 반영
