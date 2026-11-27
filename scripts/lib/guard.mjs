@@ -598,7 +598,12 @@ function searchReads(name, s, f, rel) {
   if (picked !== null) return picked;
   if (s.globs.some((g) => !g.glob.startsWith('!'))) return false;
   // -t 타입은 고르기만 하고 무시 규칙은 넘지 않는다. --type-add 정의는 그 글롭으로, 내장 타입은 안전한 것만 비밀 파일을 고르지 않는다고 본다
-  if (s.types.length && !s.types.some((t) => (s.typeAdds[t] ? s.typeAdds[t].some((g) => globMatchPath(g, rel)) : !RG_SAFE_TYPES.has(t)))) return false;
+  // --type-add 'x:include:sh,…'는 다른 타입의 규칙을 가져온다 (Codex)
+  const typeHits = (t, depth = 0) =>
+    s.typeAdds[t]
+      ? s.typeAdds[t].some((g) => (g.startsWith('include:') ? depth < 5 && g.slice(8).split(',').some((u) => typeHits(u, depth + 1)) : globMatchPath(g, rel)))
+      : !RG_SAFE_TYPES.has(t);
+  if (s.types.length && !s.types.some((t) => typeHits(t))) return false;
   return (!f.ignored || s.noIgnore) && (!base.startsWith('.') || s.hidden);
 }
 
@@ -632,7 +637,11 @@ function findEmitsSecret(seg, cwd, ctx) {
     else if (/^-(i?name|i?path|i?wholename)$/.test(a)) {
       branches[branches.length - 1].push({ kind: a.includes('name') && !a.includes('whole') ? 'name' : 'path', glob: args[++k] ?? '', icase: a.startsWith('-i'), neg });
       neg = false;
-    } else if (a === '-type' && args[k + 1] === 'd') return false;
+    } else if (a === '-type') {
+      // 부정 없는 -type d가 있는 분기는 파일을 내지 않는다 (! -type d, 다른 분기는 그대로, Codex)
+      if (args[++k] === 'd' && !neg) branches[branches.length - 1].dirs = true;
+      neg = false;
+    }
     else if (a === '-exec' || a === '-execdir' || a === '-ok' || a === '-okdir') break;
     else if (a === '-o' || a === '-or') (branches.push([]), (neg = false));
     else if (a === ',' || a === '(' || a === ')') (grouped = true), (neg = false);
@@ -645,6 +654,7 @@ function findEmitsSecret(seg, cwd, ctx) {
       // -name은 이름, -path는 find가 출력하는 경로(./backend/.env.local)로 맞춘다. 고르는 쪽은 보수적으로, 빼는 쪽은 엄격하게 (Codex)
       const subject = (t) => (t.kind === 'name' ? basename(f.path.replace(/\\/g, '/')) : `${r.replace(/\/+$/, '')}/${relative(root, f.path).replace(/\\/g, '/')}`);
       return branches.some((list) => {
+        if (list.dirs) return false;
         const pos = list.filter((t) => !t.neg);
         return (
           (!pos.length || pos.some((t) => globMatch(t.glob, subject(t), { icase: true }))) &&
@@ -862,7 +872,13 @@ function checkGit(args, cwd, ctx) {
       const ignored = o.flags.has('--untracked') && o.flags.has('--no-exclude-standard');
       if (!(noIndex || ignored) || !ctx.secretFiles) return null;
       if (['-l', '-L', '-c', '-q', '--name-only', '--files-with-matches', '--files-without-match', '--count', '--quiet'].some((f) => o.flags.has(f))) return null;
-      const paths = o.flags.has('-e') || o.flags.has('-f') ? o.positional : o.positional.slice(1);
+      // pathspec 글롭('*', ':(glob)**')은 git이 펼친다: 글롭 앞의 고정된 폴더로 본다 (Codex)
+      const paths = (o.flags.has('-e') || o.flags.has('-f') ? o.positional : o.positional.slice(1)).map((p) => {
+        const spec = p.replace(/^:\([^)]*\)/, '');
+        if (!/[*?[]/.test(spec) && spec === p) return p;
+        const fixed = spec.split(/[*?[]/)[0];
+        return fixed.includes('/') ? fixed.slice(0, fixed.lastIndexOf('/')) || '.' : '.';
+      });
       return (paths.length ? paths : ['.']).some((p) => (ctx.secretFiles(searchRoot(where, p, ctx)) ?? []).length) ? R.envSearch : null;
     }
     case 'add': {

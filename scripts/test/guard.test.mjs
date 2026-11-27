@@ -644,6 +644,21 @@ test('Codex 반영: grep include·exclude는 마지막에 맞은 규칙, find -o
     ok(cmd, sf);
 });
 
+// PR #246 Codex 4회차
+test('Codex 반영: find -type d의 부정·분기, rg --type-add include:, git grep pathspec 글롭', () => {
+  const rootOnly = { secretFiles: (dir) => [{ path: '/repo/.env', ignored: true }].filter((f) => isWithin(f.path, dir)) };
+  for (const cmd of [
+    'find . ! -type d -exec cat {} +',
+    'find . -type d -o -type f -exec cat {} +',
+    "rg -uu --type-add 'custom:include:sh' -t custom KEY .",
+    "git grep --no-index KEY -- '*'",
+    "git grep --no-index KEY -- ':(glob)**'",
+    "git grep --untracked --no-exclude-standard KEY -- '.e*'",
+  ])
+    no(cmd, rootOnly);
+  for (const cmd of ['find . -type d -exec ls {} +', "rg -uu --type-add 'custom:include:java' -t custom KEY .", "git grep --no-index KEY -- 'src/*'"]) ok(cmd, rootOnly);
+});
+
 // #245: 가드 우회 잔여 (PR #246 reviewer가 재현, 같은 PR에서 처리)
 test('#245: 읽기·검색 인자의 셸 글롭 (bash는 * 가 점으로 시작하는 이름에 맞지 않는다)', () => {
   const sf = { secretFiles };
