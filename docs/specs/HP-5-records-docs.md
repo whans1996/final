@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 |---|---|
-| 상태 | APPROVED <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
+| 상태 | DONE (PR #239) <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
 | 기능 ID | HP-5 (로드맵 트랙 4 하네스, 11/29) |
 | 우선순위 | 하네스 (기능 동결 대상 아님) |
 | 영역 오너 | A 김동환 (하네스 주도). 공통 기록(`docs/작업로그.md`)의 보관 위치와 `/progress` 절차를 바꾸므로 PR에 @JoonseobKim |
@@ -110,5 +110,5 @@
 - [x] Schema.sql 스크립트 + 실측 1회 (AC9~12)
 - [x] `/progress`·CLAUDE.md·README·08·verify 로그 정리 (AC13~15)
 - [x] reviewer 지적 사항 반영
-- [ ] PR CI 초록
-- [ ] 상태 DONE (PR 머지 후)
+- [x] PR CI 초록
+- [x] 상태 DONE (PR #239)
