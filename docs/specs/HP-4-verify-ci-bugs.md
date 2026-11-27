@@ -98,10 +98,10 @@
 
 `/implement`가 진행하며 체크한다.
 
-- [ ] 브랜치 `feature/HP-4-verify-ci-bugs`
-- [ ] AC별 실패 테스트 작성 (red 확인)
-- [ ] 하네스 구현 (green, `node --test "scripts/test/*.test.mjs"`)
-- [ ] 스킬·에이전트·CLAUDE.md·`docs/conventions.md` 문구 반영 (verifier.md, handoff·implement·pr-review SKILL.md)
+- [x] 브랜치 `feature/HP-4-verify-ci-bugs`
+- [x] AC별 실패 테스트 작성 (red 확인)
+- [x] 하네스 구현 (green, `node --test "scripts/test/*.test.mjs"`)
+- [x] 스킬·에이전트·CLAUDE.md·`docs/conventions.md` 문구 반영 (verifier.md, handoff·implement·pr-review SKILL.md)
 - [ ] reviewer 지적 사항 반영
 - [ ] PR에서 AC8 실제 확인 (docs만 push → Backend·Frontend skipped, 필수 체크 통과)
 - [ ] PR CI 초록, @JoonseobKim 멘션
