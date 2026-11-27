@@ -2,11 +2,16 @@
 // paths-filter는 PR 전체 diff로 판별하므로, BE 변경이 있는 PR에 NOW·작업로그만 push해도 Backend·Frontend를 처음부터 다시 돌렸다.
 // 직전에 성공한 실행(head S) 이후 바뀐 파일이 문서뿐이면 S의 검증 결과가 그대로 유효하므로 건너뛴다 (skipped = 필수 체크 통과).
 
-const OPENAPI = 'docs/api/openapi.json';
+import { isDocPath } from './codex.mjs';
 
-/** 문서만 바뀌었나: 하나 이상이고 모두 docs/ 아래이며 openapi.json(BE 테스트가 코드와 비교)은 아니다 */
+/** 문서만 바뀌었나: 하나 이상이고 모두 docs/ 아래이며 openapi.json(BE 테스트가 코드와 비교)은 아니다. 규칙은 Codex 문서 판정과 같다 */
 export function isDocsOnly(files) {
-  return files.length > 0 && files.every((f) => f.startsWith('docs/') && f !== OPENAPI);
+  return files.length > 0 && files.every(isDocPath);
+}
+
+/** compare API의 files([{ filename, previous_filename? }])를 경로 목록으로. 이름 바꾸기는 원래 경로도 넣는다 (코드를 docs/로 옮긴 경우) */
+export function compareFiles(files) {
+  return (files || []).flatMap((f) => [f.filename, f.previous_filename].filter(Boolean));
 }
 
 /** `gh run list --json headSha`(최근 것부터)에서 지금 head가 아닌 가장 최근 성공 실행의 head sha. 없으면 null */

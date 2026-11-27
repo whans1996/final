@@ -5,7 +5,7 @@
 // env: EVENT, ACTION, BE, FE(paths-filter 출력 'true'/'false'), HEAD_SHA, HEAD_REF, GITHUB_REPOSITORY, GH_TOKEN, GITHUB_OUTPUT
 import { spawnSync } from 'node:child_process';
 import { appendFileSync } from 'node:fs';
-import { decideChanges, lastSuccessSha } from './lib/ci-changes.mjs';
+import { compareFiles, decideChanges, lastSuccessSha } from './lib/ci-changes.mjs';
 
 const env = process.env;
 const filter = { be: env.BE === 'true', fe: env.FE === 'true' };
@@ -30,9 +30,9 @@ if (relevant && env.HEAD_REF && env.HEAD_SHA) {
   const runs = gh(['run', 'list', '--repo', env.GITHUB_REPOSITORY, '--workflow', 'ci.yml', '--branch', env.HEAD_REF, '--event', 'pull_request', '--status', 'success', '--limit', '20', '--json', 'headSha']);
   lastSuccess = runs ? lastSuccessSha(runs, env.HEAD_SHA) : null;
   if (lastSuccess) {
-    const c = gh(['api', `repos/${env.GITHUB_REPOSITORY}/compare/${lastSuccess}...${env.HEAD_SHA}`, '--jq', '{status: .status, files: [.files[]?.filename], total: (.files // [] | length)}']);
+    const c = gh(['api', `repos/${env.GITHUB_REPOSITORY}/compare/${lastSuccess}...${env.HEAD_SHA}`, '--jq', '{status: .status, files: [.files[]? | {filename, previous_filename}], total: (.files // [] | length)}']);
     // compare API는 파일을 300개까지만 돌려준다
-    if (c) compare = { status: c.status, files: c.files, truncated: c.total >= 300 };
+    if (c) compare = { status: c.status, files: compareFiles(c.files), truncated: c.total >= 300 };
   }
 }
 

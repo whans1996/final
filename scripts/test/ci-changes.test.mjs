@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
-import { decideChanges, isDocsOnly, lastSuccessSha } from '../lib/ci-changes.mjs';
+import { compareFiles, decideChanges, isDocsOnly, lastSuccessSha } from '../lib/ci-changes.mjs';
 
 const S = 's'.repeat(40);
 const H = 'h'.repeat(40);
@@ -46,6 +46,18 @@ test('HP-4 AC8: 문서만 = docs/ 아래이고 openapi.json이 아니며 하나 
   assert.equal(isDocsOnly(['docs/api/openapi.json']), false);
   assert.equal(isDocsOnly(['README.md']), false);
   assert.equal(isDocsOnly([]), false);
+});
+
+test('HP-4 AC8: 이름 바꾸기는 원래 경로도 바뀐 파일로 센다 (코드를 docs/로 옮겨도 건너뛰지 않음)', () => {
+  const files = compareFiles([{ filename: 'docs/X.java', previous_filename: 'backend/src/main/java/X.java' }, { filename: 'docs/a.md' }]);
+  assert.deepEqual(files, ['docs/X.java', 'backend/src/main/java/X.java', 'docs/a.md']);
+  const r = decideChanges({ ...base, compare: { status: 'ahead', files } });
+  assert.deepEqual([r.be, r.fe], [true, true]);
+  assert.deepEqual(compareFiles(undefined), []);
+  // ci-changes.mjs는 compare API의 previous_filename까지 받아 compareFiles로 편다
+  const src = readFileSync(new URL('../ci-changes.mjs', import.meta.url), 'utf8');
+  assert.match(src, /previous_filename/);
+  assert.match(src, /compareFiles\(/);
 });
 
 test('HP-4 AC8: 직전 성공 = 지금 head가 아닌 가장 최근 성공 실행의 head', () => {
