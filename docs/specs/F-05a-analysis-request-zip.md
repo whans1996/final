@@ -28,7 +28,7 @@ URL 입력은 F-05b에서 같은 엔드포인트와 같은 파이프라인에 "�
 | AC4 | 오늘(Asia/Seoul 0시 이후) 만든 분석 중 `FAILED`가 아닌 것이 5개인 회원이 (soft delete된 분석도 셈) | 6번째로 요청하면 | 429 `ANALYSIS_429`. 행이 생기지 않는다. 오늘 분석 5개 중 1개가 `FAILED`이거나, 5개 중 1개가 어제 23:59에 만들어졌으면 6번째는 202다. 한도는 설정값 `analysis.daily-limit`(기본 5) |
 | AC5 | Spring 프로젝트 ZIP(최상위 폴더 1개, controller·service·mapper java·mapper xml·vue·`application.yml`, `node_modules/`·`build/` 폴더, `.env`, `id_rsa`, `logo.png` 포함)으로 만든 분석이 | 파이프라인이 실행되면 | status가 FETCHING → FILTERING → SELECTING → `DONE`, progress 100, error_code NULL. `analysis_files`에 선별 파일이 저장된다: path는 **공통 최상위 폴더를 뗀** 상대 경로(`src/main/java/.../UserController.java`), layer는 5.2절 규칙의 값. `node_modules/`·`build/`·`.env`·`id_rsa`·`logo.png`는 저장되지 않는다. `activities`에 (user, `ANALYSIS`, analysisId) 1행이 생긴다 |
 | AC6 | 선별될 파일 내용에 키가 들어 있을 때 (`AIza`+35자, `sk-`+20자 이상, `ghp_`/`github_pat_` 토큰, `AKIA`+16자, `-----BEGIN ... PRIVATE KEY-----` 블록, `application.yml`의 `password: hunter2`·`jwt.secret=abc`·`api-key: xyz`) | 파이프라인이 끝나면 | 저장된 `content`에서 그 값이 모두 `[REDACTED]`로 바뀌어 있고 원래 문자열은 어디에도 없다. `${DB_PASSWORD}`처럼 기본값 없는 환경변수 참조는 그대로 두고, `${DB_PASSWORD:hunter2}`는 기본값만 `[REDACTED]`로 바꾼다. 나머지 줄은 바뀌지 않는다 |
-| AC7 | 지원 파일이 많은 ZIP일 때 | 파이프라인이 실행되면 | 필터 후 지원 파일이 201개 이상이거나 읽은 지원 파일 합계가 10MB를 넘으면 status `FAILED`, error_code `ANALYSIS_413`, error_message는 5.3절 문구. 200개 정확히면 `DONE`. 지원 파일이 30개를 넘으면 5.2절 우선순위로 30개(`analysis.max-selected-files`)만 저장한다. 1MB를 넘는 단일 파일은 읽지 않고 건너뛴다(실패 아님) |
+| AC7 | 지원 파일이 많은 ZIP일 때 | 파이프라인이 실행되면 | 필터 후 지원 파일이 201개 이상이거나 읽은 지원 파일 합계가 10MB를 넘으면 status `FAILED`, error_code `ANALYSIS_413`, error_message는 5.3절 문구. 200개 정확히면 `DONE`. 지원 파일이 30개를 넘으면 5.2절 우선순위로 30개(`analysis.max-selected-files`)만 저장한다. 1MB를 넘는 단일 파일은 읽지 않고 건너뛴다(실패 아님) ⚠️ **F-26a가 대체** (#155): 지원 파일 수·합계로 실패하지 않고 인덱스 상한 2,000개·30MB를 넘는 파일은 버리고 계속한다 (`dropped_files`). |
 | AC8 | `.java`·`.js`·`.mjs`·`.vue` 파일이 하나도 없는 ZIP(예: Python만, yml만)일 때 | 파이프라인이 실행되면 | `FAILED`, `ANALYSIS_415`. `analysis_files`는 비어 있다 |
 | AC9 | 위험하거나 깨진 ZIP일 때 (`../../evil.java`·`/etc/passwd`·`C:\x.java` 같은 루트 밖·절대 경로 엔트리, 또는 손상된 아카이브) | 파이프라인이 실행되면 | `FAILED`, `ANALYSIS_400`. 디스크의 `analysis-tmp` 밖에 어떤 파일도 생기지 않는다 (압축을 디스크에 풀지 않는다) |
 | AC10 | 파이프라인이 `DONE`이든 `FAILED`든 (예기치 못한 예외 포함) | 끝나면 | 임시 ZIP `{id}.zip`이 삭제되어 있다. 예기치 못한 예외는 `FAILED`, `ANALYSIS_500`이고 그 전 단계의 progress는 그대로 남는다 |
@@ -116,6 +116,7 @@ URL 입력은 F-05b에서 같은 엔드포인트와 같은 파이프라인에 "�
 
 ```json
 { "analysisId": 43, "status": "FAILED", "progress": 15, "errorCode": "ANALYSIS_413", "errorMessage": "지원하는 코드 파일이 312개입니다. 200개 이하로 줄여서 다시 올려 주세요.", "updatedAt": "2026-11-24T14:21:00+09:00" }
+// ⚠️ F-26a 이후 이 실패는 없다. 지금 ANALYSIS_413은 저장소 아카이브 크기 초과뿐이다 (#155)
 ```
 
 - 에러
@@ -183,13 +184,13 @@ F-05a에서는 SELECTING 다음이 곧 `DONE`이다. 이후 spec은 단계를 �
 | error_code | 원인 | error_message |
 |---|---|---|
 | ANALYSIS_400 | 깨진 ZIP, 루트 밖·절대 경로 | ZIP 파일을 읽을 수 없습니다. 손상되었거나 허용되지 않는 경로가 들어 있습니다. |
-| ANALYSIS_413 | 지원 파일 200개 초과 | 지원하는 코드 파일이 {n}개입니다. 200개 이하로 줄여서 다시 올려 주세요. |
-| ANALYSIS_413 | 지원 파일 합계 10MB 초과 | 코드 파일 합계가 10MB를 넘습니다. 크기를 줄여서 다시 올려 주세요. |
+| ANALYSIS_413 | ~~지원 파일 200개 초과~~ (F-26a가 대체, #155) | 지원하는 코드 파일이 {n}개입니다. 200개 이하로 줄여서 다시 올려 주세요. |
+| ANALYSIS_413 | ~~지원 파일 합계 10MB 초과~~ (F-26a가 대체, #155) | 코드 파일 합계가 10MB를 넘습니다. 크기를 줄여서 다시 올려 주세요. |
 | ANALYSIS_415 | 지원 코드 없음 | 분석할 수 있는 코드가 없습니다. Java·Spring·MyBatis·JavaScript·Vue 프로젝트만 지원합니다. |
 | ANALYSIS_500 | 예기치 못한 오류, 실행기 거절 | 분석 중 오류가 발생했습니다. 다시 요청해 주세요. |
 | ANALYSIS_500 | 서버 재시작 (AC11) | 서버가 다시 시작되어 분석이 중단되었습니다. 다시 요청해 주세요. |
 
-설정값(`application.yml`): `analysis.daily-limit: 5`, `analysis.max-files: 200`, `analysis.max-total-bytes: 10MB`, `analysis.max-file-bytes: 1MB`, `analysis.max-selected-files: 30`. 임시 폴더는 기존 `app.upload-dir` 아래 `analysis-tmp/`.
+설정값(`application.yml`): `analysis.daily-limit: 5`, `analysis.max-files: 200`, `analysis.max-total-bytes: 10MB`, `analysis.max-file-bytes: 1MB`, `analysis.max-selected-files: 30`. 임시 폴더는 기존 `app.upload-dir` 아래 `analysis-tmp/`. (⚠️ `max-files`·`max-total-bytes`는 F-26a가 `max-index-files: 2000`·`max-index-bytes: 30MB`로 대체, #155)
 
 ## 6. 프론트엔드
 
@@ -200,7 +201,7 @@ F-05a에서는 SELECTING 다음이 곧 `DONE`이다. 이후 spec은 단계를 �
 | store | 없음 (화면 로컬 상태). 기본 수준은 `useAuthStore().level` |
 | API 함수 | `src/api/analyses.js`: `createAnalysis({ file, level, consent })`(FormData), `fetchAnalyses({ page, size })`, `fetchAnalysisStatus(id)` |
 | 고지 문구 | "분석을 위해 주요 파일이 Google Gemini(무료 등급)로 전송되며, 무료 등급 입력은 모델 개선에 쓰일 수 있습니다. 비공개·민감한 코드는 올리지 마세요. `.env`와 키 패턴은 전송 전에 지웁니다." + 동의 체크 |
-| 제한 안내 | "하루 5회 · 지원 스택 Java/Spring/MyBatis/JavaScript/Vue · 코드 파일 200개 · 10MB 이하" |
+| 제한 안내 | "하루 5회 · 지원 스택 Java/Spring/MyBatis/JavaScript/Vue · 코드 파일 200개 · 10MB 이하" → #155에서 "… · ZIP 10MB 이하 · 큰 프로젝트는 중요한 파일 30개를 골라 설명합니다"로 바꿈 (F-26a가 대체) |
 | 상태별 UI | 요청: 제출 중 비활성화, 필드 아래 `details`, 상단 `message`. 상세: 로딩 / 진행 중(라벨·막대) / 완료 / 실패(사유·다시 요청) / 404. 목록: 로딩 / 빈 목록 CTA / 에러 메시지 / 페이지 이동 |
 | 반응형 | 375px~1440px 가로 스크롤 없음 (NF-02) |
 

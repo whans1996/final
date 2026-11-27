@@ -105,7 +105,7 @@ describe('AnalysisDetailView (F-05a AC15)', () => {
   })
 
   it('AC15 FAILED면 errorMessage와 다시 요청하기 링크를 보여 주고 폴링을 멈춘다', async () => {
-    const message = '지원하는 코드 파일이 312개입니다. 200개 이하로 줄여서 다시 올려 주세요.'
+    const message = '저장소 압축 파일이 너무 큽니다. 크기를 줄여서 다시 올려 주세요.'
     analysesApi.fetchAnalysisStatus.mockResolvedValue(
       status({ status: 'FAILED', progress: 15, errorCode: 'ANALYSIS_413', errorMessage: message }),
     )
