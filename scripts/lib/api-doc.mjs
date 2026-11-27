@@ -20,10 +20,17 @@ export function typeOf(s) {
   if (!s || typeof s !== 'object') return 'any';
   if (s.oneOf || s.anyOf || s.allOf) return COMPOSITE;
   if (s.$ref) return `[${refName(s.$ref)}](#${refName(s.$ref).toLowerCase()})`;
+  // openapi 3.1의 null 허용 표기 type: ['string', 'null']
+  if (Array.isArray(s.type)) {
+    const types = s.type.filter((t) => t !== 'null');
+    const nullable = types.length < s.type.length ? ' · null 가능' : '';
+    const single = types.length === 1 ? typeOf({ ...s, type: types[0], enum: s.enum?.filter((v) => v !== null) }) : types.join(' · ') || 'any';
+    return `${single}${nullable}`;
+  }
   if (s.type === 'array') return `${typeOf(s.items)}[]`;
   if (s.type === 'object' && s.additionalProperties && typeof s.additionalProperties === 'object') return `map<string, ${typeOf(s.additionalProperties)}>`;
   const base = s.format ? `${s.type ?? 'any'}(${s.format})` : (s.type ?? 'any');
-  return s.enum ? `${base}: ${s.enum.join(' · ')}` : base;
+  return s.enum?.length ? `${base}: ${s.enum.join(' · ')}` : base;
 }
 
 /** 설명 + 제약 (기본값·길이·범위·항목 수) */

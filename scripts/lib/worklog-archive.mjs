@@ -15,18 +15,24 @@ export function weekOf(date) {
  * 머리말(첫 항목 앞)과 항목 [{ date, header, text }]. 항목은 코드 블록 밖의 "## " 줄에서 시작한다
  * (머리말의 형식 예시 "## YYYY-MM-DD …"는 ``` 안에 있다). date는 헤더가 "## YYYY-MM-DD"로 시작할 때만, 아니면 null.
  * text는 헤더 줄부터 다음 항목 전까지이고 끝의 빈 줄을 뺀다.
+ * unclosedFence: 끝까지 닫히지 않은 ```가 열린 곳(항목 헤더 또는 '머리말'), 없으면 null. 닫히지 않으면 뒤 항목이 모두 한 항목으로 붙는다
  */
 export function parseWorklog(text) {
   const lines = String(text || '').split(/\r?\n/);
   const blocks = [[]];
   let fenced = false;
+  let openedIn = null;
   for (const line of lines) {
-    if (/^\s*```/.test(line)) fenced = !fenced;
+    if (/^\s*```/.test(line)) {
+      fenced = !fenced;
+      openedIn = fenced ? blocks.length - 1 : null;
+    }
     if (!fenced && line.startsWith('## ')) blocks.push([]);
     blocks.at(-1).push(line);
   }
   const join = (b) => b.join('\n').replace(/\s+$/, '');
   return {
+    unclosedFence: fenced ? (openedIn === 0 ? '머리말' : blocks[openedIn][0]) : null,
     preamble: join(blocks[0]),
     entries: blocks.slice(1).map((b) => {
       const date = /^## (\d{4}-\d{2}-\d{2})\b/.exec(b[0])?.[1] ?? null;
@@ -39,11 +45,13 @@ const render = (preamble, entries) => [preamble, ...entries.map((e) => e.text)].
 
 /**
  * 오늘(today)이 속한 주보다 앞선 주의 항목을 떼어 낸다.
- * → { log: 남길 작업로그 전문, moved: Map<주 id, 항목[]> (주 순서, 항목은 문서 순서), warnings: string[] }
+ * → { log: 남길 작업로그 전문, moved: Map<주 id, 항목[]> (주 순서, 항목은 문서 순서), warnings: string[], error: string|null }
  * 날짜를 읽을 수 없거나 W1 이전인 항목은 남기고 경고한다 (자료를 잃지 않는다). 옮길 것이 없으면 log는 입력 그대로다.
+ * 닫히지 않은 코드 블록이 있으면 항목 경계를 믿을 수 없으므로 아무것도 옮기지 않고 error를 채운다 (이번 주 항목이 지난 주 파일로 가지 않게)
  */
 export function splitByWeek(text, today) {
-  const { preamble, entries } = parseWorklog(text);
+  const { preamble, entries, unclosedFence } = parseWorklog(text);
+  if (unclosedFence) return { log: String(text), moved: new Map(), warnings: [], error: `닫히지 않은 코드 블록(\`\`\`)이 있어 항목을 나눌 수 없습니다: ${unclosedFence}` };
   const current = weekOf(today);
   const currentIdx = current ? WORKLOG_WEEKS.indexOf(current) : -1;
   const moved = new Map();
@@ -60,7 +68,7 @@ export function splitByWeek(text, today) {
     } else kept.push(e);
   }
   const ordered = new Map(WORKLOG_WEEKS.filter((w) => moved.has(w.id)).map((w) => [w.id, moved.get(w.id)]));
-  return { log: moved.size ? render(preamble, kept) : String(text), moved: ordered, warnings };
+  return { log: moved.size ? render(preamble, kept) : String(text), moved: ordered, warnings, error: null };
 }
 
 /** 보관 파일 머리 (제목 + 원래 파일 링크) */

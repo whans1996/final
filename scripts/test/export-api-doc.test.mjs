@@ -134,3 +134,10 @@ test('HP-5 AC8 CLI: 생성 → 다시 실행해도 바이트 단위로 같다, �
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('HP-5 AC6 openapi 3.1 null 허용 타입(type 배열)은 null을 빼고 "· null 가능"을 붙인다', () => {
+  assert.equal(typeOf({ type: ['string', 'null'] }), 'string · null 가능');
+  assert.equal(typeOf({ type: ['array', 'null'], items: { $ref: '#/components/schemas/Item' } }), '[Item](#item)[] · null 가능');
+  assert.equal(typeOf({ type: ['string', 'null'], enum: ['A', 'B', null] }), 'string: A · B · null 가능');
+  assert.equal(typeOf({ type: ['integer', 'null'], format: 'int64' }), 'integer(int64) · null 가능');
+});

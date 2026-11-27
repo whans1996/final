@@ -225,8 +225,12 @@ if (targets.includes('fe')) verifyFrontend();
 if (targets.includes('harness')) verifyHarness();
 
 writeFileSync(logFile, fullLog || '(실행된 단계 없음)\n', 'utf8');
-// 오래된 verify 로그 정리 (#180). 다른 verify가 동시에 지웠으면 무시한다
-for (const name of logsToPrune(readdirSync(logDir), undefined, basename(logFile))) rmSync(join(logDir, name), { force: true });
+// 오래된 verify 로그 정리 (#180). 부가 작업이라 실패해도(다른 프로세스가 잡은 파일 등) 검증 결과에 영향을 주지 않는다
+for (const name of logsToPrune(readdirSync(logDir), undefined, basename(logFile))) {
+  try {
+    rmSync(join(logDir, name), { force: true });
+  } catch {}
+}
 
 const failed = results.filter((r) => !r.ok);
 if (parsed.record) {

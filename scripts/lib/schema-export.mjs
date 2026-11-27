@@ -103,6 +103,19 @@ export function exportSchema({ docker, migrations, sleep = defaultSleep, readyTr
     const dump = docker(['exec', name, 'mysqldump', ...CLIENT, '--no-data', '--skip-comments', '--skip-dump-date', DB]);
     if (!dump.ok) return { ok: false, error: `mysqldump 실패: ${firstLine(dump.err)}` };
     const sql = cleanDump(dump.out, { lastVersion });
+    // cleanDump는 CREATE TABLE만 남기므로 뷰·트리거·루틴·이벤트가 생기면 조용히 빠진다 → 멈추고 알린다
+    const others = query(
+      null,
+      [
+        `SELECT 'VIEW', table_name FROM information_schema.views WHERE table_schema = '${DB}'`,
+        `SELECT 'TRIGGER', trigger_name FROM information_schema.triggers WHERE trigger_schema = '${DB}'`,
+        `SELECT routine_type, routine_name FROM information_schema.routines WHERE routine_schema = '${DB}'`,
+        `SELECT 'EVENT', event_name FROM information_schema.events WHERE event_schema = '${DB}'`,
+      ].join(' UNION ALL '),
+    );
+    if (!others.ok) return { ok: false, error: `객체 목록 조회 실패: ${firstLine(others.err)}` };
+    const unsupported = others.out.split(/\r?\n/).filter(Boolean).map((l) => l.replace('\t', ' '));
+    if (unsupported.length) return { ok: false, error: `Schema.sql이 담지 못하는 지원하지 않는 객체가 있습니다 (export-schema를 고쳐야 함): ${unsupported.join(', ')}` };
 
     const reapplied = sqlIn(CHECK_DB, tablesOnly(sql));
     if (!reapplied.ok) return { ok: false, error: `만든 Schema.sql을 빈 DB에 적용하지 못했습니다: ${firstLine(reapplied.err)}` };

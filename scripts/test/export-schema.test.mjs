@@ -162,3 +162,15 @@ test('HP-5 AC11 다시 적용한 DB와 SHOW CREATE TABLE이 다르면 테이블 
   assert.match(r.error, /users/);
   assert.deepEqual(docker.calls.at(-1).args.slice(0, 2), ['rm', '-f']);
 });
+
+test('HP-5 AC10 트리거·뷰·루틴·이벤트가 있으면 Schema.sql에 빠지므로 이름과 함께 실패한다', () => {
+  const docker = succeed(SHOW);
+  const run = docker.run;
+  const wrapped = { ...docker, run: (args, input) => (args.join(' ').includes('information_schema') ? { ok: true, out: 'TRIGGER\ttrg_users\nVIEW\tv_stats\n', err: '' } : run(args, input)) };
+  const r = exportSchema({ ...opts(wrapped), migrations: [migrations[0]] });
+  assert.equal(r.ok, false);
+  assert.match(r.error, /지원하지 않는 객체/);
+  assert.match(r.error, /TRIGGER trg_users/);
+  assert.match(r.error, /VIEW v_stats/);
+  assert.deepEqual(docker.calls.at(-1).args.slice(0, 2), ['rm', '-f']);
+});

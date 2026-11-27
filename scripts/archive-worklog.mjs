@@ -30,7 +30,8 @@ const dryRun = args.includes('--dry-run');
 const text = readText(logFile);
 if (text === null) fail(`작업로그를 읽을 수 없습니다: ${logFile}`);
 
-const { log, moved, warnings } = splitByWeek(text, today);
+const { log, moved, warnings, error } = splitByWeek(text, today);
+if (error) fail(`${error}. 작업로그를 고친 뒤 다시 실행하세요 (파일은 바꾸지 않았습니다)`);
 for (const w of warnings) console.warn(`⚠️ ${w}`);
 if (!moved.size) {
   console.log(`보관할 항목 없음 (기준일 ${today})`);

@@ -142,3 +142,14 @@ test('HP-5 AC2 CLI: --today 형식이 틀리면 exit 1', () => {
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('HP-5 AC4 닫히지 않은 코드 블록이 있으면 아무것도 옮기지 않고 그 항목 헤더를 알린다', () => {
+  const broken = '## 2026-11-19 10:00 · whans1996 · dh-ssafy · feature/q\n- 한 일: 예시\n```bash\nnode x';
+  const log = [PREAMBLE, broken, W2a].join('\n\n') + '\n';
+  const r = splitByWeek(log, '2026-11-29');
+  assert.equal(r.moved.size, 0);
+  assert.equal(r.log, log);
+  assert.match(r.error, /닫히지 않은 코드 블록/);
+  assert.match(r.error, /## 2026-11-19 10:00 · whans1996/);
+  assert.equal(splitByWeek(LOG, '2026-11-29').error, null);
+});

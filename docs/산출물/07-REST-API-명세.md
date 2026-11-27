@@ -2059,11 +2059,11 @@ DONE이면 완료 시각을 지금으로, TODO면 완료 시각을 지운다. �
 
 | 이름 | 타입 | 필수 | 설명 | 예 |
 |---|---|---|---|---|
-| `description` | string,null | 선택 | 설명 (2,000자 이하, 비면 null) (길이 0~2000자) | `분석한 프로젝트의 퀴즈를 12월 안에 10번 풀어 보세요.` |
+| `description` | string · null 가능 | 선택 | 설명 (2,000자 이하, 비면 null) (길이 0~2000자) | `분석한 프로젝트의 퀴즈를 12월 안에 10번 풀어 보세요.` |
 | `endDate` | string(date) | 필수 | 종료일 yyyy-MM-dd. 시작일 이후, 기간(양 끝 포함) 90일 이하. 등록할 때와 종료일을 바꿀 때는 오늘 이후 (길이 1~자) | `2026-12-31` |
 | `goalType` | string: REVIEW_COUNT · QUIZ_COUNT · ANALYSIS_COUNT | 필수 | 목표 유형 (REVIEW_COUNT 개념 복습, QUIZ_COUNT 퀴즈, ANALYSIS_COUNT 분석). 시작한 챌린지는 바꿀 수 없음 (길이 1~자) | `QUIZ_COUNT` |
 | `goalValue` | string | 필수 | 목표값 (1~1,000). 시작한 챌린지는 바꿀 수 없음 (길이 1~자, 범위 1~1000) | `10` |
-| `image` | string,null(binary) | 선택 | 대표 이미지 (jpg·png·webp, 2MB 이하, 확장자·MIME·내용이 일치). 수정 때 생략하면 기존 이미지를 유지한다 | - |
+| `image` | string(binary) · null 가능 | 선택 | 대표 이미지 (jpg·png·webp, 2MB 이하, 확장자·MIME·내용이 일치). 수정 때 생략하면 기존 이미지를 유지한다 | - |
 | `removeImage` | string: true · false | 선택 | 수정 전용. true면 기존 이미지를 지운다 (image와 함께 보낼 수 없음) (기본 `false`) | - |
 | `startDate` | string(date) | 필수 | 시작일 yyyy-MM-dd (과거 허용). 시작한 챌린지는 바꿀 수 없음 (길이 1~자) | `2026-12-01` |
 | `title` | string | 필수 | 제목 (앞뒤 공백 제거 후 1~100자) (길이 0~100자) | `12월 퀴즈 챌린지` |
@@ -2075,12 +2075,12 @@ DONE이면 완료 시각을 지금으로, TODO면 완료 시각을 지운다. �
 | 이름 | 타입 | 필수 | 설명 | 예 |
 |---|---|---|---|---|
 | `createdAt` | string(date-time) | 필수 | 등록 시각 | `2026-11-24T08:50:00+09:00` |
-| `description` | string,null | 필수 | 설명 (없으면 null) | `분석한 프로젝트의 퀴즈를 12월 안에 10번 풀어 보세요.` |
+| `description` | string · null 가능 | 필수 | 설명 (없으면 null) | `분석한 프로젝트의 퀴즈를 12월 안에 10번 풀어 보세요.` |
 | `endDate` | string(date) | 필수 | 종료일 (포함) | `2026-12-31` |
 | `goalType` | string: REVIEW_COUNT · QUIZ_COUNT · ANALYSIS_COUNT | 필수 | 목표 유형 (REVIEW_COUNT 개념 복습, QUIZ_COUNT 퀴즈, ANALYSIS_COUNT 분석) | `QUIZ_COUNT` |
 | `goalValue` | integer(int32) | 필수 | 목표값 | `10` |
 | `id` | integer(int64) | 필수 | 챌린지 ID | `7` |
-| `imageUrl` | string,null | 필수 | 대표 이미지 공개 주소 (없으면 null) | `/uploads/challenges/3f2b9c1e-8a4d-4f7e-9b1a-2c5d6e7f8a90.png` |
+| `imageUrl` | string · null 가능 | 필수 | 대표 이미지 공개 주소 (없으면 null) | `/uploads/challenges/3f2b9c1e-8a4d-4f7e-9b1a-2c5d6e7f8a90.png` |
 | `participantCount` | integer(int64) | 필수 | 참여자 수 | `0` |
 | `startDate` | string(date) | 필수 | 시작일 | `2026-12-01` |
 | `status` | string: UPCOMING · ONGOING · ENDED | 필수 | 상태 (UPCOMING 예정, ONGOING 진행 중, ENDED 종료). 오늘(Asia/Seoul) 기준으로 계산 | `UPCOMING` |
@@ -2097,7 +2097,7 @@ DONE이면 완료 시각을 지금으로, TODO면 완료 시각을 지운다. �
 | `goalType` | string: REVIEW_COUNT · QUIZ_COUNT · ANALYSIS_COUNT | 필수 | 목표 유형 (REVIEW_COUNT 개념 복습, QUIZ_COUNT 퀴즈, ANALYSIS_COUNT 분석) | `QUIZ_COUNT` |
 | `goalValue` | integer(int32) | 필수 | 목표값 | `10` |
 | `id` | integer(int64) | 필수 | 챌린지 ID | `7` |
-| `imageUrl` | string,null | 필수 | 대표 이미지 공개 주소 (없으면 null) | `/uploads/challenges/3f2b9c1e-8a4d-4f7e-9b1a-2c5d6e7f8a90.png` |
+| `imageUrl` | string · null 가능 | 필수 | 대표 이미지 공개 주소 (없으면 null) | `/uploads/challenges/3f2b9c1e-8a4d-4f7e-9b1a-2c5d6e7f8a90.png` |
 | `participantCount` | integer(int64) | 필수 | 참여자 수 | `0` |
 | `startDate` | string(date) | 필수 | 시작일 | `2026-12-01` |
 | `status` | string: UPCOMING · ONGOING · ENDED | 필수 | 상태 (UPCOMING 예정, ONGOING 진행 중, ENDED 종료). 오늘(Asia/Seoul) 기준으로 계산 | `UPCOMING` |
@@ -2118,15 +2118,15 @@ DONE이면 완료 시각을 지금으로, TODO면 완료 시각을 지운다. �
 | 이름 | 타입 | 필수 | 설명 | 예 |
 |---|---|---|---|---|
 | `avgRating` | number(double) | 필수 | 평균 별점 (0.0~5.0, 리뷰가 없으면 0.0) | `0` |
-| `body` | string,null | 필수 | 본문 (Markdown 원문) | `## 핵심<br>- 엔티티에 버전 컬럼을 두고 UPDATE 조건에 넣는다.` |
+| `body` | string · null 가능 | 필수 | 본문 (Markdown 원문) | `## 핵심<br>- 엔티티에 버전 컬럼을 두고 UPDATE 조건에 넣는다.` |
 | `category` | string | 필수 | 카테고리 (java, spring, web, security, mybatis, vue) | `spring` |
 | `createdAt` | string(date-time) | 필수 | 작성 시각 | `2026-11-20T14:20:00+09:00` |
 | `difficulty` | string: BEGINNER · JUNIOR · SENIOR | 필수 | 난이도 | `SENIOR` |
-| `exampleCode` | string,null | 필수 | 예제 코드 | `UPDATE orders SET status = ?, version = version + 1 WHERE id = ? AND version = ?` |
+| `exampleCode` | string · null 가능 | 필수 | 예제 코드 | `UPDATE orders SET status = ?, version = version + 1 WHERE id = ? AND version = ?` |
 | `id` | integer(int64) | 필수 | 카드 ID | `91` |
 | `linkedAnalysisCount` | integer(int64) | 필수 | 이 카드가 연결된 분석 수 (삭제된 분석은 연결이 지워져 빠진다) | `2` |
 | `name` | string | 필수 | 개념 이름 | `낙관적 락` |
-| `referenceUrl` | string,null | 필수 | 공식 문서 출처 링크 | `https://docs.spring.io/spring-data/jpa/reference/jpa/locking.html` |
+| `referenceUrl` | string · null 가능 | 필수 | 공식 문서 출처 링크 | `https://docs.spring.io/spring-data/jpa/reference/jpa/locking.html` |
 | `reviewCount` | integer(int64) | 필수 | 리뷰 수 | `0` |
 | `source` | string: SEED · AI · ADMIN | 필수 | 출처 (SEED 시드, AI 분석 초안, ADMIN 관리자 작성) | `AI` |
 | `status` | string: DRAFT · PUBLISHED · HIDDEN | 필수 | 상태 (DRAFT 검수 대기, PUBLISHED 공개, HIDDEN 숨김) | `DRAFT` |
@@ -2140,12 +2140,12 @@ DONE이면 완료 시각을 지금으로, TODO면 완료 시각을 지운다. �
 
 | 이름 | 타입 | 필수 | 설명 | 예 |
 |---|---|---|---|---|
-| `body` | string,null | 선택 | 본문 Markdown (10,000자 이하, 비면 null) (길이 0~10000자) | `## 핵심<br>- 엔티티에 버전 컬럼을 두고 UPDATE 조건에 넣는다.` |
+| `body` | string · null 가능 | 선택 | 본문 Markdown (10,000자 이하, 비면 null) (길이 0~10000자) | `## 핵심<br>- 엔티티에 버전 컬럼을 두고 UPDATE 조건에 넣는다.` |
 | `category` | string: java · spring · web · security · mybatis · vue | 필수 | 카테고리 (길이 1~자) | `spring` |
 | `difficulty` | string: BEGINNER · JUNIOR · SENIOR | 필수 | 난이도 (길이 1~자) | `SENIOR` |
-| `exampleCode` | string,null | 선택 | 예제 코드 (10,000자 이하, 비면 null) (길이 0~10000자) | `UPDATE orders SET status = ?, version = version + 1 WHERE id = ? AND version = ?` |
+| `exampleCode` | string · null 가능 | 선택 | 예제 코드 (10,000자 이하, 비면 null) (길이 0~10000자) | `UPDATE orders SET status = ?, version = version + 1 WHERE id = ? AND version = ?` |
 | `name` | string | 필수 | 개념 이름 (1~100자, 시드 카드는 바꿀 수 없음) (길이 0~100자) | `낙관적 락` |
-| `referenceUrl` | string,null | 선택 | 공식 문서 출처 링크 (http·https만, 500자 이하, 비면 null) (길이 0~500자) | `https://docs.spring.io/spring-data/jpa/reference/jpa/locking.html` |
+| `referenceUrl` | string · null 가능 | 선택 | 공식 문서 출처 링크 (http·https만, 500자 이하, 비면 null) (길이 0~500자) | `https://docs.spring.io/spring-data/jpa/reference/jpa/locking.html` |
 | `status` | string: DRAFT · PUBLISHED · HIDDEN | 필수 | 상태. 생성은 DRAFT·PUBLISHED만, 공개·숨김 카드는 DRAFT로 되돌릴 수 없음 (길이 1~자) | `PUBLISHED` |
 | `summary` | string | 필수 | 한 줄 요약 (1~500자) (길이 0~500자) | `충돌이 드물다고 보고 저장 시점에 버전으로 충돌을 확인하는 동시성 제어 방식이다.` |
 
@@ -2183,10 +2183,10 @@ DONE이면 완료 시각을 지금으로, TODO면 완료 시각을 지운다. �
 | 이름 | 타입 | 필수 | 설명 | 예 |
 |---|---|---|---|---|
 | `concept` | [ConceptSummaryResponse](#conceptsummaryresponse) | 필수 | 카드 요약 | - |
-| `contextNote` | string,null | 선택 | 이 코드에서 개념이 쓰인 방식 (없으면 null) | `생성자로 TodoMapper를 받아 필드에 저장합니다.` |
-| `fileId` | integer,null(int64) | 선택 | 개념이 쓰인 분석 파일 ID (없으면 null) | `102` |
-| `filePath` | string,null | 선택 | 그 파일 경로 (없으면 null) | `src/main/java/com/example/todo/TodoService.java` |
-| `lineHint` | string,null | 선택 | 줄 위치 L12 또는 L12-L30 (없으면 null) | `L8-L15` |
+| `contextNote` | string · null 가능 | 선택 | 이 코드에서 개념이 쓰인 방식 (없으면 null) | `생성자로 TodoMapper를 받아 필드에 저장합니다.` |
+| `fileId` | integer(int64) · null 가능 | 선택 | 개념이 쓰인 분석 파일 ID (없으면 null) | `102` |
+| `filePath` | string · null 가능 | 선택 | 그 파일 경로 (없으면 null) | `src/main/java/com/example/todo/TodoService.java` |
+| `lineHint` | string · null 가능 | 선택 | 줄 위치 L12 또는 L12-L30 (없으면 null) | `L8-L15` |
 
 ### AnalysisConceptsResponse
 
@@ -2204,26 +2204,26 @@ DONE이면 완료 시각을 지금으로, TODO면 완료 시각을 지운다. �
 | 이름 | 타입 | 필수 | 설명 | 예 |
 |---|---|---|---|---|
 | `createdAt` | string(date-time) | 필수 | 요청 시각 | `2026-11-24T14:20:00+09:00` |
-| `errorCode` | string,null | 선택 | 실패 사유 코드. FAILED가 아니면 null | `LLM_503` |
-| `errorMessage` | string,null | 선택 | 실패 사유 문구. FAILED가 아니면 null | - |
+| `errorCode` | string · null 가능 | 선택 | 실패 사유 코드. FAILED가 아니면 null | `LLM_503` |
+| `errorMessage` | string · null 가능 | 선택 | 실패 사유 문구. FAILED가 아니면 null | - |
 | `explainedFileCount` | integer(int32) | 필수 | 설명이 만들어진 파일 수 | `14` |
 | `fileCount` | integer(int32) | 필수 | 선별해 저장한 파일 수 | `14` |
 | `id` | integer(int64) | 필수 | 분석 ID | `42` |
 | `isPublic` | boolean | 필수 | 공개 여부 | `false` |
 | `level` | string: BEGINNER · JUNIOR · SENIOR | 필수 | 분석 수준 | `JUNIOR` |
 | `liteMode` | boolean | 필수 | 간이 모드 여부. 성공한 LLM 호출 중 서버의 로컬 AI(Ollama)가 1건 이상이면 true. 처리 중이면 그 시점까지의 기록으로 계산한다 (F-27) | `false` |
-| `memo` | string,null | 선택 | 메모. 주인이 아니면(mine = false) 항상 null | `JWT 필터 순서 다시 보기` |
+| `memo` | string · null 가능 | 선택 | 메모. 주인이 아니면(mine = false) 항상 null | `JWT 필터 순서 다시 보기` |
 | `mine` | boolean | 필수 | 요청한 회원의 분석인지 | `true` |
 | `overview` | [AnalysisOverview](#analysisoverview) | 선택 | 프로젝트 개요. 개요 생성 전·실패 시 null | - |
 | `owner` | [AnalysisOwnerResponse](#analysisownerresponse) | 필수 | 분석 주인 | - |
 | `progress` | integer(int32) | 필수 | 진행률 (0~100) | `100` |
-| `projectName` | string,null | 선택 | 프로젝트 이름 | `todo-app` |
+| `projectName` | string · null 가능 | 선택 | 프로젝트 이름 | `todo-app` |
 | `quizRegenerationsLeft` | integer(int32) | 필수 | 퀴즈 다시 만들기 남은 횟수 (분석당 3회 − 사용, 최소 0, L-1a) (범위 0~) | `2` |
-| `quizStatus` | string,null: GENERATING · READY · FAILED | 선택 | 퀴즈 상태. GENERATING 재생성 중, READY 퀴즈 있음, FAILED 생성 실패(다시 만들 수 있음). QUIZ 단계를 끝내기 전이면 null (L-1a) | `READY` |
+| `quizStatus` | string: GENERATING · READY · FAILED · null 가능 | 선택 | 퀴즈 상태. GENERATING 재생성 중, READY 퀴즈 있음, FAILED 생성 실패(다시 만들 수 있음). QUIZ 단계를 끝내기 전이면 null (L-1a) | `READY` |
 | `sourceType` | string: URL · ZIP | 필수 | 입력 종류 | `ZIP` |
-| `sourceUrl` | string,null | 선택 | 저장소 주소(정규화). ZIP 분석이면 null (F-05b AC12) | `https://github.com/octo/todo-app` |
+| `sourceUrl` | string · null 가능 | 선택 | 저장소 주소(정규화). ZIP 분석이면 null (F-05b AC12) | `https://github.com/octo/todo-app` |
 | `status` | string: FETCHING · FILTERING · SELECTING · EXPLAINING · EXTRACTING · QUIZ · DONE · FAILED | 필수 | 진행 상태 | `DONE` |
-| `title` | string,null | 선택 | 제목 | `todo-app` |
+| `title` | string · null 가능 | 선택 | 제목 | `todo-app` |
 
 ### AnalysisFileResponse
 
@@ -2235,8 +2235,8 @@ DONE이면 완료 시각을 지금으로, TODO면 완료 시각을 지운다. �
 | `id` | integer(int64) | 필수 | 파일 ID | `101` |
 | `layer` | string: controller · service · mapper · vue · js · config · domain · other | 필수 | 레이어 | `controller` |
 | `path` | string | 필수 | 프로젝트 루트 기준 경로 | `src/main/java/com/example/todo/TodoController.java` |
-| `role` | string,null | 선택 | 한 줄 역할. 설명을 만들지 못했으면 null | - |
-| `summary` | string,null | 선택 | 파일 설명. 설명을 만들지 못했으면 null | - |
+| `role` | string · null 가능 | 선택 | 한 줄 역할. 설명을 만들지 못했으면 null | - |
+| `summary` | string · null 가능 | 선택 | 파일 설명. 설명을 만들지 못했으면 null | - |
 
 ### AnalysisFileSummaryResponse
 
@@ -2247,8 +2247,8 @@ DONE이면 완료 시각을 지금으로, TODO면 완료 시각을 지운다. �
 | `id` | integer(int64) | 필수 | 파일 ID | `101` |
 | `layer` | string: controller · service · mapper · vue · js · config · domain · other | 필수 | 레이어 | `controller` |
 | `path` | string | 필수 | 프로젝트 루트 기준 경로 | `src/main/java/com/example/todo/TodoController.java` |
-| `role` | string,null | 선택 | 한 줄 역할. 설명을 만들지 못했으면 null | `할 일 목록·등록·완료 API를 제공하는 컨트롤러` |
-| `summary` | string,null | 선택 | 파일 설명. 설명을 만들지 못했으면 null | `@RestController가 붙어 있어 메서드의 반환값이 JSON으로 응답됩니다.` |
+| `role` | string · null 가능 | 선택 | 한 줄 역할. 설명을 만들지 못했으면 null | `할 일 목록·등록·완료 API를 제공하는 컨트롤러` |
+| `summary` | string · null 가능 | 선택 | 파일 설명. 설명을 만들지 못했으면 null | `@RestController가 붙어 있어 메서드의 반환값이 JSON으로 응답됩니다.` |
 
 ### AnalysisOverview
 
@@ -2278,11 +2278,11 @@ DONE이면 완료 시각을 지금으로, TODO면 완료 시각을 지운다. �
 | 이름 | 타입 | 필수 | 설명 | 예 |
 |---|---|---|---|---|
 | `analysisId` | integer(int64) | 필수 | 분석 ID | `42` |
-| `errorCode` | string,null: ANALYSIS_004 · ANALYSIS_400 · ANALYSIS_413 · ANALYSIS_415 · ANALYSIS_500 · ANALYSIS_502 · ANALYSIS_503 · LLM_502 · LLM_503 | 선택 | 실패 사유 코드. FAILED가 아니면 null. ANALYSIS_413은 저장소 아카이브 크기 초과(URL 분석)에서만 나오고, 코드 파일 수·합계로는 실패하지 않는다 | `ANALYSIS_413` |
-| `errorMessage` | string,null | 선택 | 사용자에게 보여 줄 실패 사유. FAILED가 아니면 null | `저장소 아카이브가 30MB를 넘습니다. ZIP으로 필요한 코드만 올려 주세요.` |
+| `errorCode` | string: ANALYSIS_004 · ANALYSIS_400 · ANALYSIS_413 · ANALYSIS_415 · ANALYSIS_500 · ANALYSIS_502 · ANALYSIS_503 · LLM_502 · LLM_503 · null 가능 | 선택 | 실패 사유 코드. FAILED가 아니면 null. ANALYSIS_413은 저장소 아카이브 크기 초과(URL 분석)에서만 나오고, 코드 파일 수·합계로는 실패하지 않는다 | `ANALYSIS_413` |
+| `errorMessage` | string · null 가능 | 선택 | 사용자에게 보여 줄 실패 사유. FAILED가 아니면 null | `저장소 아카이브가 30MB를 넘습니다. ZIP으로 필요한 코드만 올려 주세요.` |
 | `progress` | integer(int32) | 필수 | 진행률 (0~100). FAILED면 실패 직전 값 | `15` |
-| `quizStatus` | string,null: GENERATING · READY · FAILED | 선택 | 퀴즈 상태. GENERATING 재생성 중, READY 퀴즈 있음, FAILED 생성 실패(다시 만들 수 있음). QUIZ 단계를 끝내기 전이면 null (L-1a) | `READY` |
-| `sourceUrl` | string,null | 선택 | 저장소 주소(정규화). ZIP 분석이면 null. FAILED 화면의 "저장소 보기" 링크 (F-19 AC12) | `https://github.com/octo/todo-app` |
+| `quizStatus` | string: GENERATING · READY · FAILED · null 가능 | 선택 | 퀴즈 상태. GENERATING 재생성 중, READY 퀴즈 있음, FAILED 생성 실패(다시 만들 수 있음). QUIZ 단계를 끝내기 전이면 null (L-1a) | `READY` |
+| `sourceUrl` | string · null 가능 | 선택 | 저장소 주소(정규화). ZIP 분석이면 null. FAILED 화면의 "저장소 보기" 링크 (F-19 AC12) | `https://github.com/octo/todo-app` |
 | `status` | string: FETCHING · FILTERING · SELECTING · EXPLAINING · EXTRACTING · QUIZ · DONE · FAILED | 필수 | 진행 상태 | `FILTERING` |
 | `updatedAt` | string(date-time) | 필수 | 마지막 상태 변경 시각 | `2026-11-24T14:20:01+09:00` |
 
@@ -2308,12 +2308,12 @@ DONE이면 완료 시각을 지금으로, TODO면 완료 시각을 지운다. �
 | `id` | integer(int64) | 필수 | 분석 ID | `42` |
 | `isPublic` | boolean | 필수 | 공개 여부 | `false` |
 | `level` | string: BEGINNER · JUNIOR · SENIOR | 필수 | 분석 수준 | `JUNIOR` |
-| `memo` | string,null | 선택 | 메모 (F-19) | `JWT 필터 순서 다시 보기` |
+| `memo` | string · null 가능 | 선택 | 메모 (F-19) | `JWT 필터 순서 다시 보기` |
 | `progress` | integer(int32) | 필수 | 진행률 (0~100) | `25` |
-| `projectName` | string,null | 선택 | 프로젝트 이름 (ZIP 파일명에서 .zip을 뺀 이름) | `todo-app` |
+| `projectName` | string · null 가능 | 선택 | 프로젝트 이름 (ZIP 파일명에서 .zip을 뺀 이름) | `todo-app` |
 | `sourceType` | string: URL · ZIP | 필수 | 입력 종류 | `ZIP` |
 | `status` | string: FETCHING · FILTERING · SELECTING · EXPLAINING · EXTRACTING · QUIZ · DONE · FAILED | 필수 | 진행 상태 | `SELECTING` |
-| `title` | string,null | 선택 | 제목 (처음에는 프로젝트 이름) | `todo-app` |
+| `title` | string · null 가능 | 선택 | 제목 (처음에는 프로젝트 이름) | `todo-app` |
 
 ### ApiEndpoint
 
@@ -2331,12 +2331,12 @@ DONE이면 완료 시각을 지금으로, TODO면 완료 시각을 지운다. �
 
 | 이름 | 타입 | 필수 | 설명 | 예 |
 |---|---|---|---|---|
-| `description` | string,null | 필수 | 설명 (없으면 null) | `분석한 프로젝트의 퀴즈를 기간 안에 10번 풀어 보세요.` |
+| `description` | string · null 가능 | 필수 | 설명 (없으면 null) | `분석한 프로젝트의 퀴즈를 기간 안에 10번 풀어 보세요.` |
 | `endDate` | string(date) | 필수 | 종료일 (포함) | `2026-11-30` |
 | `goalType` | string: REVIEW_COUNT · QUIZ_COUNT · ANALYSIS_COUNT | 필수 | 목표 유형 (REVIEW_COUNT 개념 복습, QUIZ_COUNT 퀴즈, ANALYSIS_COUNT 분석) | `QUIZ_COUNT` |
 | `goalValue` | integer(int32) | 필수 | 목표값 | `10` |
 | `id` | integer(int64) | 필수 | 챌린지 ID | `7` |
-| `imageUrl` | string,null | 필수 | 대표 이미지 공개 주소 (없으면 null) | `/uploads/challenges/3f2b9c1e-8a4d-4f7e-9b1a-2c5d6e7f8a90.png` |
+| `imageUrl` | string · null 가능 | 필수 | 대표 이미지 공개 주소 (없으면 null) | `/uploads/challenges/3f2b9c1e-8a4d-4f7e-9b1a-2c5d6e7f8a90.png` |
 | `participantCount` | integer(int64) | 필수 | 참여자 수 | `2` |
 | `participation` | [ChallengeProgressResponse](#challengeprogressresponse) | 필수 | 내 참여·달성도 (비로그인이거나 참여하지 않았으면 null) | - |
 | `startDate` | string(date) | 필수 | 시작일 | `2026-11-20` |
@@ -2349,7 +2349,7 @@ DONE이면 완료 시각을 지금으로, TODO면 완료 시각을 지운다. �
 
 | 이름 | 타입 | 필수 | 설명 | 예 |
 |---|---|---|---|---|
-| `completedAt` | string,null(date-time) | 필수 | 달성 시각 (미달성이면 null) | `2026-11-24T10:15:00+09:00` |
+| `completedAt` | string(date-time) · null 가능 | 필수 | 달성 시각 (미달성이면 null) | `2026-11-24T10:15:00+09:00` |
 | `goalValue` | integer(int32) | 필수 | 목표값 | `10` |
 | `joinedAt` | string(date-time) | 필수 | 참여 시각 | `2026-11-22T21:05:00+09:00` |
 | `progress` | integer(int32) | 필수 | 달성도 (기간 안 활동 수, 목표값을 넘지 않는다) | `3` |
@@ -2364,7 +2364,7 @@ DONE이면 완료 시각을 지금으로, TODO면 완료 시각을 지운다. �
 | `goalType` | string: REVIEW_COUNT · QUIZ_COUNT · ANALYSIS_COUNT | 필수 | 목표 유형 (REVIEW_COUNT 개념 복습, QUIZ_COUNT 퀴즈, ANALYSIS_COUNT 분석) | `QUIZ_COUNT` |
 | `goalValue` | integer(int32) | 필수 | 목표값 | `10` |
 | `id` | integer(int64) | 필수 | 챌린지 ID | `7` |
-| `imageUrl` | string,null | 필수 | 대표 이미지 공개 주소 (없으면 null) | `/uploads/challenges/3f2b9c1e-8a4d-4f7e-9b1a-2c5d6e7f8a90.png` |
+| `imageUrl` | string · null 가능 | 필수 | 대표 이미지 공개 주소 (없으면 null) | `/uploads/challenges/3f2b9c1e-8a4d-4f7e-9b1a-2c5d6e7f8a90.png` |
 | `joined` | boolean | 필수 | 내가 참여했는지 (비로그인이면 false) | `true` |
 | `participantCount` | integer(int64) | 필수 | 참여자 수 | `2` |
 | `startDate` | string(date) | 필수 | 시작일 | `2026-11-20` |
@@ -2394,7 +2394,7 @@ DONE이면 완료 시각을 지금으로, TODO면 완료 시각을 지운다. �
 
 | 이름 | 타입 | 필수 | 설명 | 예 |
 |---|---|---|---|---|
-| `authorId` | integer,null(int64) | 필수 | 작성자 ID (탈퇴한 회원이면 null) | `9` |
+| `authorId` | integer(int64) · null 가능 | 필수 | 작성자 ID (탈퇴한 회원이면 null) | `9` |
 | `authorNickname` | string | 필수 | 작성자 현재 닉네임 (탈퇴한 회원이면 "탈퇴한 사용자") | `스프링러버` |
 | `content` | string | 필수 | 내용 (글자 그대로. 화면은 HTML로 해석하지 않는다) | `같은 클래스 안에서 호출하면 프록시를 거치지 않아서 트랜잭션이 안 걸려요.<br>별도 빈으로 빼 보세요.` |
 | `createdAt` | string(date-time) | 필수 | 작성 시각 | `2026-11-20T14:10:05+09:00` |
@@ -2410,10 +2410,10 @@ DONE이면 완료 시각을 지금으로, TODO면 완료 시각을 지운다. �
 |---|---|---|---|---|
 | `analysisId` | integer(int64) | 필수 | 분석 ID | `31` |
 | `analysisTitle` | string | 필수 | 분석 제목 (없으면 프로젝트 이름, 둘 다 없으면 "제목 없는 분석") | `쇼핑몰 과제` |
-| `contextNote` | string,null | 필수 | 이 코드에서 개념이 쓰인 맥락 | `로그인 성공 시 토큰을 만든다` |
-| `fileId` | integer,null(int64) | 필수 | 등장한 파일 ID (파일을 특정하지 못했으면 null) | `412` |
-| `filePath` | string,null | 필수 | 등장한 파일 경로 (fileId가 null이면 null) | `src/main/java/com/shop/security/JwtProvider.java` |
-| `lineHint` | string,null | 필수 | 줄 위치 힌트 | `L24-L40` |
+| `contextNote` | string · null 가능 | 필수 | 이 코드에서 개념이 쓰인 맥락 | `로그인 성공 시 토큰을 만든다` |
+| `fileId` | integer(int64) · null 가능 | 필수 | 등장한 파일 ID (파일을 특정하지 못했으면 null) | `412` |
+| `filePath` | string · null 가능 | 필수 | 등장한 파일 경로 (fileId가 null이면 null) | `src/main/java/com/shop/security/JwtProvider.java` |
+| `lineHint` | string · null 가능 | 필수 | 줄 위치 힌트 | `L24-L40` |
 
 ### ConceptDetailResponse
 
@@ -2423,13 +2423,13 @@ DONE이면 완료 시각을 지금으로, TODO면 완료 시각을 지운다. �
 |---|---|---|---|---|
 | `appearances` | [ConceptAppearanceResponse](#conceptappearanceresponse)[] | 필수 | 내 분석(삭제되지 않은 DONE)에서 등장한 위치, 최신순 최대 10개. 비로그인은 빈 배열 | - |
 | `avgRating` | number(double) | 필수 | 평균 별점 (0.0~5.0, 소수 1자리. 리뷰가 없으면 0.0) | `4.5` |
-| `body` | string,null | 필수 | 쉬운 설명 본문 (Markdown 원문, 렌더링은 FE) | `## 핵심<br>- 서버는 **서명**과 만료만 검증한다.` |
+| `body` | string · null 가능 | 필수 | 쉬운 설명 본문 (Markdown 원문, 렌더링은 FE) | `## 핵심<br>- 서버는 **서명**과 만료만 검증한다.` |
 | `category` | string | 필수 | 카테고리 (java, spring, security, mybatis, web, vue) | `security` |
 | `difficulty` | string: BEGINNER · JUNIOR · SENIOR | 필수 | 난이도 | `SENIOR` |
-| `exampleCode` | string,null | 필수 | 예제 코드 (언어 정보 없음) | `String token = Jwts.builder().subject(email).compact();` |
+| `exampleCode` | string · null 가능 | 필수 | 예제 코드 (언어 정보 없음) | `String token = Jwts.builder().subject(email).compact();` |
 | `id` | integer(int64) | 필수 | 카드 ID | `57` |
 | `name` | string | 필수 | 개념 이름 | `JWT 기반 인증` |
-| `referenceUrl` | string,null | 필수 | 공식 문서 출처 링크 | `https://docs.spring.io/spring-security/reference/servlet/oauth2/resource-server/jwt.html` |
+| `referenceUrl` | string · null 가능 | 필수 | 공식 문서 출처 링크 | `https://docs.spring.io/spring-security/reference/servlet/oauth2/resource-server/jwt.html` |
 | `related` | [ConceptSummaryResponse](#conceptsummaryresponse)[] | 필수 | 관련 카드 최대 4개 (함께 등장한 횟수순, 모자라면 같은 카테고리 인기순) | - |
 | `summary` | string | 필수 | 한 줄 요약 | `JWT는 사용자 정보와 만료 시간을 담고 서명한 토큰이다.` |
 | `wishCount` | integer(int32) | 필수 | 찜 수 | `12` |
@@ -2459,7 +2459,7 @@ DONE이면 완료 시각을 지금으로, TODO면 완료 시각을 지운다. �
 
 | 이름 | 타입 | 필수 | 설명 | 예 |
 |---|---|---|---|---|
-| `authorId` | integer,null(int64) | 필수 | 작성자 ID (탈퇴한 회원이면 null) | `7` |
+| `authorId` | integer(int64) · null 가능 | 필수 | 작성자 ID (탈퇴한 회원이면 null) | `7` |
 | `authorNickname` | string | 필수 | 작성자 현재 닉네임 (탈퇴한 회원이면 "탈퇴한 사용자") | `코딩하는감자` |
 | `content` | string | 필수 | 리뷰 내용 | `토큰 서명과 만료 검증 순서가 한눈에 들어왔어요` |
 | `createdAt` | string(date-time) | 필수 | 작성 시각 | `2026-12-02T21:14:03+09:00` |
@@ -2496,7 +2496,7 @@ DONE이면 완료 시각을 지금으로, TODO면 완료 시각을 지운다. �
 
 | 이름 | 타입 | 필수 | 설명 | 예 |
 |---|---|---|---|---|
-| `reviewPlanDate` | string,null(date) | 필수 | 이번 찜으로 복습 계획이 새로 생겼으면 그 날짜(내일, Asia/Seoul). 이미 찜했거나 그 카드의 TODO·내일 계획이 있었거나 해제면 null | `2026-12-04` |
+| `reviewPlanDate` | string(date) · null 가능 | 필수 | 이번 찜으로 복습 계획이 새로 생겼으면 그 날짜(내일, Asia/Seoul). 이미 찜했거나 그 카드의 TODO·내일 계획이 있었거나 해제면 null | `2026-12-04` |
 | `wishCount` | integer(int32) | 필수 | 요청 처리 후 카드의 찜 수 | `13` |
 | `wished` | boolean | 필수 | 요청 후 내가 찜했는지 | `true` |
 
@@ -2566,7 +2566,7 @@ DONE이면 완료 시각을 지금으로, TODO면 완료 시각을 지운다. �
 | 이름 | 타입 | 필수 | 설명 | 예 |
 |---|---|---|---|---|
 | `id` | integer(int64) | 필수 | 링크할 대상 ID. REVIEW는 리뷰 id가 아니라 카드 id | `12` |
-| `rating` | integer,null(int32) | 필수 | REVIEW의 별점(1~5). 나머지 종류는 null | `5` |
+| `rating` | integer(int32) · null 가능 | 필수 | REVIEW의 별점(1~5). 나머지 종류는 null | `5` |
 | `title` | string | 필수 | 대상 이름. ANALYSIS는 분석 제목, 없으면 프로젝트명, 둘 다 없으면 "제목 없는 분석" | `JWT 기반 인증` |
 
 ### FlowEndpoint
@@ -2585,14 +2585,14 @@ API 하나 (개요 apis의 method·path 그대로)
 | 이름 | 타입 | 필수 | 설명 | 예 |
 |---|---|---|---|---|
 | `createdAt` | string(date-time) | 필수 | 요청 시각 | `2026-12-09T10:00:00+09:00` |
-| `errorCode` | string,null: ANALYSIS_500 · LLM_502 · LLM_503 | 선택 | 실패 사유 코드. FAILED가 아니면 null | `LLM_503` |
-| `errorMessage` | string,null | 선택 | 사용자에게 보여 줄 실패 사유. FAILED가 아니면 null | `AI 응답을 받지 못했습니다. 잠시 후 다시 시도해 주세요.` |
+| `errorCode` | string: ANALYSIS_500 · LLM_502 · LLM_503 · null 가능 | 선택 | 실패 사유 코드. FAILED가 아니면 null | `LLM_503` |
+| `errorMessage` | string · null 가능 | 선택 | 사용자에게 보여 줄 실패 사유. FAILED가 아니면 null | `AI 응답을 받지 못했습니다. 잠시 후 다시 시도해 주세요.` |
 | `id` | integer(int64) | 필수 | 흐름 ID | `7` |
 | `method` | string | 필수 | HTTP 메서드 | `POST` |
 | `path` | string | 필수 | 경로 | `/api/todos` |
 | `status` | string: PENDING · DONE · FAILED | 필수 | 생성 상태 | `DONE` |
-| `steps` | array,null | 선택 | 단계 (최대 12개). DONE이 아니면 null | - |
-| `summary` | string,null | 선택 | 전체 흐름 요약 (500자 이내). DONE이 아니면 null | `새 할 일을 등록하면 컨트롤러가 입력을 검사하고, 서비스가 저장을 맡깁니다.` |
+| `steps` | [FlowStep](#flowstep)[] · null 가능 | 선택 | 단계 (최대 12개). DONE이 아니면 null | - |
+| `summary` | string · null 가능 | 선택 | 전체 흐름 요약 (500자 이내). DONE이 아니면 null | `새 할 일을 등록하면 컨트롤러가 입력을 검사하고, 서비스가 저장을 맡깁니다.` |
 
 ### FlowStep
 
@@ -2601,11 +2601,11 @@ API 하나 (개요 apis의 method·path 그대로)
 | 이름 | 타입 | 필수 | 설명 | 예 |
 |---|---|---|---|---|
 | `description` | string | 필수 | 단계 설명 (600자 이내) | `@PostMapping이 붙은 create 메서드가 JSON 본문을 @RequestBody로 받습니다.` |
-| `fileId` | integer,null(int64) | 선택 | 파일 ID. 분석에 없는 경로면 null | `101` |
-| `layer` | string,null: controller · service · mapper · vue · js · config · domain · other | 선택 | 파일 layer. 분석에 없는 경로면 null | `controller` |
+| `fileId` | integer(int64) · null 가능 | 선택 | 파일 ID. 분석에 없는 경로면 null | `101` |
+| `layer` | string: controller · service · mapper · vue · js · config · domain · other · null 가능 | 선택 | 파일 layer. 분석에 없는 경로면 null | `controller` |
 | `no` | integer(int32) | 필수 | 단계 번호 (1부터) | `1` |
 | `path` | string | 필수 | 파일 경로 | `src/main/java/com/example/todo/TodoController.java` |
-| `symbol` | string,null | 선택 | 클래스.메서드 (100자 이내) | `TodoController.create` |
+| `symbol` | string · null 가능 | 선택 | 클래스.메서드 (100자 이내) | `TodoController.create` |
 | `title` | string | 필수 | 단계 이름 (60자 이내) | `요청 받기` |
 
 ### FollowStatusResponse
@@ -2741,12 +2741,12 @@ API 하나 (개요 apis의 method·path 그대로)
 
 | 이름 | 타입 | 필수 | 설명 | 예 |
 |---|---|---|---|---|
-| `completedAt` | string,null(date-time) | 필수 | 달성 시각 (미달성이면 null) | `2026-11-24T10:15:00+09:00` |
+| `completedAt` | string(date-time) · null 가능 | 필수 | 달성 시각 (미달성이면 null) | `2026-11-24T10:15:00+09:00` |
 | `endDate` | string(date) | 필수 | 종료일 (포함) | `2026-11-30` |
 | `goalType` | string: REVIEW_COUNT · QUIZ_COUNT · ANALYSIS_COUNT | 필수 | 목표 유형 (REVIEW_COUNT 개념 복습, QUIZ_COUNT 퀴즈, ANALYSIS_COUNT 분석) | `QUIZ_COUNT` |
 | `goalValue` | integer(int32) | 필수 | 목표값 | `10` |
 | `id` | integer(int64) | 필수 | 챌린지 ID | `7` |
-| `imageUrl` | string,null | 필수 | 대표 이미지 공개 주소 (없으면 null) | `/uploads/challenges/3f2b9c1e-8a4d-4f7e-9b1a-2c5d6e7f8a90.png` |
+| `imageUrl` | string · null 가능 | 필수 | 대표 이미지 공개 주소 (없으면 null) | `/uploads/challenges/3f2b9c1e-8a4d-4f7e-9b1a-2c5d6e7f8a90.png` |
 | `joinedAt` | string(date-time) | 필수 | 참여 시각 | `2026-11-22T21:05:00+09:00` |
 | `progress` | integer(int32) | 필수 | 달성도 (기간 안 활동 수, 목표값을 넘지 않는다) | `3` |
 | `startDate` | string(date) | 필수 | 시작일 | `2026-11-20` |
@@ -2759,7 +2759,7 @@ API 하나 (개요 apis의 method·path 그대로)
 
 | 이름 | 타입 | 필수 | 설명 | 예 |
 |---|---|---|---|---|
-| `bio` | string,null | 선택 | 소개. 없으면 null | `AI로 만든 Spring 프로젝트를 공부하고 있어요.` |
+| `bio` | string · null 가능 | 선택 | 소개. 없으면 null | `AI로 만든 Spring 프로젝트를 공부하고 있어요.` |
 | `createdAt` | string(date-time) | 필수 | 가입 시각 | `2026-11-18T10:30:00+09:00` |
 | `email` | string | 필수 | 이메일 | `user@example.com` |
 | `id` | integer(int64) | 필수 | 회원 ID | `1` |
@@ -2773,7 +2773,7 @@ API 하나 (개요 apis의 method·path 그대로)
 
 | 이름 | 타입 | 필수 | 설명 | 예 |
 |---|---|---|---|---|
-| `description` | string,null | 선택 | 소개 | `F-05 분석 결과를 같이 공부합니다` |
+| `description` | string · null 가능 | 선택 | 소개 | `F-05 분석 결과를 같이 공부합니다` |
 | `id` | integer(int64) | 필수 | 팀 ID | `12` |
 | `joinedAt` | string(date-time) | 필수 | 내가 가입한 시각 | `2026-11-24T10:00:00+09:00` |
 | `memberCount` | integer(int32) | 필수 | 멤버 수 (팀장 포함) | `3` |
@@ -2908,8 +2908,8 @@ API 하나 (개요 apis의 method·path 그대로)
 | 이름 | 타입 | 필수 | 설명 | 예 |
 |---|---|---|---|---|
 | `id` | integer(int64) | 필수 | 분석 ID | `15` |
-| `projectName` | string,null | 필수 | 프로젝트명 (볼 수 없으면 null) | `shop-backend` |
-| `title` | string,null | 필수 | 분석 제목 (볼 수 없거나 제목이 없으면 null) | `쇼핑몰 과제` |
+| `projectName` | string · null 가능 | 필수 | 프로젝트명 (볼 수 없으면 null) | `shop-backend` |
+| `title` | string · null 가능 | 필수 | 분석 제목 (볼 수 없거나 제목이 없으면 null) | `쇼핑몰 과제` |
 | `viewable` | boolean | 필수 | 요청한 사람이 볼 수 있는지 (삭제되지 않았고, 내 분석이거나 탈퇴하지 않은 회원의 공개 분석) | `true` |
 
 ### PostConceptAttachment
@@ -2918,11 +2918,11 @@ API 하나 (개요 apis의 method·path 그대로)
 
 | 이름 | 타입 | 필수 | 설명 | 예 |
 |---|---|---|---|---|
-| `category` | string,null | 필수 | 카테고리 (볼 수 없으면 null) | `security` |
-| `difficulty` | string,null: BEGINNER · JUNIOR · SENIOR | 필수 | 난이도 (볼 수 없으면 null) | `JUNIOR` |
+| `category` | string · null 가능 | 필수 | 카테고리 (볼 수 없으면 null) | `security` |
+| `difficulty` | string: BEGINNER · JUNIOR · SENIOR · null 가능 | 필수 | 난이도 (볼 수 없으면 null) | `JUNIOR` |
 | `id` | integer(int64) | 필수 | 카드 ID | `12` |
-| `name` | string,null | 필수 | 카드 이름 (볼 수 없으면 null) | `JWT` |
-| `summary` | string,null | 필수 | 한 줄 요약 (볼 수 없으면 null) | `서버가 서명한 토큰으로 로그인 상태를 전달하는 방식` |
+| `name` | string · null 가능 | 필수 | 카드 이름 (볼 수 없으면 null) | `JWT` |
+| `summary` | string · null 가능 | 필수 | 한 줄 요약 (볼 수 없으면 null) | `서버가 서명한 토큰으로 로그인 상태를 전달하는 방식` |
 | `viewable` | boolean | 필수 | 볼 수 있는지 (공개 카드인지) | `true` |
 
 ### PostDetailResponse
@@ -2932,7 +2932,7 @@ API 하나 (개요 apis의 method·path 그대로)
 | 이름 | 타입 | 필수 | 설명 | 예 |
 |---|---|---|---|---|
 | `analysis` | [PostAnalysisAttachment](#postanalysisattachment) | 필수 | 분석 첨부 | - |
-| `authorId` | integer,null(int64) | 필수 | 작성자 ID (탈퇴한 회원이면 null) | `7` |
+| `authorId` | integer(int64) · null 가능 | 필수 | 작성자 ID (탈퇴한 회원이면 null) | `7` |
 | `authorNickname` | string | 필수 | 작성자 현재 닉네임 (탈퇴한 회원이면 "탈퇴한 사용자") | `코딩초보` |
 | `boardType` | string: QNA · REVIEW · FREE | 필수 | 게시판 (QNA: 코드 이해 Q&A, REVIEW: 학습 후기, FREE: 자유) | `QNA` |
 | `commentCount` | integer(int64) | 필수 | 댓글 수 | `3` |
@@ -2958,9 +2958,9 @@ API 하나 (개요 apis의 method·path 그대로)
 
 | 이름 | 타입 | 필수 | 설명 | 예 |
 |---|---|---|---|---|
-| `analysisId` | integer,null(int64) | 선택 | 첨부할 내 분석 ID (공개·DONE이고 삭제되지 않은 내 분석, 비공개는 POST_001). conceptId와 함께 보낼 수 없다 | `15` |
+| `analysisId` | integer(int64) · null 가능 | 선택 | 첨부할 내 분석 ID (공개·DONE이고 삭제되지 않은 내 분석, 비공개는 POST_001). conceptId와 함께 보낼 수 없다 | `15` |
 | `boardType` | string: QNA · REVIEW · FREE | 필수 | 게시판 (QNA: 코드 이해 Q&A, REVIEW: 학습 후기, FREE: 자유) | `QNA` |
-| `conceptId` | integer,null(int64) | 선택 | 첨부할 공개 개념 카드 ID. analysisId와 함께 보낼 수 없다 | `12` |
+| `conceptId` | integer(int64) · null 가능 | 선택 | 첨부할 공개 개념 카드 ID. analysisId와 함께 보낼 수 없다 | `12` |
 | `content` | string | 필수 | 본문 (앞뒤 공백 제외 1~5000자, 글자 그대로 저장) (길이 0~5000자) | `같은 클래스 안에서 메서드를 호출하면 트랜잭션이 안 걸린다는데<br>왜 그런지 모르겠어요.` |
 | `title` | string | 필수 | 제목 (앞뒤 공백 제외 1~100자) (길이 0~100자) | `@Transactional이 안 먹는 이유가 뭔가요?` |
 
@@ -2970,8 +2970,8 @@ API 하나 (개요 apis의 method·path 그대로)
 
 | 이름 | 타입 | 필수 | 설명 | 예 |
 |---|---|---|---|---|
-| `attachmentType` | string,null: ANALYSIS · CONCEPT | 필수 | 첨부 종류 (볼 수 있는지와 상관없이 알린다). 첨부가 없으면 null | `ANALYSIS` |
-| `authorId` | integer,null(int64) | 필수 | 작성자 ID (탈퇴한 회원이면 null) | `7` |
+| `attachmentType` | string: ANALYSIS · CONCEPT · null 가능 | 필수 | 첨부 종류 (볼 수 있는지와 상관없이 알린다). 첨부가 없으면 null | `ANALYSIS` |
+| `authorId` | integer(int64) · null 가능 | 필수 | 작성자 ID (탈퇴한 회원이면 null) | `7` |
 | `authorNickname` | string | 필수 | 작성자 현재 닉네임 (탈퇴한 회원이면 "탈퇴한 사용자") | `코딩초보` |
 | `boardType` | string: QNA · REVIEW · FREE | 필수 | 게시판 (QNA: 코드 이해 Q&A, REVIEW: 학습 후기, FREE: 자유) | `QNA` |
 | `commentCount` | integer(int64) | 필수 | 댓글 수 | `3` |
@@ -3115,7 +3115,7 @@ API 하나 (개요 apis의 method·path 그대로)
 | 이름 | 타입 | 필수 | 설명 | 예 |
 |---|---|---|---|---|
 | `conceptId` | integer(int64) | 필수 | 카드 ID | `12` |
-| `planDate` | string,null(date) | 선택 | 복습할 날짜 (오늘 ~ 오늘+365일). 생략하면 내일 | `2026-11-21` |
+| `planDate` | string(date) · null 가능 | 선택 | 복습할 날짜 (오늘 ~ 오늘+365일). 생략하면 내일 | `2026-11-21` |
 
 ### ReviewPlanItemResponse
 
@@ -3124,7 +3124,7 @@ API 하나 (개요 apis의 method·path 그대로)
 | 이름 | 타입 | 필수 | 설명 | 예 |
 |---|---|---|---|---|
 | `concept` | [ConceptSummaryResponse](#conceptsummaryresponse) | 필수 | 카드 요약 | - |
-| `doneAt` | string,null(date-time) | 필수 | 완료 시각 (DONE일 때만, 아니면 null) | `2026-11-20T10:00:00+09:00` |
+| `doneAt` | string(date-time) · null 가능 | 필수 | 완료 시각 (DONE일 때만, 아니면 null) | `2026-11-20T10:00:00+09:00` |
 | `id` | integer(int64) | 필수 | 계획 ID | `31` |
 | `planDate` | string(date) | 필수 | 복습할 날짜 | `2026-11-21` |
 | `reason` | string: WRONG · WISH · MANUAL | 필수 | 추가된 이유 (WRONG 퀴즈 오답, WISH 찜, MANUAL 직접 추가) | `WRONG` |
@@ -3207,7 +3207,7 @@ API 하나 (개요 apis의 method·path 그대로)
 | `layer` | string: controller · service · mapper · vue · js · config · domain · other | 필수 | 레이어 (analysis_files.layer 소문자) | `controller` |
 | `name` | string | 필수 | 파일 이름 | `TodoController.java` |
 | `path` | string | 필수 | 저장소 기준 경로 | `src/main/java/com/example/todo/TodoController.java` |
-| `role` | string,null | 선택 | 한 줄 역할 (F-06). 없으면 null | `할 일 API 요청을 받아 서비스로 넘깁니다` |
+| `role` | string · null 가능 | 선택 | 한 줄 역할 (F-06). 없으면 null | `할 일 API 요청을 받아 서비스로 넘깁니다` |
 
 ### TeamAnalysisResponse
 
@@ -3284,9 +3284,9 @@ API 하나 (개요 apis의 method·path 그대로)
 | 이름 | 타입 | 필수 | 설명 | 예 |
 |---|---|---|---|---|
 | `createdAt` | string(date-time) | 필수 | 만든 시각 | `2026-11-24T10:00:00+09:00` |
-| `description` | string,null | 선택 | 소개 | `F-05 분석 결과를 같이 공부합니다` |
+| `description` | string · null 가능 | 선택 | 소개 | `F-05 분석 결과를 같이 공부합니다` |
 | `id` | integer(int64) | 필수 | 팀 ID | `12` |
-| `inviteCode` | string,null | 선택 | 초대 코드. 팀원에게는 null | `K7M2QX9P` |
+| `inviteCode` | string · null 가능 | 선택 | 초대 코드. 팀원에게는 null | `K7M2QX9P` |
 | `maxMembers` | integer(int32) | 필수 | 팀 최대 인원 | `10` |
 | `memberCount` | integer(int32) | 필수 | 멤버 수 (팀장 포함) | `3` |
 | `members` | [TeamMemberResponse](#teammemberresponse)[] | 필수 | 멤버 (팀장이 맨 앞, 나머지는 가입 순) | - |
@@ -3311,7 +3311,7 @@ API 하나 (개요 apis의 method·path 그대로)
 
 | 이름 | 타입 | 필수 | 설명 | 예 |
 |---|---|---|---|---|
-| `description` | string,null | 선택 | 소개 (앞뒤 공백 제외 200자 이하, 없거나 공백뿐이면 null) (길이 0~200자) | `F-05 분석 결과를 같이 공부합니다` |
+| `description` | string · null 가능 | 선택 | 소개 (앞뒤 공백 제외 200자 이하, 없거나 공백뿐이면 null) (길이 0~200자) | `F-05 분석 결과를 같이 공부합니다` |
 | `name` | string | 필수 | 팀 이름 (앞뒤 공백 제외 1~30자, 중복 허용) (길이 0~30자) | `스프링 스터디` |
 
 ### TeamUnderstandingResponse
@@ -3348,8 +3348,8 @@ API 하나 (개요 apis의 method·path 그대로)
 
 | 이름 | 타입 | 필수 | 설명 | 예 |
 |---|---|---|---|---|
-| `memo` | string,null | 선택 | 메모 (1000자 이하). 비우면 null (길이 0~1000자) | `JWT 필터 순서 다시 보기` |
-| `title` | string,null | 선택 | 제목 (100자 이하). 비우면 null (길이 0~100자) | `할 일 앱 백엔드` |
+| `memo` | string · null 가능 | 선택 | 메모 (1000자 이하). 비우면 null (길이 0~1000자) | `JWT 필터 순서 다시 보기` |
+| `title` | string · null 가능 | 선택 | 제목 (100자 이하). 비우면 null (길이 0~100자) | `할 일 앱 백엔드` |
 
 ### UpdateProfileRequest
 
@@ -3357,9 +3357,9 @@ API 하나 (개요 apis의 method·path 그대로)
 
 | 이름 | 타입 | 필수 | 설명 | 예 |
 |---|---|---|---|---|
-| `bio` | string,null | 선택 | 소개 (300자 이하). 빈 문자열이면 지운다 (길이 0~300자) | `AI로 만든 Spring 프로젝트를 공부하고 있어요.` |
-| `level` | string,null: BEGINNER · JUNIOR · SENIOR | 선택 | 학습 수준 | `JUNIOR` |
-| `nickname` | string,null | 선택 | 닉네임. 2~20자의 한글·영문·숫자·_ | `주니어개발자` |
+| `bio` | string · null 가능 | 선택 | 소개 (300자 이하). 빈 문자열이면 지운다 (길이 0~300자) | `AI로 만든 Spring 프로젝트를 공부하고 있어요.` |
+| `level` | string: BEGINNER · JUNIOR · SENIOR · null 가능 | 선택 | 학습 수준 | `JUNIOR` |
+| `nickname` | string · null 가능 | 선택 | 닉네임. 2~20자의 한글·영문·숫자·_ | `주니어개발자` |
 
 ### UpdateVisibilityRequest
 
@@ -3375,7 +3375,7 @@ API 하나 (개요 apis의 method·path 그대로)
 
 | 이름 | 타입 | 필수 | 설명 | 예 |
 |---|---|---|---|---|
-| `bio` | string,null | 선택 | 소개. 없으면 null | `AI로 만든 Spring 프로젝트를 공부하고 있어요.` |
+| `bio` | string · null 가능 | 선택 | 소개. 없으면 null | `AI로 만든 Spring 프로젝트를 공부하고 있어요.` |
 | `createdAt` | string(date-time) | 필수 | 가입 시각 | `2026-11-18T10:30:00+09:00` |
 | `id` | integer(int64) | 필수 | 회원 ID | `1` |
 | `level` | string: BEGINNER · JUNIOR · SENIOR | 필수 | 학습 수준 | `BEGINNER` |
@@ -3389,7 +3389,7 @@ API 하나 (개요 apis의 method·path 그대로)
 |---|---|---|---|---|
 | `analysisCount` | integer(int64) | 필수 | 완료된 분석 수 (삭제한 분석 제외) | `3` |
 | `learnedConceptCount` | integer(int64) | 필수 | 학습한 카드 수: 퀴즈에서 맞힌 카드와 복습을 완료한 카드 (중복 제외) | `12` |
-| `quizAccuracy` | integer,null(int32) | 선택 | 퀴즈 정답률(%, 정수). 푼 퀴즈가 없으면 null | `75` |
+| `quizAccuracy` | integer(int32) · null 가능 | 선택 | 퀴즈 정답률(%, 정수). 푼 퀴즈가 없으면 null | `75` |
 
 ### VisibilityResponse
 

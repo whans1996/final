@@ -109,6 +109,6 @@
 - [x] 07 생성 스크립트 + 07 재생성 (AC6~8)
 - [x] Schema.sql 스크립트 + 실측 1회 (AC9~12)
 - [x] `/progress`·CLAUDE.md·README·08·verify 로그 정리 (AC13~15)
-- [ ] reviewer 지적 사항 반영
+- [x] reviewer 지적 사항 반영
 - [ ] PR CI 초록
 - [ ] 상태 DONE (PR 머지 후)
