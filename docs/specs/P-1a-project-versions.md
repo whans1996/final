@@ -257,9 +257,9 @@ ALTER TABLE analyses MODIFY project_id BIGINT NOT NULL;
 - [x] BE 구현 (green): 요청 묶기(AC1·4·5 ✅) → FETCHING 커밋 조회·버전(AC2·3·11 ✅) → 프로젝트 API·배지(AC6~10 ✅) → AC12 ✅ (BE 끝)
 - [x] FE 구현 (green): AC14·15·16 ✅, 고친 화면(요청·상세·목록) Tailwind·`useLatestRequest` 이전(#250)
 - [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
-- [ ] contract-checker 통과
-- [ ] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일)
-- [ ] reviewer 지적 사항 반영
-- [x] 산출물 반영 (ERD 03, 화면 설계서 06 SC-25·26, 요구사항 정의서 01 P-1a 행. 스크린샷은 ui-verifier 뒤)
+- [x] contract-checker 통과 (경미 3건 반영)
+- [x] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일) — 7개 라우트 문제 0건
+- [x] reviewer 지적 사항 반영 (반드시 수정 0, 권장 5건 반영·2건 #257·#250)
+- [x] 산출물 반영 (ERD 03, 화면 설계서 06 SC-25·26, 요구사항 정의서 01 P-1a 행, 스크린샷 SC-05·06·07·25·26)
 - [ ] PR CI 초록, 셸 내비 변경 @JoonseobKim 멘션
 - [ ] 상태 DONE (PR 머지 후)
