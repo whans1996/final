@@ -679,6 +679,14 @@ test('#248: 파이프라인 안 변수 할당은 바깥 값을 모르게 하고,
   for (const cmd of ['D=scripts; printf x | cat; grep -r KEY $D', 'find . -type f -exec true {} \\; -exec ls {} +']) ok(cmd, rootOnly);
 });
 
+// PR #246 Codex 7회차
+test('Codex 반영: find 부정 두 번, git rm --no-cached, 글롭 인자 속 변수', () => {
+  const rootOnly = { secretFiles: (dir) => [{ path: '/repo/.env', ignored: true }].filter((f) => isWithin(f.path, dir)) };
+  for (const cmd of ['find . ! ! -name .env -exec cat {} +', 'find . -not ! -name .env -exec cat {} +', 'git rm -rf --cached --no-cached src', 'D=.; cat "$D"/.e*', 'cat "$X"/.e*', 'cat ~/../../repo/.e*'])
+    no(cmd, { ...rootOnly, home: '/home/me' });
+  for (const cmd of ["find . ! -name '.env*' -exec cat {} +", 'git rm -rf --no-cached --cached build', 'D=docs; cat $D/*.md', 'cat "$X"/*.md']) ok(cmd, rootOnly);
+});
+
 // #245: 가드 우회 잔여 (PR #246 reviewer가 재현, 같은 PR에서 처리)
 test('#245: 읽기·검색 인자의 셸 글롭 (bash는 * 가 점으로 시작하는 이름에 맞지 않는다)', () => {
   const sf = { secretFiles };

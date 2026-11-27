@@ -489,9 +489,14 @@ const RG_BUILTIN_TYPES = new Set(
  * 그 밖에 셸이 펼치는 경로($HOME, "$(pwd)")는 알 수 없어 / 로 본다 (저장소를 품을 수 있다)
  */
 function searchRoot(cwd, r, ctx = {}) {
-  let p = String(r).replace(/\$\{?(\w+)\}?/g, (m, n) => (n === 'PWD' ? cwd : (ctx.vars?.[n] ?? m)));
-  if (/^~(?=[\\/]|$)/.test(p)) p = (ctx.home ?? homedir()) + p.slice(1);
+  const p = expandWord(cwd, r, ctx);
   return /^~|\$/.test(p) ? '/' : resolvePath(cwd, p);
+}
+
+/** 단어의 ~·$PWD·같은 명령 안에서 할당한 변수를 펼친다. 모르는 변수는 $가 남는다 */
+function expandWord(cwd, r, ctx = {}) {
+  const p = String(r).replace(/\$\{?(\w+)\}?/g, (m, n) => (n === 'PWD' ? cwd : (ctx.vars?.[n] ?? m)));
+  return /^~(?=[\\/]|$)/.test(p) ? (ctx.home ?? homedir()) + p.slice(1) : p;
 }
 
 /** dir 아래 비밀 파일. 목록을 모르면(hook 밖, 저장소 밖) 대표 이름이 dir 바로 아래 있다고 본다 */
@@ -507,7 +512,16 @@ const normParts = (p) => {
  * bash처럼 * ? [ ]는 점으로 시작하는 이름에 맞지 않는다. exact: 글롭이 그 파일 자체, 아니면 글롭이 고른 폴더 안의 파일
  */
 function shellGlobFiles(word, cwd, ctx) {
-  const abs = resolvePath(cwd, word);
+  // 글롭 앞의 변수·~를 먼저 펼친다 ("$D"/.e*, Codex). 모르는 변수가 남으면 마지막 조각만 모든 비밀 파일 이름과 맞춰 본다
+  const w = expandWord(cwd, word, ctx);
+  if (w.includes('$')) {
+    const last = w.replace(/\\/g, '/').split('/').pop() ?? '';
+    if (!/[*?[]/.test(last)) return [];
+    return secretsIn('/', ctx)
+      .filter((f) => globMatch(last, basename(f.path.replace(/\\/g, '/')), { shell: true }))
+      .map((f) => ({ f, exact: true, base: '/' }));
+  }
+  const abs = resolvePath(cwd, w);
   const gs = normParts(abs);
   const fixed = gs.findIndex((g) => /[*?[]/.test(g));
   if (fixed === -1) return [];
@@ -642,7 +656,7 @@ function findEmitsSecret(seg, cwd, ctx) {
   let grouped = false;
   for (let k = 0; k < args.length; k++) {
     const a = args[k];
-    if (a === '!' || a === '-not') neg = true;
+    if (a === '!' || a === '-not') neg = !neg; // ! ! 는 다시 긍정이다 (Codex)
     else if (/^-(i?name|i?path|i?wholename)$/.test(a)) {
       branches[branches.length - 1].push({ kind: a.includes('name') && !a.includes('whole') ? 'name' : 'path', glob: args[++k] ?? '', icase: a.startsWith('-i'), neg });
       neg = false;
@@ -869,7 +883,8 @@ function checkGit(args, cwd, ctx) {
     }
     case 'rm': {
       const o = options(rest, '', ['--pathspec-from-file']);
-      if (o.flags.has('--cached')) return null; // 색인에서만 빼고 파일은 남긴다
+      // 색인에서만 빼고 파일은 남긴다. 뒤의 --no-cached가 앞의 --cached를 끈다 (Codex)
+      if (rest.reduce((on, a) => (a === '--cached' ? true : a === '--no-cached' ? false : on), false)) return null;
       // 글롭 pathspec('src/*')은 디렉터리 경계를 넘어 맞아 -r 없이도 하위 전체를 지운다
       const wide = o.flags.has('-r') || o.positional.some((p) => /[*?[]/.test(p) || p.startsWith(':('));
       return wide && (o.flags.has('-f') || o.flags.has('--force')) ? R.rmForce : null;
