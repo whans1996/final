@@ -3,11 +3,11 @@
 > 김동환(A 영역: AI·분석·학습 루프) 전용. 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
 > 머리 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
-갱신: 2026-11-27 23:36 · 작업자: whans1996 · PC: dh-home · 브랜치: feature/K-1-card-levels
+갱신: 2026-11-27 23:40 · 작업자: whans1996 · PC: dh-home · 브랜치: feature/K-1-card-levels
 
 ## 현재 기능
 
-**K-1 카테고리 12종·카드 수준별 요약·본문·매칭 버그** `docs/specs/K-1-card-levels.md` (📝 DRAFT, AC1~13) · 브랜치 `feature/K-1-card-levels` · `/implement K-1` 대기
+**K-1 카테고리 12종·카드 수준별 요약·본문·매칭 버그** `docs/specs/K-1-card-levels.md` (✅ APPROVED 11-27, AC1~13) · 브랜치 `feature/K-1-card-levels` · `/implement K-1` 대기
 
 ## 진행
 
