@@ -165,8 +165,8 @@ async function load() {
 - [x] AC8 PostWriteView, AC9 WishButton 새 가드
 - [x] AC10 useMoreList, AC11 가드 테스트
 - [x] `frontend/CLAUDE.md` 규칙 한 줄
-- [ ] A 영역 follow-up 이슈 (`area:A`, 파일 목록·적용 예시)
-- [ ] ui-verifier 통과 (콘솔 에러만, 데스크톱)
+- [x] A 영역 follow-up 이슈 (`area:A`, 파일 목록·적용 예시) → #250
+- [x] ui-verifier 통과 (콘솔 에러만, 데스크톱)
 - [ ] reviewer 지적 사항 반영
 - [ ] 산출물 반영: 없음 (화면·ERD·요구사항 변화 없음)
 - [ ] PR CI 초록, 공통 파일 변경이라 김동환 @멘션
