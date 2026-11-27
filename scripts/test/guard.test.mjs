@@ -519,3 +519,68 @@ test('#193: 글 전용 명령의 리다이렉션 대상, wget --method', () => {
   assert.ok(checkCommand('irm -Method:Delete https://api.github.com/repos/o/r/git/refs/heads/develop', { cwd: 'C:/repo', shell: 'powershell' }));
   ok('wget https://api.github.com/repos/o/r/git/refs/heads/develop');
 });
+
+// PR(issue-188) reviewer가 checkCommand로 재현한 우회·오탐
+test('리뷰 반영: gh 별칭을 덜 쓴 확장, --shell 확장의 gh $N', () => {
+  for (const cmd of ['gh alias set m pr', 'gh alias set a api', "gh alias set x 'pr $1'", "gh alias set -s x 'gh $1 merge'", "gh alias set r 'repo'", "gh alias set --shell y 'gh pr $1 1'"])
+    no(cmd);
+  for (const cmd of ["gh alias set co 'pr checkout'", "gh alias set prs 'pr list --author @me'", "gh alias set iv 'issue view'", "gh alias set i 'issue $1'"]) ok(cmd);
+  // --shell 확장은 gh가 sh -c로 실행한다: PowerShell에서 만들어도 bash 규칙으로 본다
+  assert.ok(checkCommand("gh alias set -s x 'git push -f'", { cwd: 'C:/repo', shell: 'powershell' }));
+});
+
+test('리뷰 반영: eval — GIT_DIR 환경변수, 글롭은 eval 폴더가 있을 때만', () => {
+  const ev = { evalDir: '/repo/data/raw/eval', exists: () => true, home: '/' };
+  for (const cmd of ['GIT_DIR=data/raw/eval/.git git log -p', 'GIT_WORK_TREE=data/raw/eval git status', 'export GIT_DIR=data/raw/eval/.git; git log -p', 'find ~ -name "*.json"']) no(cmd, ev);
+  assert.ok(checkCommand("$env:GIT_DIR='data/raw/eval/.git'; git log -p", { cwd: '/repo', shell: 'powershell', ...ev }));
+  for (const cmd of ['ls data/raw/*', 'cat data/raw/*/README.md', 'wc -l data/raw/*/*']) ok(cmd, { ...ev, exists: () => false });
+});
+
+test('리뷰 반영: 재귀 검색 — 알 수 없는 시작 경로, git grep, 이름만 출력, 경로 글롭, 엄격한 제외 글롭', () => {
+  const sf = { secretFiles, home: '/' }; // 홈(~)이 저장소를 품는다
+  // 같은 명령 안에서 할당한 변수는 펼친다, ~ 아래 다른 폴더는 저장소 밖
+  for (const cmd of ['D=.; grep -rn KEY $D', 'export D=/repo; grep -rn KEY "$D"', 'grep -rn KEY $PWD']) no(cmd, sf);
+  for (const cmd of ['D=docs; grep -rn KEY $D/a', 'd="/c/tmp/ci"; grep -rh error -A6 $d', 'grep -rn flyway ~/.gradle']) ok(cmd, sf);
+  for (const cmd of [
+    'grep -rn KEY ~',
+    'grep -rn KEY "$HOME"',
+    'grep -rn KEY "$(pwd)"',
+    'rg -uu KEY ~/',
+    'git grep --no-index KEY',
+    'git grep --untracked --no-exclude-standard KEY',
+    "grep -r KEY --exclude='{x' .",
+    'grep -r KEY --exclude=.ENV* .',
+    "rg -uu KEY -g '!.ENV*'",
+    'rg KEY -g "backend/**"',
+  ])
+    no(cmd, sf);
+  for (const cmd of [
+    'grep -rl GMS_API_KEY .',
+    'grep -rc KEY .',
+    'rg -uu -l KEY',
+    'rg -uu --files-with-matches KEY',
+    'git grep KEY',
+    'git grep --untracked KEY',
+    'git grep --no-index --exclude-standard KEY',
+    'git grep --no-index KEY -- src',
+    'git grep --no-index -l KEY',
+    "rg KEY -g 'src/**'",
+    "rg KEY -g 'docs/*'",
+  ])
+    ok(cmd, sf);
+  // 목록에 없는 긴 옵션의 =값도 파일로 본다 (develop 동작 유지)
+  no('grep --foo=.env KEY src');
+  // Windows 경로
+  const win = { cwd: 'C:/repo', secretFiles: (dir) => [{ path: 'C:/repo/.env', ignored: true }].filter((f) => isWithin(f.path, dir)) };
+  assert.ok(checkCommand('grep -rn KEY .', win));
+  assert.ok(checkCommand('grep -rn KEY C:\repo', win));
+  assert.equal(checkCommand('grep -rn KEY scripts', win), null);
+});
+
+test('리뷰 반영: PowerShell ForEach-Object 블록으로 넘긴 파일, git rm -f 글롭 pathspec', () => {
+  const ps = (cmd) => checkCommand(cmd, { cwd: '/repo', shell: 'powershell', secretFiles });
+  for (const cmd of ['gi .env | % { gc $_ }', 'gi .env | ForEach-Object { $_.OpenText().ReadToEnd() }', 'gci -r | % { gc $_ }']) assert.ok(ps(cmd), `차단되어야 함: ${cmd}`);
+  assert.equal(ps('gci docs | % { $_.Name }'), null);
+  for (const cmd of ["git rm -f 'src/*'", "git rm --force ':(glob)src/**'"]) no(cmd);
+  for (const cmd of ['git rm -f src/a.js', "git rm 'src/*.tmp'"]) ok(cmd);
+});

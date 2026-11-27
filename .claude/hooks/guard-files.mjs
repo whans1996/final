@@ -11,6 +11,7 @@ import { join } from 'node:path';
 import { ROOT, git, hasCommits, localPcId, nowRelPath, otherOwnerKey, ownerKey, readStdinJson } from '../../scripts/lib/common.mjs';
 import { checkFileTool } from '../../scripts/lib/file-guard.mjs';
 import { EVAL_DIR_REL, evalBlockedFor } from '../../scripts/lib/protect.mjs';
+import { secretFilesUnder } from '../../scripts/lib/secret-files.mjs';
 
 const input = readStdinJson();
 const me = ownerKey(localPcId());
@@ -18,6 +19,8 @@ const reason = checkFileTool(input?.tool_name, input?.tool_input || {}, {
   cwd: input?.cwd || ROOT,
   root: ROOT,
   exists: existsSync,
+  // 검색 글롭이 고르는 실제 비밀 파일 (#188. git 조회는 글롭·숨김 파일 내용 검색일 때만)
+  secretFiles: secretFilesUnder,
   evalDir: evalBlockedFor(me) ? join(ROOT, EVAL_DIR_REL) : null,
   committedMigration: (rel) => hasCommits() && git(['cat-file', '-e', `HEAD:${rel}`]).ok,
   // 사람별 스냅샷은 본인만 쓴다 (11-19 결정). 미등록 PC는 판정할 수 없어 건너뛴다

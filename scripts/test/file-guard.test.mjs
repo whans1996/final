@@ -72,6 +72,18 @@ test('#188: 검색 글롭이 비밀 파일 이름에 맞으면 내용 검색을 
   for (const glob of ['*.{js,ts}', '*.md', '**/*.java', '.env.example']) ok('Grep', { pattern: 'KEY', glob });
   ok(`${DC}start_search`, { path: '/repo', pattern: 'KEY', searchType: 'content', filePattern: '*.js|*.ts', includeHidden: true });
   ok(`${DC}start_search`, { path: '/repo', pattern: '*env*', searchType: 'files' });
+  // 경로 글롭은 경로 전체로 맞춘다 (리뷰 반영: backend/**는 루트 .env를 고르지 않는다)
+  for (const glob of ['backend/**', '{src,docs}/**', 'src/**']) ok('Grep', { pattern: 'KEY', glob });
+});
+
+test('리뷰 반영: hook이 넘긴 실제 비밀 파일로 검색 글롭을 판정한다', () => {
+  const sf = { secretFiles: (dir) => [{ path: '/repo/.env', ignored: true }, { path: '/repo/backend/.env.local', ignored: true }].filter((f) => f.path.startsWith(dir.replace(/\/$/, '') + '/')) };
+  for (const glob of ['backend/**', '*env*', '**/.env.local']) no('Grep', { pattern: 'KEY', glob }, sf);
+  no('Grep', { pattern: 'KEY', path: '/repo/backend', glob: '*' }, sf);
+  no(`${DC}start_search`, { path: '/repo', pattern: 'KEY', searchType: 'content', includeHidden: true }, sf);
+  for (const glob of ['src/**', '*.java', 'docs/*']) ok('Grep', { pattern: 'KEY', glob }, sf);
+  ok('Grep', { pattern: 'KEY', path: '/repo/scripts', glob: '*' }, sf);
+  ok(`${DC}start_search`, { path: '/repo/scripts', pattern: 'KEY', searchType: 'content', includeHidden: true }, sf);
 });
 
 test('eval 경로: 김동환 PC(evalDir 지정)에서만 막는다 (HX-2)', () => {

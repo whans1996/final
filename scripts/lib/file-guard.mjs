@@ -76,7 +76,8 @@ const EVAL = '평가(eval) 데이터는 김동환(A) PC에서 열람·수정할 
 
 /**
  * 막을 사유(문자열) 또는 null.
- * ctx: { cwd, root, evalDir?, exists?(path), committedMigration?(rel): 이미 커밋된 파일인가, peerNowRel?: 상대 NOW 경로(미등록 PC는 null) }
+ * ctx: { cwd, root, evalDir?, exists?(path), committedMigration?(rel): 이미 커밋된 파일인가, peerNowRel?: 상대 NOW 경로(미등록 PC는 null),
+ *        secretFiles?(dir): dir 아래 실제 비밀 파일 [{ path }] (검색 글롭 판정) }
  */
 export function checkFileTool(tool, input = {}, ctx = {}) {
   const root = ctx.root || process.cwd();
@@ -107,9 +108,13 @@ export function checkFileTool(tool, input = {}, ctx = {}) {
   for (const p of t.reads) if (isSecretFile(p)) return secretRead(p);
   for (const s of t.searches) {
     if (s.path && isSecretFile(s.path)) return secretRead(s.path);
-    // 글롭은 무시 규칙(.gitignore)보다 우선한다: 비밀 파일 이름에 맞는 글롭으로 내용을 검색하면 값이 출력된다 (#188)
-    if (s.content && s.globs.some(globHitsSecret)) return '.env·키 파일 내용은 검색할 수 없습니다. 필요한 변수 이름은 .env.example을 보세요.';
-    if (s.content && s.hidden && !s.globs.length) return '숨김 파일(.env 포함)까지 보는 내용 검색은 filePattern으로 파일 종류를 좁혀 주세요 (#188).';
+    if (!s.content) continue;
+    // 글롭은 무시 규칙(.gitignore)보다 우선한다: 비밀 파일을 고르는 글롭으로 내용을 검색하면 값이 출력된다 (#188).
+    // hook이 넘긴 실제 비밀 파일(검색 폴더 기준 상대 경로)로 보고, 목록이 없으면 대표 이름으로 본다
+    const base = abs(s.path || ctx.cwd || root);
+    const files = ctx.secretFiles ? ctx.secretFiles(base).map((f) => relative(base, f.path).replace(/\\/g, '/')) : undefined;
+    if (s.globs.some((g) => globHitsSecret(g, files))) return '.env·키 파일 내용은 검색할 수 없습니다. 필요한 변수 이름은 .env.example을 보세요.';
+    if (s.hidden && !s.globs.length && (!files || files.length)) return '숨김 파일(.env 포함)까지 보는 내용 검색은 filePattern으로 파일 종류를 좁혀 주세요 (#188).';
   }
   return null;
 }

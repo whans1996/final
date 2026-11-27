@@ -81,10 +81,14 @@ function segmentRegex(glob, flags) {
     if (c === '*') re += '.*';
     else if (c === '?') re += '.';
     else if (c === '[') {
-      const end = glob.indexOf(']', i + 2);
+      // [abc], [!abc]·[^abc]. 여는 괄호 바로 뒤의 ]는 글자 그대로다 ([]a], [!]])
+      let j = i + 1;
+      const neg = glob[j] === '!' || glob[j] === '^';
+      if (neg) j++;
+      const end = glob.indexOf(']', j + 1);
       if (end === -1) re += '\\[';
       else {
-        re += `[${glob[i + 1] === '!' || glob[i + 1] === '^' ? '^' : glob[i + 1].replace(/[\\\]]/g, '\\$&')}${glob.slice(i + 2, end).replace(/\\/g, '\\\\')}]`;
+        re += `[${neg ? '^' : ''}${glob.slice(j, end).replace(/[\\\]^]/g, '\\$&')}]`;
         i = end;
       }
     } else if (c === '{') (re += '(?:'), braces++;
@@ -95,22 +99,45 @@ function segmentRegex(glob, flags) {
   try {
     return new RegExp(`^${re}$`, flags);
   } catch {
-    return /^.*$/; // 해석할 수 없는 글롭은 모든 이름에 맞는다고 본다
+    return null;
   }
 }
 
-/** 이름(경로 구분자 없음)이 글롭 조각에 맞는가 */
-export const globMatch = (glob, name, flags = 'i') => segmentRegex(String(glob ?? ''), flags).test(String(name ?? ''));
+/**
+ * 이름(경로 구분자 없음)이 글롭 조각에 맞는가. 고르는 쪽(포함 글롭)은 보수적으로 대소문자를 무시하고 해석할 수 없으면 맞는다고 본다.
+ * 빼는 쪽(--exclude, rg !글롭)은 strict: grep·rg처럼 대소문자를 구분하고 해석할 수 없으면 맞지 않는다고 본다 (리뷰 반영)
+ */
+export function globMatch(glob, name, { strict = false, icase = !strict } = {}) {
+  const re = segmentRegex(String(glob ?? ''), icase ? 'i' : '');
+  return re ? re.test(String(name ?? '')) : !strict;
+}
 
-// 글롭이 비밀 파일을 고르는지 볼 대표 이름 (#188)
+/** 상대 경로가 글롭에 맞는가. /가 없는 글롭은 어느 깊이든 이름(basename)으로, 있으면 경로 전체로 맞춘다 (** 는 0개 이상의 조각) */
+export function globMatchPath(glob, relPath, opts) {
+  const g = String(glob ?? '').replace(/\\/g, '/');
+  const parts = String(relPath ?? '')
+    .replace(/\\/g, '/')
+    .split('/')
+    .filter((p) => p && p !== '.');
+  const gs = g.split('/').filter(Boolean);
+  if (gs.length <= 1 && !g.startsWith('/')) return globMatch(gs[0] ?? '', parts[parts.length - 1] ?? '', opts);
+  const match = (a, b) => {
+    if (!a.length) return !b.length;
+    if (a[0] === '**') return match(a.slice(1), b) || (b.length > 0 && match(a, b.slice(1)));
+    return b.length > 0 && globMatch(a[0], b[0], opts) && match(a.slice(1), b.slice(1));
+  };
+  return match(gs, parts);
+}
+
+// 실제 파일 목록이 없을 때 글롭이 비밀 파일을 고르는지 볼 대표 경로 (#188. 저장소 루트의 이름들)
 const SECRET_SAMPLES = ['.env', '.env.local', '.env.production', 'server.pem', 'server.key', 'cert.p12', 'id_rsa'];
 
-/** 검색 글롭이 비밀 파일 이름을 고르는가. 경로 글롭(**\/.env*)은 마지막 조각만 본다. !로 시작하는 제외 글롭은 고르지 않는다 */
-export function globHitsSecret(glob) {
+/** 검색 글롭이 비밀 파일을 고르는가. files: 검색 폴더 기준 상대 경로 목록(없으면 대표 경로). !로 시작하는 제외 글롭은 고르지 않는다 */
+export function globHitsSecret(glob, files = SECRET_SAMPLES) {
   const g = String(glob ?? '').replace(/\\/g, '/');
   if (!g || g.startsWith('!')) return false;
-  const last = g.split('/').filter(Boolean).pop() ?? '';
-  return isSecretFile(last) || SECRET_SAMPLES.some((name) => globMatch(last, name));
+  if (files === SECRET_SAMPLES && isSecretFile(g.split('/').filter(Boolean).pop() ?? '')) return true;
+  return files.some((rel) => globMatchPath(g, rel));
 }
 
 /** 코드 안의 문자열 리터럴 ('…', "…", `…`). 인라인 코드(node -e·python -c·REPL 입력) 판정에 쓴다 */
