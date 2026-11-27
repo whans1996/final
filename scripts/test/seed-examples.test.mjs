@@ -64,6 +64,14 @@ test('AC9_vue_script_setup_lang_ts면_ts_규칙도_적용', { skip }, () => {
   ]);
   assert.deepEqual(sev(both), ['vue:error']);
   assert.equal(both.issues[0].line, 20); // <script>의 둘째 줄
+  // 매크로는 vue의 실제 타입으로 본다: 타입을 준 emit·model을 잘못 쓰면 오류 (Codex 리뷰)
+  const emit = run([{ lang: 'vue', code: sfc('const emit = defineEmits<{ change: [id: number] }>();\nemit("change", "wrong");') }]);
+  assert.deepEqual(sev(emit), ['vue:error']);
+  assert.equal(emit.issues[0].line, 21); // emit(...) 줄
+  assert.deepEqual(sev(run([{ lang: 'vue', code: sfc('const model = defineModel<number>();\nmodel.value = "wrong";') }])), ['vue:error']);
+  assert.deepEqual(sev(run([{ lang: 'vue', code: sfc('const model = defineModel<number>();\nmodel.value = 1;') }])), []);
+  // 카드가 매크로를 직접 import해도 이름이 겹치지 않는다
+  assert.deepEqual(sev(run([{ lang: 'vue', code: sfc('import { defineProps } from "vue";\nconst props = defineProps<{ title: string }>();') }])), []);
 });
 
 test('AC9_js는_파서가_받아도_문법상_틀린_문장을_오류로_본다 (Codex 리뷰)', { skip }, () => {

@@ -24,10 +24,16 @@ export function loadFeTools(root = ROOT) {
   }
 }
 
-const SETUP_MACROS =
-  'declare function defineProps<T = any>(p?: any): T; declare function defineEmits<T = any>(e?: any): any; ' +
-  'declare function defineModel<T = any>(...a: any[]): any; declare function withDefaults<T>(p: T, d?: any): T; ' +
-  'declare function defineExpose(e?: any): void; declare function defineOptions(o?: any): void; declare function defineSlots<T = any>(): T;\n';
+/** <script setup> 컴파일러 매크로. vue가 내보내는 실제 타입으로 검사한다 (any로 선언하면 타입을 준 emit·model 오용을 놓친다, Codex 리뷰) */
+const MACROS = ['defineProps', 'defineEmits', 'defineModel', 'withDefaults', 'defineExpose', 'defineOptions', 'defineSlots'];
+/** 매크로 import 한 줄. 조각이 이미 import한 이름은 뺀다 (이름이 겹치지 않게) */
+const setupMacros = (content) => {
+  const imported = new Set(
+    [...content.matchAll(/import\s*(?:type\s*)?\{([^}]*)\}/g)].flatMap((m) => m[1].split(',').map((x) => x.trim().split(/\s+as\s+/).pop())),
+  );
+  const names = MACROS.filter((n) => !imported.has(n));
+  return `${names.length ? `import { ${names.join(', ')} } from "vue";` : ''}\n`;
+};
 const slugOf = (file) => posix.basename(file).replace(/\.md$/, '');
 
 /**
@@ -153,8 +159,8 @@ export function checkFeExamples(cards, tools) {
           }
           for (const s of [script, scriptSetup]) {
             if (!s || (s.lang !== 'ts' && s.lang !== 'tsx')) continue;
-            // <script setup>의 컴파일러 매크로는 전역 선언 없이 쓴다 → 한 줄로 선언을 붙이고 줄 번호를 하나 당긴다
-            const text = s === scriptSetup ? `${SETUP_MACROS}${s.content}` : s.content;
+            // <script setup>의 컴파일러 매크로는 import 없이 쓴다 → 한 줄로 vue에서 import하고 줄 번호를 하나 당긴다
+            const text = s === scriptSetup ? `${setupMacros(s.content)}${s.content}` : s.content;
             tsUnit(s.lang, text, s.loc.start.line - 1 - (s === scriptSetup ? 1 : 0), true, s === scriptSetup ? '-setup' : '-script');
           }
         }
