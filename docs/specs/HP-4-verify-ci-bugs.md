@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 |---|---|
-| 상태 | APPROVED <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
+| 상태 | DONE (PR #238) <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
 | 기능 ID | HP-4 (로드맵 트랙 4 하네스, 11/28~11/29) |
 | 우선순위 | 하네스 (기능 동결 대상 아님) |
 | 영역 오너 | A 김동환 (하네스 주도). 공통 파일(`ci.yml`·`CODEOWNERS`·스킬)을 바꾸므로 PR에 @JoonseobKim |
@@ -102,7 +102,7 @@
 - [x] AC별 실패 테스트 작성 (red 확인)
 - [x] 하네스 구현 (green, `node --test "scripts/test/*.test.mjs"`)
 - [x] 스킬·에이전트·CLAUDE.md·`docs/conventions.md` 문구 반영 (verifier.md, handoff·implement·pr-review SKILL.md)
-- [ ] reviewer 지적 사항 반영
+- [x] reviewer 지적 사항 반영 (반드시 1·권장 3, AC5 놓치는 경우는 PR 본문)
 - [ ] PR에서 AC8 실제 확인 (docs만 push → Backend·Frontend skipped, 필수 체크 통과)
-- [ ] PR CI 초록, @JoonseobKim 멘션
-- [ ] 상태 DONE (PR 머지 후)
+- [x] PR CI 초록, @JoonseobKim 멘션 (#238, Codex ✅ 9bd4c97)
+- [x] 상태 DONE (머지 직전 완료 표시)
