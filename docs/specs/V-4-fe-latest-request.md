@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 |---|---|
-| 상태 | APPROVED <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
+| 상태 | DONE (PR #252) <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
 | 기능 ID | V-4 (FE 부분. BE 동시 갱신 규칙·활성 회원 확인은 A) |
 | 우선순위 | T1 |
 | 영역 오너 | B 김준섭 (공통 composable·공통 화면 포함, 공통 PR로 김동환 @멘션) |
@@ -167,7 +167,7 @@ async function load() {
 - [x] `frontend/CLAUDE.md` 규칙 한 줄
 - [x] A 영역 follow-up 이슈 (`area:A`, 파일 목록·적용 예시) → #250
 - [x] ui-verifier 통과 (콘솔 에러만, 데스크톱)
-- [ ] reviewer 지적 사항 반영
-- [ ] 산출물 반영: 없음 (화면·ERD·요구사항 변화 없음)
-- [ ] PR CI 초록, 공통 파일 변경이라 김동환 @멘션
-- [ ] 상태 DONE (PR 머지 후)
+- [x] reviewer 지적 사항 반영 (반드시 1·권장 3)
+- [x] 산출물 반영: 없음 (화면·ERD·요구사항 변화 없음)
+- [x] PR CI 초록, 공통 파일 변경이라 김동환 @멘션 (PR #252, Codex ✅ 66e7989)
+- [x] 상태 DONE (PR #252)
