@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 |---|---|
-| 상태 | APPROVED <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
+| 상태 | DONE (PR #234) <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
 | 기능 ID | K-3a (로드맵 트랙 3 카드, 11/26~11/28, 다음 K-3b ③출처 대조) |
 | 우선순위 | T1 (기획서 7.4b, K-3 200장의 첫 단계) |
 | 영역 오너 | A 김동환 (AI·분석·학습 루프. 11-26 합의로 K-3 기간 `R__seed_concepts.sql`도 A) |
@@ -129,6 +129,6 @@ List<Post> search(@Param("keyword") String keyword);
 - [x] 85장 오류 0으로 수정 (PR 본문 표)
 - [x] CI 경로 필터·단계, `verify.mjs`가 `data/seed` 변경을 be·fe 영역으로 판정
 - [x] 산출물 09 DS-05(보관 방법·검증 결과) 갱신
-- [ ] reviewer 지적 사항 반영
-- [ ] PR CI 초록
-- [ ] 상태 DONE (PR 머지 후)
+- [x] reviewer 지적 사항 반영
+- [x] PR CI 초록
+- [x] 상태 DONE (PR #234)

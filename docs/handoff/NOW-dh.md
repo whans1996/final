@@ -3,16 +3,18 @@
 > 김동환(A 영역: AI·분석·학습 루프) 전용. 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
 > 머리 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
-갱신: 2026-11-27 10:07 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/K-3a-seed-check
+갱신: 2026-11-27 10:26 · 작업자: whans1996 · PC: dh-ssafy · 브랜치: feature/K-3a-seed-check
 
 ## 현재 기능
 
-**K-3a 시드 카드 원본 형식 + 검수 ①형식 ②예제 실행** (`docs/specs/K-3a-seed-check.md`, APPROVED 11-27, `Roadmap: K-3a`, 11/26~11/28)
+**K-3a 시드 카드 원본 형식 + 검수 ①형식 ②예제 실행** (`docs/specs/K-3a-seed-check.md`, DONE (PR #234), `Roadmap: K-3a`, 11/26~11/28)
 
 ## 진행
 
 - ✅ AC1~AC6·AC9·AC10 커밋·push (e716b40). 85장 develop과 동일, 수정 1건(vue/navigation-guards 라우트 조각 → `const routes = [...]`)
 - ✅ AC7·AC8·AC11 커밋 (5e8d439·c549729). /pr-review: verifier 지적(seed-check --be UP-TO-DATE, baed368), reviewer 반드시 수정 2(javac 흐름 분석 생략·@Override 완화 범위, efb6957), 권장 전부(지어낸 API 오류·SQL 격리·DB 한도·ConceptCategories 필터, f4e6293, 결정로그) 반영. 85장 오류 0·경고 437. PR 설명 `.harness/pr-K-3a.md`
+- ✅ **PR #234 CI 초록 + Codex ✅ eaf14e7** (Codex P2 3건 반영: vue script·setup 경로, js checker 문법, vue 매크로 실제 타입). 완료 표시 커밋 완료 → **머지 대기 (GitHub에서 직접)**
+- 🔨 **PR #236** (`feature/issue-235-codex-head-lag`, Closes #235): push 직후 codex-review가 이전 head로 판정하던 하네스 버그. Codex P2(hook 15초 제한) 반영 0c63e83, 재리뷰 대기
 
 ## 이슈 정리 순서 (11-26 사용자 승인)
 
@@ -20,8 +22,8 @@
 
 ## 바로 다음 할 일
 
-1. **PR #234** 열림. Codex P2 2건(vue script·setup 경로 겹침, js checker 문법 오류) 반영 후 재리뷰 중 (재리뷰 3회째). Codex 루프: `node scripts/codex-review.mjs 234 --request --wait --status` (Bash 백그라운드)
-2. COMPLETE·CI 초록이면 `docs(K-3a): 완료 표시 (spec DONE)` → 머지는 GitHub에서 직접
+1. 사람: PR #234 GitHub에서 머지 (상대 PR이 먼저 머지됐으면 `git merge origin/develop` → push로 CI 재확인)
+2. PR #236 Codex 루프: `git switch feature/issue-235-codex-head-lag` → `node scripts/codex-review.mjs 236 --request --wait --status` (백그라운드). COMPLETE·CI 초록이면 머지
 3. 11/29부터 HP-4 (#165·#166 + ④ 묶음)
 
 ## 막힌 점 / 결정 필요
