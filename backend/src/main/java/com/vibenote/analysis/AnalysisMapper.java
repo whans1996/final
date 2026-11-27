@@ -3,6 +3,7 @@ package com.vibenote.analysis;
 import com.vibenote.analysis.domain.Analysis;
 import com.vibenote.analysis.domain.AnalysisDetail;
 import com.vibenote.analysis.domain.AnalysisFile;
+import com.vibenote.analysis.domain.AnalysisListItem;
 import com.vibenote.analysis.explain.AnalysisOverview;
 import com.vibenote.quiz.QuizStatus;
 import java.time.LocalDateTime;
@@ -24,8 +25,8 @@ public interface AnalysisMapper {
     /** since 이후 만든 분석 중 FAILED가 아닌 것의 수. 일일 한도용이라 soft delete된 분석도 센다 (V2 규칙). */
     long countRequestedSince(@Param("userId") long userId, @Param("since") LocalDateTime since);
 
-    /** 내 미삭제 분석, created_at 최신순(같으면 id 내림차순). */
-    List<Analysis> findByUser(
+    /** 내 미삭제 분석, created_at 최신순(같으면 id 내림차순). 붙은 버전 번호를 함께 준다 (P-1a AC12). */
+    List<AnalysisListItem> findByUser(
             @Param("userId") long userId, @Param("size") int size, @Param("offset") long offset);
 
     long countByUser(long userId);

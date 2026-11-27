@@ -114,6 +114,33 @@ class AnalysisRerunApiTest extends AnalysisTestSupport {
     }
 
     @Test
+    void P1a_AC12_재실행한_분석은_원본과_같은_프로젝트에_붙고_버전은_FETCHING에서_다시_정한다() throws Exception {
+        long userId = createUser("p1aac12rerun", "JUNIOR");
+        long id = failedUrlAnalysis(userId);
+        long projectId = (Long) analysisRow(id).get("project_id");
+        // EXPLAINING 이후에 실패한 분석은 버전이 이미 붙어 있다
+        jdbc.update("INSERT INTO project_versions (project_id, number) VALUES (?, 1)", projectId);
+        jdbc.update(
+                "UPDATE analyses SET project_version_id = (SELECT id FROM project_versions WHERE"
+                        + " project_id = ?) WHERE id = ?",
+                projectId,
+                id);
+
+        String body =
+                rerun(userId, id)
+                        .andExpect(status().isAccepted())
+                        .andExpect(jsonPath("$.projectId").value(projectId))
+                        .andReturn()
+                        .getResponse()
+                        .getContentAsString();
+        long newId = objectMapper.readTree(body).get("analysisId").asLong();
+
+        Map<String, Object> row = analysisRow(newId);
+        assertThat(row.get("project_id")).isEqualTo(projectId);
+        assertThat(row.get("project_version_id")).isNull();
+    }
+
+    @Test
     void AC2_오늘_한도를_다_썼으면_429이고_원본은_그대로다() throws Exception {
         long userId = createUser("l1aac2", "JUNIOR");
         long id = failedUrlAnalysis(userId);

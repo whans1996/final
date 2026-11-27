@@ -2,7 +2,7 @@ package com.vibenote.analysis.dto;
 
 import com.vibenote.analysis.AnalysisStatus;
 import com.vibenote.analysis.SourceType;
-import com.vibenote.analysis.domain.Analysis;
+import com.vibenote.analysis.domain.AnalysisListItem;
 import com.vibenote.common.Level;
 import com.vibenote.common.config.ClockConfig;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -48,9 +48,19 @@ public record AnalysisSummaryResponse(
                         requiredMode = Schema.RequiredMode.REQUIRED,
                         description = "요청 시각",
                         example = "2026-11-24T14:20:00+09:00")
-                OffsetDateTime createdAt) {
+                OffsetDateTime createdAt,
+        @Schema(
+                        requiredMode = Schema.RequiredMode.REQUIRED,
+                        description = "붙은 프로젝트 ID (P-1a)",
+                        example = "12")
+                long projectId,
+        @Schema(
+                        description = "붙은 버전 번호 (P-1a). 저장소 분석이 아직 FETCHING이거나 받기 전에 실패했으면 null",
+                        example = "2",
+                        nullable = true)
+                Integer versionNumber) {
 
-    public static AnalysisSummaryResponse from(Analysis analysis) {
+    public static AnalysisSummaryResponse from(AnalysisListItem analysis) {
         return new AnalysisSummaryResponse(
                 analysis.getId(),
                 analysis.getTitle(),
@@ -61,6 +71,8 @@ public record AnalysisSummaryResponse(
                 analysis.getStatus(),
                 analysis.getProgress(),
                 analysis.getIsPublic(),
-                analysis.getCreatedAt().atZone(ClockConfig.ZONE).toOffsetDateTime());
+                analysis.getCreatedAt().atZone(ClockConfig.ZONE).toOffsetDateTime(),
+                analysis.getProjectId(),
+                analysis.getVersionNumber());
     }
 }

@@ -609,6 +609,10 @@
             "format" : "int32",
             "type" : "integer"
           },
+          "project" : {
+            "$ref" : "#/components/schemas/AnalysisProjectRefResponse",
+            "description" : "붙은 프로젝트 (P-1a)"
+          },
           "projectName" : {
             "description" : "프로젝트 이름",
             "example" : "todo-app",
@@ -648,9 +652,13 @@
             "description" : "제목",
             "example" : "todo-app",
             "type" : [ "string", "null" ]
+          },
+          "version" : {
+            "$ref" : "#/components/schemas/AnalysisVersionRefResponse",
+            "description" : "붙은 버전 (P-1a). 저장소 분석이 아직 FETCHING이거나 받기 전에 실패했으면 null"
           }
         },
-        "required" : [ "createdAt", "explainedFileCount", "fileCount", "id", "isPublic", "level", "liteMode", "mine", "owner", "progress", "quizRegenerationsLeft", "sourceType", "status" ],
+        "required" : [ "createdAt", "explainedFileCount", "fileCount", "id", "isPublic", "level", "liteMode", "mine", "owner", "progress", "project", "quizRegenerationsLeft", "sourceType", "status" ],
         "type" : "object"
       },
       "AnalysisFileResponse" : {
@@ -783,6 +791,24 @@
         "required" : [ "id", "nickname" ],
         "type" : "object"
       },
+      "AnalysisProjectRefResponse" : {
+        "description" : "분석이 붙은 프로젝트",
+        "properties" : {
+          "id" : {
+            "description" : "프로젝트 ID",
+            "example" : 12,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "name" : {
+            "description" : "프로젝트 이름",
+            "example" : "todo-app",
+            "type" : "string"
+          }
+        },
+        "required" : [ "id", "name" ],
+        "type" : "object"
+      },
       "AnalysisStatusResponse" : {
         "description" : "분석 진행 상태",
         "properties" : {
@@ -911,6 +937,12 @@
             "format" : "int32",
             "type" : "integer"
           },
+          "projectId" : {
+            "description" : "붙은 프로젝트 ID (P-1a)",
+            "example" : 12,
+            "format" : "int64",
+            "type" : "integer"
+          },
           "projectName" : {
             "description" : "프로젝트 이름 (ZIP 파일명에서 .zip을 뺀 이름)",
             "example" : "todo-app",
@@ -932,9 +964,50 @@
             "description" : "제목 (처음에는 프로젝트 이름)",
             "example" : "todo-app",
             "type" : [ "string", "null" ]
+          },
+          "versionNumber" : {
+            "description" : "붙은 버전 번호 (P-1a). 저장소 분석이 아직 FETCHING이거나 받기 전에 실패했으면 null",
+            "example" : 2,
+            "format" : "int32",
+            "type" : [ "integer", "null" ]
           }
         },
-        "required" : [ "createdAt", "id", "isPublic", "level", "progress", "sourceType", "status" ],
+        "required" : [ "createdAt", "id", "isPublic", "level", "progress", "projectId", "sourceType", "status" ],
+        "type" : "object"
+      },
+      "AnalysisVersionRefResponse" : {
+        "description" : "분석이 붙은 버전",
+        "properties" : {
+          "commitMessage" : {
+            "description" : "커밋 메시지 첫 줄",
+            "example" : "feat: JWT 로그인",
+            "type" : [ "string", "null" ]
+          },
+          "commitSha" : {
+            "description" : "커밋 SHA (40자)",
+            "example" : "9f2c4e1a7b3d5f60812c9e4a1b2c3d4e5f607182",
+            "type" : [ "string", "null" ]
+          },
+          "committedAt" : {
+            "description" : "커밋 시각",
+            "example" : "2026-11-28T14:02:11+09:00",
+            "format" : "date-time",
+            "type" : [ "string", "null" ]
+          },
+          "id" : {
+            "description" : "버전 ID",
+            "example" : 31,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "number" : {
+            "description" : "버전 번호",
+            "example" : 2,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "id", "number" ],
         "type" : "object"
       },
       "ApiEndpoint" : {

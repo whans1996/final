@@ -28,8 +28,11 @@
         WHERE user_id = #{userId} AND created_at &gt;= #{since} AND status &lt;&gt; 'FAILED'
     </select>
 
-    <select id="findByUser" resultType="com.vibenote.analysis.domain.Analysis">
-        SELECT <include refid="columns"/> FROM analyses
+    <!-- version_number: 붙은 버전 번호 (P-1a AC12, 없으면 NULL) -->
+    <select id="findByUser" resultType="com.vibenote.analysis.domain.AnalysisListItem">
+        SELECT <include refid="columns"/>,
+               (SELECT v.number FROM project_versions v WHERE v.id = a.project_version_id) AS version_number
+        FROM analyses a
         WHERE user_id = #{userId} AND deleted_at IS NULL
         ORDER BY created_at DESC, id DESC
         LIMIT #{size} OFFSET #{offset}
@@ -114,7 +117,12 @@
                 WHERE f.analysis_id = a.id AND f.selected = TRUE AND f.summary IS NOT NULL) AS explained_file_count,
                (SELECT u.nickname FROM users u WHERE u.id = a.user_id) AS owner_nickname,
                EXISTS (SELECT 1 FROM llm_usage_logs l
-                       WHERE l.analysis_id = a.id AND l.provider = 'ollama' AND l.success = TRUE) AS lite_mode
+                       WHERE l.analysis_id = a.id AND l.provider = 'ollama' AND l.success = TRUE) AS lite_mode,
+               (SELECT p.name FROM projects p WHERE p.id = a.project_id) AS project_ref_name,
+               (SELECT v.number FROM project_versions v WHERE v.id = a.project_version_id) AS version_number,
+               (SELECT v.commit_sha FROM project_versions v WHERE v.id = a.project_version_id) AS version_commit_sha,
+               (SELECT v.commit_message FROM project_versions v WHERE v.id = a.project_version_id) AS version_commit_message,
+               (SELECT v.committed_at FROM project_versions v WHERE v.id = a.project_version_id) AS version_committed_at
         FROM analyses a
         WHERE <include refid="viewable"/>
     </select>

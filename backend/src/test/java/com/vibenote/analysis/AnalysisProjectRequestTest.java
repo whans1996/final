@@ -1,6 +1,8 @@
 package com.vibenote.analysis;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.nullValue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -13,6 +15,7 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.mock.web.MockPart;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockMultipartHttpServletRequestBuilder;
 import tools.jackson.databind.JsonNode;
 
@@ -230,5 +233,111 @@ class AnalysisProjectRequestTest extends AnalysisTestSupport {
         if (message != null) {
             result.andExpect(jsonPath("$.details.projectId").value(message));
         }
+    }
+
+    // ───────────── AC12 분석 상세·목록의 프로젝트·버전 ─────────────
+
+    private static final String SHA = "9f2c4e1a7b3d5f60812c9e4a1b2c3d4e5f607182";
+
+    private ResultActions detail(long viewerId, long analysisId) throws Exception {
+        return mockMvc.perform(
+                get(URL + "/" + analysisId).header(HttpHeaders.AUTHORIZATION, bearer(viewerId)));
+    }
+
+    /** 저장소 분석에 커밋 정보가 있는 버전을 붙인다 (FETCHING이 끝난 것처럼). */
+    private long attachCommitVersion(long analysisId, long projectId) {
+        jdbc.update(
+                "INSERT INTO project_versions (project_id, number, commit_sha, commit_message,"
+                        + " committed_at) VALUES (?, 1, ?, 'feat: JWT 로그인', '2026-11-28 14:02:11')",
+                projectId,
+                SHA);
+        long versionId = count("SELECT id FROM project_versions WHERE project_id = ?", projectId);
+        jdbc.update(
+                "UPDATE analyses SET project_version_id = ? WHERE id = ?", versionId, analysisId);
+        return versionId;
+    }
+
+    @Test
+    void AC12_분석_상세에_프로젝트_이름과_버전이_있고_프로젝트_이름을_바꾸면_따라_바뀐다() throws Exception {
+        long me = createUser("p1ac12zip", "JUNIOR");
+        JsonNode body = accepted(zipFile(me, "todo-app.zip"));
+        long analysisId = body.get("analysisId").asLong();
+        long projectId = body.get("projectId").asLong();
+        long versionId = count("SELECT project_version_id FROM analyses WHERE id = ?", analysisId);
+        jdbc.update("UPDATE projects SET name = '할 일 앱' WHERE id = ?", projectId);
+
+        detail(me, analysisId)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.project.id").value(projectId))
+                .andExpect(jsonPath("$.project.name").value("할 일 앱"))
+                .andExpect(jsonPath("$.title").value("todo-app"))
+                .andExpect(jsonPath("$.version.id").value(versionId))
+                .andExpect(jsonPath("$.version.number").value(1))
+                .andExpect(jsonPath("$.version.commitSha").value(nullValue()))
+                .andExpect(jsonPath("$.version.commitMessage").value(nullValue()))
+                .andExpect(jsonPath("$.version.committedAt").value(nullValue()));
+    }
+
+    @Test
+    void AC12_저장소_분석은_FETCHING_전에는_version이_null이고_붙으면_커밋_정보가_있다() throws Exception {
+        long me = createUser("p1ac12url", "JUNIOR");
+        JsonNode body = accepted(url(me, TODO));
+        long analysisId = body.get("analysisId").asLong();
+        long projectId = body.get("projectId").asLong();
+
+        detail(me, analysisId)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.project.id").value(projectId))
+                .andExpect(jsonPath("$.project.name").value("todo-app"))
+                .andExpect(jsonPath("$.version").value(nullValue()));
+
+        long versionId = attachCommitVersion(analysisId, projectId);
+        detail(me, analysisId)
+                .andExpect(jsonPath("$.version.id").value(versionId))
+                .andExpect(jsonPath("$.version.number").value(1))
+                .andExpect(jsonPath("$.version.commitSha").value(SHA))
+                .andExpect(jsonPath("$.version.commitMessage").value("feat: JWT 로그인"))
+                .andExpect(jsonPath("$.version.committedAt").value("2026-11-28T14:02:11+09:00"));
+    }
+
+    @Test
+    void AC12_공개_분석을_보는_다른_회원에게도_같은_프로젝트_버전을_준다() throws Exception {
+        long me = createUser("p1ac12owner", "JUNIOR");
+        long viewer = createUser("p1ac12viewer", "JUNIOR");
+        JsonNode body = accepted(url(me, TODO));
+        long analysisId = body.get("analysisId").asLong();
+        long projectId = body.get("projectId").asLong();
+        long versionId = attachCommitVersion(analysisId, projectId);
+        jdbc.update(
+                "UPDATE analyses SET status = 'DONE', progress = 100, is_public = TRUE WHERE id ="
+                        + " ?",
+                analysisId);
+
+        detail(viewer, analysisId)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.mine").value(false))
+                .andExpect(jsonPath("$.project.id").value(projectId))
+                .andExpect(jsonPath("$.project.name").value("todo-app"))
+                .andExpect(jsonPath("$.version.id").value(versionId))
+                .andExpect(jsonPath("$.version.commitSha").value(SHA));
+    }
+
+    @Test
+    void AC12_분석_목록_항목에_projectId와_versionNumber가_있다() throws Exception {
+        long me = createUser("p1ac12list", "JUNIOR");
+        JsonNode zip = accepted(zipFile(me, "todo-app.zip"));
+        jdbc.update(
+                "UPDATE analyses SET created_at = created_at - INTERVAL 1 MINUTE WHERE id = ?",
+                zip.get("analysisId").asLong());
+        JsonNode repo = accepted(url(me, TODO));
+
+        mockMvc.perform(get(URL).header(HttpHeaders.AUTHORIZATION, bearer(me)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[0].id").value(repo.get("analysisId").asLong()))
+                .andExpect(jsonPath("$.items[0].projectId").value(repo.get("projectId").asLong()))
+                .andExpect(jsonPath("$.items[0].versionNumber").value(nullValue()))
+                .andExpect(jsonPath("$.items[1].id").value(zip.get("analysisId").asLong()))
+                .andExpect(jsonPath("$.items[1].projectId").value(zip.get("projectId").asLong()))
+                .andExpect(jsonPath("$.items[1].versionNumber").value(1));
     }
 }
