@@ -19,6 +19,8 @@ const row = (over = {}) => ({
 });
 
 function fixture(cards) {
+  // CI 체크아웃에는 .harness가 없다 (gitignore)
+  mkdirSync(join(ROOT, '.harness'), { recursive: true });
   const dir = mkdtempSync(join(ROOT, '.harness', 'seed-check-test-'));
   const src = join(dir, 'concepts');
   for (const [path, r, blocks] of cards) {
