@@ -275,6 +275,8 @@
             "items" : {
               "$ref" : "#/components/schemas/ConceptLevelResponse"
             },
+            "maxItems" : 3,
+            "minItems" : 3,
             "type" : "array"
           },
           "linkedAnalysisCount" : {
@@ -1409,6 +1411,8 @@
             "items" : {
               "$ref" : "#/components/schemas/ConceptLevelResponse"
             },
+            "maxItems" : 3,
+            "minItems" : 3,
             "type" : "array"
           },
           "name" : {

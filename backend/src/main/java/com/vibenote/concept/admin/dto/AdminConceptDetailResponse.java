@@ -94,6 +94,8 @@ public record AdminConceptDetailResponse(
                         example = "2026-11-20T14:20:00+09:00")
                 OffsetDateTime updatedAt,
         @ArraySchema(
+                        minItems = 3,
+                        maxItems = 3,
                         arraySchema =
                                 @Schema(
                                         requiredMode = Schema.RequiredMode.REQUIRED,

@@ -7,9 +7,10 @@ const isEmpty = (value) => value === undefined || value === null || value === ''
 /**
  * @typedef {'DRAFT'|'PUBLISHED'|'HIDDEN'} ConceptStatus
  * @typedef {'SEED'|'AI'|'ADMIN'} ConceptSource
+ * @typedef {{ level: 'BEGINNER'|'JUNIOR'|'SENIOR', summary: string|null, body: string|null }} ConceptLevel 수준별 요약·본문 (K-1)
  * @typedef {{ id: number, name: string, category: string, difficulty: string, summary: string, status: ConceptStatus, source: ConceptSource, wishCount: number, avgRating: number, updatedAt: string }} AdminConceptSummary
- * @typedef {{ id: number, name: string, category: string, difficulty: string, summary: string, body: string|null, exampleCode: string|null, referenceUrl: string|null, status: ConceptStatus, source: ConceptSource, wishCount: number, avgRating: number, reviewCount: number, linkedAnalysisCount: number, createdAt: string, updatedAt: string }} AdminConceptDetail
- * @typedef {{ name: string, category: string, difficulty: string, summary: string, body: string|null, exampleCode: string|null, referenceUrl: string|null, status: ConceptStatus }} AdminConceptBody
+ * @typedef {{ id: number, name: string, category: string, difficulty: string, summary: string, body: string|null, exampleCode: string|null, referenceUrl: string|null, status: ConceptStatus, source: ConceptSource, wishCount: number, avgRating: number, reviewCount: number, linkedAnalysisCount: number, createdAt: string, updatedAt: string, levels: ConceptLevel[] }} AdminConceptDetail levels는 언제나 BEGINNER·JUNIOR·SENIOR 순 3개 (K-1)
+ * @typedef {{ name: string, category: string, difficulty: string, summary: string, body: string|null, exampleCode: string|null, referenceUrl: string|null, status: ConceptStatus, levels?: ConceptLevel[]|null }} AdminConceptBody levels를 빼거나 null이면 PUT은 기존 수준별 칸을 유지하고, 보내면 6칸을 통째로 바꾼다 (K-1)
  */
 
 /**

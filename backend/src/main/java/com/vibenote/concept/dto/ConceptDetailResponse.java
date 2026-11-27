@@ -85,6 +85,8 @@ public record ConceptDetailResponse(
                         example = "JUNIOR")
                 Level viewerLevel,
         @ArraySchema(
+                        minItems = 3,
+                        maxItems = 3,
                         arraySchema =
                                 @Schema(
                                         requiredMode = Schema.RequiredMode.REQUIRED,
