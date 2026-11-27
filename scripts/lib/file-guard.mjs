@@ -112,7 +112,8 @@ export function checkFileTool(tool, input = {}, ctx = {}) {
     // 글롭은 무시 규칙(.gitignore)보다 우선한다: 비밀 파일을 고르는 글롭으로 내용을 검색하면 값이 출력된다 (#188).
     // hook이 넘긴 실제 비밀 파일(검색 폴더 기준 상대 경로)로 보고, 목록이 없으면 대표 이름으로 본다
     const base = abs(s.path || ctx.cwd || root);
-    const files = ctx.secretFiles ? ctx.secretFiles(base).map((f) => relative(base, f.path).replace(/\\/g, '/')) : undefined;
+    // 목록을 모르는 곳(hook 밖, 저장소 밖: null)과 확인한 빈 목록([])을 구분한다 (Codex)
+    const files = ctx.secretFiles?.(base)?.map((f) => relative(base, f.path).replace(/\\/g, '/')) ?? undefined;
     if (s.globs.some((g) => globHitsSecret(g, files))) return '.env·키 파일 내용은 검색할 수 없습니다. 필요한 변수 이름은 .env.example을 보세요.';
     if (s.hidden && !s.globs.length && (!files || files.length)) return '숨김 파일(.env 포함)까지 보는 내용 검색은 filePattern으로 파일 종류를 좁혀 주세요 (#188).';
   }

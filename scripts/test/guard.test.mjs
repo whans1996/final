@@ -573,7 +573,7 @@ test('리뷰 반영: 재귀 검색 — 알 수 없는 시작 경로, git grep, �
   // Windows 경로
   const win = { cwd: 'C:/repo', secretFiles: (dir) => [{ path: 'C:/repo/.env', ignored: true }].filter((f) => isWithin(f.path, dir)) };
   assert.ok(checkCommand('grep -rn KEY .', win));
-  assert.ok(checkCommand('grep -rn KEY C:\repo', win));
+  assert.ok(checkCommand("grep -rn KEY 'C:\\repo'", win)); // bash에서 따옴표 없는 \는 이스케이프다
   assert.equal(checkCommand('grep -rn KEY scripts', win), null);
 });
 
@@ -583,4 +583,95 @@ test('리뷰 반영: PowerShell ForEach-Object 블록으로 넘긴 파일, git r
   assert.equal(ps('gci docs | % { $_.Name }'), null);
   for (const cmd of ["git rm -f 'src/*'", "git rm --force ':(glob)src/**'"]) no(cmd);
   for (const cmd of ['git rm -f src/a.js', "git rm 'src/*.tmp'"]) ok(cmd);
+});
+
+// PR #246 Codex 1회차
+test('Codex 반영: rg -g + eval, rg -L, grep --exclude 브레이스, 서브셸 변수, rg -t 타입', () => {
+  const ev = { evalDir: '/repo/data/raw/eval', exists: () => true, secretFiles };
+  assert.doesNotThrow(() => checkCommand("rg KEY -g 'data/**'", { cwd: '/repo', ...ev }));
+  no("rg -uu KEY -g 'data/**' data", ev);
+  const sf = { secretFiles };
+  for (const cmd of [
+    'rg -uu -L KEY',
+    "grep -r KEY --exclude='{.env,*.pem}' .",
+    'D=.; (D=scripts); grep -r KEY "$D"',
+    'D=.; echo $(D=scripts); grep -r KEY $D',
+    'rg -uu -t sh KEY .',
+    'rg -uu -t config KEY .',
+    "rg -uu --type-add 'e:.e*' -te KEY",
+    "rg -uu --type-add 'e:*.env*' --type e KEY",
+  ])
+    no(cmd, sf);
+  for (const cmd of ['rg -uu -t java KEY .', 'rg -uu -tjs -tts KEY .', "rg -uu --type-add 'j:*.java' -tj KEY", 'D=scripts; (D=.); grep -r KEY $D']) ok(cmd, sf);
+});
+
+// #245: 가드 우회 잔여 (PR #246 reviewer가 재현, 같은 PR에서 처리)
+test('#245: 읽기·검색 인자의 셸 글롭 (bash는 * 가 점으로 시작하는 이름에 맞지 않는다)', () => {
+  const sf = { secretFiles };
+  for (const cmd of ['cat .e*', 'cat .en?', 'head .[e]nv', 'grep KEY .*', 'grep -rn KEY .*', 'grep -rn KEY *', 'cat backend/.env*', 'rg KEY .e*', 'cat */.env.local']) no(cmd, sf);
+  for (const cmd of ['cat *.md', 'cat *', 'grep -n KEY src/*', 'grep -rn KEY scripts/*', 'cat .e*.example', 'cat docs/*.md']) ok(cmd, sf);
+  // 목록이 없어도(hook 밖) 대표 이름으로 본다
+  no('cat .e*');
+  ok('cat *.md');
+});
+
+test('#245: 파이프·명령 치환·find -exec·findstr /s로 넘긴 파일 이름', () => {
+  const sf = { secretFiles };
+  for (const cmd of [
+    'find . -type f | xargs grep KEY',
+    'find . -name ".env*" | xargs cat',
+    'find . -type f -exec grep KEY {} +',
+    "find . -name '.env' -exec cat {} \\;",
+    'grep KEY $(find . -type f)',
+    'cat `find . -name ".env*"`',
+    'find backend -type f | xargs -I{} grep KEY {}',
+  ])
+    no(cmd, sf);
+  for (const cmd of ['find src -type f | xargs grep KEY', 'find . -name "*.java" | xargs grep KEY', 'find . -name "*.md" -exec grep KEY {} +', 'grep KEY $(find docs -name "*.md")', 'find . -name ".env*"', 'git ls-files | xargs grep KEY'])
+    ok(cmd, sf);
+  for (const sh of ['cmd', 'powershell']) {
+    assert.ok(checkCommand('findstr /s KEY *.*', { cwd: '/repo', shell: sh, secretFiles }), `차단되어야 함 (${sh}): findstr /s`);
+    assert.ok(checkCommand('findstr /si key *', { cwd: '/repo', shell: sh, secretFiles }));
+    assert.equal(checkCommand('findstr /s KEY *.java', { cwd: '/repo', shell: sh, secretFiles }), null);
+  }
+});
+
+test('#245: PowerShell 변형 — ${x}, 다중 할당, 괄호로 넘긴 목록, Where-Object 파이프', () => {
+  const ps = (cmd) => checkCommand(cmd, { cwd: '/repo', shell: 'powershell', secretFiles });
+  for (const cmd of [
+    '${x} = gc .env',
+    '$x, $y = gc .env',
+    '$x,$y = gc .env',
+    'Get-Content (gci -Filter .env*)',
+    'gc (gi .env)',
+    'sls KEY (gci -r)',
+    "gci | ? { $_.Name -eq '.env' } | gc",
+    'gci -r | Where-Object { $_.Length -gt 0 } | Select-String KEY',
+    'gci | sort Name | gc',
+  ])
+    assert.ok(ps(cmd), `차단되어야 함: ${cmd}`);
+  for (const cmd of ['${x} = gc README.md', 'Get-Content (gci docs -Filter *.md)', 'if (Test-Path .env) { echo ok }', 'gci docs | ? { $_.Length -gt 0 } | gc', '$a, $b = 1, 2'])
+    assert.equal(ps(cmd), null, `차단되면 안 됨: ${cmd}`);
+});
+
+test('#245: eval — 인라인 코드의 경로 조각 이어 붙이기·재귀 탐색 API, 셸 브레이스', () => {
+  const ev = { evalDir: '/repo/data/raw/eval', exists: () => true };
+  for (const cmd of [
+    `node -e "fs.readdirSync(path.join('data','raw','eval'))"`,
+    `python -c "import os; print(list(os.walk('data')))"`,
+    `node -e "fs.readdirSync('data/raw', { recursive: true })"`,
+    `node -e "fs.globSync('data/raw/*/a.json')"`,
+    `python -c "from pathlib import Path; print(list(Path('.').rglob('*.json')))"`,
+    'cat data/raw/{eval,x}/a.json',
+    'ls data/{raw,seed}/eval',
+  ])
+    no(cmd, ev);
+  for (const cmd of [`node -e "fs.readdirSync('data/raw')"`, `python -c "import os; print(list(os.walk('scripts')))"`, `node -e "path.join('data','seed')"`, 'cat data/{seed,x}/a.json']) ok(cmd, ev);
+  // eval 폴더가 없으면 재귀 탐색 API는 막지 않는다
+  ok(`python -c "import os; print(list(os.walk('data')))"`, { ...ev, exists: () => false });
+});
+
+test('#245: 알 수 없는 gh 하위 명령은 미리 만든 별칭·확장일 수 있다', () => {
+  for (const cmd of ['gh m 1', 'gh co-merge 12']) no(cmd);
+  for (const cmd of ['gh pr view 1', 'gh issue list', 'gh run list', 'gh --version', 'gh auth status', 'gh workflow run CI', 'gh label list', 'gh search issues x', 'gh help']) ok(cmd);
 });

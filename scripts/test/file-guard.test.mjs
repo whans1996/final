@@ -84,6 +84,12 @@ test('리뷰 반영: hook이 넘긴 실제 비밀 파일로 검색 글롭을 판
   for (const glob of ['src/**', '*.java', 'docs/*']) ok('Grep', { pattern: 'KEY', glob }, sf);
   ok('Grep', { pattern: 'KEY', path: '/repo/scripts', glob: '*' }, sf);
   ok(`${DC}start_search`, { path: '/repo/scripts', pattern: 'KEY', searchType: 'content', includeHidden: true }, sf);
+  // Codex 반영: 목록을 모르는 곳(저장소 밖, secretFiles가 null)은 대표 이름으로 본다
+  const outside = { secretFiles: (dir) => (dir.startsWith('/repo') ? [] : null) };
+  no('Grep', { pattern: 'KEY', path: '/tmp/other-worktree', glob: '.env' }, outside);
+  no(`${DC}start_search`, { path: '/tmp/x', pattern: 'KEY', searchType: 'content', filePattern: '*env*' }, outside);
+  ok('Grep', { pattern: 'KEY', path: '/tmp/other-worktree', glob: '*.md' }, outside);
+  ok('Grep', { pattern: 'KEY', path: '/repo/scripts', glob: '.env' }, outside); // 확인한 빈 목록
 });
 
 test('eval 경로: 김동환 PC(evalDir 지정)에서만 막는다 (HX-2)', () => {
