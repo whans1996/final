@@ -6,11 +6,13 @@
 // FAILED도 상세를 1회 불러와 주인에게 관리 영역(삭제)을 보여 준다. 남의 공개 분석은 읽기 전용이다: 관리·메모·퀴즈 탭이 없고
 // 실행 흐름은 카드만 보인다 (F-19 AC13·AC14). 내 분석이 DONE이면 진행 중인 분석 챌린지 달성도를 보인다 (#211).
 // FAILED인 내 URL 분석은 같은 설정으로 다시 실행해 새 분석으로 바꾸고, ZIP 분석은 다시 올리라고 안내한다 (L-1a AC9).
+// 제목 근처에 "프로젝트 이름 · v번호"를 보이고 주인에게만 프로젝트 상세 링크로 준다 (P-1a AC16).
 import { computed, nextTick, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { fetchAnalysis, fetchAnalysisStatus, rerunAnalysis } from '@/api/analyses'
 import { errorCode, errorMessage } from '@/api/http'
 import { usePolling } from '@/composables/usePolling'
+import { useLatestRequest } from '@/composables/useLatestRequest'
 import { isInProgress } from '@/utils/analysisStatus'
 import AnalysisStatusBadge from '@/components/analysis/AnalysisStatusBadge.vue'
 import AnalysisOverviewTab from '@/components/analysis/AnalysisOverviewTab.vue'
@@ -21,6 +23,7 @@ import AnalysisConceptsTab from '@/components/analysis/AnalysisConceptsTab.vue'
 import AnalysisQuizTab from '@/components/analysis/AnalysisQuizTab.vue'
 import AnalysisManagePanel from '@/components/analysis/AnalysisManagePanel.vue'
 import ChallengeProgressNotice from '@/components/challenge/ChallengeProgressNotice.vue'
+import BaseButton from '@/components/common/BaseButton.vue'
 import { LEVELS } from '@/utils/authValidation'
 
 const POLL_INTERVAL_MS = 2000
@@ -70,6 +73,13 @@ const activeTab = computed(() =>
   tabs.value.some((t) => t.name === route.query.tab) ? route.query.tab : 'overview',
 )
 const tabsEl = ref(null)
+// 프로젝트·버전 (P-1a AC16). 버전이 아직 없으면(FETCHING·버전 전 실패) 이름만
+const projectLabel = computed(() => {
+  const project = analysis.value?.project
+  if (!project) return null
+  const version = analysis.value.version
+  return version ? `${project.name} · v${version.number}` : project.name
+})
 
 // 좁은 화면에서 탭 줄이 가로로 스크롤되므로 선택된 탭이 보이게 한다 (?tab=quiz로 바로 들어온 경우 포함)
 watch(
@@ -90,7 +100,8 @@ const selectedFileId = computed(() => {
 
 // 상세는 첫 상태를 받으면 1회(진행 중이면 관리 영역용, F-19 AC13), 진행 중에 불러왔으면 DONE·FAILED가 된 뒤
 // 결과를 위해 1회 더 불러온다 (결과는 다시 바뀌지 않는다). 단계는 요청할 때 정해 실패해도 같은 단계에서 다시 부르지 않는다
-let detailRequest = 0
+// 다른 분석으로 옮기면 이전 상세 요청을 취소하고 늦게 온 응답은 버린다 (V-4)
+const detailLatest = useLatestRequest()
 let detailStage = null
 
 function stageOf(value) {
@@ -99,17 +110,17 @@ function stageOf(value) {
 
 async function loadDetail() {
   const id = currentId
-  const request = ++detailRequest
+  const request = detailLatest.begin()
   detailStage = stageOf(status.value?.status)
   detailLoading.value = true
   detailError.value = ''
   try {
     const result = await fetchAnalysis(id)
-    if (request === detailRequest) analysis.value = result
+    if (request.isCurrent()) analysis.value = result
   } catch (error) {
-    if (request === detailRequest) detailError.value = errorMessage(error)
+    if (request.isCurrent()) detailError.value = errorMessage(error)
   } finally {
-    if (request === detailRequest) detailLoading.value = false
+    if (request.isCurrent()) detailLoading.value = false
   }
 }
 
@@ -183,7 +194,7 @@ watch(
     currentId = id
     status.value = null
     analysis.value = null
-    detailRequest += 1
+    detailLatest.invalidate()
     detailStage = null
     detailLoading.value = false
     detailError.value = ''
@@ -198,56 +209,81 @@ watch(
 </script>
 
 <template>
-  <section class="detail" :class="{ wide: isDone }">
+  <section class="mx-auto flex flex-col py-8" :class="isDone ? 'max-w-6xl' : 'max-w-3xl'">
     <!-- 진행 중·실패 화면은 주인만 본다. 남의 것으로 확인된 공개 분석만 숨기고, 아래 소유자 줄로 돌아간다 (#200) -->
     <RouterLink
       v-if="!isDone || analysis?.mine !== false"
       :to="{ name: 'analyses' }"
-      class="back"
+      class="self-start text-sm"
       data-action="back-to-mine"
       >← 내 분석</RouterLink
     >
-    <h1>{{ isDone ? title : '분석 진행 상태' }}</h1>
-    <p v-if="analysis && !mine" class="owner" data-section="owner">
+    <h1 class="mt-2 break-all">{{ isDone ? title : '분석 진행 상태' }}</h1>
+    <template v-if="projectLabel">
+      <RouterLink
+        v-if="mine"
+        :to="{ name: 'project-detail', params: { id: analysis.project.id } }"
+        class="mt-1 self-start text-sm font-semibold break-all"
+        data-section="project"
+        >{{ projectLabel }}</RouterLink
+      >
+      <p v-else class="mt-1 text-sm break-all text-text-muted" data-section="project">
+        {{ projectLabel }}
+      </p>
+    </template>
+    <p v-if="analysis && !mine" class="mt-2" data-section="owner">
       <RouterLink :to="{ name: 'user-profile', params: { id: analysis.owner.id } }">
         {{ analysis.owner.nickname }}님의 분석
       </RouterLink>
     </p>
-    <p v-if="mine && analysis.memo" class="memo" data-section="memo">{{ analysis.memo }}</p>
+    <p
+      v-if="mine && analysis.memo"
+      class="mt-2 break-all whitespace-pre-line text-text-muted"
+      data-section="memo"
+    >
+      {{ analysis.memo }}
+    </p>
     <a
       v-if="(isDone || isFailed) && sourceLink"
       :href="sourceLink"
       target="_blank"
       rel="noopener noreferrer"
-      class="source-link"
+      class="mt-2 self-start text-sm"
       data-action="source"
     >
       저장소 보기
     </a>
 
-    <div v-if="mine && manageDetail" class="manage-area">
-      <AnalysisManagePanel :detail="manageDetail" @updated="onUpdated" @deleted="onDeleted" />
+    <div v-if="mine && manageDetail" class="mt-3 flex flex-col items-start gap-2">
+      <AnalysisManagePanel
+        :detail="manageDetail"
+        class="self-stretch"
+        @updated="onUpdated"
+        @deleted="onDeleted"
+      />
       <RouterLink
         v-if="isDone"
         :to="{ name: 'post-write', query: { analysisId: String(analysis.id) } }"
-        class="ask"
+        class="font-semibold"
         data-action="ask-community"
       >
         커뮤니티에 질문하기
       </RouterLink>
     </div>
-    <ChallengeProgressNotice v-if="mine && isDone" goal-type="ANALYSIS_COUNT" class="challenges" />
+    <ChallengeProgressNotice v-if="mine && isDone" goal-type="ANALYSIS_COUNT" class="mt-2" />
 
-    <p v-if="notFound" class="form-error" data-message="not-found">분석을 찾을 수 없습니다.</p>
-    <p v-else-if="loading" class="hint">불러오는 중…</p>
+    <p v-if="notFound" class="mt-6 text-danger" data-message="not-found">
+      분석을 찾을 수 없습니다.
+    </p>
+    <p v-else-if="loading" class="mt-6 text-text-muted">불러오는 중…</p>
 
     <template v-else>
-      <p v-if="loadError" class="form-error" role="alert">{{ loadError }}</p>
+      <p v-if="loadError" class="mt-4 text-danger" role="alert">{{ loadError }}</p>
 
-      <div v-if="status && isDone" class="result">
-        <div class="meta">
+      <div v-if="status && isDone" class="result mt-4 flex flex-col gap-4">
+        <div class="flex flex-wrap items-center gap-3">
           <AnalysisStatusBadge :status="status.status" :progress="status.progress" />
-          <p class="done hint" data-message="done" role="status">
+          <p class="font-semibold text-text-muted" data-message="done" role="status">
             분석이 끝났습니다.
             <template v-if="analysis">
               {{ levelLabel(analysis.level) }} 수준 · 설명한 파일
@@ -256,26 +292,36 @@ watch(
           </p>
         </div>
 
-        <p v-if="detailLoading" class="hint">결과를 불러오는 중…</p>
-        <div v-else-if="detailError" class="failed">
-          <p class="form-error" role="alert" data-error="detail">{{ detailError }}</p>
-          <button type="button" class="retry-button" data-action="retry-detail" @click="loadDetail">
+        <p v-if="detailLoading" class="text-text-muted">결과를 불러오는 중…</p>
+        <div v-else-if="detailError" class="flex flex-col items-start gap-3">
+          <p class="text-danger" role="alert" data-error="detail">{{ detailError }}</p>
+          <BaseButton variant="secondary" size="sm" data-action="retry-detail" @click="loadDetail">
             다시 시도
-          </button>
+          </BaseButton>
         </div>
         <template v-else-if="analysis">
           <!-- F-27 AC11: GMS 대신 Ollama로 만든 결과가 있으면 알린다 -->
-          <p v-if="analysis.liteMode" class="lite-mode" role="status" data-message="lite-mode">
+          <p
+            v-if="analysis.liteMode"
+            class="rounded-sm bg-info-soft px-4 py-3 text-sm text-text"
+            role="status"
+            data-message="lite-mode"
+          >
             일부 결과는 간이 모드(서버의 로컬 AI)로 만들어 설명이 짧거나 덜 정확할 수 있어요.
           </p>
-          <div ref="tabsEl" class="tabs" role="tablist" aria-label="분석 결과">
+          <div
+            ref="tabsEl"
+            class="flex gap-1 overflow-x-auto border-b border-border"
+            role="tablist"
+            aria-label="분석 결과"
+          >
             <button
               v-for="tab in tabs"
               :id="`tab-${tab.name}`"
               :key="tab.name"
               type="button"
               role="tab"
-              class="tab"
+              class="shrink-0 cursor-pointer border-b-2 border-transparent px-4 py-2 font-semibold whitespace-nowrap text-text-muted hover:text-text aria-selected:border-primary aria-selected:text-primary"
               :aria-selected="activeTab === tab.name ? 'true' : 'false'"
               :aria-controls="`panel-${tab.name}`"
               @click="selectTab(tab.name)"
@@ -286,7 +332,7 @@ watch(
 
           <div
             :id="`panel-${activeTab}`"
-            class="panel"
+            class="min-w-0 rounded-md border border-border bg-surface p-4 sm:p-6 dark:bg-surface-raised"
             role="tabpanel"
             :aria-labelledby="`tab-${activeTab}`"
           >
@@ -324,216 +370,56 @@ watch(
         </template>
       </div>
 
-      <div v-else-if="status" class="card">
+      <div
+        v-else-if="status"
+        class="mt-6 flex flex-col gap-4 rounded-md border border-border bg-surface p-6 shadow-1 dark:bg-surface-raised"
+      >
         <AnalysisStatusBadge :status="status.status" :progress="status.progress" />
 
-        <div v-if="status.status === 'FAILED'" class="failed" data-message="failed">
-          <p class="form-error">{{ status.errorMessage }}</p>
+        <div
+          v-if="status.status === 'FAILED'"
+          class="flex flex-col items-start gap-3"
+          data-message="failed"
+        >
+          <p class="text-danger">{{ status.errorMessage }}</p>
           <template v-if="mine && analysis.sourceType === 'URL'">
-            <button
-              type="button"
-              class="retry-button"
+            <BaseButton
+              variant="secondary"
+              size="sm"
               data-action="rerun"
               :disabled="rerunning"
               @click="rerun"
             >
               같은 설정으로 다시 실행
-            </button>
-            <p v-if="rerunError" class="form-error" role="alert" data-error="rerun">
+            </BaseButton>
+            <p v-if="rerunError" class="text-danger" role="alert" data-error="rerun">
               {{ rerunError }}
             </p>
           </template>
           <template v-else-if="mine && analysis.sourceType === 'ZIP'">
-            <p class="hint" data-message="zip-rerun">
+            <p class="text-text-muted" data-message="zip-rerun">
               ZIP 분석은 원본을 보관하지 않습니다. ZIP 파일을 다시 올려 주세요.
             </p>
-            <RouterLink :to="{ name: 'analysis-new' }" class="retry" data-action="retry">
+            <BaseButton :to="{ name: 'analysis-new' }" data-action="retry">
               ZIP 다시 올리기
-            </RouterLink>
+            </BaseButton>
           </template>
-          <RouterLink v-else :to="{ name: 'analysis-new' }" class="retry" data-action="retry">
+          <BaseButton v-else :to="{ name: 'analysis-new' }" data-action="retry">
             다시 요청하기
-          </RouterLink>
+          </BaseButton>
         </div>
-        <p v-else class="hint">
+        <p v-else class="text-text-muted">
           {{ status.progress }}% · 화면을 닫아도 분석은 계속됩니다. 내 분석에서 다시 볼 수 있습니다.
         </p>
 
         <!-- 진행 중·FAILED의 상세는 관리 영역용이다 (F-19 AC13) -->
-        <div v-if="detailError" class="failed">
-          <p class="form-error" role="alert" data-error="detail">{{ detailError }}</p>
-          <button type="button" class="retry-button" data-action="retry-detail" @click="loadDetail">
+        <div v-if="detailError" class="flex flex-col items-start gap-3">
+          <p class="text-danger" role="alert" data-error="detail">{{ detailError }}</p>
+          <BaseButton variant="secondary" size="sm" data-action="retry-detail" @click="loadDetail">
             다시 시도
-          </button>
+          </BaseButton>
         </div>
       </div>
     </template>
   </section>
 </template>
-
-<style scoped>
-.detail {
-  max-width: 720px;
-  margin: 0 auto;
-  padding: var(--space-8) 0;
-}
-
-.detail.wide {
-  max-width: 1120px;
-}
-
-.detail h1 {
-  overflow-wrap: anywhere;
-}
-
-.result {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-  margin-top: var(--space-4);
-}
-
-.lite-mode {
-  margin: 0;
-  padding: var(--space-3) var(--space-4);
-  border-radius: var(--radius);
-  background: var(--color-background);
-  font-size: 0.9em;
-}
-
-.meta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-3);
-}
-
-.tabs {
-  display: flex;
-  gap: var(--space-1);
-  overflow-x: auto;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.tab {
-  flex-shrink: 0;
-  white-space: nowrap;
-  padding: var(--space-2) var(--space-4);
-  border: none;
-  border-bottom: 2px solid transparent;
-  color: var(--color-text-muted);
-  background: none;
-  font: inherit;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.tab[aria-selected='true'] {
-  border-bottom-color: var(--color-primary);
-  color: var(--color-primary);
-}
-
-.panel {
-  min-width: 0;
-  padding: var(--space-6);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  background: var(--color-surface);
-}
-
-.retry-button {
-  padding: var(--space-1) var(--space-3);
-  border: 1px solid var(--color-primary);
-  border-radius: var(--radius);
-  color: var(--color-primary);
-  background: var(--color-surface);
-  font: inherit;
-  cursor: pointer;
-}
-
-@media (max-width: 480px) {
-  .panel {
-    padding: var(--space-4);
-  }
-}
-
-.back {
-  font-size: 0.9em;
-}
-
-.owner,
-.memo {
-  margin: 0 0 var(--space-2);
-}
-
-.memo {
-  white-space: pre-line;
-  overflow-wrap: anywhere;
-  color: var(--color-text-muted);
-}
-
-.manage-area {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-2);
-  margin-bottom: var(--space-2);
-}
-
-.manage-area > section {
-  align-self: stretch;
-}
-
-.ask {
-  font-weight: 600;
-}
-
-.challenges {
-  margin-bottom: var(--space-4);
-}
-
-.source-link {
-  display: inline-block;
-  margin-bottom: var(--space-2);
-  font-size: 0.9em;
-}
-
-.hint {
-  color: var(--color-text-muted);
-}
-
-.form-error {
-  color: var(--color-danger);
-}
-
-.card {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-  margin-top: var(--space-6);
-  padding: var(--space-6);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  background: var(--color-surface);
-}
-
-.done {
-  font-weight: 600;
-}
-
-.failed {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-3);
-}
-
-.retry {
-  padding: var(--space-2) var(--space-4);
-  border-radius: var(--radius);
-  color: #fff;
-  background: var(--color-primary);
-  font-weight: 700;
-  text-decoration: none;
-}
-</style>

@@ -8,14 +8,16 @@ const UPLOAD_TIMEOUT_MS = 60000
 /**
  * multipart로 `file` 또는 `sourceUrl` 파트 하나와 `level`·`consent` 파트를 보낸다. file이 있으면 file을,
  * 없으면 sourceUrl을 보낸다. level을 생략하면 서버가 내 프로필 수준을 쓴다.
- * @returns {Promise<{ analysisId: number, status: string }>} 202
+ * projectId가 있으면 그 프로젝트의 새 버전으로 분석한다 (P-1a AC1·AC4·AC5, 잘못되면 400 COMMON_400·404 PROJECT_404).
+ * @returns {Promise<{ analysisId: number, status: string, projectId: number }>} 202
  */
-export function createAnalysis({ file, sourceUrl, level, consent }) {
+export function createAnalysis({ file, sourceUrl, level, consent, projectId }) {
   const form = new FormData()
   if (file) form.append('file', file)
   else form.append('sourceUrl', sourceUrl)
   if (level) form.append('level', level)
   form.append('consent', String(consent))
+  if (projectId != null) form.append('projectId', String(projectId))
   return http.post('/analyses', form, { timeout: UPLOAD_TIMEOUT_MS }).then((res) => res.data)
 }
 
@@ -40,7 +42,9 @@ export function fetchAnalysisStatus(id) {
  * 분석 상세 (overview·fileCount·explainedFileCount 포함). 진행 중이면 overview가 null일 수 있다.
  * sourceUrl은 URL 분석의 정규화한 저장소 주소이고 ZIP 분석이면 null이다 (F-05b AC12).
  * mine은 내 분석인지, owner는 주인 `{ id, nickname }`, memo는 주인에게만 온다 (남이면 null, F-19 AC9·AC11).
- * @returns {Promise<{ id: number, title: string|null, memo: string|null, mine: boolean, owner: { id: number, nickname: string }, projectName: string|null, sourceType: string, sourceUrl: string|null, level: string, status: string, progress: number, isPublic: boolean, errorCode: string|null, errorMessage: string|null, createdAt: string, fileCount: number, explainedFileCount: number, overview: object|null, quizStatus: 'GENERATING'|'READY'|'FAILED'|null, quizRegenerationsLeft: number }>}
+ * project는 묶인 프로젝트 `{ id, name }`, version은 버전 `{ id, number, commitSha, commitMessage, committedAt }`이고
+ * 아직 버전이 없으면(FETCHING·FAILED) null이다 (P-1a AC12).
+ * @returns {Promise<{ id: number, title: string|null, memo: string|null, mine: boolean, owner: { id: number, nickname: string }, project: { id: number, name: string }, version: object|null, projectName: string|null, sourceType: string, sourceUrl: string|null, level: string, status: string, progress: number, isPublic: boolean, errorCode: string|null, errorMessage: string|null, createdAt: string, fileCount: number, explainedFileCount: number, overview: object|null, quizStatus: 'GENERATING'|'READY'|'FAILED'|null, quizRegenerationsLeft: number }>}
  */
 export function fetchAnalysis(id) {
   return http.get(`/analyses/${id}`).then((res) => res.data)

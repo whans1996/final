@@ -1,11 +1,16 @@
 <script setup>
 // SC-06 내 분석 목록 (F-05a AC16). 공개 배지와 메모 첫 줄을 보여 준다 (F-19 AC15). 수정·삭제·공개 설정은 SC-07에서만 한다.
+// 머리에 프로젝트별 보기(SC-25) 링크가 있다 (P-1a 5절).
 import { onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
+import { FolderGit2 } from 'lucide-vue-next'
 import { fetchAnalyses } from '@/api/analyses'
 import { errorMessage } from '@/api/http'
+import { useLatestRequest } from '@/composables/useLatestRequest'
 import { LEVELS } from '@/utils/authValidation'
 import AnalysisStatusBadge from '@/components/analysis/AnalysisStatusBadge.vue'
+import BaseBadge from '@/components/common/BaseBadge.vue'
+import BaseButton from '@/components/common/BaseButton.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import PageNav from '@/components/common/PageNav.vue'
 
@@ -31,24 +36,24 @@ function formatDate(value) {
   return value ? value.slice(0, 10).replaceAll('-', '.') : ''
 }
 
-// 페이지를 빠르게 넘길 때 늦게 도착한 이전 요청의 응답은 버린다
-let lastRequest = 0
+// 페이지를 빠르게 넘기면 이전 요청을 취소하고 늦게 도착한 응답은 버린다 (V-4)
+const latest = useLatestRequest()
 
 async function load(target) {
-  const request = ++lastRequest
+  const request = latest.begin()
   loading.value = true
   loadError.value = ''
   try {
     const result = await fetchAnalyses({ page: target, size: PAGE_SIZE })
-    if (request !== lastRequest) return
+    if (!request.isCurrent()) return
     items.value = result.items
     total.value = result.total
     page.value = result.page
   } catch (error) {
-    if (request !== lastRequest) return
+    if (!request.isCurrent()) return
     loadError.value = errorMessage(error)
   } finally {
-    if (request === lastRequest) loading.value = false
+    if (request.isCurrent()) loading.value = false
   }
 }
 
@@ -56,44 +61,56 @@ onMounted(() => load(1))
 </script>
 
 <template>
-  <section class="list">
-    <div class="heading">
+  <section class="flex flex-col gap-6 py-8">
+    <div class="flex flex-wrap items-center justify-between gap-4">
       <h1>내 분석</h1>
-      <RouterLink :to="{ name: 'analysis-new' }" class="new">분석 요청</RouterLink>
+      <div class="flex flex-wrap items-center gap-2">
+        <BaseButton variant="secondary" :to="{ name: 'projects' }" data-action="by-project">
+          <FolderGit2 class="size-4" aria-hidden="true" />
+          프로젝트별로 보기
+        </BaseButton>
+        <BaseButton :to="{ name: 'analysis-new' }">분석 요청</BaseButton>
+      </div>
     </div>
 
-    <p v-if="loading" class="hint">불러오는 중…</p>
-    <p v-else-if="loadError" class="form-error" role="alert">{{ loadError }}</p>
+    <p v-if="loading" class="text-text-muted">불러오는 중…</p>
+    <p v-else-if="loadError" class="text-danger" role="alert">{{ loadError }}</p>
 
     <EmptyState
       v-else-if="items.length === 0"
       message="아직 분석이 없습니다. AI로 만든 프로젝트를 올려 코드를 이해해 보세요."
     >
       <template #action>
-        <RouterLink :to="{ name: 'analysis-new' }" class="new" data-action="first-request">
+        <BaseButton :to="{ name: 'analysis-new' }" data-action="first-request">
           첫 분석 요청하기
-        </RouterLink>
+        </BaseButton>
       </template>
     </EmptyState>
 
     <template v-else>
-      <ul class="cards">
+      <ul class="grid list-none grid-cols-1 gap-4 ps-0 sm:grid-cols-2 lg:grid-cols-3">
         <li v-for="analysis in items" :key="analysis.id">
           <RouterLink
             :to="{ name: 'analysis-detail', params: { id: analysis.id } }"
-            class="card"
+            class="flex h-full flex-col gap-2 rounded-md border border-border bg-surface p-4 text-text no-underline shadow-1 transition-colors hover:border-primary focus-visible:outline-2 focus-visible:outline-primary dark:bg-surface-raised"
             :data-analysis-id="analysis.id"
           >
-            <span class="title-row">
-              <strong class="title">
+            <span class="flex items-start justify-between gap-2">
+              <strong class="title break-all">
                 {{ analysis.title ?? analysis.projectName ?? '제목 없는 분석' }}
               </strong>
-              <span v-if="analysis.isPublic" class="public" data-badge="public">공개</span>
+              <BaseBadge v-if="analysis.isPublic" tone="primary" data-badge="public"
+                >공개</BaseBadge
+              >
             </span>
-            <span v-if="memoFirstLine(analysis.memo)" class="memo" data-section="memo">
+            <span
+              v-if="memoFirstLine(analysis.memo)"
+              class="truncate text-sm text-text-muted"
+              data-section="memo"
+            >
               {{ memoFirstLine(analysis.memo) }}
             </span>
-            <span class="meta">
+            <span class="text-sm text-text-muted">
               {{ levelLabel(analysis.level) }} · {{ formatDate(analysis.createdAt) }}
             </span>
             <AnalysisStatusBadge :status="analysis.status" :progress="analysis.progress" />
@@ -105,96 +122,3 @@ onMounted(() => load(1))
     </template>
   </section>
 </template>
-
-<style scoped>
-.list {
-  padding: var(--space-8) 0;
-}
-
-.heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-4);
-}
-
-.hint {
-  margin-top: var(--space-6);
-  color: var(--color-text-muted);
-}
-
-.form-error {
-  margin-top: var(--space-6);
-  color: var(--color-danger);
-}
-
-.new {
-  padding: var(--space-2) var(--space-4);
-  border-radius: var(--radius);
-  color: #fff;
-  background: var(--color-primary);
-  font-weight: 700;
-  text-decoration: none;
-  white-space: nowrap;
-}
-
-.cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: var(--space-4);
-  margin-top: var(--space-6);
-  padding: 0;
-  list-style: none;
-}
-
-.card {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  height: 100%;
-  padding: var(--space-4);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  color: inherit;
-  background: var(--color-surface);
-  text-decoration: none;
-}
-
-.card:hover {
-  border-color: var(--color-primary);
-}
-
-.title-row {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-2);
-}
-
-.title {
-  overflow-wrap: anywhere;
-}
-
-.public {
-  flex-shrink: 0;
-  padding: 0 var(--space-2);
-  border: 1px solid var(--color-primary);
-  border-radius: var(--radius);
-  color: var(--color-primary);
-  font-size: 0.8em;
-  font-weight: 600;
-}
-
-.memo {
-  overflow: hidden;
-  color: var(--color-text-muted);
-  font-size: 0.9em;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.meta {
-  color: var(--color-text-muted);
-  font-size: 0.9em;
-}
-</style>

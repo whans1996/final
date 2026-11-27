@@ -962,3 +962,64 @@ describe('AnalysisDetailView 실패 분석 재실행 (L-1a AC9)', () => {
     expect(wrapper.find('[data-message="zip-rerun"]').exists()).toBe(false)
   })
 })
+
+describe('AnalysisDetailView 프로젝트 링크 (P-1a AC16)', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  const ref = {
+    project: { id: 12, name: 'todo-app' },
+    version: {
+      id: 31,
+      number: 2,
+      commitSha: '9f2c4e1a7b3d5f60812c9e4a1b2c3d4e5f607182',
+      commitMessage: 'feat: JWT 로그인',
+      committedAt: '2026-11-28T14:02:11+09:00',
+    },
+  }
+
+  it('AC16 주인이면 제목 근처에 "프로젝트 이름 · v번호" 링크(→ /projects/:id)가 있다', async () => {
+    analysesApi.fetchAnalysisStatus.mockResolvedValue(status({ status: 'DONE', progress: 100 }))
+    analysesApi.fetchAnalysis.mockResolvedValue(detail(ref))
+
+    const { wrapper } = await mountDetail()
+
+    const link = wrapper.find('a[data-section="project"]')
+    expect(link.text()).toBe('todo-app · v2')
+    expect(link.attributes('href')).toBe('/projects/12')
+  })
+
+  it('AC16 버전이 아직 없으면 이름만 링크로 보인다', async () => {
+    analysesApi.fetchAnalysisStatus.mockResolvedValue(status({ status: 'FETCHING', progress: 5 }))
+    analysesApi.fetchAnalysis.mockResolvedValue(
+      detail({ ...ref, version: null, status: 'FETCHING', overview: null }),
+    )
+
+    const { wrapper } = await mountDetail()
+
+    const link = wrapper.find('a[data-section="project"]')
+    expect(link.text()).toBe('todo-app')
+    expect(link.attributes('href')).toBe('/projects/12')
+    wrapper.unmount()
+  })
+
+  it('AC16 주인이 아니면(공개·팀 공유) 링크 없이 이름만 보인다', async () => {
+    analysesApi.fetchAnalysisStatus.mockResolvedValue(status({ status: 'DONE', progress: 100 }))
+    analysesApi.fetchAnalysis.mockResolvedValue(
+      detail({ ...ref, mine: false, owner: { id: 7, nickname: 'vibecoder' } }),
+    )
+
+    const { wrapper } = await mountDetail()
+
+    const label = wrapper.find('[data-section="project"]')
+    expect(label.text()).toBe('todo-app · v2')
+    expect(label.element.tagName).not.toBe('A')
+    expect(label.find('a').exists()).toBe(false)
+  })
+})

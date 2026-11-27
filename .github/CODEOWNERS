@@ -114,6 +114,11 @@
 /frontend/src/router/routes/analysis.js      @whans1996
 /frontend/src/router/routes/challenge.js     @whans1996
 /frontend/src/router/routes/reviewplan.js    @whans1996
+# 프로젝트·버전 (P-1a, BE는 analysis/project 하위라 위 analysis 규칙)
+/frontend/src/api/**/projects.*              @whans1996
+/frontend/src/views/project/                 @whans1996
+/frontend/src/components/project/            @whans1996
+/frontend/src/router/routes/project.js       @whans1996
 # 팀(F-20a~c, T-1 팀 프로젝트): 11-26 합의로 B → A (기획서 7.5절)
 **/vibenote/team/                            @whans1996
 /backend/src/main/resources/mapper/team/     @whans1996

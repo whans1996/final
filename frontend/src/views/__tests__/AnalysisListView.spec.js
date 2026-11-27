@@ -200,3 +200,19 @@ describe('AnalysisListView 공개 배지·메모 (F-19 AC15)', () => {
     expect(titles).toEqual(['shop', '제목 없는 분석'])
   })
 })
+
+describe('AnalysisListView 프로젝트 진입 (P-1a 5절)', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+  })
+
+  it('AC14 목록 머리에 "프로젝트별로 보기" 링크(→ /projects)가 있다', async () => {
+    analysesApi.fetchAnalyses.mockResolvedValue(page([item()]))
+
+    const { wrapper } = await mountList()
+
+    const link = wrapper.find('a[data-action="by-project"]')
+    expect(link.text()).toContain('프로젝트별로 보기')
+    expect(link.attributes('href')).toBe('/projects')
+  })
+})
