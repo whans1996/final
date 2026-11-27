@@ -472,6 +472,14 @@ describe('AnalysisDetailView 결과 탭 (F-06 AC13~AC15)', () => {
     expect(other.wrapper.find('[data-section="owner"]').text()).toBe('vibecoder님의 분석')
   })
 
+  it('#200 상세를 못 받아 누구 것인지 모르면 "← 내 분석" 링크를 남긴다', async () => {
+    analysesApi.fetchAnalysisStatus.mockResolvedValue(status({ status: 'DONE', progress: 100 }))
+    analysesApi.fetchAnalysis.mockRejectedValue(apiError(500, { code: 'COMMON_500' }))
+    const { wrapper } = await mountDetail()
+    expect(wrapper.find('[data-error="detail"]').exists()).toBe(true)
+    expect(wrapper.find('[data-action="back-to-mine"]').exists()).toBe(true)
+  })
+
   it('F-08 AC8 개념 탭은 실행 흐름 다음이고, ?tab=concepts로 열면 복원하며 위치를 누르면 파일 탭으로 간다', async () => {
     analysesApi.fetchAnalysisStatus.mockResolvedValue(status({ status: 'DONE', progress: 100 }))
     analysesApi.fetchAnalysis.mockResolvedValue(detail())

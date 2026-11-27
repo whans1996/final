@@ -199,9 +199,9 @@ watch(
 
 <template>
   <section class="detail" :class="{ wide: isDone }">
-    <!-- 진행 중·실패 화면은 주인만 본다. 남의 공개 분석은 아래 소유자 줄로 돌아간다 (#200) -->
+    <!-- 진행 중·실패 화면은 주인만 본다. 남의 것으로 확인된 공개 분석만 숨기고, 아래 소유자 줄로 돌아간다 (#200) -->
     <RouterLink
-      v-if="mine || !isDone"
+      v-if="!isDone || analysis?.mine !== false"
       :to="{ name: 'analyses' }"
       class="back"
       data-action="back-to-mine"
