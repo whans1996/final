@@ -13,6 +13,7 @@ import {
   sessionBanner,
   worklogEntries,
 } from '../lib/common.mjs';
+import { nowFormatProblems } from '../lib/records.mjs';
 
 test('PC id 접두로 사람 key를 정한다', () => {
   assert.equal(ownerKey('dh-ssafy'), 'dh');
@@ -119,6 +120,8 @@ test('NOW 파일마다 맨 앞이 "갱신:"인 줄이 있다 (previousPc·peer-w
   for (const key of ['dh', 'js']) {
     const text = readFileSync(nowFileOf(key), 'utf8');
     assert.match(text, /^갱신: \d{4}-\d{2}-\d{2} \d{2}:\d{2}/m, nowRelPath(key));
+    // 제목·필수 섹션까지 (HP-4 AC3: NOW 파일 커밋은 커밋 hook에서 이 테스트를 돈다)
+    assert.deepEqual(nowFormatProblems(text), [], nowRelPath(key));
   }
 });
 

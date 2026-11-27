@@ -83,7 +83,7 @@ SSAFY 관통 프로젝트(2026-11-17 시작, 12-24 발표). Spring Boot 4 + MyBa
 작업 단위가 끝날 때마다 **내 NOW 파일**(`node scripts/stamp.mjs --file` → `docs/handoff/NOW-<dh|js>.md`)을 **덮어써서** 갱신한다. 상대 NOW 파일은 수정하지 않는다.
 작업 단위란 AC 하나 통과, 파일 묶음 완성, 방향 결정, 막힘 발생을 말한다.
 
-- 형식은 NOW 파일에 있는 섹션 구조를 그대로 유지한다. 30줄 이내로 쓴다. `갱신:` 줄은 `node scripts/stamp.mjs --now` 출력을 쓴다 (시각·PC를 짐작해 쓰지 않는다. 갱신 줄만 바꿀 때는 `--touch-now`).
+- 본문(`## 현재 기능`부터, 갱신 줄 없이)을 `.harness/now-body.md`에 쓰고 `node scripts/stamp.mjs --write-now .harness/now-body.md`로 바꾼다. 머리말은 그대로 두고 `갱신:` 줄은 지금 값으로 쓴다 (시각·PC를 짐작해 쓰지 않는다. 머리말을 깨뜨리지 않는다 #166). 형식은 NOW 파일에 있는 섹션 구조를 그대로 유지하고 30줄 이내로 쓴다. 갱신 줄만 바꿀 때는 `--touch-now`.
 - 기록에 필요한 사실(내 마지막 기록 뒤 커밋, 바뀐 영역, 검증, PR·CI)은 `node scripts/stamp.mjs --draft`로 한 번에 본다. 작업로그는 `--append-log --did … --next … [--blocked …] [--ai …]`로 메모 3줄만 붙인다 (머리 줄·커밋 줄 자동).
 - "바로 다음 할 일"은 다른 PC의 세션이 **맥락 없이 바로 시작할 수 있을 만큼** 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 - 코드를 바꾸고 NOW 파일을 갱신하지 않은 채 턴을 끝내려 하면 Stop hook이 한 번 막는다.
@@ -100,7 +100,7 @@ SSAFY 관통 프로젝트(2026-11-17 시작, 12-24 발표). Spring Boot 4 + MyBa
 | 화면 점검 | `node scripts/ui-check.mjs / /concepts` (FE dev 서버 실행 중일 때) |
 | AI 없이 교대 | `node scripts/handoff.mjs [-m "메모"] [--no-push]` |
 | 기록 머리 줄·내 NOW 파일·내 이슈 영역 라벨 | `node scripts/stamp.mjs [--now\|--log\|--file\|--area]` |
-| 기록 초안·NOW 갱신 줄·작업로그 추가 | `node scripts/stamp.mjs --draft`, `--touch-now`, `--append-log --did … --next …` |
+| 기록 초안·NOW 본문 교체·NOW 갱신 줄·작업로그 추가 | `node scripts/stamp.mjs --draft`, `--write-now <본문 파일>`, `--touch-now`, `--append-log --did … --next …` |
 | 로드맵 (지금 할 항목·내 남은 항목·넘겨주는 시점, 다음 항목, 형식 검사) | `node scripts/roadmap.mjs [--next [--after <ID>]] [--check]` |
 | 다음 마이그레이션 번호 | `node scripts/next-migration.mjs` (develop·원격 feature 브랜치 포함) |
 | develop 밖에서 진행 중인 브랜치 | `node scripts/branches.mjs` (내 NOW를 바꾼 원격 브랜치), `node scripts/branches.mjs F-xx` (`/spec` 전 중복 확인) |

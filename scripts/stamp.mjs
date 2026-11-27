@@ -11,6 +11,9 @@
 //   node scripts/stamp.mjs --area  area:A (이 PC 사용자의 follow-up 이슈 영역 라벨)
 //   node scripts/stamp.mjs --draft         NOW·작업로그를 쓸 때 필요한 사실 (내 마지막 기록 뒤 커밋, 바뀐 영역, 검증, PR)
 //   node scripts/stamp.mjs --touch-now     내 NOW 파일의 "갱신:" 줄만 지금 값으로 바꾼다
+//   node scripts/stamp.mjs --write-now <본문 파일>
+//                                          내 NOW 파일의 머리말은 두고 갱신 줄은 지금 값으로, 그 아래는 본문 파일 내용으로 바꾼다 (#166)
+//                                          본문에 갱신 줄이 있거나 "## 현재 기능"·"## 바로 다음 할 일"이 없으면 바꾸지 않고 exit 1
 //   node scripts/stamp.mjs --append-log --did "한 일" --next "다음 할 일" [--blocked "막힌 점"] [--ai "AI 활용"]
 //                                          작업로그 맨 아래에 항목을 붙인다 (머리 줄·커밋 줄은 자동)
 import { spawnSync } from 'node:child_process';
@@ -19,7 +22,7 @@ import { userInfo } from 'node:os';
 import { join } from 'node:path';
 import { ROOT, WORKLOG_FILE, currentBranch, git, localPcId, nowFileOf, nowRelPath, nowStamp, ownerKey, readText, recordStamp } from './lib/common.mjs';
 import { AREA_OF } from './lib/issues.mjs';
-import { lastEntryAt, logEntry, touchNowHeader, undoMsysPathConv, verifiedLine } from './lib/records.mjs';
+import { lastEntryAt, logEntry, replaceNowBody, touchNowHeader, undoMsysPathConv, verifiedLine } from './lib/records.mjs';
 import { areasOf } from './lib/related.mjs';
 
 const args = process.argv.slice(2);
@@ -73,6 +76,23 @@ if (has('--file') || has('--area')) {
   const file = nowFileOf(key);
   writeFileSync(file, touchNowHeader(readText(file) || '', nowLine()), 'utf8');
   console.log(`📝 ${nowRelPath(key)} ${nowLine()}`);
+} else if (has('--write-now')) {
+  needKey();
+  const bodyPath = value('--write-now');
+  const body = bodyPath ? readText(bodyPath) : null;
+  if (body === null) {
+    console.error(`본문 파일을 읽을 수 없습니다: ${bodyPath || '(없음)'} — node scripts/stamp.mjs --write-now <본문 파일>`);
+    process.exit(1);
+  }
+  const file = nowFileOf(key);
+  const r = replaceNowBody(readText(file) || '', body, nowLine());
+  if (r.error) {
+    console.error(`❌ ${nowRelPath(key)}을 바꾸지 않았습니다: ${r.error}`);
+    process.exit(1);
+  }
+  writeFileSync(file, r.text, 'utf8');
+  console.log(`📝 ${nowRelPath(key)} 본문 교체 · ${nowLine()}`);
+  if (r.warning) console.log(`⚠️  ${r.warning}`);
 } else if (has('--append-log')) {
   needKey();
   const entry = logEntry({
