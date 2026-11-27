@@ -1,29 +1,27 @@
 # NOW — 김준섭 현재 작업 스냅샷
 
 > 김준섭(B 영역: 카드·소셜) 전용. 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
-갱신: 2026-11-27 15:56 · 작업자: JoonseobKim · PC: js-ssafy · 브랜치: feature/F-29b-app-shell
+갱신: 2026-11-27 16:17 · 작업자: JoonseobKim · PC: js-ssafy · 브랜치: feature/V-4-fe-latest-request
 
 ## 현재 기능
 
-**F-29b 앱 셸** `docs/specs/F-29b-app-shell.md` (APPROVED, AC14 모두 green) · 브랜치 `feature/F-29b-app-shell` · **PR #247** (Codex ✅ e7777e9, CI 초록, spec DONE, `Roadmap: F-29`, 김동환 @멘션) · ~12/02 넘겨주기
+**V-4 FE 늦은 응답 무시·요청 취소** `docs/specs/V-4-fe-latest-request.md` (**APPROVED** 김준섭 11-27) · 브랜치 `feature/V-4-fe-latest-request` · 로드맵 V-4 (12/03~12/08, 의존 없음이라 앞당김)
 
 ## 진행
 
-- ✅ AC1~AC14 구현·테스트 (e9acb91 … 1256182), `/pr-review`: verify all 통과, reviewer 반드시 수정 1건 반영 fe99fa1 (App.vue 셸 전환을 `router.afterEach`로 → 로그아웃 시 화면 재마운트·401→/login 방지, 회귀 App.spec AC11) + 권장 4건(닉네임 메뉴 접근 이름, viewport-fit=cover, dev 갤러리 중첩 main 제거, 사이드바 z-20, FE CLAUDE.md)
-- ✅ 화면 설계서 2-1절 구현 반영·스크린샷 7장 (ac88f2b), PR 본문 `.harness/pr-F-29b.md`
-- ✅ Codex 1차 FINDINGS 2건 반영 b4f29a3: P1 `App.vue` afterEach에서 `failure`(취소된 이동)면 셸 유지(회귀 App.spec AC11 취소), P2 `HeaderSearch.vue` `maxlength="50"`(API @Size 50)
-- 🟡 CI 재실행 중, Codex 재리뷰 1회차 RUNNING (`node scripts/codex-review.mjs 247 --request --wait --status` 백그라운드)
+- ✅ F-29b PR #247 머지됨 (11-27)
+- ✅ V-4 spec 초안: AC1~AC11, `composables/useLatestRequest.js`(begin → {signal,isCurrent}, invalidate, onScopeDispose), B·공통 23개 파일 분류(이관 14·새 가드 2·예외 1·대상 아님 6), api 3개에 `{ signal }` 두 번째 인자
+- ✅ spec 승인 (김준섭 11-27), 결정 (사용자): 범위 B·공통만, 취소는 목록 4곳만, 기존 가드도 이관 → 결정로그 11-27 V-4 행
 
 ## 바로 다음 할 일
 
-1. 사람이 GitHub에서 #247 머지 (상대 PR이 먼저 머지되면 `git merge origin/develop` → push → CI 재확인)
-2. 머지 뒤 develop으로 switch·pull, 다음 로드맵: `node scripts/roadmap.mjs --next --after F-29` (LP-1 랜딩·CD-1·V-4, 12/03~)
+1. `/clear` 후 `/implement V-4` (Opus/high): AC1·AC2 `src/composables/__tests__/useLatestRequest.spec.js` red부터
 
 ## 막힌 점 / 결정 필요
-- 없음. 미확인: ADMIN `/admin` 화면, `/analyses/:id` 1440px 화면 (단위 테스트로만). GMS 키 만료 12/09 18:00 → EV-2 전에 재발급·연장 확인
+- 없음. GMS 키 만료 12/09 18:00 → EV-2 전에 재발급·연장 확인. 내 이슈 #243(FOLLOW_SYSTEM)은 화면 이전 뒤
 
 ## 주의
 
 - **NOW·작업로그·PR·커밋 메시지에 eval 라벨 내용을 적지 않는다.** 점수·개수·SHA만
-- 셸 전환은 내비게이션 경계(afterEach)에서만: 로그인 뒤 테스트는 `router.push`까지 해야 회원 셸이 된다
-- 화면(View)은 `<main>`을 쓰지 않는다. 본문 상하 여백은 각 화면 개편 PR에서
+- V-4는 A 영역 FE 파일(analysis·quiz·challenge·team·reviewplan·dashboard)을 건드리지 않는다. A용 follow-up 이슈를 구현 PR에서 만든다
+- 화면(View)은 `<main>`을 쓰지 않는다. 셸 전환은 afterEach에서만
