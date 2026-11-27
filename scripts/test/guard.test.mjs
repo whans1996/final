@@ -623,6 +623,27 @@ test('Codex 반영: find 제외 -path는 전체 경로, 조건부·재할당 변
     ok(cmd, sf);
 });
 
+// PR #246 Codex 3회차
+test('Codex 반영: grep include·exclude는 마지막에 맞은 규칙, find -o 분기가 있으면 제외 조건을 믿지 않는다', () => {
+  const sf = { secretFiles };
+  const rootOnly = { secretFiles: (dir) => [{ path: '/repo/.env', ignored: true }].filter((f) => isWithin(f.path, dir)) };
+  for (const cmd of [
+    "grep -r KEY --exclude=.env --include='*' .",
+    "grep -r KEY --exclude='.env*' --include='.env' .",
+    'find . ! -name .env -o -type f -exec cat {} +',
+    "find . -name '*.md' -o -type f | xargs grep KEY",
+    "find . \\( -name '*.md' -o -name '.env' \\) -exec cat {} +",
+  ])
+    no(cmd, rootOnly);
+  for (const cmd of [
+    "grep -r KEY --include='*' --exclude='.env*' .",
+    "grep -r KEY --include='*.java' .",
+    "find backend -type f ! -name '.env*' -exec cat {} +",
+    "find . -name '*.md' -o -name '*.java' -exec cat {} +",
+  ])
+    ok(cmd, sf);
+});
+
 // #245: 가드 우회 잔여 (PR #246 reviewer가 재현, 같은 PR에서 처리)
 test('#245: 읽기·검색 인자의 셸 글롭 (bash는 * 가 점으로 시작하는 이름에 맞지 않는다)', () => {
   const sf = { secretFiles };

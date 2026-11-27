@@ -519,7 +519,8 @@ function searchSpec(name, args) {
   const spec = GREP_LIKE[name];
   const rg = name === 'rg';
   // globs: rg -g·--glob·--iglob [{ glob, icase }] (명령줄 순서. 뒤의 것이 이긴다). types: -t로 고른 타입, typeAdds: --type-add 정의
-  const s = { recursive: rg, includes: [], excludes: [], globs: [], types: [], typeAdds: {}, noIgnore: false, hidden: false, namesOnly: false, roots: [] };
+  // filters: grep --include·--exclude [{ include, glob }] (명령줄 순서. 충돌하면 마지막에 맞은 것이 이긴다)
+  const s = { recursive: rg, filters: [], globs: [], types: [], typeAdds: {}, noIgnore: false, hidden: false, namesOnly: false, roots: [] };
   const positional = [];
   let pattern = false;
   let unrestricted = 0;
@@ -535,8 +536,7 @@ function searchSpec(name, args) {
       const value = v.length ? v.join('=') : candidates.length ? args[++k] : undefined;
       const full = candidates.length === 1 ? candidates[0] : raw; // 모호한 축약(--excl)은 제외 옵션으로 보지 않는다 (보수적으로)
       if (candidates.some((o) => o === '--regexp' || o === '--expression' || o === '--file')) pattern = true;
-      if (full === '--include') s.includes.push(value ?? '');
-      else if (full === '--exclude') s.excludes.push(value ?? '');
+      if (full === '--include' || full === '--exclude') s.filters.push({ include: full === '--include', glob: value ?? '' });
       else if (full === '--glob' || full === '--iglob') s.globs.push({ glob: value ?? '', icase: full === '--iglob' });
       else if (full === '--type') s.types.push(value ?? '');
       else if (full === '--type-add') {
@@ -583,12 +583,12 @@ function searchSpec(name, args) {
  */
 function searchReads(name, s, f, rel) {
   const base = basename(String(f.path).replace(/\\/g, '/'));
-  if (name !== 'rg')
-    return (
-      s.recursive &&
-      (!s.includes.length || s.includes.some((g) => globMatch(g, base, { braces: false }))) &&
-      !s.excludes.some((g) => globMatch(g, base, { strict: true, braces: false }))
-    );
+  if (name !== 'rg') {
+    // GNU grep: 마지막에 맞은 --include·--exclude가 이긴다. 아무것도 맞지 않으면 첫 규칙이 --include일 때만 뺀다 (Codex)
+    let take = null;
+    for (const { include, glob } of s.filters) if (globMatch(glob, base, include ? { braces: false } : { strict: true, braces: false })) take = include;
+    return s.recursive && (take ?? !s.filters[0]?.include);
+  }
   // rg: 뒤에 준 글롭이 이긴다. 고르는 글롭(-g x)에 맞으면 무시 규칙·숨김을 넘고, 고르는 글롭이 있는데 맞지 않으면 건너뛴다
   let picked = null;
   for (const { glob, icase } of s.globs) {
@@ -623,26 +623,34 @@ function findEmitsSecret(seg, cwd, ctx) {
   const roots = recursiveRoots('find', args);
   const tests = [];
   let neg = false;
+  // -o(OR)로 나눈 분기마다 조건을 모은다. 괄호·쉼표로 묶으면 범위를 따지지 않고 모든 파일을 낸다고 본다 (보수적으로, Codex)
+  const branches = [tests];
+  let grouped = false;
   for (let k = 0; k < args.length; k++) {
     const a = args[k];
     if (a === '!' || a === '-not') neg = true;
     else if (/^-(i?name|i?path|i?wholename)$/.test(a)) {
-      tests.push({ kind: a.includes('name') && !a.includes('whole') ? 'name' : 'path', glob: args[++k] ?? '', icase: a.startsWith('-i'), neg });
+      branches[branches.length - 1].push({ kind: a.includes('name') && !a.includes('whole') ? 'name' : 'path', glob: args[++k] ?? '', icase: a.startsWith('-i'), neg });
       neg = false;
     } else if (a === '-type' && args[k + 1] === 'd') return false;
     else if (a === '-exec' || a === '-execdir' || a === '-ok' || a === '-okdir') break;
+    else if (a === '-o' || a === '-or') (branches.push([]), (neg = false));
+    else if (a === ',' || a === '(' || a === ')') (grouped = true), (neg = false);
     else neg = false;
   }
   return roots.some((r) => {
     const root = searchRoot(cwd, r, ctx);
     return (ctx.secretFiles?.(root) ?? []).some((f) => {
+      if (grouped) return true;
       // -name은 이름, -path는 find가 출력하는 경로(./backend/.env.local)로 맞춘다. 고르는 쪽은 보수적으로, 빼는 쪽은 엄격하게 (Codex)
       const subject = (t) => (t.kind === 'name' ? basename(f.path.replace(/\\/g, '/')) : `${r.replace(/\/+$/, '')}/${relative(root, f.path).replace(/\\/g, '/')}`);
-      const pos = tests.filter((t) => !t.neg);
-      return (
-        (!pos.length || pos.some((t) => globMatch(t.glob, subject(t), { icase: true }))) &&
-        !tests.filter((t) => t.neg).some((t) => globMatch(t.glob, subject(t), { strict: true, icase: t.icase }))
-      );
+      return branches.some((list) => {
+        const pos = list.filter((t) => !t.neg);
+        return (
+          (!pos.length || pos.some((t) => globMatch(t.glob, subject(t), { icase: true }))) &&
+          !list.filter((t) => t.neg).some((t) => globMatch(t.glob, subject(t), { strict: true, icase: t.icase }))
+        );
+      });
     });
   });
 }
