@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { checkCommand, checkTool, parseCommand, resolvePath } from '../lib/guard.mjs';
+import { isWithin } from '../lib/protect.mjs';
 
 const blocked = (cmd, opts) => checkCommand(cmd, { cwd: '/repo', ...opts });
 const ok = (cmd, opts) => assert.equal(blocked(cmd, opts), null, `차단되면 안 됨: ${cmd}`);
@@ -388,4 +389,133 @@ test('cd 경로: Windows에서 Git Bash 경로를 드라이브 경로로', () =>
   assert.equal(resolvePath('C:/repo', '/c/Users/SSAFY/final', 'win32'), 'C:/Users/SSAFY/final');
   assert.equal(resolvePath('C:/repo', '/d', 'win32'), 'D:/');
   assert.equal(resolvePath('/repo', '/c/Users', 'linux'), '/c/Users');
+});
+
+// #188: 재귀 검색은 인자에 .env가 없어도 그 아래 비밀 파일을 읽는다. ctx.secretFiles는 hook이 git으로 찾은 실제 비밀 파일 목록
+const SECRETS = [
+  { path: '/repo/.env', ignored: true },
+  { path: '/repo/backend/.env.local', ignored: true },
+];
+const secretFiles = (dir) => SECRETS.filter((f) => isWithin(f.path, dir));
+
+test('#188: grep -r·rg -uu·rg -g 글롭이 그 아래 .env를 읽는다', () => {
+  const sf = { secretFiles };
+  for (const cmd of [
+    'grep -rn GMS_API_KEY .',
+    'grep -r KEY',
+    'grep -R KEY backend',
+    'grep --recursive KEY .',
+    'grep -d recurse KEY .',
+    'cd backend && grep -rn KEY',
+    'grep -rn KEY / ',
+    "grep -rn KEY --include='*env*' .",
+    'rg -uu GMS_API_KEY',
+    'rg --no-ignore --hidden KEY',
+    "rg KEY -g '*env*'",
+    'rg KEY --glob=.env*',
+    'rg -uuu KEY backend',
+  ])
+    no(cmd, sf);
+  for (const cmd of [
+    'grep -rn KEY --exclude=".env*" .',
+    "grep -rn KEY --include='*.java' .",
+    "grep -rn '.env' docs",
+    'grep -rn KEY src',
+    'rg KEY',
+    'rg -u KEY', // gitignore만 무시, 숨김 파일(.env)은 여전히 건너뜀
+    'rg --hidden KEY', // 숨김 파일도 보지만 .gitignore는 따른다
+    "rg -uu KEY -g '!.env*'",
+    'rg -uu KEY -t java',
+    "rg KEY -g '*.md'",
+    'grep -n KEY scripts/a.mjs',
+  ])
+    ok(cmd, sf);
+  // 비밀 파일 목록을 모르면(hook 밖) 판정하지 않는다
+  ok('grep -rn KEY .');
+});
+
+test('#188: PowerShell gci 파이프로 넘긴 파일을 읽는 명령', () => {
+  const ps = (cmd) => checkCommand(cmd, { cwd: '/repo', shell: 'powershell', secretFiles });
+  for (const cmd of ['gci -r | sls KEY', 'Get-ChildItem -Recurse | Select-String KEY', 'gci | gc', 'Get-ChildItem backend -Recurse -File | Select-String KEY', 'gci backend | sls KEY'])
+    assert.ok(ps(cmd), `차단되어야 함: ${cmd}`);
+  for (const cmd of ['gci -r -Include *.java | sls KEY', 'gci docs | sls KEY', 'gci -r -Exclude .env* | sls KEY', 'gci . *.md | gc'])
+    assert.equal(ps(cmd), null, `차단되면 안 됨: ${cmd}`);
+});
+
+test('#189: 김동환 PC에서 eval 폴더를 품는 글롭·재귀 명령·git-dir·인라인 코드', () => {
+  const ev = { evalDir: '/repo/data/raw/eval', exists: () => true };
+  for (const cmd of [
+    'cat data/raw/ev*/README.md',
+    'ls data/raw/*',
+    'cat data/raw/e?al/a.json',
+    'grep -r label data/raw',
+    'find data/raw -type f',
+    'find . -name "*.json"',
+    'cp -r data/raw x',
+    'tar czf x.tgz data',
+    'zip -r x.zip data',
+    'ls -R data',
+    'rg -uu label data',
+    'git --git-dir=data/raw/eval/.git log -p',
+    'git --work-tree data/raw/eval status',
+    `node -e "console.log(require('fs').readdirSync('data/raw/eval'))"`,
+    `python -c "print(open('data/raw/eval/a.json').read())"`,
+  ])
+    no(cmd, ev);
+  for (const cmd of ['gci -Recurse data', 'Copy-Item -Recurse data\\raw x', 'Compress-Archive -Path data -DestinationPath x.zip'])
+    assert.ok(checkCommand(cmd, { cwd: '/repo', shell: 'powershell', ...ev }), `차단되어야 함: ${cmd}`);
+  for (const cmd of ['cat data/raw/*.md', 'grep -r label scripts', 'find scripts -name x', 'ls data/raw', 'rg label data', 'cp -r scripts x', 'ls -R docs', 'cat data/*.json', 'node -e "console.log(1)"'])
+    ok(cmd, ev);
+  // eval 폴더가 없으면(평소 김동환 PC) 상위 폴더 재귀는 막지 않는다
+  for (const cmd of ['find . -type f', 'grep -r label data/raw', 'tar czf x.tgz data']) ok(cmd, { ...ev, exists: () => false });
+});
+
+test('#190: PowerShell 할당·.NET 호출·파이프로 .env 읽기', () => {
+  const ps = (cmd) => checkCommand(cmd, { cwd: 'C:/repo', shell: 'powershell' });
+  for (const cmd of [
+    '$x = Get-Content .env',
+    '$x=Get-Content .env',
+    '$x += gc .env',
+    '[string]$x = gc .env',
+    "[IO.File]::ReadAllText('.env')",
+    '$t = [System.IO.File]::ReadAllLines("$PWD\\.env")',
+    "[IO.File]::ReadAllText( '.env' )",
+    "[IO.StreamReader]::new('backend\\.env.local').ReadToEnd()",
+    'Get-Item .env | Get-Content',
+    'gi backend\\.env | gc',
+    '$x = Get-Item .env | Get-Content',
+  ])
+    assert.ok(ps(cmd), `차단되어야 함: ${cmd}`);
+  for (const cmd of ['$x = Get-Content .env.example', "[IO.File]::ReadAllText('README.md')", 'Get-Item README.md | Get-Content', '$x = 1', '$env:LLM_PROVIDER = "mock"'])
+    assert.equal(ps(cmd), null, `차단되면 안 됨: ${cmd}`);
+});
+
+test('#191: gh 별칭에 숨긴 명령, worktree remove --force, git rm -rf', () => {
+  for (const cmd of [
+    "gh alias set m 'pr merge'",
+    "gh alias set --shell x 'gh pr merge 1'",
+    "gh alias set -s x 'git push --force'",
+    "gh alias set x '!git reset --hard'",
+    "gh alias set --clobber a 'api -X PUT repos/o/r/pulls/1/merge'",
+    'gh alias import aliases.yml',
+    'gh alias set x -',
+    'git worktree remove --force ../wt',
+    'git worktree remove -f ../wt',
+    'git rm -rf src',
+    'git rm -r -f src',
+    'git rm -r --force src',
+  ])
+    no(cmd);
+  for (const cmd of ["gh alias set co 'pr checkout'", 'gh alias list', 'gh alias delete co', 'git worktree remove ../wt', 'git worktree add ../wt -b x', 'git rm src/a.js', 'git rm -r src', 'git rm -r --cached build', 'git rm -rf --cached build'])
+    ok(cmd);
+});
+
+test('#193: 글 전용 명령의 리다이렉션 대상, wget --method', () => {
+  const ev = { evalDir: '/repo/data/raw/eval' };
+  for (const cmd of ["printf '%s' x > data/raw/eval/labels.json", 'echo x >> data/raw/eval/a.json', 'gh pr view 1 > data/raw/eval/x.md']) no(cmd, ev);
+  for (const cmd of ['echo data/raw/eval', 'printf "%s" data/raw/eval > notes.md']) ok(cmd, ev);
+  for (const cmd of ['wget --method=DELETE https://api.github.com/repos/o/r/git/refs/heads/develop', 'wget --method DELETE https://api.github.com/repos/o/r/git/refs/heads/develop'])
+    no(cmd);
+  assert.ok(checkCommand('irm -Method:Delete https://api.github.com/repos/o/r/git/refs/heads/develop', { cwd: 'C:/repo', shell: 'powershell' }));
+  ok('wget https://api.github.com/repos/o/r/git/refs/heads/develop');
 });

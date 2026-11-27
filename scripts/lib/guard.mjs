@@ -2,8 +2,8 @@
 // `bash -c "..."`, `git -C <경로>`, 명령 치환 안의 명령을 놓친다. 그래서 셸 토큰으로 나눠 단순 명령(segment)마다 규칙을 본다.
 // shell: 'bash'(기본) | 'powershell' | 'cmd'. PowerShell은 \가 글자 그대로이고 백틱이 이스케이프이며 { }가 스크립트 블록이다.
 // 완전한 셸 파서가 아니라 가드용 근사다. 모르는 형태는 단어로 남겨 규칙이 보게 한다.
-import { basename, isAbsolute, resolve } from 'node:path';
-import { codeReadsSecret, isSecretFile, isWithin, stringLiterals } from './protect.mjs';
+import { basename, dirname, isAbsolute, resolve } from 'node:path';
+import { codeReadsSecret, globHitsSecret, globMatch, isSecretFile, isWithin, stringLiterals } from './protect.mjs';
 
 const SUBST = '$()'; // 명령 치환 자리 표시
 // 서브셸·명령 치환의 시작과 끝 표시. 그 안의 cd는 바깥 명령의 위치를 바꾸지 않는다 (#139). parseCommand는 걸러 낸다
@@ -238,11 +238,27 @@ const WRAPPERS = {
   env: { value: ['-u', '-C', '-S', '--unset', '--chdir', '--split-string'] },
 };
 
-/** env 할당·예약어·래퍼를 건너뛴 실제 명령과 인자 */
-function unwrap(words) {
+// PowerShell 변수 할당: `$x = gc .env`, `[string]$x += …`, `$x=gc .env` (#190). 오른쪽이 명령이다
+const PS_VAR = /^(?:\[[\w.[\],]+\])*\$[\w:]+$/;
+const PS_ASSIGN_OP = /^(?:[-+*/%]|\?\?)?=$/;
+const PS_VAR_EQ = /^(?:\[[\w.[\],]+\])*\$[\w:]+(?:[-+*/%]|\?\?)?=(.*)$/;
+
+/** env 할당·PowerShell 변수 할당·예약어·래퍼를 건너뛴 실제 명령과 인자 */
+function unwrap(input) {
+  const words = [...input];
   let k = 0;
   for (;;) {
-    while (k < words.length && (isAssign(words[k]) || RESERVED.has(words[k].toLowerCase()))) k++;
+    for (;;) {
+      const w = words[k];
+      if (w === undefined) break;
+      if (isAssign(w) || RESERVED.has(w.toLowerCase())) k++;
+      else if (PS_VAR.test(w) && PS_ASSIGN_OP.test(words[k + 1] ?? '')) k += 2;
+      else if (PS_VAR_EQ.test(w)) {
+        const rest = PS_VAR_EQ.exec(w)[1];
+        if (rest) words[k] = rest;
+        else k++;
+      } else break;
+    }
     const w = WRAPPERS[cmdName(words[k])];
     if (!w) break;
     k++;
@@ -293,6 +309,7 @@ const GIT_GLOBAL_VALUE = new Set(['-C', '-c', '--git-dir', '--work-tree', '--nam
 
 function parseGit(args) {
   const configs = [];
+  const paths = []; // --git-dir·--work-tree 값 (eval 경로 판정, #189)
   let dir = null;
   let k = 0;
   while (k < args.length && args[k].startsWith('-')) {
@@ -302,12 +319,13 @@ function parseGit(args) {
     if (GIT_GLOBAL_VALUE.has(key)) {
       const v = key === a ? args[++k] : a.slice(eq + 1);
       if (key === '-C') dir = v;
+      if ((key === '--git-dir' || key === '--work-tree') && v) paths.push(v);
       if (key === '-c') configs.push({ entry: v || '', env: false });
       if (key === '--config-env') configs.push({ entry: v || '', env: true }); // 값은 환경변수라 알 수 없다
     }
     k++;
   }
-  return { dir, configs, sub: args[k] || '', rest: args.slice(k + 1) };
+  return { dir, configs, paths, sub: args[k] || '', rest: args.slice(k + 1) };
 }
 
 // git은 모호하지 않은 긴 옵션 축약(--no-verif, --forc)을 받는다. 금지 판정에 쓰는 옵션은 축약도 같은 것으로 본다
@@ -409,7 +427,8 @@ function readTargets(name, args) {
       const value = v.length ? v.join('=') : takesValue ? args[++k] : undefined;
       const patternOpt = candidates.some((o) => o === '--regexp' || o === '--expression');
       if (patternOpt) pattern = true;
-      else if (value !== undefined) files.push(value); // --file(패턴 파일)·--glob 등. 값도 파일 이름일 수 있다
+      // --file(패턴 파일)·--glob 등. 값도 파일 이름일 수 있다. 빼는 글롭(--exclude=".env*")은 읽지 않는다
+      else if (value !== undefined && !candidates.every((o) => o === '--exclude' || o === '--exclude-dir')) files.push(value);
       if (candidates.includes('--file')) pattern = true;
     } else if (a.startsWith('-') && a.length > 1) {
       for (let j = 1; j < a.length; j++) {
@@ -422,6 +441,130 @@ function readTargets(name, args) {
     } else positional.push(a);
   }
   return [...files, ...(pattern ? positional : positional.slice(1))];
+}
+
+// ── 재귀 검색 (#188) ── grep -r는 .gitignore를 따르지 않고, rg는 -uu·--no-ignore·-g 글롭이 무시 규칙을 넘는다.
+// 인자에 .env가 없어도 검색 폴더 아래 비밀 파일이 출력된다. 그래서 hook이 넘긴 실제 비밀 파일 목록(ctx.secretFiles)을 이 검색이 읽는지 본다
+const SEARCHERS = new Set(['grep', 'egrep', 'fgrep', 'rg']);
+const lastSegment = (g) =>
+  String(g ?? '')
+    .replace(/\\/g, '/')
+    .split('/')
+    .filter(Boolean)
+    .pop() ?? '';
+
+/** grep류·rg의 재귀 여부, 포함·제외 글롭, 무시 규칙을 넘는 옵션, 검색 시작 경로 */
+function searchSpec(name, args) {
+  const spec = GREP_LIKE[name];
+  const rg = name === 'rg';
+  const s = { recursive: rg, includes: [], excludes: [], globs: [], types: false, noIgnore: false, hidden: false, roots: [] };
+  const positional = [];
+  let pattern = false;
+  let unrestricted = 0;
+  for (let k = 0; k < args.length; k++) {
+    const a = args[k];
+    if (a === '--') {
+      positional.push(...args.slice(k + 1));
+      break;
+    }
+    if (a.startsWith('--')) {
+      const [raw, ...v] = a.split('=');
+      const candidates = GREP_LONG_VALUE.has(raw) ? [raw] : [...GREP_LONG_VALUE].filter((o) => raw.length >= 4 && o.startsWith(raw));
+      const value = v.length ? v.join('=') : candidates.length ? args[++k] : undefined;
+      const full = candidates.length === 1 ? candidates[0] : raw; // 모호한 축약(--excl)은 제외 옵션으로 보지 않는다 (보수적으로)
+      if (candidates.some((o) => o === '--regexp' || o === '--expression' || o === '--file')) pattern = true;
+      if (full === '--include') s.includes.push(value ?? '');
+      else if (full === '--exclude') s.excludes.push(value ?? '');
+      else if (full === '--glob' || full === '--iglob') s.globs.push(value ?? '');
+      else if (full === '--type') s.types = true;
+      else if (full === '--directories' && value === 'recurse') s.recursive = true;
+      if (raw.length >= 5 && ['--recursive', '--dereference-recursive'].some((o) => o.startsWith(raw))) s.recursive = true;
+      if (raw.startsWith('--no-ignore')) s.noIgnore = true;
+      if (raw === '--unrestricted') unrestricted++;
+      if (raw === '--hidden') s.hidden = true;
+    } else if (a.startsWith('-') && a.length > 1) {
+      for (let j = 1; j < a.length; j++) {
+        const c = a[j];
+        if (!rg && (c === 'r' || c === 'R')) s.recursive = true; // rg의 -r은 --replace다
+        if (rg && c === 'u') unrestricted++;
+        if (rg && c === '.') s.hidden = true;
+        if (!spec.value.includes(c)) continue;
+        const value = a.slice(j + 1) || args[++k] || '';
+        if (spec.pattern.includes(c)) pattern = true;
+        if (rg && c === 'g') s.globs.push(value);
+        if (rg && c === 't') s.types = true;
+        if (!rg && c === 'd' && value === 'recurse') s.recursive = true;
+        break;
+      }
+    } else positional.push(a);
+  }
+  // rg -u: .gitignore 무시, -uu: 숨김 파일까지
+  if (unrestricted >= 1) s.noIgnore = true;
+  if (unrestricted >= 2) s.hidden = true;
+  s.roots = pattern ? positional : positional.slice(1);
+  if (!s.roots.length) s.roots = ['.'];
+  return s;
+}
+
+/** 이 검색이 비밀 파일 f({ path, ignored })를 읽는가 */
+function searchReads(name, s, f) {
+  const base = basename(String(f.path).replace(/\\/g, '/'));
+  if (name !== 'rg') return s.recursive && (!s.includes.length || s.includes.some((g) => globMatch(g, base))) && !s.excludes.some((g) => globMatch(g, base));
+  // rg: 뒤에 준 글롭이 이긴다. 고르는 글롭(-g x)에 맞으면 무시 규칙·숨김을 넘고, 고르는 글롭·-t가 있는데 맞지 않으면 건너뛴다
+  let picked = null;
+  for (const g of s.globs) {
+    const neg = g.startsWith('!');
+    if (globMatch(lastSegment(neg ? g.slice(1) : g), base)) picked = !neg;
+  }
+  if (picked !== null) return picked;
+  if (s.types || s.globs.some((g) => !g.startsWith('!'))) return false;
+  return (!f.ignored || s.noIgnore) && (!base.startsWith('.') || s.hidden);
+}
+
+/** 재귀 검색이 검색 폴더 아래 비밀 파일을 읽는가. 비밀 파일 목록을 모르면(hook 밖) 판정하지 않는다 */
+function searchReadsSecret(name, args, cwd, ctx) {
+  if (!ctx.secretFiles) return false;
+  const s = searchSpec(name, args);
+  if (!s.recursive) return false;
+  return s.roots.some((r) => ctx.secretFiles(resolvePath(cwd, r)).some((f) => searchReads(name, s, f)));
+}
+
+// PowerShell은 파이프로 파일 객체를 넘긴다: `gi .env | gc`, `gci -r | sls KEY` (#188·#190)
+const PS_LIST = new Set(['get-childitem', 'gci', 'dir', 'ls', 'get-item', 'gi']);
+const PS_RECURSE = /^-r(e(c(u(r(se?)?)?)?)?)?$/i;
+
+/** 파이프 앞 PowerShell 목록 명령이 비밀 파일을 넘기는가 */
+function psPipeReadsSecret(from, cwd, ctx) {
+  const { name, args } = unwrap(from.words);
+  if (!PS_LIST.has(name)) return false;
+  const paths = [];
+  const positional = [];
+  const include = [];
+  const exclude = [];
+  let recurse = false;
+  for (let k = 0; k < args.length; k++) {
+    const a = args[k].toLowerCase();
+    if (PS_RECURSE.test(a)) recurse = true;
+    else if (a === '-depth') (recurse = true), k++;
+    else if (/^-(path|literalpath|lp)$/.test(a)) paths.push(...String(args[++k] ?? '').split(','));
+    else if (/^-(filter|include)$/.test(a)) include.push(...String(args[++k] ?? '').split(','));
+    else if (a === '-exclude') exclude.push(...String(args[++k] ?? '').split(','));
+    else if (!a.startsWith('-')) positional.push(args[k]);
+  }
+  // 첫 위치 인자는 경로, 둘째는 -Filter
+  if (positional[0]) paths.push(...positional[0].split(','));
+  if (positional[1]) include.push(positional[1]);
+  const roots = paths.length ? paths : ['.'];
+  if (roots.some((r) => isSecretFile(r) || (/[*?[]/.test(r) && globHitsSecret(r)))) return true;
+  if (!ctx.secretFiles) return false;
+  return roots.some((r) => {
+    const root = resolvePath(cwd, r);
+    return ctx.secretFiles(root).some((f) => {
+      const base = basename(String(f.path).replace(/\\/g, '/'));
+      if (!recurse && !isWithin(root, dirname(f.path))) return false; // 재귀가 아니면 바로 아래 파일만
+      return (!include.length || include.some((g) => globMatch(g, base))) && !exclude.some((g) => globMatch(g, base));
+    });
+  });
 }
 
 // 인라인 코드를 실행하는 인터프리터: 이름 → 코드를 받는 옵션 (HX-1)
@@ -476,6 +619,9 @@ const R = {
   restoreAll: '작업 트리를 디렉터리·와일드카드 단위로 되돌리는 것은 금지입니다. 파일을 하나씩 지정하거나 사용자에게 확인하세요.',
   discard: '미커밋 변경을 버리는 브랜치 전환(checkout -f, switch -f·--discard-changes)은 금지입니다. 먼저 커밋(교대용이면 wip)하거나 사용자에게 확인하세요.',
   stashDrop: 'git stash drop·clear는 금지입니다. 보관한 변경이 영구 삭제됩니다.',
+  worktreeForce: 'git worktree remove --force는 금지입니다. 그 작업 트리의 미커밋 변경이 사라집니다. 사용자에게 확인하세요.',
+  rmForce: 'git rm -r -f는 금지입니다. 폴더의 미커밋 변경까지 지웁니다. 파일을 하나씩 지정하거나(--cached는 허용) 사용자에게 확인하세요.',
+  ghAlias: 'gh alias import·표준 입력(-) 별칭은 내용을 확인할 수 없어 막습니다. gh alias set <이름> \'<명령>\'으로 하나씩 만드세요.',
   addForce: 'git add --force는 금지입니다. .gitignore된 비밀 파일이 커밋될 수 있습니다.',
   hooksPath: 'git hook 경로 변경은 금지입니다.',
   merge: 'PR 머지는 영역 오너가 CI 초록을 확인하고 GitHub에서 직접 합니다.',
@@ -483,6 +629,7 @@ const R = {
   repo: '저장소 설정 변경·삭제는 사람이 직접 합니다.',
   secret: '릴리스·시크릿·변수 변경은 사람이 직접 합니다.',
   envRead: '.env·키 파일 내용을 읽을 수 없습니다. 필요한 변수 이름은 .env.example을 보세요.',
+  envSearch: '이 재귀 검색은 .env·키 파일 내용까지 출력합니다. 검색 경로를 좁히거나 --exclude=".env*"(rg는 -g "!.env*")로 빼세요 (#188).',
   envAdd: '.env·키 파일은 커밋할 수 없습니다.',
   evalRead: '평가(eval) 데이터는 김동환(A) PC에서 열람할 수 없습니다 (블라인드 평가, docs/산출물/09-데이터셋.md 5절). 필요한 것은 김준섭에게 요청하세요.',
 };
@@ -552,6 +699,16 @@ function checkGit(args, cwd, ctx) {
     }
     case 'stash':
       return ['drop', 'clear'].includes(rest[0]) ? R.stashDrop : null;
+    case 'worktree': {
+      if (rest[0] !== 'remove') return null;
+      const o = options(rest.slice(1));
+      return o.flags.has('-f') || o.flags.has('--force') ? R.worktreeForce : null;
+    }
+    case 'rm': {
+      const o = options(rest, '', ['--pathspec-from-file']);
+      if (o.flags.has('--cached')) return null; // 색인에서만 빼고 파일은 남긴다
+      return o.flags.has('-r') && (o.flags.has('-f') || o.flags.has('--force')) ? R.rmForce : null;
+    }
     case 'add': {
       const o = options(rest, '', ['--chmod', '--pathspec-from-file']);
       if (o.flags.has('-f') || o.flags.has('--force')) return R.addForce;
@@ -608,8 +765,19 @@ function checkGhApi(args) {
   return githubWrite(path, method || (body ? 'POST' : 'GET'), args.join(' ')) ? R.ghApi : null;
 }
 
-function checkGh(args) {
+function checkGh(args, ctx = {}, depth = 0) {
   const [group, action] = args;
+  if (group === 'alias') {
+    // 별칭에 숨긴 명령 (#191): `gh alias set m 'pr merge'` 뒤 `gh m 1`. 확장 내용을 같은 규칙으로 본다
+    if (action === 'import') return R.ghAlias;
+    if (action !== 'set') return null;
+    const o = options(args.slice(2));
+    const expansion = o.positional[1];
+    if (expansion === undefined || expansion === '-') return R.ghAlias;
+    if (depth >= 3) return null;
+    if (o.flags.has('-s') || o.flags.has('--shell') || expansion.startsWith('!')) return checkCommand(expansion.replace(/^!/, ''), ctx, depth + 1);
+    return checkGh(parseCommand(expansion)[0]?.words || [], ctx, depth + 1);
+  }
   if (group === 'pr' && action === 'merge') return R.merge;
   if (group === 'api') return checkGhApi(args.slice(1));
   if (group === 'repo' && ['delete', 'edit', 'rename', 'archive'].includes(action)) return R.repo;
@@ -629,7 +797,9 @@ function checkHttp(args) {
   let body = false;
   for (let k = 0; k < args.length; k++) {
     const a = args[k];
-    if (a === '--request' || /^-method$/i.test(a)) method = String(args[++k] || '').toUpperCase();
+    // curl --request X, wget --method=X·--method X (#193), PowerShell -Method X·-Method:X
+    const m = /^(?:--request|--method|-method)(?:[=:](.*))?$/i.exec(a);
+    if (m) method = String(m[1] ?? args[++k] ?? '').toUpperCase();
     else if (/^(--data.*|--json|--form.*|--upload-file|-body|--post-data|--body-data)$/i.test(a.split('=')[0])) body = true;
     else if (/^-[A-Za-z]/.test(a) && !a.startsWith('--')) {
       // curl 짧은 옵션 묶음: 값을 받는 글자에서 나머지(없으면 다음 단어)가 값이다 (-sXPUT, -d'{…}', -sd@f)
@@ -652,26 +822,111 @@ const TEXT_ONLY = new Set(['echo', 'printf', 'write-output', 'write-host']);
 const EVAL_REPO_GIT = new Set(['clone', 'fetch', 'pull', 'remote', 'submodule', 'ls-remote']);
 const EVAL_REPO_GH = new Set(['clone', 'view', 'fork', 'sync']);
 
+/**
+ * 와일드카드 경로가 dir(또는 그 안)에 닿는가: 앞 조각들이 dir의 조각마다 맞으면 (`data/raw/ev*`, `data/raw/*`, #189).
+ * bash는 globstar가 기본으로 꺼져 있어 `**`도 한 조각으로 본다 (코드 속 `/**` 주석 오탐 방지)
+ */
+function globReaches(pattern, dir) {
+  const win = process.platform === 'win32';
+  const parts = (p) => {
+    const s = resolve(String(p)).replace(/\\/g, '/').replace(/\/+$/, '');
+    return (win ? s.toLowerCase() : s).split('/');
+  };
+  const g = parts(pattern);
+  const d = parts(dir);
+  for (let i = 0; i < d.length; i++) {
+    if (i >= g.length) return false;
+    if (!globMatch(g[i], d[i], '')) return false;
+  }
+  return true;
+}
+
+/**
+ * 단어가 eval 폴더나 그 안을 가리키는가. 공백이 든 단어는 메시지로 본다 (경로에 공백을 쓰지 않는다).
+ * glob: 셸이 와일드카드를 펼치는가. 인라인 코드 문자열은 fs가 펼치지 않으므로 false (`'**\/config'` 오탐 방지)
+ */
+function evalHit(w, cwd, ctx, glob = true) {
+  const p = String(w ?? '').replace(/^--?[\w-]+=/, '');
+  if (!p || /\s/.test(p)) return false;
+  if (glob && /[*?[]/.test(p)) return globReaches(resolvePath(cwd, p), ctx.evalDir);
+  return /eval/i.test(p) && isWithin(resolvePath(cwd, p), ctx.evalDir);
+}
+
+/** 폴더를 통째로 훑거나 옮기는 명령의 대상 폴더 (#189). 재귀가 아니면 [] */
+function recursiveRoots(name, args) {
+  const positional = args.filter((a) => !a.startsWith('-') && !/^\/[A-Za-z]$/.test(a));
+  const has = (re) => args.some((a) => re.test(a));
+  const short = (c) => args.some((a) => /^-[A-Za-z]+$/.test(a) && a.includes(c));
+  const orCwd = (list) => (list.length ? list : ['.']);
+  switch (name) {
+    case 'grep':
+    case 'egrep':
+    case 'fgrep':
+    case 'rg': {
+      const s = searchSpec(name, args);
+      // rg는 기본으로 .gitignore(data/raw/)를 따른다
+      if (name === 'rg' && !s.noIgnore && !s.globs.some((g) => !g.startsWith('!'))) return [];
+      return s.recursive ? s.roots : [];
+    }
+    case 'find': {
+      const roots = [];
+      for (const a of args) {
+        if (/^-([HLP]|O\d)$/.test(a)) continue;
+        if (a.startsWith('-') || a === '(' || a === '!') break;
+        roots.push(a);
+      }
+      return orCwd(roots);
+    }
+    case 'cp':
+    case 'scp':
+    case 'rsync':
+    case 'copy-item':
+    case 'cpi':
+    case 'copy':
+      return short('r') || short('R') || short('a') || has(/^--(recursive|archive)$/) ? positional : [];
+    case 'zip':
+      return short('r') || has(/^--recurse-paths$/) ? positional : [];
+    case 'ls':
+    case 'get-childitem':
+    case 'gci':
+    case 'dir':
+      return short('R') || has(PS_RECURSE) || has(/^-depth$/i) || has(/^--recursive$/) || has(/^\/s$/i) ? orCwd(positional) : [];
+    case 'tree':
+    case 'du':
+      return orCwd(positional);
+    case 'tar':
+    case '7z':
+    case 'robocopy':
+    case 'xcopy':
+    case 'compress-archive':
+      return positional;
+    default:
+      return [];
+  }
+}
+
 /** 김동환 PC에서 eval 경로를 건드리는가 (HX-2). 메시지 인자(git commit -m, gh pr create --body, --did "…")는 경로로 보지 않는다 */
 function checkEval(name, args, redirects, cwd, ctx) {
   const repo = (list) => list.some((a) => /vibenote-eval/i.test(a));
   if (name === 'git' && EVAL_REPO_GIT.has(parseGit(args).sub) && repo(args)) return R.evalRead;
   if (name === 'gh' && ((args[0] === 'repo' && EVAL_REPO_GH.has(args[1])) || args[0] === 'api') && repo(args)) return R.evalRead;
   if (['curl', 'wget', 'invoke-webrequest', 'iwr', 'invoke-restmethod', 'irm'].includes(name) && repo(args)) return R.evalRead;
-  if (TEXT_ONLY.has(name) || name === 'gh') return null;
-  let words = args;
+  // 글 전용 명령·gh는 인자를 경로로 보지 않지만 리다이렉션 대상은 본다 (`printf x > data/raw/eval/a.json`, #193)
+  let words = TEXT_ONLY.has(name) || name === 'gh' ? [] : args;
   if (name === 'git') {
     const g = parseGit(args);
-    words = [...(g.dir ? [g.dir] : []), ...(['commit', 'tag', 'notes'].includes(g.sub) ? [] : g.rest)];
+    words = [...(g.dir ? [g.dir] : []), ...g.paths, ...(['commit', 'tag', 'notes'].includes(g.sub) ? [] : g.rest)];
   }
-  // 공백이 든 단어는 메시지로 본다 (경로에 공백을 쓰지 않는다)
-  const hit = (w) => /eval/i.test(w) && !/\s/.test(w) && isWithin(resolvePath(cwd, w.replace(/^--?[\w-]+=/, '')), ctx.evalDir);
-  return [...words, ...redirects.map((r) => r.target)].some(hit) ? R.evalRead : null;
+  if ([...words, ...redirects.map((r) => r.target)].some((w) => evalHit(w, cwd, ctx))) return R.evalRead;
+  // eval 폴더를 품는 상위 폴더를 재귀로 훑기 (eval 폴더가 있을 때만. 평소 김동환 PC에는 없다)
+  if (ctx.exists?.(ctx.evalDir) && recursiveRoots(name, args).some((r) => isWithin(ctx.evalDir, resolvePath(cwd, r)))) return R.evalRead;
+  return null;
 }
 
-/** 인라인 코드: 비밀 파일 읽기, 문자열로 넘긴 셸 명령 (HX-1) */
+/** 인라인 코드: 비밀 파일 읽기, eval 경로 문자열, 문자열로 넘긴 셸 명령 (HX-1, #189) */
 function checkCode(code, ctx, depth) {
   if (codeReadsSecret(code)) return R.envRead;
+  if (ctx.evalDir && stringLiterals(code).some((l) => evalHit(l, ctx.cwd || process.cwd(), ctx, false))) return R.evalRead;
   if (depth >= 3) return null;
   for (const literal of stringLiterals(code)) {
     const r = checkCommand(literal, { ...ctx, shell: 'bash' }, depth + 1);
@@ -716,7 +971,8 @@ export function resolvePath(cwd, p, platform = process.platform) {
 /**
  * 명령을 판정한다. 막을 사유(문자열) 또는 null.
  * ctx.cwd: 시작 위치, ctx.exists(path): cd 대상이 있는지, ctx.commitBlocked(cwd): 그 위치에서 커밋하면 안 되는 보호 브랜치 이름(없으면 null),
- * ctx.isDir(path): 디렉터리인지 (되돌리기 범위 판정), ctx.evalDir: 열람을 막을 eval 폴더 절대 경로 (김동환 PC만)
+ * ctx.isDir(path): 디렉터리인지 (되돌리기 범위 판정), ctx.evalDir: 열람을 막을 eval 폴더 절대 경로 (김동환 PC만),
+ * ctx.secretFiles(dir): dir 아래 비밀 파일 [{ path, ignored: .gitignore 대상인가 }] (재귀 검색 판정, 없으면 판정하지 않는다)
  */
 export function checkCommand(command, ctx = {}, depth = 0) {
   let cwd = ctx.cwd || process.cwd();
@@ -767,12 +1023,16 @@ export function checkCommand(command, ctx = {}, depth = 0) {
       name === 'git'
         ? checkGit(args, cwd, ctx)
         : name === 'gh'
-          ? checkGh(args)
+          ? checkGh(args, { ...ctx, cwd }, depth)
           : ['curl', 'wget', 'invoke-restmethod', 'irm', 'invoke-webrequest', 'iwr'].includes(name)
             ? checkHttp(args)
             : null;
     if (r) return r;
     if (READERS.has(name) && readTargets(name, args).some(isSecretFile)) return R.envRead;
+    if (SEARCHERS.has(name) && searchReadsSecret(name, args, cwd, ctx)) return R.envSearch;
+    // .NET 호출: [IO.File]::ReadAllText('.env'), [IO.StreamReader]::new(…), New-Object IO.StreamReader(…) (#190)
+    if ((seg.words.some((w) => /\]::\w/.test(w)) || name === 'new-object') && seg.words.some((w) => w.split(/[(),;\s]+/).some(isSecretFile))) return R.envRead;
+    if (shell === 'powershell' && seg.pipeFrom && READERS.has(name) && psPipeReadsSecret(seg.pipeFrom, cwd, ctx)) return R.envRead;
   }
   return null;
 }

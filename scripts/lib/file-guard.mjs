@@ -4,7 +4,7 @@
 //  - eval: 김동환 PC(ctx.evalDir)에서 data/raw/eval 아래 읽기·쓰기·목록·검색 (HX-2)
 // 판정만 한다. git·파일 시스템 조회는 hook이 ctx 함수로 넘긴다.
 import { isAbsolute, relative, resolve } from 'node:path';
-import { findSecrets, isSecretFile, isWithin } from './protect.mjs';
+import { findSecrets, globHitsSecret, isSecretFile, isWithin } from './protect.mjs';
 
 const DC = /desktop-commander__(\w+)$/;
 
@@ -47,7 +47,7 @@ export function fileTargets(tool, input = {}) {
       t.lists.push(input.path);
       break;
     case 'dc:start_search':
-      t.searches.push({ path: input.path, globs: String(input.filePattern || '').split('|'), content: input.searchType === 'content', mcp: true });
+      t.searches.push({ path: input.path, globs: String(input.filePattern || '').split('|'), content: input.searchType === 'content', mcp: true, hidden: input.includeHidden === true });
       break;
     case 'dc:write_file':
       t.writes.push(input.path);
@@ -107,7 +107,9 @@ export function checkFileTool(tool, input = {}, ctx = {}) {
   for (const p of t.reads) if (isSecretFile(p)) return secretRead(p);
   for (const s of t.searches) {
     if (s.path && isSecretFile(s.path)) return secretRead(s.path);
-    if (s.content && s.globs.some((g) => isSecretFile(g.replace(/[{}]/g, '')))) return '.env·키 파일 내용은 검색할 수 없습니다. 필요한 변수 이름은 .env.example을 보세요.';
+    // 글롭은 무시 규칙(.gitignore)보다 우선한다: 비밀 파일 이름에 맞는 글롭으로 내용을 검색하면 값이 출력된다 (#188)
+    if (s.content && s.globs.some(globHitsSecret)) return '.env·키 파일 내용은 검색할 수 없습니다. 필요한 변수 이름은 .env.example을 보세요.';
+    if (s.content && s.hidden && !s.globs.length) return '숨김 파일(.env 포함)까지 보는 내용 검색은 filePattern으로 파일 종류를 좁혀 주세요 (#188).';
   }
   return null;
 }

@@ -72,6 +72,47 @@ export function isSecretFile(path) {
   return /\.(pem|key|p12|pfx|jks|keystore)$/.test(b) || /^id_(rsa|dsa|ecdsa|ed25519)$/.test(b);
 }
 
+/** 글롭 한 조각(구분자 없는 이름)의 정규식. *·?는 점으로 시작하는 이름에도 맞는다 (grep --include·rg -g·bash dotglob과 같게 보수적으로) */
+function segmentRegex(glob, flags) {
+  let re = '';
+  let braces = 0;
+  for (let i = 0; i < glob.length; i++) {
+    const c = glob[i];
+    if (c === '*') re += '.*';
+    else if (c === '?') re += '.';
+    else if (c === '[') {
+      const end = glob.indexOf(']', i + 2);
+      if (end === -1) re += '\\[';
+      else {
+        re += `[${glob[i + 1] === '!' || glob[i + 1] === '^' ? '^' : glob[i + 1].replace(/[\\\]]/g, '\\$&')}${glob.slice(i + 2, end).replace(/\\/g, '\\\\')}]`;
+        i = end;
+      }
+    } else if (c === '{') (re += '(?:'), braces++;
+    else if (c === '}' && braces) (re += ')'), braces--;
+    else if (c === ',' && braces) re += '|';
+    else re += c.replace(/[.+^$()|\\{}]/g, '\\$&');
+  }
+  try {
+    return new RegExp(`^${re}$`, flags);
+  } catch {
+    return /^.*$/; // 해석할 수 없는 글롭은 모든 이름에 맞는다고 본다
+  }
+}
+
+/** 이름(경로 구분자 없음)이 글롭 조각에 맞는가 */
+export const globMatch = (glob, name, flags = 'i') => segmentRegex(String(glob ?? ''), flags).test(String(name ?? ''));
+
+// 글롭이 비밀 파일을 고르는지 볼 대표 이름 (#188)
+const SECRET_SAMPLES = ['.env', '.env.local', '.env.production', 'server.pem', 'server.key', 'cert.p12', 'id_rsa'];
+
+/** 검색 글롭이 비밀 파일 이름을 고르는가. 경로 글롭(**\/.env*)은 마지막 조각만 본다. !로 시작하는 제외 글롭은 고르지 않는다 */
+export function globHitsSecret(glob) {
+  const g = String(glob ?? '').replace(/\\/g, '/');
+  if (!g || g.startsWith('!')) return false;
+  const last = g.split('/').filter(Boolean).pop() ?? '';
+  return isSecretFile(last) || SECRET_SAMPLES.some((name) => globMatch(last, name));
+}
+
 /** 코드 안의 문자열 리터럴 ('…', "…", `…`). 인라인 코드(node -e·python -c·REPL 입력) 판정에 쓴다 */
 export function stringLiterals(code) {
   const out = [];

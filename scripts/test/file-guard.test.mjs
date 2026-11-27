@@ -63,6 +63,17 @@ test('읽기·검색: 비밀 파일 (HX-1)', () => {
   ok('Glob', { pattern: '**/.env*' });
 });
 
+test('#188: 검색 글롭이 비밀 파일 이름에 맞으면 내용 검색을 막는다', () => {
+  for (const glob of ['*env*', '**/.env*', '*.{pem,key}', '.e?v', '*']) no('Grep', { pattern: 'KEY', glob });
+  no(`${DC}start_search`, { path: '/repo', pattern: 'KEY', searchType: 'content', filePattern: '*env*' });
+  no(`${DC}start_search`, { path: '/repo', pattern: 'KEY', searchType: 'content', filePattern: '*.js|*.env.*' });
+  // 숨김 파일까지 보는 내용 검색은 파일 글롭으로 좁혀야 한다
+  no(`${DC}start_search`, { path: '/repo', pattern: 'KEY', searchType: 'content', includeHidden: true });
+  for (const glob of ['*.{js,ts}', '*.md', '**/*.java', '.env.example']) ok('Grep', { pattern: 'KEY', glob });
+  ok(`${DC}start_search`, { path: '/repo', pattern: 'KEY', searchType: 'content', filePattern: '*.js|*.ts', includeHidden: true });
+  ok(`${DC}start_search`, { path: '/repo', pattern: '*env*', searchType: 'files' });
+});
+
 test('eval 경로: 김동환 PC(evalDir 지정)에서만 막는다 (HX-2)', () => {
   const ev = { evalDir: '/repo/data/raw/eval', exists: () => true };
   no('Read', { file_path: '/repo/data/raw/eval/sets.json' }, ev);
