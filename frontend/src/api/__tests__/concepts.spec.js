@@ -185,3 +185,22 @@ describe('api/concepts (F-12)', () => {
     expect(calls[0].params).toEqual({ page: 2, size: 12 })
   })
 })
+
+describe('api/concepts signal (V-4)', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
+  it('AC3 fetchConcepts는 두 번째 인자의 signal을 요청 설정에 싣고, 없으면 싣지 않는다', async () => {
+    const calls = capture({ items: [], page: 1, size: 20, total: 0 })
+    const controller = new AbortController()
+
+    await fetchConcepts({ keyword: 'jwt' }, { signal: controller.signal })
+    await fetchConcepts({ keyword: 'jwt' })
+
+    expect(calls[0].signal).toBe(controller.signal)
+    expect(calls[0].params).toEqual({ keyword: 'jwt' })
+    expect(calls[1].signal).toBeUndefined()
+    expect(calls[1].params).toEqual({ keyword: 'jwt' })
+  })
+})

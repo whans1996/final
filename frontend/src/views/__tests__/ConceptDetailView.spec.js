@@ -6,7 +6,7 @@ import { routes } from '@/router'
 import ConceptDetailView from '@/views/concept/ConceptDetailView.vue'
 import * as conceptsApi from '@/api/concepts'
 import { useAuthStore } from '@/stores/auth'
-import { apiError, mountAt } from './viewTestUtils'
+import { apiError, deferred, mountAt } from './viewTestUtils'
 
 vi.mock('@/api/concepts')
 
@@ -450,5 +450,64 @@ describe('ConceptDetailView 찜 버튼 (F-12 AC12)', () => {
     const button = wrapper.find('[data-action="toggle-wish"]')
     expect(button.text()).toBe('♥ 20')
     expect(button.attributes('aria-pressed')).toBe('true')
+  })
+})
+
+describe('ConceptDetailView 늦은 응답 (V-4 AC6·AC7)', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+    window.scrollTo = vi.fn()
+    conceptsApi.fetchReviews.mockResolvedValue({ items: [], page: 1, size: 10, total: 0 })
+  })
+
+  it('AC6·AC7 이전 id의 늦은 실패와 화면을 떠난 뒤 온 응답은 화면 상태를 바꾸지 않는다', async () => {
+    const first = deferred()
+    const second = deferred()
+    conceptsApi.fetchConcept.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise)
+    const { wrapper, router } = await mountDetail('/concepts/57')
+
+    await router.push('/concepts/58')
+    first.reject(apiError(500, { code: 'COMMON_500', message: '옛 카드 실패' }))
+    await flushPromises()
+    const vm = wrapper.vm
+    expect(vm.loadError).toBe('')
+    expect(vm.loading).toBe(true)
+
+    wrapper.unmount()
+    second.resolve(detail({ id: 58 }))
+    await flushPromises()
+    expect(vm.concept).toBeNull()
+    expect(vm.loading).toBe(true)
+  })
+
+  // 실제 화면 경로: :id가 바뀌면 loading 동안 WishButton이 내려가고 B에서 새로 올라온다. 지금은 Vue가 내려간
+  // 컴포넌트의 emit을 버려서 막힌다. 버튼이 내려가지 않게 바뀌면 WishButton의 watch 가드가 막는다 (WishButton.spec AC9)
+  it('AC9 A에서 찜을 누르고 관련 카드 B로 넘어간 뒤 온 A의 응답은 B의 찜 상태·수를 바꾸지 않는다', async () => {
+    const wish = deferred()
+    conceptsApi.wishConcept.mockReturnValue(wish.promise)
+    conceptsApi.fetchConcept
+      .mockResolvedValueOnce(detail({ wished: false, wishCount: 12, related: [summary()] }))
+      .mockResolvedValueOnce(detail({ id: 58, wished: false, wishCount: 3 }))
+    const { wrapper, router } = await mountAt(ConceptDetailView, '/concepts/57', {
+      beforeNavigate: () =>
+        useAuthStore().setSession({
+          accessToken: 'access-1',
+          user: { id: 7, nickname: '코딩초보', level: 'JUNIOR', role: 'USER' },
+        }),
+    })
+    await flushPromises()
+
+    await wrapper.find('[data-action="toggle-wish"]').trigger('click')
+    expect(conceptsApi.wishConcept).toHaveBeenCalledWith(57)
+    await router.push('/concepts/58')
+    await flushPromises()
+    wish.resolve({ wished: true, wishCount: 13, reviewPlanDate: '2026-11-30' })
+    await flushPromises()
+
+    const button = wrapper.find('[data-action="toggle-wish"]')
+    expect(button.text()).toBe('♡ 3')
+    expect(button.attributes('aria-pressed')).toBe('false')
+    expect(button.attributes('disabled')).toBeUndefined()
+    expect(wrapper.vm.concept).toMatchObject({ id: 58, wished: false, wishCount: 3 })
   })
 })

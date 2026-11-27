@@ -16,13 +16,14 @@ const isEmpty = (value) => value === undefined || value === null || value === ''
 /**
  * 글 목록 (최신순). 빈 값(빈 문자열·null·undefined)은 쿼리에서 뺀다.
  * @param {{ boardType?: BoardType|'', keyword?: string, page?: number, size?: number }} query
+ * @param {{ signal?: AbortSignal }} [options] 취소용 signal (V-4)
  * @returns {Promise<{ items: PostSummary[], page: number, size: number, total: number }>}
  */
-export function fetchPosts({ boardType, keyword, page, size } = {}) {
+export function fetchPosts({ boardType, keyword, page, size } = {}, { signal } = {}) {
   const params = Object.fromEntries(
     Object.entries({ boardType, keyword, page, size }).filter(([, value]) => !isEmpty(value)),
   )
-  return http.get('/posts', { params }).then((res) => res.data)
+  return http.get('/posts', { params, signal }).then((res) => res.data)
 }
 
 /**

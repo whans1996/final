@@ -13,6 +13,7 @@ import AdminChallengeForm from '@/components/challenge/admin/AdminChallengeForm.
 import { LOCK_MESSAGE, statusLabel } from '@/components/challenge/labels'
 import { validateChallengeForm } from '@/components/challenge/admin/validation'
 import { todayInSeoul } from '@/utils/seoulDate'
+import { useLatestRequest } from '@/composables/useLatestRequest'
 
 const route = useRoute()
 const router = useRouter()
@@ -46,11 +47,15 @@ const submitError = ref('')
 /** 진행 중·종료 챌린지는 목표 유형·목표값·시작일을 바꿀 수 없다 (AC7) */
 const locked = computed(() => Boolean(challenge.value) && challenge.value.status !== 'UPCOMING')
 
+// 다른 챌린지·새 챌린지로 옮기거나 화면을 떠나면 늦게 온 이전 응답은 버린다 (V-4)
+const latest = useLatestRequest()
+
 async function load(id) {
+  const request = latest.begin()
   loading.value = true
   try {
     const result = await fetchAdminChallenge(id)
-    if (id !== challengeId.value) return // 그사이 다른 챌린지로 옮겼으면 늦은 응답은 버린다
+    if (!request.isCurrent()) return
     challenge.value = result
     form.value = {
       title: result.title,
@@ -63,11 +68,11 @@ async function load(id) {
       removeImage: false,
     }
   } catch (error) {
-    if (id !== challengeId.value) return
+    if (!request.isCurrent()) return
     if (errorCode(error) === 'CHALLENGE_404') notFound.value = true
     else loadError.value = errorMessage(error)
   } finally {
-    if (id === challengeId.value) loading.value = false
+    if (request.isCurrent()) loading.value = false
   }
 }
 
@@ -80,6 +85,7 @@ function reset() {
   fieldErrors.value = {}
   submitError.value = ''
   loading.value = !isNew.value
+  latest.invalidate()
   if (!isNew.value) load(challengeId.value)
 }
 

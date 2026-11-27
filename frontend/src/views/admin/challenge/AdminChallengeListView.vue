@@ -1,7 +1,7 @@
 <script setup>
 // SC-21 관리자 챌린지 목록 (F-24 AC11·AC12). 조건의 정본은 라우트 쿼리(?status=&page=)다. status가 없으면 전체 탭이다.
 // 삭제는 브라우저 confirm 대신 화면 안 대화상자로 참여 기록이 함께 지워진다는 것을 알린다.
-import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { deleteAdminChallenge, fetchAdminChallenges } from '@/api/adminChallenges'
 import { errorMessage } from '@/api/http'
@@ -11,6 +11,7 @@ import { CHALLENGE_STATUSES } from '@/components/challenge/labels'
 import EmptyState from '@/components/common/EmptyState.vue'
 import PageNav from '@/components/common/PageNav.vue'
 import { overflowLastPage } from '@/utils/pagination'
+import { useLatestRequest } from '@/composables/useLatestRequest'
 
 const PAGE_SIZE = 20
 const STATUSES = CHALLENGE_STATUSES.map((s) => s.value)
@@ -58,11 +59,9 @@ function toQuery({ tab, page }) {
   return query
 }
 
-let lastRequest = 0
-// 화면이 사라지면 남은 요청을 무효로 한다. 늦은 응답이 범위 보정 replace로 다음 화면을 바꾸지 않게
-onBeforeUnmount(() => {
-  lastRequest++
-})
+// 화면이 사라지면 남은 요청을 무효로 한다. 늦은 응답이 범위 보정 replace로 다음 화면을 바꾸지 않게 (V-4).
+// api가 A 영역이라 signal은 넘기지 않고 무시만 한다
+const latest = useLatestRequest()
 
 // 편집 화면이 history state로 넘긴 성공 안내를 꺼내고 그 항목에서 지운다 (새로고침 때 다시 뜨지 않게)
 function takeNotice() {
@@ -74,7 +73,7 @@ function takeNotice() {
 }
 
 async function load({ keepNotice = false } = {}) {
-  const request = ++lastRequest
+  const request = latest.begin()
   const { tab, page } = conditions.value
   let redirecting = false
   loading.value = true
@@ -86,7 +85,7 @@ async function load({ keepNotice = false } = {}) {
       page,
       size: PAGE_SIZE,
     })
-    if (request !== lastRequest) return
+    if (!request.isCurrent()) return
     // 마지막 페이지의 챌린지를 지우고 page가 범위를 넘으면 마지막 page로 주소를 바꾼다
     const lastPage = overflowLastPage({
       page,
@@ -106,10 +105,10 @@ async function load({ keepNotice = false } = {}) {
     items.value = result.items
     total.value = result.total
   } catch (error) {
-    if (request !== lastRequest) return
+    if (!request.isCurrent()) return
     loadError.value = errorMessage(error)
   } finally {
-    if (request === lastRequest && !redirecting) loading.value = false
+    if (request.isCurrent() && !redirecting) loading.value = false
   }
 }
 

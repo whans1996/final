@@ -3,7 +3,7 @@ import { flushPromises } from '@vue/test-utils'
 import UserFollowsView from '@/views/UserFollowsView.vue'
 import * as usersApi from '@/api/users'
 import * as followsApi from '@/api/follows'
-import { apiError, mountAt } from './viewTestUtils'
+import { apiError, deferred, mountAt } from './viewTestUtils'
 
 vi.mock('@/api/users')
 vi.mock('@/api/follows', async (importOriginal) => ({
@@ -138,5 +138,37 @@ describe('UserFollowsView (F-04 AC10)', () => {
     const { wrapper } = await open('/users/3/follows')
 
     expect(wrapper.find('[role="alert"]').text()).toBe('서버에서 오류가 발생했습니다.')
+  })
+})
+
+describe('UserFollowsView 머리 늦은 응답 (V-4 AC6·AC7)', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+    followsApi.fetchFollowStatus.mockResolvedValue({
+      following: false,
+      followerCount: 2,
+      followingCount: 1,
+    })
+    followsApi.fetchFollowers.mockResolvedValue(page([]))
+    followsApi.fetchFollowings.mockResolvedValue(page([]))
+  })
+
+  it('AC6·AC7 이전 회원의 늦은 실패와 화면을 떠난 뒤 온 응답은 머리를 바꾸지 않는다', async () => {
+    const first = deferred()
+    const second = deferred()
+    usersApi.fetchUser.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise)
+    const { wrapper, router } = await open('/users/3/follows')
+
+    await router.push('/users/4/follows')
+    first.reject(apiError(500, { code: 'COMMON_500', message: '옛 회원 실패' }))
+    await flushPromises()
+    const vm = wrapper.vm
+    expect(vm.headError).toBeNull()
+
+    wrapper.unmount()
+    second.resolve({ id: 4, nickname: '늦은 닉네임', level: 'JUNIOR' })
+    await flushPromises()
+    expect(vm.nickname).toBe('')
+    expect(vm.status).toBeNull()
   })
 })

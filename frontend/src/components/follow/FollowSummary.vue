@@ -7,6 +7,7 @@ import { RouterLink, useRouter } from 'vue-router'
 import { fetchFollowStatus, follow, unfollow } from '@/api/follows'
 import { errorMessage } from '@/api/http'
 import { useAuthStore } from '@/stores/auth'
+import { useLatestRequest } from '@/composables/useLatestRequest'
 
 const props = defineProps({
   userId: { type: Number, required: true },
@@ -27,20 +28,20 @@ const label = computed(() => {
   return hovering.value ? '언팔로우' : '팔로잉'
 })
 
-// userId를 빠르게 바꿀 때 늦게 도착한 이전 요청의 응답은 버린다
-let lastRequest = 0
+// userId를 빠르게 바꾸거나 컴포넌트가 사라지면 늦게 도착한 이전 요청의 응답은 버린다 (V-4)
+const latest = useLatestRequest()
 
 async function load(id) {
-  const request = ++lastRequest
+  const request = latest.begin()
   status.value = null
   loadError.value = ''
   actionError.value = ''
   hovering.value = false
   try {
     const result = await fetchFollowStatus(id)
-    if (request === lastRequest) status.value = result
+    if (request.isCurrent()) status.value = result
   } catch (e) {
-    if (request === lastRequest) loadError.value = errorMessage(e)
+    if (request.isCurrent()) loadError.value = errorMessage(e)
   }
 }
 

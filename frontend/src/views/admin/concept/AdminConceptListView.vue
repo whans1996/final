@@ -1,7 +1,7 @@
 <script setup>
 // SC-20 관리자 개념 카드 목록 (F-13 AC13). 조건의 정본은 라우트 쿼리(?status=&source=&keyword=&page=)다.
 // status가 없으면 검수 대기(DRAFT) 탭이고, 전체 탭은 status=ALL로 표시해 조회 때는 status를 빼고 보낸다.
-import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { fetchAdminConceptCounts, fetchAdminConcepts } from '@/api/adminConcepts'
 import { errorMessage } from '@/api/http'
@@ -11,6 +11,7 @@ import { CONCEPT_SOURCES } from '@/components/concept/admin/labels'
 import EmptyState from '@/components/common/EmptyState.vue'
 import PageNav from '@/components/common/PageNav.vue'
 import { overflowLastPage } from '@/utils/pagination'
+import { useLatestRequest } from '@/composables/useLatestRequest'
 
 const PAGE_SIZE = 20
 const DEFAULT_TAB = 'DRAFT'
@@ -73,11 +74,9 @@ const emptyMessage = computed(() => {
   return source || keyword ? '조건에 맞는 카드가 없습니다.' : EMPTY_MESSAGES[tab]
 })
 
-let lastRequest = 0
-// 화면이 사라지면 남은 요청을 무효로 한다. 늦은 응답이 범위 보정 replace로 다음 화면을 바꾸지 않게 (Codex 리뷰)
-onBeforeUnmount(() => {
-  lastRequest++
-})
+// 조건을 빠르게 바꾸면 이전 요청을 취소하고 늦게 온 응답은 버린다. 화면이 사라지면 남은 요청을 무효로 해
+// 늦은 응답이 범위 보정 replace로 다음 화면을 바꾸지 않게 한다 (Codex 리뷰, V-4)
+const latest = useLatestRequest()
 
 // 편집 화면이 history state로 넘긴 성공 안내를 꺼내고 그 항목에서 지운다.
 // 브라우저는 새로고침해도 history.state를 유지하므로 지우지 않으면 F5마다 다시 뜬다.
@@ -90,21 +89,24 @@ function takeNotice() {
 }
 
 async function load() {
-  const request = ++lastRequest
+  const request = latest.begin()
   const { tab, source, keyword, page } = conditions.value
   let redirecting = false
   loading.value = true
   loadError.value = ''
   notice.value = takeNotice()
   try {
-    const result = await fetchAdminConcepts({
-      status: tab === 'ALL' ? '' : tab,
-      source,
-      keyword,
-      page,
-      size: PAGE_SIZE,
-    })
-    if (request !== lastRequest) return
+    const result = await fetchAdminConcepts(
+      {
+        status: tab === 'ALL' ? '' : tab,
+        source,
+        keyword,
+        page,
+        size: PAGE_SIZE,
+      },
+      { signal: request.signal },
+    )
+    if (!request.isCurrent()) return
     // 마지막 페이지의 카드를 처리하고 돌아와 page가 범위를 넘으면 마지막 page로 주소를 바꾼다.
     // 성공 안내는 바꾼 history 항목의 state로 넘겨 다음 조회의 takeNotice()가 다시 꺼내게 한다 (#76)
     const lastPage = overflowLastPage({
@@ -126,10 +128,10 @@ async function load() {
     items.value = result.items
     total.value = result.total
   } catch (error) {
-    if (request !== lastRequest) return
+    if (!request.isCurrent()) return
     loadError.value = errorMessage(error)
   } finally {
-    if (request === lastRequest && !redirecting) loading.value = false
+    if (request.isCurrent() && !redirecting) loading.value = false
   }
 }
 

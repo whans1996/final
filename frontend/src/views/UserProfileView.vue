@@ -9,6 +9,7 @@ import { LEVELS } from '@/utils/authValidation'
 import UserWishes from '@/components/concept/UserWishes.vue'
 import FollowSummary from '@/components/follow/FollowSummary.vue'
 import UserChallenges from '@/components/challenge/UserChallenges.vue'
+import { useLatestRequest } from '@/composables/useLatestRequest'
 
 const route = useRoute()
 const auth = useAuthStore()
@@ -32,13 +33,13 @@ function formatDate(value) {
   return value ? value.slice(0, 10).replaceAll('-', '.') : ''
 }
 
-// 요청마다 번호를 붙여, 늦게 도착한 이전 요청의 응답은 버린다 (A→B→A처럼 같은 id로 돌아와도 구분된다)
-let lastRequest = 0
+// 늦게 도착한 이전 요청의 응답은 버린다 (A→B→A처럼 같은 id로 돌아와도 구분된다). 화면을 떠나도 버린다 (V-4)
+const latest = useLatestRequest()
 
 async function load(id) {
   // 프로필이 아닌 주소로 나가는 중이면 params.id가 없어 NaN이 된다
   if (!Number.isInteger(id)) return
-  const request = ++lastRequest
+  const request = latest.begin()
   loading.value = true
   notFound.value = false
   loadError.value = ''
@@ -46,15 +47,15 @@ async function load(id) {
   stats.value = null
   try {
     const [user, userStats] = await Promise.all([fetchUser(id), fetchUserStats(id)])
-    if (request !== lastRequest) return
+    if (!request.isCurrent()) return
     profile.value = user
     stats.value = userStats
   } catch (error) {
-    if (request !== lastRequest) return
+    if (!request.isCurrent()) return
     if (errorCode(error) === 'USER_404') notFound.value = true
     else loadError.value = errorMessage(error)
   } finally {
-    if (request === lastRequest) loading.value = false
+    if (request.isCurrent()) loading.value = false
   }
 }
 

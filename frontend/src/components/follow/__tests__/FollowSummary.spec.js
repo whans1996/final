@@ -6,7 +6,7 @@ import { routes } from '@/router'
 import FollowSummary from '@/components/follow/FollowSummary.vue'
 import * as followsApi from '@/api/follows'
 import { useAuthStore } from '@/stores/auth'
-import { apiError } from '@/views/__tests__/viewTestUtils'
+import { apiError, deferred } from '@/views/__tests__/viewTestUtils'
 
 vi.mock('@/api/follows')
 
@@ -153,5 +153,31 @@ describe('FollowSummary (F-04 AC9)', () => {
 
     expect(wrapper.find('[role="alert"]').text()).toBe('서버에서 오류가 발생했습니다.')
     expect(button(wrapper).exists()).toBe(false)
+  })
+})
+
+describe('FollowSummary 늦은 응답 (V-4 AC6·AC7)', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+  })
+
+  it('AC6·AC7 이전 회원의 늦은 실패와 사라진 뒤 온 응답은 상태를 바꾸지 않는다', async () => {
+    const first = deferred()
+    const second = deferred()
+    followsApi.fetchFollowStatus
+      .mockReturnValueOnce(first.promise)
+      .mockReturnValueOnce(second.promise)
+    const { wrapper } = await mountSummary({ userId: 7, isMe: false })
+
+    await wrapper.setProps({ userId: 8 })
+    first.reject(apiError(500, { code: 'COMMON_500', message: '옛 회원 실패' }))
+    await flushPromises()
+    const vm = wrapper.vm
+    expect(vm.loadError).toBe('')
+
+    wrapper.unmount()
+    second.resolve({ following: true, followerCount: 1, followingCount: 1 })
+    await flushPromises()
+    expect(vm.status).toBeNull()
   })
 })

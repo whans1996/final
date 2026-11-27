@@ -5,7 +5,7 @@ import * as postsApi from '@/api/posts'
 import * as analysesApi from '@/api/analyses'
 import * as conceptsApi from '@/api/concepts'
 import { useAuthStore } from '@/stores/auth'
-import { apiError, mountAt } from './viewTestUtils'
+import { apiError, deferred, mountAt } from './viewTestUtils'
 
 vi.mock('@/api/posts')
 vi.mock('@/api/analyses')
@@ -351,5 +351,31 @@ describe('PostWriteView (F-17 AC17·AC18)', () => {
       timeout: 5000,
     })
     expect(postsApi.updatePost).not.toHaveBeenCalled()
+  })
+})
+
+describe('PostWriteView 떠난 뒤 온 글 응답 (V-4 AC8)', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('AC8 남의 글 수정 주소에서 응답 전에 떠나면 늦은 응답이 상세 화면으로 replace하지 않는다', async () => {
+    const call = deferred()
+    postsApi.fetchPost.mockReturnValueOnce(call.promise)
+    const { wrapper, router } = await mountWrite('/community/42/edit')
+
+    await router.push('/concepts')
+    // RouterView가 화면을 내리는 것을 흉내 낸다. 앱을 내리면 라우터가 현재 위치를 처음으로 돌리므로 replace 호출로 본다
+    const replace = vi.spyOn(router, 'replace')
+    wrapper.unmount()
+    call.resolve(detail({ authorId: 8 }))
+    await flushPromises()
+
+    expect(replace).not.toHaveBeenCalled()
   })
 })

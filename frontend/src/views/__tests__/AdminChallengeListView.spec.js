@@ -163,6 +163,20 @@ describe('AdminChallengeListView (F-24 AC11·AC12)', () => {
     expect(wrapper.findAll('tbody tr')).toHaveLength(1)
   })
 
+  it('V-4 AC5 화면을 떠났다가 같은 목록으로 돌아오면 떠난 화면의 늦은 응답으로 주소를 바꾸지 않는다', async () => {
+    let resolve
+    adminApi.fetchAdminChallenges.mockReturnValue(new Promise((r) => (resolve = r)))
+    const { wrapper, router } = await mountList('/admin/challenges?page=99')
+
+    await router.push('/admin/concepts')
+    wrapper.unmount()
+    await router.push('/admin/challenges?page=9')
+    resolve(page([], { page: 99, total: 41 }))
+    await flushPromises()
+
+    expect(router.currentRoute.value.fullPath).toBe('/admin/challenges?page=9')
+  })
+
   it('AC12 삭제를 누르면 화면 안 대화상자에 참여자 수를 알리고, 확인하면 지운 뒤 목록을 다시 부른다', async () => {
     const confirmSpy = vi.spyOn(window, 'confirm')
     adminApi.fetchAdminChallenges.mockResolvedValue(

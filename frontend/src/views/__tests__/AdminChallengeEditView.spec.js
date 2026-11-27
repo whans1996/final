@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 
 import { flushPromises } from '@vue/test-utils'
 import AdminChallengeEditView from '@/views/admin/challenge/AdminChallengeEditView.vue'
 import * as adminApi from '@/api/adminChallenges'
-import { apiError, mountAt } from './viewTestUtils'
+import { apiError, deferred, mountAt } from './viewTestUtils'
 
 vi.mock('@/api/adminChallenges')
 
@@ -318,5 +318,33 @@ describe('AdminChallengeEditView (F-24 AC13)', () => {
 
     resolve({ id: 9 })
     await flushPromises()
+  })
+})
+
+describe('AdminChallengeEditView 늦은 응답 (V-4 AC6·AC7)', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+  })
+
+  it('AC6·AC7 이전 id의 늦은 실패와 화면을 떠난 뒤 온 응답은 화면 상태를 바꾸지 않는다', async () => {
+    const first = deferred()
+    const second = deferred()
+    adminApi.fetchAdminChallenge
+      .mockReturnValueOnce(first.promise)
+      .mockReturnValueOnce(second.promise)
+    const { wrapper, router } = await mountEdit('/admin/challenges/7/edit')
+
+    await router.push('/admin/challenges/8/edit')
+    first.reject(apiError(500, { code: 'COMMON_500', message: '옛 챌린지 실패' }))
+    await flushPromises()
+    const vm = wrapper.vm
+    expect(vm.loadError).toBe('')
+    expect(vm.loading).toBe(true)
+
+    wrapper.unmount()
+    second.resolve(detail({ id: 8 }))
+    await flushPromises()
+    expect(vm.challenge).toBeNull()
+    expect(vm.loading).toBe(true)
   })
 })
