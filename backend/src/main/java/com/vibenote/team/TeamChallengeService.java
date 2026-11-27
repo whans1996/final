@@ -67,7 +67,8 @@ public class TeamChallengeService {
 
     /**
      * 목표를 만든다 (AC1~AC3). 잠금 순서는 {@link TeamAnalysisService#share}와 같이 users → teams이고, 팀 행을 잠근 뒤
-     * 중복·상한을 센다.
+     * 중복·상한을 센다. 마지막으로 공유 확인이 team_analyses 행을 공유 잠금으로 읽어, 공유 해제·탈퇴의 삭제와 겹쳐도 FK 위반(500) 대신
+     * TEAM_006이 된다 (#168).
      */
     @Transactional
     public TeamChallengeResponse create(

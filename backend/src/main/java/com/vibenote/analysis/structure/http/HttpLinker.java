@@ -549,12 +549,16 @@ public final class HttpLinker {
      *
      * @param axiosBase axios 기본 baseURL을 {@code X.defaults.baseURL = 식} 말고 다른 모양으로 바꾼다
      * @param instanceBase 기본 baseURL을 바꾸는 인스턴스 (식별자: 인스턴스 판정 메모의 Receiver)
+     * @param axiosMethod axios 기본 method를 바꾼다 (값은 계산하지 않는다, #150)
+     * @param instanceMethod 기본 method를 바꾸는 인스턴스
      * @param hooked request 인터셉터를 단 받는 쪽 (axios는 {@link #axiosHooked})
      * @param fetchReplaced {@code fetch}를 바꿔 끼운다
      */
     private record Taints(
             boolean axiosBase,
             Set<Receiver> instanceBase,
+            boolean axiosMethod,
+            Set<Receiver> instanceMethod,
             boolean axiosHooked,
             Set<Receiver> hooked,
             boolean fetchReplaced) {}
@@ -581,9 +585,11 @@ public final class HttpLinker {
     /** 요청을 바꾸는 쓰기를 모으는 중간 값. */
     private static final class TaintScan {
         boolean axiosBase;
+        boolean axiosMethod;
         boolean axiosHooked;
         boolean fetchReplaced;
         final Set<Receiver> instanceBase = Collections.newSetFromMap(new IdentityHashMap<>());
+        final Set<Receiver> instanceMethod = Collections.newSetFromMap(new IdentityHashMap<>());
         final Set<Receiver> hooked = Collections.newSetFromMap(new IdentityHashMap<>());
     }
 
@@ -598,6 +604,8 @@ public final class HttpLinker {
         return new Taints(
                 scan.axiosBase,
                 scan.instanceBase,
+                scan.axiosMethod,
+                scan.instanceMethod,
                 scan.axiosHooked,
                 scan.hooked,
                 scan.fetchReplaced);
@@ -631,7 +639,9 @@ public final class HttpLinker {
                             && is(t, i - 4, "Object")
                             && defaults
                             && is(t, i + 3, ",");
-            if (!interceptor && !(defaults && (assigned || writesBase(t, i)))) {
+            boolean base = defaults && (assigned || writesKey(t, i, "baseURL"));
+            boolean method = defaults && (assigned || writesKey(t, i, "method"));
+            if (!interceptor && !base && !method) {
                 continue;
             }
             Receiver receiver = receiver(name.text(), name.start(), m);
@@ -645,24 +655,36 @@ public final class HttpLinker {
                 } else {
                     scan.hooked.add(receiver);
                 }
-            } else if (axios) {
-                // 단순한 axios.defaults.baseURL = 식은 defaultsBaseUrls가 모은다
-                scan.axiosBase |= assigned || !plainBaseWrite(t, i);
-            } else {
-                scan.instanceBase.add(receiver);
+                continue;
+            }
+            if (base) {
+                if (axios) {
+                    // 단순한 axios.defaults.baseURL = 식은 defaultsBaseUrls가 모은다
+                    scan.axiosBase |= assigned || !plainBaseWrite(t, i);
+                } else {
+                    scan.instanceBase.add(receiver);
+                }
+            }
+            if (method) {
+                if (axios) {
+                    scan.axiosMethod = true;
+                } else {
+                    scan.instanceMethod.add(receiver);
+                }
             }
         }
     }
 
     /**
-     * {@code X.defaults} 뒤가 baseURL을 바꾸는 쓰기: {@code X.defaults = …}, {@code X.defaults.baseURL
-     * <대입>}, {@code delete X.defaults.baseURL}, 계산된 키 {@code X.defaults[k] = …}(k가 다른 문자열이면 제외).
+     * {@code X.defaults} 뒤가 key(baseURL·method)를 바꾸는 쓰기: {@code X.defaults = …}, {@code
+     * X.defaults.key <대입>}, {@code delete X.defaults.key}, 계산된 키 {@code X.defaults[k] = …}(k가 다른
+     * 문자열이면 제외).
      */
-    private static boolean writesBase(List<JsToken> t, int i) {
+    private static boolean writesKey(List<JsToken> t, int i, String key) {
         if (is(t, i + 3, null) && ASSIGN_OPS.contains(t.get(i + 3).text())) {
             return true;
         }
-        if (is(t, i + 3, ".") && is(t, i + 4, "baseURL")) {
+        if (is(t, i + 3, ".") && is(t, i + 4, key)) {
             return is(t, i - 1, "delete")
                     || (i + 5 < t.size() && ASSIGN_OPS.contains(t.get(i + 5).text()));
         }
@@ -671,7 +693,7 @@ public final class HttpLinker {
             boolean otherKey =
                     close == i + 5
                             && t.get(i + 4).kind() == JsToken.Kind.STRING
-                            && !t.get(i + 4).value().equals("baseURL");
+                            && !t.get(i + 4).value().equals(key);
             return close > 0
                     && !otherKey
                     && close + 1 < t.size()
@@ -708,13 +730,20 @@ public final class HttpLinker {
 
     /**
      * config에 method가 없으면 인스턴스는 {@code create} config의 method를 쓴다 (#123). 그 config를 계산하지 못하면
-     * method를 모른다(null).
+     * method를 모른다(null). 선별 파일이 그 인스턴스의 기본 method를 바꾸거나, axios 기본 method를 바꾸는데 axios·method 없이 만든
+     * 인스턴스로 부르면 method를 모른다 (#150).
      */
     private String method(Expr method, Receiver receiver) {
         if (method == null && receiver.type() == ReceiverType.INSTANCE) {
+            if (taints().instanceMethod().contains(receiver)) {
+                return null;
+            }
             method =
                     config(receiver.createArgs(), receiver.module(), Bindings.NONE, 0)
                             .prop("method");
+        }
+        if (method == null && receiver.type() != ReceiverType.FETCH && taints().axiosMethod()) {
+            return null;
         }
         return method(method);
     }

@@ -1,8 +1,10 @@
 package com.vibenote.challenge;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -125,6 +127,30 @@ class ChallengeApiTest extends ChallengeTestSupport {
                 .andExpect(jsonPath("$.participation.goalValue").value(10))
                 .andExpect(jsonPath("$.participation.completedAt").value(nullValue()))
                 .andExpect(jsonPath("$.participation.joinedAt").value("2026-11-22T21:05:00+09:00"));
+    }
+
+    @Test
+    void AC1_AC2_탈퇴_회원의_참여는_참여자_수에서_빠지고_참여_행은_남는다() throws Exception {
+        // #202: 참여 기록은 남기되 목록·상세·참여 응답의 참여자 수는 지금 회원만 센다
+        long c = insertChallenge("C", "2026-11-20", "2026-11-30", "QUIZ_COUNT", 10);
+        insertParticipant(c, insertUser("f25active"));
+        long gone = insertUser("f25gone");
+        insertParticipant(c, gone);
+        jdbc.update(
+                "UPDATE users SET status = 'WITHDRAWN', withdrawn_at = NOW() WHERE id = ?", gone);
+
+        mockMvc.perform(get(LIST))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[0].participantCount").value(1));
+        mockMvc.perform(get(ONE, c))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.participantCount").value(1));
+        mockMvc.perform(
+                        post("/api/challenges/{id}/participation", c)
+                                .header(HttpHeaders.AUTHORIZATION, bearer(insertUser("f25new"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.participantCount").value(2));
+        assertThat(count("challenge_participants", "challenge_id = ?", c)).isEqualTo(3);
     }
 
     @Test

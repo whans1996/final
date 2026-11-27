@@ -67,6 +67,11 @@ describe('AnalysisRequestView (F-05a AC14)', () => {
     expect(wrapper.text()).toContain('서버의 로컬 AI로 간이 분석')
     expect(wrapper.text()).not.toContain('Gemini')
     expect(wrapper.text()).toContain('하루 5회')
+    // F-26a부터 코드 파일 수로 실패하지 않는다 (#155)
+    expect(wrapper.text()).toContain(
+      'ZIP 10MB 이하 · 큰 프로젝트는 중요한 파일 30개를 골라 설명합니다',
+    )
+    expect(wrapper.text()).not.toContain('코드 파일 200개')
   })
 
   it('AC14 파일과 동의가 모두 있어야 분석 요청 버튼이 활성화된다', async () => {
@@ -206,7 +211,10 @@ describe('AnalysisRequestView 저장소 주소 (F-05b AC13)', () => {
     expect(wrapper.text()).toContain(
       '공개 GitHub·GitLab(gitlab.com) 저장소의 기본 브랜치를 분석합니다. 저장소 주소만 입력하세요.',
     )
-    expect(wrapper.text()).toContain('저장소 아카이브 30MB 이하')
+    expect(wrapper.text()).toContain(
+      '저장소 아카이브 30MB 이하 · 큰 저장소는 중요한 파일 30개를 골라 설명합니다',
+    )
+    expect(wrapper.text()).not.toContain('코드 파일 200개')
     expect(wrapper.find('input[name="file"]').exists()).toBe(false)
   })
 

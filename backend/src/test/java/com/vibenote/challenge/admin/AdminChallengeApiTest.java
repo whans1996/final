@@ -457,6 +457,24 @@ class AdminChallengeApiTest extends IntegrationTestBase {
     }
 
     @Test
+    void AC4_AC5_관리자_목록과_상세의_참여자_수도_탈퇴_회원을_뺀다() throws Exception {
+        // #202: 회원 화면과 같은 집계(ChallengeMapper withParticipantCount)를 쓴다
+        long id = create(validFields(), null);
+        join(id, userId);
+        long gone = insertUser("f24gone");
+        join(id, gone);
+        jdbc.update(
+                "UPDATE users SET status = 'WITHDRAWN', withdrawn_at = NOW() WHERE id = ?", gone);
+
+        asAdmin(get(LIST))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[0].participantCount").value(1));
+        asAdmin(get(ONE, id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.participantCount").value(1));
+    }
+
+    @Test
     void AC5_없는_챌린지는_404_CHALLENGE_404() throws Exception {
         asAdmin(get(ONE, 999_999))
                 .andExpect(status().isNotFound())
