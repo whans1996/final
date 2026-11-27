@@ -31,7 +31,7 @@ const item =
   <DropdownMenuRoot v-else :modal="false">
     <DropdownMenuTrigger
       class="flex h-9 max-w-40 shrink-0 items-center gap-1 rounded-sm px-2 text-sm font-semibold text-text hover:bg-primary-soft focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
-      aria-label="내 메뉴"
+      :aria-label="`${auth.user.nickname} 메뉴`"
     >
       <span class="truncate">{{ auth.user.nickname }}</span>
       <ChevronDown class="size-4 shrink-0" aria-hidden="true" />

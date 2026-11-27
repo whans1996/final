@@ -38,7 +38,7 @@ const tooltipClass = computed(() =>
     id="app-sidebar"
     :data-collapsed="collapsed ? 'true' : 'false'"
     :class="[
-      'sticky top-14 hidden h-[calc(100dvh-3.5rem)] w-16 shrink-0 flex-col border-r border-border bg-surface sm:flex',
+      'sticky top-14 z-20 hidden h-[calc(100dvh-3.5rem)] w-16 shrink-0 flex-col border-r border-border bg-surface sm:flex',
       collapsed ? '' : 'lg:w-60',
     ]"
   >

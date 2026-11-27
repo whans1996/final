@@ -46,6 +46,8 @@ describe('UserMenu (F-29b AC11)', () => {
     const { wrapper } = await mountOpen({ beforeNavigate: loginAs('USER') })
 
     expect(wrapper.find('button').text()).toContain('코딩초보')
+    // 보이는 닉네임이 접근 가능한 이름에 들어간다 (Label in Name)
+    expect(wrapper.find('button').attributes('aria-label')).toBe('코딩초보 메뉴')
     expect(menuItems()).toEqual(['프로필', '설정', '로그아웃'])
     expect(document.querySelector('a[href="/users/7"]').textContent.trim()).toBe('프로필')
     expect(document.querySelector('a[href="/me/settings"]').textContent.trim()).toBe('설정')

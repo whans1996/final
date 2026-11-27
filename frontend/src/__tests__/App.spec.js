@@ -1,10 +1,26 @@
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import App from '@/App.vue'
 import { routes } from '@/router'
 import { useAuthStore } from '@/stores/auth'
+import { fetchReviewPlans } from '@/api/reviewPlans'
+
+// 대시보드가 부르는 API (로그아웃 회귀 테스트). 다른 화면은 실제 호출이 실패해도 셸만 본다
+vi.mock('@/api/auth', () => ({ logout: vi.fn().mockResolvedValue(undefined) }))
+vi.mock('@/api/reviewPlans', () => ({
+  fetchReviewPlans: vi.fn().mockResolvedValue({ today: '2026-11-27', items: [], overdue: [] }),
+}))
+vi.mock('@/api/analyses', () => ({
+  fetchAnalyses: vi.fn().mockResolvedValue({ items: [], total: 0, page: 1, size: 20 }),
+}))
+vi.mock('@/api/challenges', () => ({
+  fetchMyChallenges: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+}))
+vi.mock('@/api/recommendations', () => ({
+  fetchRecommendations: vi.fn().mockResolvedValue({ items: [] }),
+}))
 
 const Page = { template: '<p id="page">본문</p>' }
 // 실제 route에 더해 셸 선택만 보는 가짜 화면 (F-29b에는 bare를 쓰는 실제 route가 없다)
@@ -75,7 +91,7 @@ describe('App 셸 선택 (F-29b AC6·AC7, F-00b AC8)', () => {
     expect(wrapper.findAll('aside h2').map((h) => h.text())).toEqual(['대시보드', '학습', '함께'])
     expect(wrapper.find('aside a[aria-current="page"]').attributes('aria-label')).toBe('개념 카드')
     expect(wrapper.find('nav[aria-label="하단 탭"]').exists()).toBe(true)
-    expect(wrapper.find('header button[aria-label="내 메뉴"]').text()).toContain('코딩초보')
+    expect(wrapper.find('header button[aria-haspopup="menu"]').text()).toContain('코딩초보')
     expect(wrapper.find('a[href="/admin"]').exists()).toBe(false)
     expect(wrapper.find('header a[href="/login"]').exists()).toBe(false)
   })
@@ -116,5 +132,24 @@ describe('App 셸 선택 (F-29b AC6·AC7, F-00b AC8)', () => {
     expect(first.text()).toBe('본문으로 건너뛰기')
     expect(first.attributes('href')).toBe('#main')
     expect(wrapper.find('main#main').attributes('tabindex')).toBe('-1')
+  })
+
+  it('AC11 회원이 /dashboard에서 로그아웃하면 home에 도착하고, 대시보드가 비회원 셸에서 다시 마운트되지 않는다', async () => {
+    const wrapper = await mountApp('/dashboard', 'USER')
+    const router = wrapper.vm.$router
+    expect(fetchReviewPlans).toHaveBeenCalledTimes(1)
+
+    await wrapper.find('header button[aria-haspopup="menu"]').trigger('keydown', { key: 'Enter' })
+    await flushPromises()
+    ;[...document.querySelectorAll('[role="menuitem"]')]
+      .find((el) => el.textContent.trim() === '로그아웃')
+      .click()
+    await flushPromises()
+
+    expect(useAuthStore().isLoggedIn).toBe(false)
+    expect(router.currentRoute.value.name).toBe('home')
+    expect(fetchReviewPlans).toHaveBeenCalledTimes(1)
+    expect(wrapper.find('aside').exists()).toBe(false)
+    expect(wrapper.find('header a[href="/login"]').exists()).toBe(true)
   })
 })
