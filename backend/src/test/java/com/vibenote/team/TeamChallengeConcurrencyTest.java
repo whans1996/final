@@ -15,7 +15,8 @@ import java.time.LocalDate;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 
@@ -48,8 +49,13 @@ class TeamChallengeConcurrencyTest extends IntegrationTestBase {
         return jdbc.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
     }
 
-    @Test
-    void 목표를_만드는_사이_공유가_해제되고_커밋되면_500이_아니라_TEAM_006이다() throws Exception {
+    /**
+     * 공유 해제는 {@code TeamMapper.deleteTeamAnalysis}, 탈퇴는 {@code deleteAllTeamAnalysesSharedBy}와 같은
+     * 문장으로 지운다.
+     */
+    @ParameterizedTest(name = "{0}")
+    @ValueSource(strings = {"공유 해제", "탈퇴"})
+    void AC3_목표를_만드는_사이_공유가_해제되고_커밋되면_500이_아니라_TEAM_006이다(String path) throws Exception {
         long owner = user("f20cxowner");
         long sharer = user("f20cxsharer");
         jdbc.update(
@@ -85,11 +91,20 @@ class TeamChallengeConcurrencyTest extends IntegrationTestBase {
                                 MYSQL.getJdbcUrl(), "root", MYSQL.getPassword())) {
             // 공유 해제를 커밋하지 않은 채 행 잠금만 쥔다
             unsharer.setAutoCommit(false);
+            boolean withdraw = path.equals("탈퇴");
             try (PreparedStatement delete =
                     unsharer.prepareStatement(
-                            "DELETE FROM team_analyses WHERE team_id = ? AND analysis_id = ?")) {
-                delete.setLong(1, team);
-                delete.setLong(2, analysis);
+                            withdraw
+                                    ? "DELETE ta FROM team_analyses ta JOIN analyses a ON a.id ="
+                                            + " ta.analysis_id WHERE a.user_id = ?"
+                                    : "DELETE FROM team_analyses WHERE team_id = ? AND analysis_id"
+                                            + " = ?")) {
+                if (withdraw) {
+                    delete.setLong(1, sharer);
+                } else {
+                    delete.setLong(1, team);
+                    delete.setLong(2, analysis);
+                }
                 assertThat(delete.executeUpdate()).isEqualTo(1);
             }
 
@@ -118,8 +133,8 @@ class TeamChallengeConcurrencyTest extends IntegrationTestBase {
     }
 
     /**
-     * 목표 만들기가 공유 행에 닿는 문장(공유 확인 또는 목표 insert의 FK 검사)에서 공유 해제의 행 잠금을 기다릴 때까지. 다른 세션의 문장은 root만 볼 수
-     * 있고, 지나가는 문장과 구분하려고 같은 문장이 잠시 뒤에도 남아 있는지 본다.
+     * 목표 만들기가 공유 행에 닿는 문장(공유 확인 또는 목표 insert의 FK 검사)에서 공유 해제의 행 잠금을 기다릴 때까지. 지나가는 문장과 구분하려고 같은 문장이
+     * 잠시 뒤에도 남아 있는지 본다.
      */
     private static void awaitLockWait(Connection monitor, CompletableFuture<Object> creating)
             throws Exception {
