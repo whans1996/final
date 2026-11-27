@@ -2,8 +2,8 @@
 
 | 항목 | 값 |
 |---|---|
-| 상태 | APPROVED <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
-| 기능 ID | P-1a (로드맵 트랙 1, 11/27~12/02, 넘겨주기 12/02 A→A: T-1·I-1b·I-2, 결정로그 11-27) |
+| 상태 | DONE (PR #258) <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
+| 기능 ID | P-1a (로드맵 트랙 1, 11/27~12/02 → 11/27 머지, 넘겨주기 12/02 → 11/27 A→A: T-1·I-1b·I-2, 결정로그 11-27) |
 | 우선순위 | T0 (시연 줄거리, 기획서 7.4b) |
 | 영역 오너 | A 김동환 (AI·분석·학습 루프) |
 | 관련 필수 요구사항 | ⑥ 분석 관리(CRUD) |
@@ -261,5 +261,5 @@ ALTER TABLE analyses MODIFY project_id BIGINT NOT NULL;
 - [x] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일) — 7개 라우트 문제 0건
 - [x] reviewer 지적 사항 반영 (반드시 수정 0, 권장 5건 반영·2건 #257·#250)
 - [x] 산출물 반영 (ERD 03, 화면 설계서 06 SC-25·26, 요구사항 정의서 01 P-1a 행, 스크린샷 SC-05·06·07·25·26)
-- [ ] PR CI 초록, 셸 내비 변경 @JoonseobKim 멘션
-- [ ] 상태 DONE (PR 머지 후)
+- [x] PR CI 초록, 셸 내비 변경 @JoonseobKim 멘션 (PR #258, Codex COMPLETE a5ef902)
+- [x] 상태 DONE (PR #258)
