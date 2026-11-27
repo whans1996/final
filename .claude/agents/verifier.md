@@ -19,7 +19,7 @@ node scripts/verify.mjs all
 ```
 
 특정 테스트만 요청받으면:
-- BE: `cd backend && gradlew.bat test --console=plain --tests "<패턴>"` (Windows가 아니면 `./gradlew`)
+- BE: `node scripts/verify.mjs be --tests "<패턴>"` (여러 개면 `--tests`를 반복). gradlew를 직접 부르지 않는다: verify.mjs만 `.harness/gradle.lock`을 잡아 커밋 hook·pre-push의 Gradle과 겹치지 않게 한다 (H-9)
 - FE: `cd frontend && npm run test:unit -- --run <파일 또는 -t 패턴>`
 
 요약에 원인이 부족하면 출력 끝의 `전체 로그` 파일에서 해당 테스트 부분만 Grep으로 찾아 읽는다. 로그 전체를 읽지 않는다.
