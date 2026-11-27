@@ -69,6 +69,10 @@ tasks.named('test') {
         events 'failed'
         exceptionFormat 'full'
     }
+    // SeedExampleTest(K-3a AC7·AC8)가 읽는 시드 카드와 범위 환경변수. 카드만 바뀌어도 UP-TO-DATE로 건너뛰지 않게 입력으로 둔다
+    inputs.dir(rootProject.file('../data/seed')).withPathSensitivity(PathSensitivity.RELATIVE).withPropertyName('seedCards')
+    inputs.property('seedSrc', providers.environmentVariable('SEED_SRC').orElse(''))
+    inputs.property('seedCard', providers.environmentVariable('SEED_CARD').orElse(''))
 }
 
 // 사람이 키를 넣고 수동으로만 실행한다: ./gradlew liveTest (GMS 크레딧·Gemini 무료 한도를 쓴다)

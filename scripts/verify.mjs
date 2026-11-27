@@ -17,7 +17,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 
 import { join, relative } from 'node:path';
 import { ROOT, git, isWin } from './lib/common.mjs';
 import { acquireLock } from './lib/lock.mjs';
-import { HARNESS_DATA_FILES, areasOf, frontendCodeFiles, relatedBackendTests, relatedHarnessTests } from './lib/related.mjs';
+import { HARNESS_DATA_FILES, SEED_CATEGORIES, SEED_DATA_PATHS, areasOf, isSeedData, frontendCodeFiles, relatedBackendTests, relatedHarnessTests } from './lib/related.mjs';
 
 const args = process.argv.slice(2);
 const fix = args.includes('--fix');
@@ -146,12 +146,22 @@ function verifyFrontend() {
   const testScript = scripts['test:unit'] ? 'test:unit' : scripts.test ? 'test' : null;
   if (testScript) run('fe', 'test', `npm run ${testScript} -- --run`, dir);
   if (scripts.build) run('fe', 'build', 'npm run build', dir);
+  verifySeedCards();
+}
+
+// 시드 카드 ①형식·②FE 예제 검사 (K-3a). FE 의존성(typescript·@vue/compiler-sfc)을 쓰므로 fe 영역에서 돈다
+function verifySeedCards() {
+  if (!existsSync(join(ROOT, 'data', 'seed'))) return;
+  run('fe', '시드 카드 검사 (seed-check)', 'node scripts/seed-check.mjs', ROOT);
+  if (!staged) run('fe', '시드 예제 검사 단위 테스트', 'node --test scripts/test/seed-examples.test.mjs', ROOT);
 }
 
 // 스테이징된 파일만 린트하고, 그 파일에 닿는 단위 테스트만 돈다 (vitest related)
 function verifyFrontendStaged(dir) {
+  const seed = stagedFiles.some(isSeedData) || stagedFiles.includes(SEED_CATEGORIES);
+  if (seed) verifySeedCards();
   const files = frontendCodeFiles(stagedFiles).filter((f) => existsSync(join(dir, f)));
-  if (!files.length) return skip('fe', '스테이징된 코드 파일 없음');
+  if (!files.length) return seed ? undefined : skip('fe', '스테이징된 코드 파일 없음');
   const scriptFiles = files.filter((f) => /\.(js|mjs|vue|ts)$/.test(f)).map(quote);
   const srcFiles = files.filter((f) => f.startsWith('src/')).map(quote);
   if (scriptFiles.length) {
@@ -174,7 +184,7 @@ function verifyHarness() {
 }
 
 // 하네스가 읽는 문서(로드맵)도 넣는다: 작업 트리에서만 고친 로드맵으로 통과한 결과를 HEAD에 남기지 않게 (Codex 리뷰)
-const AREA_PATHS = { be: ['backend'], fe: ['frontend'], harness: ['scripts', '.claude/hooks', '.githooks', ...HARNESS_DATA_FILES] };
+const AREA_PATHS = { be: ['backend', ...SEED_DATA_PATHS], fe: ['frontend', ...SEED_DATA_PATHS, SEED_CATEGORIES], harness: ['scripts', '.claude/hooks', '.githooks', ...HARNESS_DATA_FILES] };
 
 // 전체 검증을 통과한 커밋을 남긴다. 그 영역에 커밋 안 된 변경이 있으면 HEAD와 검증한 내용이 달라 남기지 않는다
 function recordVerified(areas) {
