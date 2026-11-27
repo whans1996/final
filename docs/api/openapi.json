@@ -1507,6 +1507,12 @@
             "format" : "int64",
             "type" : "integer"
           },
+          "projectId" : {
+            "description" : "분석이 붙은 프로젝트 ID (P-1a)",
+            "example" : 12,
+            "format" : "int64",
+            "type" : "integer"
+          },
           "status" : {
             "description" : "현재 상태 (접수 직후 FETCHING)",
             "enum" : [ "FETCHING", "FILTERING", "SELECTING", "EXPLAINING", "EXTRACTING", "QUIZ", "DONE", "FAILED" ],
@@ -1514,7 +1520,7 @@
             "type" : "string"
           }
         },
-        "required" : [ "analysisId", "status" ],
+        "required" : [ "analysisId", "projectId", "status" ],
         "type" : "object"
       },
       "CreateFlowsRequest" : {
@@ -4932,6 +4938,11 @@
                     "enum" : [ "BEGINNER", "JUNIOR", "SENIOR" ],
                     "type" : "string"
                   },
+                  "projectId" : {
+                    "description" : "붙일 내 프로젝트 ID (P-1a). 없으면 저장소는 같은 주소의 내 프로젝트(없으면 새로), ZIP은 새 프로젝트에 붙는다. 저장소 프로젝트에는 같은 주소만, ZIP 프로젝트에는 ZIP만 보낼 수 있다",
+                    "example" : "12",
+                    "type" : "string"
+                  },
                   "sourceUrl" : {
                     "description" : "공개 GitHub·GitLab(gitlab.com) 저장소 주소 (500자 이하, 브랜치·파일 경로 없이). file과 둘 중 하나만 보낸다",
                     "example" : "https://github.com/octo/todo-app",
@@ -4963,7 +4974,7 @@
                 }
               }
             },
-            "description" : "검증 실패 (COMMON_400, details.file·sourceUrl·consent·level)"
+            "description" : "검증 실패 (COMMON_400, details.file·sourceUrl·consent·level·projectId)"
           },
           "401" : {
             "content" : {
@@ -4974,6 +4985,16 @@
               }
             },
             "description" : "토큰 없음·만료 (AUTH_401)"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "projectId가 없거나 남의 프로젝트 (PROJECT_404)"
           },
           "413" : {
             "content" : {
