@@ -16,7 +16,7 @@ SSAFY 관통 프로젝트(2026-11-17 시작, 12-24 발표). Spring Boot 4 + MyBa
 |---|---|
 | 지금 무엇을 하던 중인가 | 내 NOW 파일 `docs/handoff/NOW-dh.md`(김동환)·`NOW-js.md`(김준섭) (세션 시작 시 hook이 내 것 전문과 상대 요약을 주입) |
 | 일정 (기간 × 사람 × 트랙 할 일, 넘겨주는 시점, 공통 일정) | `docs/로드맵.md` (정본. 상태는 PR 본문 `Roadmap: <ID>` 줄로 계산, `node scripts/roadmap.mjs`. 세션 시작 배너 🗺️ 줄) |
-| 작업 이력 | `docs/작업로그.md` (두 사람 공용, 맨 아래 추가) |
+| 작업 이력 | `docs/작업로그.md` (두 사람 공용, 맨 아래 추가). 지난 주 항목은 `docs/기록/작업로그-W?.md` (주간 `/progress`가 옮긴다) |
 | 기획·운영 결정 기록 | `docs/결정로그.md` (맨 아래 추가) |
 | 기능 하나의 상세 요구사항 | `docs/specs/F-xx-*.md` |
 | 기능 목록, ERD, API 목록, 일정, 역할 분담 | `docs/기획서.md` (길다. 필요한 섹션만 읽는다) |
@@ -107,6 +107,8 @@ SSAFY 관통 프로젝트(2026-11-17 시작, 12-24 발표). Spring Boot 4 + MyBa
 | 하네스 단위 테스트 | `node --test "scripts/test/*.test.mjs"` |
 | PR 스크린샷 Markdown | `node scripts/pr-screens.mjs SC-18 SC-19` (`docs/산출물/screens/` 커밋·push 후) |
 | 파일 영역·PR @멘션 대상 | `node scripts/owners.mjs [--diff origin/develop | <경로...>]` |
+| 작업로그 주차별 보관 (`/progress`) | `node scripts/archive-worklog.mjs [--dry-run] [--today YYYY-MM-DD]` |
+| 산출물 07 API 명세·Schema.sql 생성 (`/progress`·제출 전) | `node scripts/export-api-doc.mjs`, `node scripts/export-schema.mjs` (Docker) |
 | 토큰 사용량 (메인·에이전트별) | `node scripts/token-report.mjs [latest|<세션 ID>] [--list]` |
 | PR 상태·CI 확인 | `gh pr status`, `gh pr checks` |
 | Codex 리뷰 판정·재요청·이관 | `node scripts/codex-review.mjs <PR> [--request --wait --status \| --resolve]` (COMPLETE/FINDINGS/RUNNING/STALE/TIMEOUT/CLOSED/ERROR). 열린 PR이 COMPLETE가 될 때까지 Stop hook `codex-loop`이 루프를 이어 가게 한다 |
