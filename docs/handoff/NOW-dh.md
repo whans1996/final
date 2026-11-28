@@ -3,7 +3,7 @@
 > 김동환(A 영역: AI·분석·학습 루프) 전용. 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
 > 머리 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
-갱신: 2026-11-28 22:04 · 작업자: whans1996 · PC: dh-home · 브랜치: feature/I-1a-interview-prep
+갱신: 2026-11-28 22:13 · 작업자: whans1996 · PC: dh-home · 브랜치: feature/I-1a-interview-prep
 
 ## 현재 기능
 
@@ -11,9 +11,9 @@
 
 ## 진행
 
-- ✅ BE AC1~AC11·FE AC12~AC15 green, 산출물·스크린샷 5장, contract-checker 0건, ui-verifier 통과
-- ✅ /pr-review: reviewer 반드시 수정 0건, 권장 5 + 무시 가능 1 반영 (96984b5 Error→FAILED·AC8 팀 공유·AC2 줄 수, 224f46c 분석 SQL을 AnalysisService로, 4c2c2f6 LLM_502 면접 전용 문구 + spec AC4·결정로그)
-- ⏳ PR #262 CI 실행 중, Codex 리뷰 요청 중 (head 4c2c2f6, `node scripts/codex-review.mjs 262 --request --wait --status`)
+- ✅ AC1~AC15 green, contract-checker 0건, ui-verifier 통과. /pr-review: reviewer 반드시 수정 0건, 권장 5 + 무시 가능 1 반영 (96984b5 Error→FAILED·AC8 팀 공유·AC2 줄 수, 224f46c 분석 SQL을 AnalysisService로, 4c2c2f6 LLM_502 면접 전용 문구 + spec AC4·결정로그)
+- ✅ Codex 1차 FINDINGS P1 1건(폴링 중 GET 실패 시 다시 시도 버튼 없음, AC14) → `InterviewTab.vue` 오류 블록에 `data-action="retry-poll"` 버튼, 테스트 `InterviewTab.spec.js` "AC14 PENDING 폴링 중 조회가 실패하면 …" (7937968)
+- ⏳ Codex 재리뷰 대기 (head 7937968, 재리뷰 2회째, `node scripts/codex-review.mjs 262 --request --wait --status`), CI 재실행 중
 
 ## 바로 다음 할 일
 
