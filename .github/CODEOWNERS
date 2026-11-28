@@ -146,6 +146,11 @@
 /frontend/src/views/**/Post*                 @JoonseobKim
 /frontend/src/components/community/          @JoonseobKim
 /frontend/src/router/routes/community.js     @JoonseobKim
+# 헤더 알림 기반 (NT-1, B). A는 NT-2에서 NotificationType 상수와 notify 호출만 더한다 (spec 3절)
+**/vibenote/notification/                    @JoonseobKim
+/backend/src/main/resources/mapper/notification/ @JoonseobKim
+/frontend/src/api/**/notifications.*         @JoonseobKim
+/frontend/src/components/notification/       @JoonseobKim
 # 랜딩 SC-01 (LP-1, B). 샘플 분석 데이터 sample.json만 A가 만든다 (SD-1, 결정로그 11-27)
 /frontend/src/views/landing/                 @JoonseobKim
 /frontend/src/views/landing/sample.json      @whans1996
