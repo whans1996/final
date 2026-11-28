@@ -36,31 +36,6 @@ class QuizTeamAccessApiTest extends QuizTestSupport {
                                         .formatted(questionId, selected)));
     }
 
-    private long insertTeam(long ownerId) {
-        jdbc.update(
-                "INSERT INTO teams (name, owner_id, invite_code) VALUES ('팀', ?, ?)",
-                ownerId,
-                "T0" + ownerId % 1_000_000);
-        long teamId = jdbc.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
-        addMember(teamId, ownerId, "OWNER");
-        return teamId;
-    }
-
-    private void addMember(long teamId, long userId, String role) {
-        jdbc.update(
-                "INSERT INTO team_members (team_id, user_id, role) VALUES (?, ?, ?)",
-                teamId,
-                userId,
-                role);
-    }
-
-    private void share(long teamId, long analysisId) {
-        jdbc.update(
-                "INSERT INTO team_analyses (team_id, analysis_id) VALUES (?, ?)",
-                teamId,
-                analysisId);
-    }
-
     /** 주인 U, 팀원 W, 팀 밖 X. U의 분석 A(퀴즈 1문항, 정답 0, 공개 개념)를 팀에 공유한다. */
     private record Setup(
             long u, long w, long x, long team, long analysis, long quiz, long q, long concept) {}

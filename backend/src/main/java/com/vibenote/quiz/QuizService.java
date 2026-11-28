@@ -14,8 +14,10 @@ import com.vibenote.quiz.domain.QuizAttempt;
 import com.vibenote.quiz.domain.QuizQuestion;
 import com.vibenote.quiz.dto.LastAttemptResponse;
 import com.vibenote.quiz.dto.QuizAnswerRequest;
+import com.vibenote.quiz.dto.QuizAttemptDetailResponse;
 import com.vibenote.quiz.dto.QuizAttemptRequest;
 import com.vibenote.quiz.dto.QuizAttemptResponse;
+import com.vibenote.quiz.dto.QuizAttemptSummaryResponse;
 import com.vibenote.quiz.dto.QuizQuestionResponse;
 import com.vibenote.quiz.dto.QuizResponse;
 import com.vibenote.quiz.dto.QuizResultItem;
@@ -36,9 +38,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
-/** 퀴즈 조회(F-14 AC5)와 풀이 채점·오답 복습 추가(AC6~AC8). LLM을 부르지 않는다. */
+/** 퀴즈 조회(F-14 AC5)와 풀이 채점·오답 복습 추가(AC6~AC8), 지난 풀이 조회(L-1b AC1~AC4). LLM을 부르지 않는다. */
 @Service
 public class QuizService {
+
+    /** 풀이 기록은 최근 이만큼만 준다 (L-1b AC1, 페이지 넘기기는 범위 밖). */
+    static final int ATTEMPT_HISTORY_LIMIT = 20;
 
     private final QuizMapper mapper;
     private final AnalysisService analysisService;
@@ -100,14 +105,7 @@ public class QuizService {
      */
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public QuizAttemptResponse submit(long userId, long quizId, QuizAttemptRequest request) {
-        Quiz quiz =
-                mapper.findActive(quizId)
-                        .filter(
-                                q ->
-                                        q.getOwnerId() == userId
-                                                || teamAnalysisAccess.isSharedWith(
-                                                        userId, q.getAnalysisId()))
-                        .orElseThrow(() -> new BusinessException(ErrorCode.QUIZ_404));
+        Quiz quiz = openQuiz(userId, quizId);
         List<QuizQuestion> questions = mapper.findQuestions(quiz.getId());
         Map<Long, Integer> selected = selections(request.answers(), questions);
 
@@ -127,15 +125,7 @@ public class QuizService {
         mapper.insertAnswers(attempt.getId(), answers);
         challengeProgressService.refresh(userId, ChallengeGoalType.QUIZ_COUNT, now.toLocalDate());
 
-        Map<Long, ConceptSummaryResponse> published =
-                conceptQueryService
-                        .findPublishedSummaries(
-                                questions.stream()
-                                        .map(QuizQuestion::conceptId)
-                                        .filter(Objects::nonNull)
-                                        .toList())
-                        .stream()
-                        .collect(Collectors.toMap(ConceptSummaryResponse::id, Function.identity()));
+        Map<Long, ConceptSummaryResponse> published = publishedConcepts(questions);
         List<Long> wrongConcepts = new ArrayList<>();
         List<QuizResultItem> results = new ArrayList<>(questions.size());
         for (int i = 0; i < questions.size(); i++) {
@@ -171,6 +161,82 @@ public class QuizService {
                 now.atZone(ClockConfig.ZONE).toOffsetDateTime(),
                 results,
                 reviewAdded);
+    }
+
+    /**
+     * 그 퀴즈의 내 풀이 최신순 최대 {@value #ATTEMPT_HISTORY_LIMIT}개 (L-1b AC1). 퀴즈를 열 수 없으면 QUIZ_404 (AC2).
+     */
+    @Transactional(readOnly = true)
+    public List<QuizAttemptSummaryResponse> getAttempts(long userId, long quizId) {
+        openQuiz(userId, quizId);
+        return mapper.findAttempts(quizId, userId, ATTEMPT_HISTORY_LIMIT).stream()
+                .map(QuizAttemptSummaryResponse::from)
+                .toList();
+    }
+
+    /**
+     * 내 지난 풀이 하나의 문항별 결과 (L-1b AC3). 선택지·위치는 저장된 순서이고 개념은 공개 카드만 준다. 퀴즈를 열 수 없으면 QUIZ_404, 풀이가 내 것이
+     * 아니거나 이 퀴즈의 것이 아니면 QUIZ_001 (AC4).
+     */
+    @Transactional(readOnly = true)
+    public QuizAttemptDetailResponse getAttempt(long userId, long quizId, long attemptId) {
+        openQuiz(userId, quizId);
+        QuizAttempt attempt =
+                mapper.findAttempt(quizId, userId, attemptId)
+                        .orElseThrow(() -> new BusinessException(ErrorCode.QUIZ_001));
+        Map<Long, AnswerRow> answers =
+                mapper.findAnswers(attemptId).stream()
+                        .collect(Collectors.toMap(AnswerRow::questionId, Function.identity()));
+        List<QuizQuestion> questions = mapper.findQuestions(quizId);
+        Map<Long, ConceptSummaryResponse> published = publishedConcepts(questions);
+        List<QuizResultItem> results = new ArrayList<>(questions.size());
+        for (int i = 0; i < questions.size(); i++) {
+            QuizQuestion q = questions.get(i);
+            AnswerRow answer = answers.get(q.id());
+            if (answer == null) {
+                continue;
+            }
+            results.add(
+                    new QuizResultItem(
+                            q.id(),
+                            i + 1,
+                            q.question(),
+                            List.of(q.choices()),
+                            answer.selectedIndex(),
+                            q.answerIndex(),
+                            answer.correct(),
+                            q.explanation(),
+                            q.conceptId() == null ? null : published.get(q.conceptId())));
+        }
+        return new QuizAttemptDetailResponse(
+                attempt.getId(),
+                attempt.getScore(),
+                attempt.getTotal(),
+                attempt.getCreatedAt().atZone(ClockConfig.ZONE).toOffsetDateTime(),
+                results);
+    }
+
+    /** 미삭제 분석의 퀴즈이고 내가 분석 주인이거나 공유받은 팀 멤버(F-20b AC5)면 그 퀴즈, 아니면 QUIZ_404. */
+    private Quiz openQuiz(long userId, long quizId) {
+        return mapper.findActive(quizId)
+                .filter(
+                        q ->
+                                q.getOwnerId() == userId
+                                        || teamAnalysisAccess.isSharedWith(
+                                                userId, q.getAnalysisId()))
+                .orElseThrow(() -> new BusinessException(ErrorCode.QUIZ_404));
+    }
+
+    /** 문항들의 공개 개념 카드 (개념 id → 요약). */
+    private Map<Long, ConceptSummaryResponse> publishedConcepts(List<QuizQuestion> questions) {
+        return conceptQueryService
+                .findPublishedSummaries(
+                        questions.stream()
+                                .map(QuizQuestion::conceptId)
+                                .filter(Objects::nonNull)
+                                .toList())
+                .stream()
+                .collect(Collectors.toMap(ConceptSummaryResponse::id, Function.identity()));
     }
 
     /** 문항 id → 고른 위치. 누락·중복·다른 퀴즈의 문항이 있으면 QUIZ_400. */

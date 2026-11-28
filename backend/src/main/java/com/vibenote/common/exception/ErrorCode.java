@@ -105,6 +105,8 @@ public enum ErrorCode {
     QUIZ_409(HttpStatus.CONFLICT, "퀴즈를 다시 만들 수 없는 상태입니다. 화면을 새로 고쳐 주세요."),
     /** 분석당 재생성 횟수(quiz.max-regenerations) 소진 (L-1a AC7). {limit}은 서비스가 채운다. */
     QUIZ_429(HttpStatus.TOO_MANY_REQUESTS, "이 분석의 퀴즈 다시 만들기 횟수({limit}회)를 모두 썼습니다."),
+    /** 퀴즈는 열 수 있지만 풀이가 남의 것이거나 다른 퀴즈의 것이거나 없음 (L-1b AC4). */
+    QUIZ_001(HttpStatus.NOT_FOUND, "풀이 기록을 찾을 수 없습니다."),
 
     // ── INTERVIEW (A I-1a) ──
     /** 분석이 DONE이 아니거나 면접 질문을 이미 만드는 중(PENDING) (I-1a AC5·AC7·AC8). */

@@ -3440,6 +3440,44 @@
         "required" : [ "questionId", "selectedIndex" ],
         "type" : "object"
       },
+      "QuizAttemptDetailResponse" : {
+        "description" : "지난 풀이 상세",
+        "properties" : {
+          "attemptId" : {
+            "description" : "풀이 ID",
+            "example" : 16,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "createdAt" : {
+            "description" : "제출 시각",
+            "example" : "2026-11-29T17:42:05+09:00",
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "results" : {
+            "description" : "문항별 결과 (no 순서)",
+            "items" : {
+              "$ref" : "#/components/schemas/QuizResultItem"
+            },
+            "type" : "array"
+          },
+          "score" : {
+            "description" : "맞힌 문항 수",
+            "example" : 3,
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "total" : {
+            "description" : "문항 수",
+            "example" : 6,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "attemptId", "createdAt", "results", "score", "total" ],
+        "type" : "object"
+      },
       "QuizAttemptRequest" : {
         "description" : "풀이 제출",
         "properties" : {
@@ -3498,6 +3536,37 @@
           }
         },
         "required" : [ "attemptId", "createdAt", "results", "reviewAdded", "score", "total" ],
+        "type" : "object"
+      },
+      "QuizAttemptSummaryResponse" : {
+        "description" : "내 풀이 한 회차 요약",
+        "properties" : {
+          "attemptId" : {
+            "description" : "풀이 ID",
+            "example" : 31,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "createdAt" : {
+            "description" : "제출 시각",
+            "example" : "2026-11-30T21:14:03+09:00",
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "score" : {
+            "description" : "맞힌 문항 수",
+            "example" : 5,
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "total" : {
+            "description" : "문항 수",
+            "example" : 6,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "attemptId", "createdAt", "score", "total" ],
         "type" : "object"
       },
       "QuizQuestionResponse" : {
@@ -4629,6 +4698,115 @@
           }
         },
         "required" : [ "password" ],
+        "type" : "object"
+      },
+      "WrongNoteGroupResponse" : {
+        "description" : "오답 노트의 개념 묶음",
+        "properties" : {
+          "concept" : {
+            "$ref" : "#/components/schemas/ConceptSummaryResponse",
+            "description" : "관련 개념 카드. 개념이 없거나 공개되지 않은 문항 묶음이면 null"
+          },
+          "items" : {
+            "description" : "문항 (lastAnsweredAt 내림차순 → questionId 오름차순)",
+            "items" : {
+              "$ref" : "#/components/schemas/WrongNoteItemResponse"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "items" ],
+        "type" : "object"
+      },
+      "WrongNoteItemResponse" : {
+        "description" : "마지막 답이 틀린 문항",
+        "properties" : {
+          "analysisId" : {
+            "description" : "분석 ID",
+            "example" : 7,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "analysisTitle" : {
+            "description" : "분석 제목 (없으면 프로젝트 이름, 둘 다 없으면 \"제목 없는 분석\")",
+            "example" : "JWT 기반 인증",
+            "type" : "string"
+          },
+          "answerIndex" : {
+            "description" : "정답 위치",
+            "example" : 1,
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "choices" : {
+            "description" : "선택지 4개",
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "explanation" : {
+            "description" : "해설",
+            "example" : "jwtService.getSubFromToken()으로 사용자 id를 꺼내 SecurityContextHolder에 넣습니다.",
+            "type" : "string"
+          },
+          "lastAnsweredAt" : {
+            "description" : "마지막으로 답한 시각",
+            "example" : "2026-11-30T21:14:03+09:00",
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "question" : {
+            "description" : "질문",
+            "example" : "JwtTokenFilter가 Authorization 헤더에서 토큰을 꺼낸 뒤 하는 일로 알맞은 것은?",
+            "type" : "string"
+          },
+          "questionId" : {
+            "description" : "문항 ID",
+            "example" : 22,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "quizId" : {
+            "description" : "퀴즈 ID",
+            "example" : 3,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "selectedIndex" : {
+            "description" : "마지막으로 고른 위치",
+            "example" : 3,
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "wrongCount" : {
+            "description" : "내가 이 문항을 틀린 횟수",
+            "example" : 2,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "analysisId", "analysisTitle", "answerIndex", "choices", "explanation", "lastAnsweredAt", "question", "questionId", "quizId", "selectedIndex", "wrongCount" ],
+        "type" : "object"
+      },
+      "WrongNoteResponse" : {
+        "description" : "오답 노트",
+        "properties" : {
+          "groups" : {
+            "description" : "개념별 묶음. 공개 개념 묶음은 문항 수 내림차순 → 가장 최근 lastAnsweredAt 내림차순 → 개념 id 오름차순, 개념이 없거나 공개되지 않은 문항 묶음(concept null)은 맨 뒤. 없으면 []",
+            "items" : {
+              "$ref" : "#/components/schemas/WrongNoteGroupResponse"
+            },
+            "type" : "array"
+          },
+          "totalCount" : {
+            "description" : "마지막 답이 틀린 문항 전체 수 (groups에는 최근 200개까지만 담는다)",
+            "example" : 3,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "groups", "totalCount" ],
         "type" : "object"
       }
     },
@@ -8471,6 +8649,56 @@
       }
     },
     "/api/quizzes/{quizId}/attempts" : {
+      "get" : {
+        "description" : "그 퀴즈의 요청자 풀이만 최신순(createdAt 내림차순, 같으면 id 내림차순)으로 최근 20개. 없으면 []. 분석 주인과 그 분석을 공유받은 팀 멤버가 자기 풀이를 볼 수 있다 (L-1b).",
+        "operationId" : "getAttempts",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "quizId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/QuizAttemptSummaryResponse"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "조회 성공"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "토큰 없음·만료 (AUTH_401)"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "없는 퀴즈, 삭제된 분석의 퀴즈, 내 분석도 내가 멤버인 팀에 공유된 분석도 아닌 퀴즈 (QUIZ_404)"
+          }
+        },
+        "summary" : "내 풀이 기록 목록",
+        "tags" : [ "퀴즈" ]
+      },
       "post" : {
         "description" : "문항마다 한 번씩 답하면 채점해 저장하고, 틀린 문항의 공개 개념을 내일 복습 계획에 넣는다. 같은 퀴즈를 여러 번 풀 수 있다. 분석 주인과 그 분석을 공유받은 팀 멤버(F-20b)가 낼 수 있고, 풀이·복습 계획은 요청자의 것이다.",
         "operationId" : "submit",
@@ -8536,6 +8764,63 @@
           }
         },
         "summary" : "퀴즈 풀이 제출·채점",
+        "tags" : [ "퀴즈" ]
+      }
+    },
+    "/api/quizzes/{quizId}/attempts/{attemptId}" : {
+      "get" : {
+        "description" : "지난 풀이 하나의 문항별 내 답·정답·해설·관련 공개 카드. 선택지·위치는 저장된 순서 기준이다 (L-1b).",
+        "operationId" : "getAttempt",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "quizId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "path",
+          "name" : "attemptId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/QuizAttemptDetailResponse"
+                }
+              }
+            },
+            "description" : "조회 성공"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "토큰 없음·만료 (AUTH_401)"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "퀴즈가 없거나 열 수 없음 (QUIZ_404), 풀이가 남의 것·다른 퀴즈의 것이거나 없음 (QUIZ_001)"
+          }
+        },
+        "summary" : "내 풀이 상세",
         "tags" : [ "퀴즈" ]
       }
     },
@@ -10077,6 +10362,36 @@
         "tags" : [ "팀" ]
       }
     },
+    "/api/users/me/wrong-notes" : {
+      "get" : {
+        "description" : "지금 열 수 있는 분석(내 미삭제 분석·내가 멤버인 팀에 공유된 미삭제 분석)에서 내 마지막 답이 틀린 문항을 개념별로 묶는다. 최근에 답한 200개까지 담고 totalCount는 전체 수다 (L-1b).",
+        "operationId" : "getWrongNotes",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WrongNoteResponse"
+                }
+              }
+            },
+            "description" : "조회 성공"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "토큰 없음·만료 (AUTH_401)"
+          }
+        },
+        "summary" : "내 오답 노트",
+        "tags" : [ "퀴즈" ]
+      }
+    },
     "/api/users/{id}" : {
       "get" : {
         "description" : "로그인 없이 볼 수 있다. email·role은 주지 않는다.",
@@ -10690,11 +11005,11 @@
     "description" : "공개 개념 카드 목록·검색·상세·리뷰·찜",
     "name" : "개념 카드"
   }, {
-    "description" : "분석한 코드로 만든 객관식 퀴즈 조회, 다시 만들기, 풀이 제출·채점",
-    "name" : "퀴즈"
-  }, {
     "description" : "학습 챌린지 목록·상세, 참여·취소, 참여한 챌린지와 달성도",
     "name" : "챌린지"
+  }, {
+    "description" : "분석한 코드로 만든 객관식 퀴즈 조회, 다시 만들기, 풀이 제출·채점, 풀이 기록, 오답 노트",
+    "name" : "퀴즈"
   }, {
     "description" : "퀴즈 오답·내 코드·찜한 분야·수준으로 고른 맞춤 개념 카드와 AI 추천 이유",
     "name" : "추천"

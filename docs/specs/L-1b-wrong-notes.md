@@ -24,7 +24,7 @@
 | AC1 | 내가 같은 퀴즈를 3번 풀었고, 같은 공유 분석을 팀원도 풀었을 때 | `GET /api/quizzes/{quizId}/attempts` | 200, **내 풀이만** 최신순(`createdAt` 내림차순, 같으면 id 내림차순)으로 받는다. 각 항목은 `attemptId·score·total·createdAt`. 21번 넘게 풀었으면 최근 20개만 받는다 |
 | AC2 | 퀴즈를 열 수 없을 때 (남의 비공유 분석, 삭제한 분석, 공유가 끊긴 팀 분석, 없는 quizId) | 풀이 목록·풀이 상세를 조회하면 | 404 `QUIZ_404`. 공유받은 팀원은 자기 풀이를 조회할 수 있다 |
 | AC3 | 내 풀이가 있을 때 | `GET /api/quizzes/{quizId}/attempts/{attemptId}` | 200, `attemptId·score·total·createdAt`과 `results`(no 순서. 문항마다 `questionId·no·question·choices·selectedIndex·answerIndex·correct·explanation·concept`)를 받는다. 선택지·위치는 **저장된 순서** 기준이다. `concept`은 공개(PUBLISHED) 카드만, 아니면 null (F-14 제출 응답과 같은 모양) |
-| AC4 | 퀴즈는 열 수 있지만 attemptId가 남의 풀이거나 다른 퀴즈의 풀이거나 없을 때 | 풀이 상세를 조회하면 | 404 `QUIZ_ATTEMPT_404` |
+| AC4 | 퀴즈는 열 수 있지만 attemptId가 남의 풀이거나 다른 퀴즈의 풀이거나 없을 때 | 풀이 상세를 조회하면 | 404 `QUIZ_001` |
 | AC5 | 한 문항을 1회차 틀리고(답 2) 2회차 틀리고(답 3), 다른 문항을 1회차 틀리고 2회차 맞혔을 때 | `GET /api/users/me/wrong-notes` | 첫 문항만 들어 있고 `selectedIndex`는 **마지막 답**(3), `wrongCount`는 2, `lastAnsweredAt`은 2회차 제출 시각이다. 두 번째 문항(마지막 답이 정답)은 없다. 한 번도 틀리지 않은 문항도 없다 |
 | AC6 | 오답 문항이 개념 A(2문항)·개념 B(1문항)·개념 없음·비공개 개념에 걸쳐 있을 때 | 오답 노트를 조회하면 | `groups`는 개념별 묶음이다. 공개 개념 묶음은 문항 수 내림차순 → 그 묶음의 가장 최근 `lastAnsweredAt` 내림차순 → 개념 id 오름차순, **개념이 없거나 공개되지 않은 문항은 `concept: null` 한 묶음으로 맨 뒤**. 묶음 안 항목은 `lastAnsweredAt` 내림차순 → `questionId` 오름차순. 항목마다 `analysisId·analysisTitle·quizId`가 있고 `analysisTitle`은 분석 제목 → 프로젝트 이름 → "제목 없는 분석" 순 |
 | AC7 | 오답 문항이 내 분석·공유받은 팀 분석·삭제한 내 분석·공유가 끊긴 팀 분석에 있을 때 | 오답 노트를 조회하면 | **지금 열 수 있는 분석**(내 분석·공유받은 분석)의 문항만 보인다. 삭제·공유 해제로 빠진 문항의 풀이 기록은 DB에 그대로 남는다(F-19). 다른 사람의 풀이는 내 노트에 영향을 주지 않는다 |
@@ -92,7 +92,7 @@
 |---|---|---|
 | 401 | AUTH_401 | 비로그인 |
 | 404 | QUIZ_404 | 퀴즈가 없거나 열 수 없음 |
-| 404 | QUIZ_ATTEMPT_404 | 새 코드. "풀이 기록을 찾을 수 없습니다." 남의 풀이·다른 퀴즈의 풀이·없는 id (AC4) |
+| 404 | QUIZ_001 | 새 코드. "풀이 기록을 찾을 수 없습니다." 남의 풀이·다른 퀴즈의 풀이·없는 id (AC4) |
 
 ### `GET /api/users/me/wrong-notes`
 
@@ -198,17 +198,18 @@
 ## 9. 결정 필요
 
 - 없음 (11-28 사용자 선택 4건 반영: 마지막 답이 틀린 문항, 열 수 있는 분석만, FE에서 섞고 저장 위치로 제출, 새 화면 + 링크만)
+- 구현 중 정정 (11-28): 새 에러 코드 이름 `QUIZ_ATTEMPT_404` → **`QUIZ_001`** (에러 코드 형식 규칙 `<도메인>_<상태 or 번호>`, `ErrorCodeTest`. 결정로그 11-28)
 
 ## 10. 구현 체크리스트
 
 `/implement`가 진행하며 체크한다.
 
-- [ ] 브랜치 `feature/L-1b-wrong-notes`
-- [ ] Flyway 마이그레이션 — 없음
-- [ ] AC별 실패 테스트 작성 (red 확인)
-- [ ] BE 구현 (green): `QuizController` GET 2개, `WrongNoteController`(또는 `QuizController`) `/api/users/me/wrong-notes`, `ErrorCode.QUIZ_ATTEMPT_404`
-- [ ] FE 구현 (green)
-- [ ] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
+- [x] 브랜치 `feature/L-1b-wrong-notes`
+- [x] Flyway 마이그레이션 — 없음
+- [x] AC별 실패 테스트 작성 (red 확인)
+- [x] BE 구현 (green): `QuizController` GET 2개, `WrongNoteController`(또는 `QuizController`) `/api/users/me/wrong-notes`, `ErrorCode.QUIZ_001`
+- [x] FE 구현 (green)
+- [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
 - [ ] contract-checker 통과
 - [ ] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일)
 - [ ] reviewer 지적 사항 반영
