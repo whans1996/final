@@ -98,6 +98,8 @@ erDiagram
     project_versions |o--o{ analyses : "커밋별 분석 (CASCADE)"
     analyses ||--o{ analysis_files : "인덱스 파일 (CASCADE)"
     analyses ||--o{ analysis_flows : "실행 흐름 (CASCADE)"
+    analyses ||--o| analysis_interviews : "면접 질문 (CASCADE, I-1a)"
+    analysis_interviews ||--o{ interview_questions : "질문 (CASCADE)"
     analyses ||--o{ analysis_concepts : "개념 연결"
     concepts ||--o{ analysis_concepts : "개념 연결"
     analysis_files |o--o{ analysis_concepts : "코드 위치 (SET NULL)"
@@ -179,6 +181,24 @@ erDiagram
         text summary
         json steps
         varchar error_code
+    }
+    analysis_interviews {
+        bigint id PK
+        bigint analysis_id FK "UK, 분석당 1개"
+        varchar status "PENDING|DONE|FAILED (행 없음 = NONE)"
+        varchar error_code
+        int regenerations "DONE 다시 만들기 사용 수"
+        datetime generated_at
+    }
+    interview_questions {
+        bigint id PK
+        bigint interview_id FK
+        int no "(interview_id, no) UK"
+        varchar category "STRUCTURE|TECH_CHOICE|FLOW|LIMITATION"
+        varchar question
+        json key_points
+        json evidence "fileId·path·startLine·endLine"
+        json concept_ids
     }
     concepts {
         bigint id PK
@@ -343,6 +363,7 @@ erDiagram
 | project_versions | 프로젝트 버전. 번호는 프로젝트 안에서 최대 + 1(UNIQUE `(project_id, number)`), 저장소 분석은 FETCHING에서 기본 브랜치 최신 커밋으로 찾거나 만들고(UNIQUE `(project_id, commit_sha)`, 같은 커밋을 다른 수준으로 분석하면 같은 버전), 커밋 정보가 없는 버전(ZIP·커밋 조회 실패·V15 백필)은 `commit_sha` NULL로 여럿 있을 수 있다 | projects 1:N | P-1a |
 | analysis_files | 저장소 인덱스 전체(코드·test·migration·doc, 최대 2,000개, 키 마스킹된 content). 그중 설명 대상으로 고른 최대 30개만 `selected = TRUE`(중요도 `importance`, V12)이고 설명·개념·퀴즈·흐름·구조·파일 API는 이 행만 본다. 한 줄 역할(role, V4)과 설명(summary) | analyses 1:N | F-05a, F-06, F-26a |
 | analysis_flows | API 실행 흐름(endpoint `"{METHOD} {path}"`, 분석 안에서 UNIQUE, 상태 PENDING·DONE·FAILED, 요약·단계 JSON 캐시·실패 코드, V5) | analyses 1:N | F-07 |
+| analysis_interviews, interview_questions | 분석 하나의 면접 예상 질문(V17). 생성 상태(PENDING·DONE·FAILED, 행이 없으면 NONE)·실패 코드·DONE 다시 만들기 사용 수(분석당 2회)·마지막 생성 시각을 분석당 1행에 두고, 질문(5~12개, 번호·범주·질문·핵심 포인트·근거 `{fileId, path, startLine, endLine}`·관련 카드 id, 모두 JSON 열)은 별도 테이블이다(I-1b가 질문 id에 답을 붙인다). FAILED는 질문이 없고, 다시 만들기가 성공하면 질문을 통째로 바꾼다. 분석 삭제·재실행 때 서비스가 지우고(`AnalysisDeletedEvent`), 관련 카드는 조회 때 지금 숨김이 아닌 카드만 보인다 | analyses 1:0..1, analysis_interviews 1:N | I-1a |
 | concepts | 개념 카드 (상태 DRAFT/PUBLISHED/HIDDEN, 출처 SEED/AI/ADMIN — ADMIN은 관리자가 직접 만든 카드, V7). AI 초안은 분석의 EXTRACTING 단계가 `DRAFT·AI`로 만들고 예제 코드·출처는 비워 둔다(관리자 검수 F-13에서 채움). `name` UNIQUE라 같은 이름이면 기존 카드를 쓴다. 관리자는 DRAFT만 삭제할 수 있고(연결은 FK CASCADE), 시드 재적용(`R__seed_concepts.sql`)은 내용만 덮어쓰고 상태·`wish_count`·`avg_rating`은 유지한다. 카테고리는 12종(`java·spring·web·security·mybatis·vue·database·javascript·tooling·typescript·react·cs`, K-1. 컬럼은 VARCHAR(50) 그대로이고 애플리케이션이 검사). 수준별 한 줄 요약 `summary_beginner/junior/senior`(VARCHAR(300))와 수준별 본문 `body_beginner/junior/senior`(TEXT)는 모두 NULL 가능(V16): AI 초안은 요약 3개만, 시드·관리자는 둘 다 채울 수 있다. 상세 API는 언제나 3개 `levels`로 준다 | - | F-08~13, K-1 |
 | analysis_concepts | 분석 ↔ 개념 연결과 코드 위치(파일 `file_id`, 줄 `line_hint` 예: L12-L30, 맥락 `context_note`). EXTRACTING 단계(F-08)가 채우고, PK `(analysis_id, concept_id)`라 한 분석에서 개념 하나는 위치 하나다. 분석당 최대 15개 | analyses N:M concepts | F-08, F-10 |
 | concept_reviews | 카드 리뷰(별점 1~5 CHECK, 내용). 회원당 카드 하나에 리뷰 1개(UNIQUE `(concept_id, user_id)`, V2). 쓰고 고치고 지울 때마다 같은 트랜잭션에서 카드 행을 잠그고 `concepts.avg_rating`을 다시 계산한다. 작성자 FK는 RESTRICT(V2)라 탈퇴해도 리뷰가 남는다 | concepts 1:N, users 1:N | F-11 |
@@ -359,7 +380,7 @@ erDiagram
 | team_members | 팀 멤버 PK `(team_id, user_id)`, 역할 `OWNER`·`MEMBER`(역할의 정본, 팀당 OWNER 1명·위임 없음), 가입 시각. 팀당 10명·1인 5팀은 서비스가 `teams` 행 잠금 후 센다. 팀 삭제·회원 탈퇴 시 지워진다(FK CASCADE·탈퇴 정리, V8) | teams N:M users | F-20a |
 | team_analyses | 팀 공유 분석 PK `(team_id, analysis_id)`, 공유 시각. 공유한 사람 = 분석 주인(`analyses.user_id`). 팀당 미삭제 10개(서비스가 `teams` 행 잠금 후 셈), 같은 분석을 여러 팀에 공유 가능. 공유받은 팀 멤버는 그 퀴즈만 풀 수 있다. soft delete된 분석은 지우지 않고 조회·권한에서 거른다. 팀 삭제·분석 삭제 시 CASCADE, 공유자가 팀을 떠나거나 탈퇴하면 서비스가 지운다 (V9) | teams N:M analyses | F-20b |
 | team_challenges | 팀 기간 목표: 공유 분석 하나 + 기간(`start_date`~`end_date`, Asia/Seoul 날짜·양끝 포함·최대 30일) + 목표 정답률 `target_rate`(1~100), 만든 팀장 `created_by`. 달성은 저장하지 않고 조회 때 지금 멤버의 기간 안 최근 풀이로 계산한다. 분석마다 끝나지 않은 목표 1개·팀당 20개(서비스가 `teams` 행 잠금 후 셈). `(team_id, analysis_id)` → `team_analyses` 복합 FK CASCADE라 공유 해제·공유자 탈퇴·팀 삭제 때 함께 지워진다. soft delete된 분석의 목표는 조회·상한에서 거른다 (V10) | team_analyses 1:N | F-20c |
-| llm_usage_logs | LLM 호출 사용량(단계 `stage`, 공급자 `provider`(V13, 분석 상세의 간이 모드 판단), 모델, 입력·출력 토큰, 지연 시간, 성공 여부·오류). 분석이 지워져도 기록을 남기려고 `analysis_id`에는 FK를 걸지 않았고, 회원 FK는 `SET NULL`이다 | users 0..1:N | NF-07 |
+| llm_usage_logs | LLM 호출 사용량(단계 `stage`: overview·file·flow·concept·quiz·recommend·interview(I-1a), 공급자 `provider`(V13, 분석 상세의 간이 모드 판단), 모델, 입력·출력 토큰, 지연 시간, 성공 여부·오류). 분석이 지워져도 기록을 남기려고 `analysis_id`에는 FK를 걸지 않았고, 회원 FK는 `SET NULL`이다 | users 0..1:N | NF-07 |
 
 ## 마이그레이션 이력
 
@@ -381,6 +402,7 @@ erDiagram
 | V14 | `analyses.quiz_status`·`quiz_regenerations` (기존 행: 퀴즈가 있으면 READY, 없고 DONE이면 FAILED, 나머지 NULL) | L-1a |
 | V15 | `projects`, `project_versions`, `analyses.project_id`·`project_version_id`. 백필: 저장소 분석은 (회원, 주소)마다 프로젝트 하나, ZIP 분석은 분석마다 프로젝트 하나, 삭제하지 않은 분석마다 커밋 정보 없는 버전(요청 순 번호), 삭제한 분석은 프로젝트에만 붙음 | P-1a |
 | V16 | `concepts.summary_beginner`·`summary_junior`·`summary_senior`(VARCHAR(300) NULL), `body_beginner`·`body_junior`·`body_senior`(TEXT NULL). 기존 카드는 모두 NULL | K-1 |
+| V17 | `analysis_interviews`(UNIQUE `analysis_id`), `interview_questions`(UNIQUE `(interview_id, no)`) | I-1a |
 | R | `R__seed_concepts.sql` 시드 카드 (반복 적용, 내용만 덮어씀, DS-05) | F-09 |
 
 ## 정규화 메모
