@@ -106,6 +106,12 @@ public enum ErrorCode {
     /** 분석당 재생성 횟수(quiz.max-regenerations) 소진 (L-1a AC7). {limit}은 서비스가 채운다. */
     QUIZ_429(HttpStatus.TOO_MANY_REQUESTS, "이 분석의 퀴즈 다시 만들기 횟수({limit}회)를 모두 썼습니다."),
 
+    // ── INTERVIEW (A I-1a) ──
+    /** 분석이 DONE이 아니거나 면접 질문을 이미 만드는 중(PENDING) (I-1a AC5·AC7·AC8). */
+    INTERVIEW_409(HttpStatus.CONFLICT, "지금은 면접 질문을 만들 수 없습니다. 분석이 끝났는지, 이미 만드는 중인지 확인해 주세요."),
+    /** DONE 다시 만들기 횟수(interview.max-regenerations) 소진 (I-1a AC6). {limit}은 서비스가 채운다. */
+    INTERVIEW_429(HttpStatus.TOO_MANY_REQUESTS, "이 분석의 면접 질문 다시 만들기 횟수({limit}회)를 모두 썼습니다."),
+
     // ── REVIEW_PLAN (A F-15) ──
     /** 없는 계획, 다른 회원의 계획, PUBLISHED가 아닌 카드의 계획 (F-15 AC7). */
     REVIEW_PLAN_404(HttpStatus.NOT_FOUND, "복습 계획을 찾을 수 없습니다."),

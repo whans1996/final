@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.vibenote.interview.InterviewMapper">
+
+    <resultMap id="question" type="com.vibenote.interview.InterviewQuestionRow" autoMapping="true">
+        <result column="key_points" property="keyPoints"
+                javaType="[Ljava.lang.String;"
+                typeHandler="com.vibenote.common.mybatis.JsonTypeHandler"/>
+        <result column="evidence" property="evidence"
+                javaType="[Lcom.vibenote.interview.InterviewEvidence;"
+                typeHandler="com.vibenote.common.mybatis.JsonTypeHandler"/>
+        <result column="concept_ids" property="conceptIds"
+                javaType="[Ljava.lang.Long;"
+                typeHandler="com.vibenote.common.mybatis.JsonTypeHandler"/>
+    </resultMap>
+
+    <sql id="interviewColumns">
+        id, analysis_id, status, error_code, regenerations, generated_at, created_at, updated_at
+    </sql>
+
+    <!-- I-1a AC7. 같은 분석의 동시 요청을 차례로 처리하려고 analyses 행을 잠근다 -->
+    <select id="lockOwnedAnalysis" resultMap="com.vibenote.analysis.AnalysisMapper.analysisDetail">
+        SELECT id, user_id, source_type, source_url, project_name, title, level, status, progress, is_public,
+               error_code, error_message, created_at, updated_at, overview
+        FROM analyses
+        WHERE id = #{id} AND user_id = #{userId} AND deleted_at IS NULL
+        FOR UPDATE
+    </select>
+
+    <select id="findAnalysis" resultMap="com.vibenote.analysis.AnalysisMapper.analysisDetail">
+        SELECT id, user_id, source_type, source_url, project_name, title, level, status, progress, is_public,
+               error_code, error_message, created_at, updated_at, overview
+        FROM analyses
+        WHERE id = #{id}
+    </select>
+
+    <select id="findFiles" resultType="com.vibenote.analysis.domain.AnalysisFile">
+        SELECT id, analysis_id, path, layer, selected, importance, role, content
+        FROM analysis_files WHERE analysis_id = #{analysisId} AND selected = TRUE ORDER BY id
+    </select>
+
+    <select id="findByAnalysis" resultType="com.vibenote.interview.AnalysisInterview">
+        SELECT <include refid="interviewColumns"/> FROM analysis_interviews WHERE analysis_id = #{analysisId}
+    </select>
+
+    <select id="findById" resultType="com.vibenote.interview.AnalysisInterview">
+        SELECT <include refid="interviewColumns"/> FROM analysis_interviews WHERE id = #{id}
+    </select>
+
+    <!-- created_at·updated_at은 서비스 Clock 값(Asia/Seoul)으로 넣는다 (#17) -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO analysis_interviews (analysis_id, status, created_at, updated_at)
+        VALUES (#{analysisId}, #{status}, #{createdAt}, #{updatedAt})
+    </insert>
+
+    <update id="resetFailed">
+        UPDATE analysis_interviews
+        SET status = 'PENDING', error_code = NULL, updated_at = #{now}
+        WHERE id = #{id} AND status = 'FAILED'
+    </update>
+
+    <update id="startRegeneration">
+        UPDATE analysis_interviews
+        SET status = 'PENDING', regenerations = regenerations + 1, error_code = NULL, updated_at = #{now}
+        WHERE id = #{id} AND status = 'DONE' AND regenerations &lt; #{max}
+    </update>
+
+    <update id="complete">
+        UPDATE analysis_interviews
+        SET status = 'DONE', error_code = NULL, generated_at = #{now}, updated_at = #{now}
+        WHERE id = #{id} AND status = 'PENDING'
+    </update>
+
+    <update id="markFailed">
+        UPDATE analysis_interviews
+        SET status = 'FAILED', error_code = #{errorCode}, updated_at = #{now}
+        WHERE id = #{id} AND status = 'PENDING'
+    </update>
+
+    <delete id="deleteQuestionsOfPending">
+        DELETE q FROM interview_questions q
+        JOIN analysis_interviews i ON i.id = q.interview_id
+        WHERE i.status = 'PENDING'
+    </delete>
+
+    <update id="failAllPending">
+        UPDATE analysis_interviews
+        SET status = 'FAILED', error_code = #{errorCode}, updated_at = #{now}
+        WHERE status = 'PENDING'
+    </update>
+
+    <delete id="deleteQuestions">
+        DELETE FROM interview_questions WHERE interview_id = #{interviewId}
+    </delete>
+
+    <insert id="insertQuestions">
+        INSERT INTO interview_questions (interview_id, no, category, question, key_points, evidence, concept_ids) VALUES
+        <foreach collection="questions" item="q" separator=",">
+            (#{interviewId}, #{q.no}, #{q.category}, #{q.question},
+             #{q.keyPoints, javaType=java.util.List, typeHandler=com.vibenote.common.mybatis.JsonTypeHandler},
+             #{q.evidence, javaType=java.util.List, typeHandler=com.vibenote.common.mybatis.JsonTypeHandler},
+             #{q.conceptIds, javaType=java.util.List, typeHandler=com.vibenote.common.mybatis.JsonTypeHandler})
+        </foreach>
+    </insert>
+
+    <select id="findQuestions" resultMap="question">
+        SELECT id, interview_id, no, category, question, key_points, evidence, concept_ids
+        FROM interview_questions WHERE interview_id = #{interviewId}
+        ORDER BY no
+    </select>
+
+    <delete id="deleteByAnalysis">
+        DELETE FROM analysis_interviews WHERE analysis_id = #{analysisId}
+    </delete>
+</mapper>

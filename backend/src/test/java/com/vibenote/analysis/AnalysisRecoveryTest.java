@@ -112,6 +112,41 @@ class AnalysisRecoveryTest extends AnalysisTestSupport {
         assertThat(analysisRow(ready).get("quiz_status")).isEqualTo("READY");
     }
 
+    /** I-1a AC10: 생성 중(PENDING)이던 면접 질문을 FAILED·ANALYSIS_500으로 바꾸고 이전 질문을 지운다. DONE은 그대로다. */
+    @Test
+    void I1a_AC10_PENDING_면접_질문을_FAILED_ANALYSIS_500으로_바꾼다() {
+        long userId = createUser("i1aac10", "JUNIOR");
+        long pending = insertAnalysis(userId, "DONE", null, false, "pending");
+        long done = insertAnalysis(userId, "DONE", null, false, "done");
+        jdbc.update(
+                "INSERT INTO analysis_interviews (analysis_id, status, regenerations, created_at,"
+                        + " updated_at) VALUES (?, 'PENDING', 1, NOW(), NOW()), (?, 'DONE', 0,"
+                        + " NOW(), NOW())",
+                pending,
+                done);
+        for (long analysisId : List.of(pending, done)) {
+            jdbc.update(
+                    "INSERT INTO interview_questions (interview_id, no, category, question,"
+                            + " key_points, evidence, concept_ids) SELECT id, 1, 'FLOW', 'q',"
+                            + " '[]', '[]', '[]' FROM analysis_interviews WHERE analysis_id = ?",
+                    analysisId);
+        }
+
+        recovery.recover();
+
+        String sql =
+                "SELECT i.status, i.error_code, (SELECT COUNT(*) FROM interview_questions q WHERE"
+                        + " q.interview_id = i.id) AS questions FROM analysis_interviews i WHERE"
+                        + " i.analysis_id = ?";
+        Map<String, Object> failed = jdbc.queryForMap(sql, pending);
+        assertThat(failed.get("status")).isEqualTo("FAILED");
+        assertThat(failed.get("error_code")).isEqualTo("ANALYSIS_500");
+        assertThat(((Number) failed.get("questions")).intValue()).isZero();
+        Map<String, Object> kept = jdbc.queryForMap(sql, done);
+        assertThat(kept.get("status")).isEqualTo("DONE");
+        assertThat(((Number) kept.get("questions")).intValue()).isEqualTo(1);
+    }
+
     /**
      * ApplicationReadyEvent는 웹 서버가 요청을 받기 시작한 뒤에 오므로, 그 사이에 들어온 새 분석까지 "재시작"으로 FAILED 처리하고 임시 ZIP을
      * 지울 수 있다. 모든 싱글톤이 만들어진 직후(웹 서버 시작 전)에 실행되어야 한다.
