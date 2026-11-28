@@ -8,13 +8,13 @@ import com.vibenote.analysis.explain.AnalysisOverview;
 import com.vibenote.analysis.explain.AnalysisOverview.LayerRole;
 import com.vibenote.analysis.explain.AnalysisOverview.ReadingStep;
 import com.vibenote.analysis.explain.ApiEndpoint;
-import com.vibenote.analysis.explain.ExplainPrompts;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -138,10 +138,30 @@ class InterviewPromptsTest {
                         null, List.of(file(1, "A.java", "service", 1, content)), List.of(), PROPS);
 
         assertThat(input.files()).contains("// ... (이하 ");
-        String cut = ExplainPrompts.numberLines(content).substring(0, 4000);
-        int visible = (int) cut.lines().filter(l -> l.matches("^\\d+: .*")).count();
-        assertThat(input.codeLines()).containsEntry(1, visible);
-        assertThat(visible).isBetween(38, 40);
+        // 1~9줄 102자(줄바꿈 포함) × 9 = 918, 10~38줄 103자 × 29 = 2,987 → 39줄은 3,905자부터라 "39: "가 보인다
+        assertThat(input.codeLines()).containsEntry(1, 39);
+    }
+
+    @Test
+    void AC2_줄_번호_접두사_도중에_잘리면_그_줄은_넣은_줄_수에서_뺀다() {
+        // "1: aaa\n2: bbb\n3: ccc": 14자까지가 "2: bbb\n", 15자 "3", 16자 "3:", 17자 "3: "
+        String content = "aaa\nbbb\nccc";
+        Map<Integer, Integer> expected = Map.of(14, 2, 15, 2, 16, 2, 17, 3);
+
+        expected.forEach(
+                (maxFileChars, visible) -> {
+                    InterviewProperties props =
+                            new InterviewProperties(24000, maxFileChars, 6000, 3000, 20, 5, 12, 2);
+                    InterviewPrompts.Input input =
+                            InterviewPrompts.input(
+                                    null,
+                                    List.of(file(1, "A.java", "service", 1, content)),
+                                    List.of(),
+                                    props);
+                    assertThat(input.codeLines())
+                            .as("maxFileChars=%d", maxFileChars)
+                            .containsEntry(1, visible);
+                });
     }
 
     @Test

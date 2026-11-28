@@ -71,6 +71,12 @@ public class InterviewGenerator {
         } catch (RuntimeException e) {
             log.error("면접 {}: 예기치 못한 오류로 FAILED", interviewId, e);
             markFailed(interviewId, ErrorCode.ANALYSIS_500);
+        } catch (Error e) {
+            // PENDING으로 남으면 재시작 전까지 다시 요청이 409라 FAILED로 바꾸고 스레드에는 그대로 알린다 (QuizRegenerationRunner와
+            // 같음)
+            log.error("면접 {}: 치명적 오류로 FAILED", interviewId, e);
+            markFailed(interviewId, ErrorCode.ANALYSIS_500);
+            throw e;
         }
     }
 

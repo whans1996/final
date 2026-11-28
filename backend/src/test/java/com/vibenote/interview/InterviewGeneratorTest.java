@@ -1,6 +1,7 @@
 package com.vibenote.interview;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.doReturn;
@@ -209,6 +210,22 @@ class InterviewGeneratorTest extends InterviewTestSupport {
         Map<String, Object> row = interviewRow(analysisId);
         assertThat(row.get("status")).isEqualTo("FAILED");
         assertThat(row.get("error_code")).isEqualTo("LLM_503");
+    }
+
+    @Test
+    void AC5_Error가_나도_FAILED_ANALYSIS_500으로_바꾸고_다시_던진다() {
+        // PENDING으로 남으면 재시작 전까지 POST가 409라 다시 시도할 수 없다 (QuizRegenerationRunner와 같음)
+        doThrow(new StackOverflowError("테스트")).when(llmClient).complete(any());
+        long userId = createUser("gen9");
+        long analysisId = analysis(userId, "DONE", "JUNIOR");
+        long interviewId = insertInterview(analysisId, "PENDING", 0, null);
+
+        assertThatThrownBy(() -> generator.generate(interviewId))
+                .isInstanceOf(StackOverflowError.class);
+
+        Map<String, Object> row = interviewRow(analysisId);
+        assertThat(row.get("status")).isEqualTo("FAILED");
+        assertThat(row.get("error_code")).isEqualTo("ANALYSIS_500");
     }
 
     @Test

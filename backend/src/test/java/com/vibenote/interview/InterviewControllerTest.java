@@ -1,5 +1,7 @@
 package com.vibenote.interview;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -29,12 +31,12 @@ class InterviewControllerTest extends InterviewTestSupport {
                 .andExpect(jsonPath("$.errorCode").isEmpty())
                 .andExpect(jsonPath("$.errorMessage").isEmpty())
                 .andExpect(jsonPath("$.regenerationsLeft").value(2))
-                .andExpect(jsonPath("$.questions").isEmpty())
+                .andExpect(jsonPath("$.questions").value(nullValue()))
                 .andExpect(jsonPath("$.generatedAt").isEmpty());
     }
 
     @Test
-    void AC8_DONE이_아니면_409_남의_것_팀원_없는_것_삭제된_것은_404_토큰_없으면_401() throws Exception {
+    void AC8_DONE이_아니면_409_남의_것_없는_것_삭제된_것은_404_토큰_없으면_401() throws Exception {
         long userId = createUser("ctl2");
         long other = createUser("ctl2o");
         long running = analysis(userId, "QUIZ", "JUNIOR");
@@ -66,6 +68,39 @@ class InterviewControllerTest extends InterviewTestSupport {
     }
 
     @Test
+    void AC8_팀에_공유된_분석도_주인이_아니면_POST_GET_모두_404() throws Exception {
+        long owner = createUser("ctl2t");
+        long member = createUser("ctl2m");
+        long shared = analysis(owner, "DONE", "JUNIOR");
+        jdbc.update(
+                "INSERT INTO teams (name, invite_code, owner_id) VALUES ('i1a팀', 'I1AAC8TM', ?)",
+                owner);
+        long teamId = jdbc.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
+        jdbc.update(
+                "INSERT INTO team_members (team_id, user_id, role) VALUES (?, ?, 'OWNER'), (?, ?,"
+                        + " 'MEMBER')",
+                teamId,
+                owner,
+                teamId,
+                member);
+        jdbc.update(
+                "INSERT INTO team_analyses (team_id, analysis_id) VALUES (?, ?)", teamId, shared);
+
+        mockMvc.perform(post(url(shared)).header("Authorization", bearer(member)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("ANALYSIS_404"));
+        mockMvc.perform(get(url(shared)).header("Authorization", bearer(member)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("ANALYSIS_404"));
+        Integer rows =
+                jdbc.queryForObject(
+                        "SELECT COUNT(*) FROM analysis_interviews WHERE analysis_id = ?",
+                        Integer.class,
+                        shared);
+        assertThat(rows).isZero();
+    }
+
+    @Test
     void AC6_다시_만들기_횟수를_다_쓰면_429() throws Exception {
         long userId = createUser("ctl3");
         long analysisId = analysis(userId, "DONE", "JUNIOR");
@@ -85,7 +120,7 @@ class InterviewControllerTest extends InterviewTestSupport {
         mockMvc.perform(get(url(running)).header("Authorization", bearer(userId)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("NONE"))
-                .andExpect(jsonPath("$.questions").isEmpty())
+                .andExpect(jsonPath("$.questions").value(nullValue()))
                 .andExpect(jsonPath("$.regenerationsLeft").value(2));
     }
 
@@ -143,6 +178,6 @@ class InterviewControllerTest extends InterviewTestSupport {
                 .andExpect(jsonPath("$.status").value("FAILED"))
                 .andExpect(jsonPath("$.errorCode").value("LLM_503"))
                 .andExpect(jsonPath("$.errorMessage").value("AI 응답을 받지 못했습니다. 잠시 후 다시 시도해 주세요."))
-                .andExpect(jsonPath("$.questions").isEmpty());
+                .andExpect(jsonPath("$.questions").value(nullValue()));
     }
 }
