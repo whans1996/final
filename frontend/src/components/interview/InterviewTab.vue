@@ -102,7 +102,18 @@ onMounted(reload)
       @retry="reload"
     >
       <template v-if="interview">
-        <p v-if="loadError" class="text-danger" role="alert">{{ loadError }}</p>
+        <!-- 이미 받은 상태가 있는데 다시 조회(폴링)가 실패하면 폴링이 멈추므로 다시 시도를 준다 (AC14, Codex 리뷰) -->
+        <div
+          v-if="loadError"
+          class="flex flex-col items-start gap-2 rounded-md border border-danger/30 bg-danger-soft px-4 py-3"
+          role="alert"
+          data-error="load"
+        >
+          <p class="text-danger">{{ loadError }}</p>
+          <BaseButton variant="secondary" size="sm" data-action="retry-poll" @click="reload">
+            다시 시도
+          </BaseButton>
+        </div>
 
         <div
           v-if="interview.status === 'NONE'"

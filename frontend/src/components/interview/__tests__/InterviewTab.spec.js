@@ -197,4 +197,29 @@ describe('InterviewTab (I-1a AC12~AC14)', () => {
     await flushPromises()
     expect(wrapper.find('[data-state="none"]').exists()).toBe(true)
   })
+
+  it('AC14 PENDING 폴링 중 조회가 실패하면 만드는 중 화면에 서버 message와 "다시 시도"를 보이고, 누르면 폴링을 다시 시작한다', async () => {
+    const message = '서버 오류가 발생했습니다.'
+    interviewsApi.fetchInterview
+      .mockResolvedValueOnce(interview({ status: 'PENDING' }))
+      .mockRejectedValueOnce(apiError(500, { code: 'COMMON_500', message }))
+      .mockResolvedValue(doneInterview())
+
+    const wrapper = await mountTab()
+    await advance(3000)
+
+    expect(wrapper.find('[data-state="pending"]').exists()).toBe(true)
+    const alert = wrapper.find('[data-error="load"]')
+    expect(alert.text()).toContain(message)
+    // 실패하면 폴링이 멈춘다: 다시 시도 전에는 더 조회하지 않는다
+    await advance(9000)
+    expect(interviewsApi.fetchInterview).toHaveBeenCalledTimes(2)
+
+    await alert.find('[data-action="retry-poll"]').trigger('click')
+    await flushPromises()
+
+    expect(interviewsApi.fetchInterview).toHaveBeenCalledTimes(3)
+    expect(wrapper.find('[data-state="done"]').exists()).toBe(true)
+    expect(wrapper.find('[data-error="load"]').exists()).toBe(false)
+  })
 })
