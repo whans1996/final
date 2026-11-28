@@ -2,7 +2,10 @@ package com.vibenote.post;
 
 import com.vibenote.common.exception.BusinessException;
 import com.vibenote.common.exception.ErrorCode;
+import com.vibenote.notification.NotificationService;
+import com.vibenote.notification.NotificationType;
 import com.vibenote.post.domain.Comment;
+import com.vibenote.post.domain.Post;
 import com.vibenote.post.dto.CommentListResponse;
 import com.vibenote.post.dto.CommentRequest;
 import com.vibenote.post.dto.CommentResponse;
@@ -21,7 +24,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 커뮤니티 댓글 (F-18). 쓰기는 모두 활성 회원인지 먼저 본다 (탈퇴 전에 받은 Access 토큰은 여기서 AUTH_401). 수정·삭제의 판단 순서는
- * 글(POST_404) → 그 글의 댓글(POST_003) → 작성자(POST_004) → 형식 검증(400)이다. 피드 활동은 남기지 않는다 (11-20 결정).
+ * 글(POST_404) → 그 글의 댓글(POST_003) → 작성자(POST_004) → 형식 검증(400)이다. 피드 활동은 남기지 않고, 작성하면 글쓴이에게 알린다
+ * (NT-1 AC10).
  */
 @Service
 public class CommentService {
@@ -31,16 +35,19 @@ public class CommentService {
 
     private final CommentMapper commentMapper;
     private final UserService userService;
+    private final NotificationService notificationService;
     private final Validator validator;
     private final Clock clock;
 
     public CommentService(
             CommentMapper commentMapper,
             UserService userService,
+            NotificationService notificationService,
             Validator validator,
             Clock clock) {
         this.commentMapper = commentMapper;
         this.userService = userService;
+        this.notificationService = notificationService;
         this.validator = validator;
         this.clock = clock;
     }
@@ -57,6 +64,17 @@ public class CommentService {
         return new CommentListResponse(items, commentMapper.countByPost(postId));
     }
 
+    /** 글쓴이에게 댓글 알림 (NT-1 AC10). 자기 글이면 notify가 거른다. 글은 lockPost가 공유 잠금으로 잡고 있다. */
+    private void notifyAuthor(long postId, long commenterId) {
+        Post post = commentMapper.findPostHeader(postId);
+        notificationService.notify(
+                post.getUserId(),
+                NotificationType.COMMENT,
+                commenterId,
+                "회원님의 글에 댓글을 남겼어요 · " + NotificationService.clip(post.getTitle(), 40),
+                "/community/" + postId);
+    }
+
     /** 본문 형식은 Controller의 {@code @Valid}가 이미 검증했다. 남의 글·자기 글 모두 쓸 수 있다. */
     @Transactional
     public CommentResponse create(long postId, long userId, CommentRequest request) {
@@ -66,6 +84,7 @@ public class CommentService {
         }
         Comment comment = new Comment(postId, userId, request.content(), now());
         commentMapper.insert(comment);
+        notifyAuthor(postId, userId);
         return getResponse(comment.getId());
     }
 

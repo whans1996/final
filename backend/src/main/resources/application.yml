@@ -124,6 +124,10 @@ analysis:
 challenge:
   recount-cron: "0 10 0 * * *"
 
+# 90일 지난 알림 정리 (NT-1 AC8, notification.NotificationPurgeJob). Asia/Seoul 기준, "-"면 끈다
+notification:
+  purge-cron: "0 30 3 * * *"
+
 # QUIZ 단계 (docs/specs/F-14-code-quiz.md 5절): 저장할 문항 수 범위, 프롬프트 입력 상한
 quiz:
   min-questions: 5

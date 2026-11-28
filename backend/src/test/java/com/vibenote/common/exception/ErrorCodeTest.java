@@ -11,7 +11,7 @@ class ErrorCodeTest {
 
     private static final Pattern NAME =
             Pattern.compile(
-                    "(COMMON|AUTH|USER|ANALYSIS|CONCEPT|QUIZ|REVIEW_PLAN|POST|TEAM|LLM|CHALLENGE|PROJECT|INTERVIEW)_\\d{3}");
+                    "(COMMON|AUTH|USER|ANALYSIS|CONCEPT|QUIZ|REVIEW_PLAN|POST|TEAM|LLM|CHALLENGE|PROJECT|INTERVIEW|NOTIFICATION)_\\d{3}");
 
     @Test
     void AC5_모든_코드가_도메인_형식이고_메시지가_있으며_CONCEPT_404는_404다() {

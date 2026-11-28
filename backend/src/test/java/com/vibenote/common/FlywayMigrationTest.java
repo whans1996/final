@@ -64,7 +64,9 @@ class FlywayMigrationTest extends IntegrationTestBase {
                         "project_versions",
                         // I-1a 면접 질문 (V17)
                         "analysis_interviews",
-                        "interview_questions");
+                        "interview_questions",
+                        // NT-1 헤더 알림 (V18)
+                        "notifications");
     }
 
     @Test

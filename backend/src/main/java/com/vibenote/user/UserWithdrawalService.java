@@ -5,6 +5,7 @@ import com.vibenote.auth.AuthService;
 import com.vibenote.common.exception.BusinessException;
 import com.vibenote.common.exception.ErrorCode;
 import com.vibenote.follow.FollowService;
+import com.vibenote.notification.NotificationService;
 import com.vibenote.team.TeamService;
 import com.vibenote.user.domain.User;
 import java.util.Map;
@@ -27,6 +28,7 @@ public class UserWithdrawalService {
     private final FollowService followService;
     private final TeamService teamService;
     private final AnalysisService analysisService;
+    private final NotificationService notificationService;
 
     public UserWithdrawalService(
             UserService userService,
@@ -34,18 +36,20 @@ public class UserWithdrawalService {
             AuthService authService,
             FollowService followService,
             TeamService teamService,
-            AnalysisService analysisService) {
+            AnalysisService analysisService,
+            NotificationService notificationService) {
         this.userService = userService;
         this.passwordEncoder = passwordEncoder;
         this.authService = authService;
         this.followService = followService;
         this.teamService = teamService;
         this.analysisService = analysisService;
+        this.notificationService = notificationService;
     }
 
     /**
      * 비밀번호가 맞으면 한 트랜잭션에서 마스킹, 모든 기기의 Refresh 토큰 폐기, 팔로우 양방향 삭제, 팀 정리(팀장인 팀 삭제·멤버 행 삭제, F-20a AC10),
-     * 분석 삭제(#91)를 한다. 틀리면 USER_001.
+     * 분석 삭제(#91), 받은 알림 삭제(NT-1 AC9)를 한다. 틀리면 USER_001.
      */
     @Transactional
     public void withdraw(long userId, String password) {
@@ -59,5 +63,6 @@ public class UserWithdrawalService {
         followService.removeAllOf(userId);
         teamService.removeAllOf(userId);
         analysisService.deleteAllOf(userId);
+        notificationService.removeAllOf(userId);
     }
 }

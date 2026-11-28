@@ -17,6 +17,8 @@ erDiagram
     users ||--o{ follows : "팔로우함 (follower)"
     users ||--o{ follows : "팔로우받음 (following)"
     users ||--o{ activities : "공개 활동"
+    users ||--o{ notifications : "받은 알림 (CASCADE, NT-1)"
+    users |o--o{ notifications : "일으킨 회원 (SET NULL)"
     users ||--o{ posts : "작성 (RESTRICT)"
     posts ||--o{ comments : "댓글 (CASCADE)"
     users ||--o{ comments : "작성 (RESTRICT)"
@@ -50,6 +52,16 @@ erDiagram
         bigint user_id FK
         enum type "ANALYSIS|REVIEW|WISH|POST|CHALLENGE_JOIN|CHALLENGE_COMPLETE"
         bigint target_id "type별 다형 참조, FK 없음"
+    }
+    notifications {
+        bigint id PK
+        bigint recipient_id FK
+        varchar type "COMMENT|FOLLOW|CHALLENGE_COMPLETE (NT-2가 추가)"
+        bigint actor_id FK "NULL 가능"
+        varchar message "120자, 주어 없는 문장"
+        varchar link "FE 경로"
+        datetime read_at "NULL = 안 읽음"
+        datetime created_at
     }
     posts {
         bigint id PK
@@ -358,6 +370,7 @@ erDiagram
 | refresh_tokens | Refresh 토큰. 원문 대신 SHA-256 해시(`token_hash` UNIQUE)와 만료 시각을 저장한다 | users 1:N | F-02 |
 | follows | 팔로우 PK `(follower_id, following_id)`, 역방향 조회용 `idx_follows_following`. 팔로우 수는 반정규화 없이 `COUNT(*)`로 센다. 팔로우 자체는 활동을 남기지 않는다 | users N:M users | F-04 |
 | activities | 공개 활동 기록(팔로우 피드의 원천). `type`은 `ANALYSIS`·`REVIEW`·`WISH`·`POST`·`CHALLENGE_JOIN`·`CHALLENGE_COMPLETE`(V2에서 챌린지를 참여·달성으로 나눔). `target_id`는 type에 따라 분석·리뷰·카드·게시글·챌린지 id를 가리키는 **다형 참조라 FK가 없다**. 대상이 지워지거나 비공개가 돼도 행은 남기고, 피드 쿼리가 대상 테이블과 `LEFT JOIN`해 보일 것만 고른다. 예외로 챌린지 참여를 취소하면 그 `CHALLENGE_JOIN` 행은 지운다(F-25) | users 1:N | F-04, F-05a, F-11, F-12, F-17, F-25 |
+| notifications | 헤더 알림(V18). 받는 회원·종류(`VARCHAR(40)`, 새 종류에 마이그레이션 불필요)·일으킨 회원(없으면 NULL)·문장(서버가 만든 주어 없는 문장, 120자)·이동 경로·읽은 시각. 받는 사람이 활성 회원일 때만 넣고(`INSERT … SELECT`), 자기가 한 일은 넣지 않는다. 탈퇴하면 받은 알림은 서비스가 지우고, 일으킨 알림은 남아 마스킹 닉네임으로 보인다. 90일보다 오래된 행은 매일 03:30 정리 작업이 지운다 | users 1:N (받는 사람·일으킨 사람) | NT-1 |
 | analyses | 분석 요청과 결과 개요(JSON: summary·techStack·layers·readingOrder·apis, F-06 5.3절), 상태·진행률·실패 사유(error_code·error_message, V3), 인덱스 수치(`indexed_files`·`dropped_files`, V12), 퀴즈 상태·재생성 수(`quiz_status`·`quiz_regenerations`, V14), 프로젝트·버전(`project_id` NOT NULL·`project_version_id` 수집 전·수집 실패면 NULL, V15), 공개 여부, 제목·메모, 삭제 시각(soft delete, V2). 삭제하면 서비스가 파일·흐름·개념 연결을 지우고 `deleted_at`을 채운다. 퀴즈·풀이는 남는다(통계·챌린지·일일 한도가 읽음) | users·projects 1:N, project_versions 0..1:N | F-05a, F-06, F-19, L-1a, P-1a |
 | projects | 분석 묶음 단위(저장소·ZIP 프로젝트, V15). 저장소 프로젝트는 (회원, 정규화한 주소)마다 하나(UNIQUE `(user_id, source_url)`), ZIP은 `source_url` NULL이라 요청마다 새로 생기고 `projectId`를 보내면 그 프로젝트에 붙는다. 이름 100자(바꿀 수 있음, 분석 `title`과 별개). 새 커밋 배지 조회 결과(`latest_commit_*`·`latest_checked_at`)를 5분 캐시로 둔다(조회 실패도 저장). 목록·상세는 삭제하지 않은 분석이 있는 프로젝트만 보인다 | users 1:N | P-1a |
 | project_versions | 프로젝트 버전. 번호는 프로젝트 안에서 최대 + 1(UNIQUE `(project_id, number)`), 저장소 분석은 FETCHING에서 기본 브랜치 최신 커밋으로 찾거나 만들고(UNIQUE `(project_id, commit_sha)`, 같은 커밋을 다른 수준으로 분석하면 같은 버전), 커밋 정보가 없는 버전(ZIP·커밋 조회 실패·V15 백필)은 `commit_sha` NULL로 여럿 있을 수 있다 | projects 1:N | P-1a |
@@ -403,6 +416,7 @@ erDiagram
 | V15 | `projects`, `project_versions`, `analyses.project_id`·`project_version_id`. 백필: 저장소 분석은 (회원, 주소)마다 프로젝트 하나, ZIP 분석은 분석마다 프로젝트 하나, 삭제하지 않은 분석마다 커밋 정보 없는 버전(요청 순 번호), 삭제한 분석은 프로젝트에만 붙음 | P-1a |
 | V16 | `concepts.summary_beginner`·`summary_junior`·`summary_senior`(VARCHAR(300) NULL), `body_beginner`·`body_junior`·`body_senior`(TEXT NULL). 기존 카드는 모두 NULL | K-1 |
 | V17 | `analysis_interviews`(UNIQUE `analysis_id`), `interview_questions`(UNIQUE `(interview_id, no)`) | I-1a |
+| V18 | `notifications` (인덱스 `(recipient_id, created_at, id)`·`(recipient_id, read_at)`·`created_at`) | NT-1 |
 | R | `R__seed_concepts.sql` 시드 카드 (반복 적용, 내용만 덮어씀, DS-05) | F-09 |
 
 ## 정규화 메모

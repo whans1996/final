@@ -7,6 +7,8 @@ import com.vibenote.common.page.PageResponse;
 import com.vibenote.follow.domain.FollowUser;
 import com.vibenote.follow.dto.FollowStatusResponse;
 import com.vibenote.follow.dto.FollowUserResponse;
+import com.vibenote.notification.NotificationService;
+import com.vibenote.notification.NotificationType;
 import com.vibenote.user.UserService;
 import com.vibenote.user.domain.User;
 import java.time.Clock;
@@ -24,18 +26,25 @@ public class FollowService {
 
     private final FollowMapper followMapper;
     private final UserService userService;
+    private final NotificationService notificationService;
     private final Clock clock;
 
-    public FollowService(FollowMapper followMapper, UserService userService, Clock clock) {
+    public FollowService(
+            FollowMapper followMapper,
+            UserService userService,
+            NotificationService notificationService,
+            Clock clock) {
         this.followMapper = followMapper;
         this.userService = userService;
+        this.notificationService = notificationService;
         this.clock = clock;
     }
 
     /**
-     * 팔로우한다. 이미 팔로우 중이면 행을 그대로 둔다 (AC1). 나와 대상의 users 행을 id 오름차순으로 공유 잠금(FOR SHARE)한 뒤 상태를 본다. 탈퇴는
-     * 같은 행을 UPDATE(배타 잠금)한 뒤 follows를 지우므로, 탈퇴와 겹쳐도 탈퇴한 회원의 팔로우 행이 남지 않는다. 이 트랜잭션은 users를 고치지 않아
-     * 잠금을 올릴 일이 없으므로 공유 잠금이면 충분하고, 인기 회원을 여러 사람이 동시에 팔로우해도 서로 기다리지 않는다 (PR 리뷰).
+     * 팔로우한다. 이미 팔로우 중이면 행을 그대로 두고, 새로 팔로우하면 대상에게 알린다 (AC1, NT-1 AC11). 나와 대상의 users 행을 id 오름차순으로 공유
+     * 잠금(FOR SHARE)한 뒤 상태를 본다. 탈퇴는 같은 행을 UPDATE(배타 잠금)한 뒤 follows를 지우므로, 탈퇴와 겹쳐도 탈퇴한 회원의 팔로우 행이 남지
+     * 않는다. 이 트랜잭션은 users를 고치지 않아 잠금을 올릴 일이 없으므로 공유 잠금이면 충분하고, 인기 회원을 여러 사람이 동시에 팔로우해도 서로 기다리지 않는다
+     * (PR 리뷰).
      */
     @Transactional
     public FollowStatusResponse follow(long targetId, long userId) {
@@ -51,8 +60,14 @@ public class FollowService {
         }
         requireActive(target, () -> new BusinessException(ErrorCode.USER_404));
         requireActive(me, () -> new BusinessException(ErrorCode.AUTH_401));
-        followMapper.insertIgnore(
-                userId, targetId, LocalDateTime.now(clock).truncatedTo(ChronoUnit.SECONDS));
+        int inserted =
+                followMapper.insertIgnore(
+                        userId, targetId, LocalDateTime.now(clock).truncatedTo(ChronoUnit.SECONDS));
+        if (inserted == 1) {
+            // 다시 팔로우해도 안 읽은 팔로우 알림이 있으면 쌓지 않는다 (NT-1 AC11)
+            notificationService.notifyUnlessUnread(
+                    targetId, NotificationType.FOLLOW, userId, "회원님을 팔로우했어요", "/users/" + userId);
+        }
         return statusOf(targetId, true);
     }
 

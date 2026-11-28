@@ -62,7 +62,7 @@
     <!-- ── 집계 ── -->
 
     <select id="findOpenForUpdate" resultType="com.vibenote.challenge.domain.Challenge">
-        SELECT c.id, c.start_date, c.end_date, c.goal_type, c.goal_value
+        SELECT c.id, c.title, c.start_date, c.end_date, c.goal_type, c.goal_value
         FROM challenge_participants p
         JOIN challenges c ON c.id = p.challenge_id
         WHERE p.user_id = #{userId}
@@ -84,7 +84,7 @@
     </select>
 
     <select id="findOpenOneForUpdate" resultType="com.vibenote.challenge.domain.Challenge">
-        SELECT c.id, c.start_date, c.end_date, c.goal_type, c.goal_value
+        SELECT c.id, c.title, c.start_date, c.end_date, c.goal_type, c.goal_value
         FROM challenge_participants p
         JOIN challenges c ON c.id = p.challenge_id
         WHERE p.challenge_id = #{challengeId} AND p.user_id = #{userId}

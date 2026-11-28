@@ -166,6 +166,10 @@ public enum ErrorCode {
     /** 없는 목표, 다른 팀의 목표, soft delete된 분석의 목표 (F-20c AC7). */
     TEAM_013(HttpStatus.NOT_FOUND, "팀 목표를 찾을 수 없습니다."),
 
+    // ── NOTIFICATION (B NT-1) ──
+    /** 없는 알림이거나 남의 알림. 둘을 구분하지 않는다 (NT-1 AC5). */
+    NOTIFICATION_404(HttpStatus.NOT_FOUND, "알림을 찾을 수 없습니다."),
+
     // ── LLM (A) ──
     /** 개요 응답이 1회 재시도 후에도 스키마 위반. 파이프라인 FAILED 사유다 (F-06 AC5). */
     LLM_502(HttpStatus.BAD_GATEWAY, "AI 응답 형식이 올바르지 않아 설명을 만들지 못했습니다. 다시 요청해 주세요."),

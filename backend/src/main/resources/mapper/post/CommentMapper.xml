@@ -16,6 +16,10 @@
         SELECT COUNT(*) FROM posts WHERE id = #{postId} FOR SHARE
     </select>
 
+    <select id="findPostHeader" resultType="com.vibenote.post.domain.Post">
+        SELECT id, user_id, title FROM posts WHERE id = #{postId}
+    </select>
+
     <!-- 가장 최근 limit개를 골라 오래된순으로 돌려준다 (#208). 안쪽은 idx_comments_post_created (post_id, created_at)를 거꾸로 탄다 -->
     <select id="findByPost" resultType="com.vibenote.post.domain.Comment">
         SELECT <include refid="columns"/>

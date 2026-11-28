@@ -10,8 +10,8 @@ import org.apache.ibatis.annotations.Param;
 @Mapper
 public interface FollowMapper {
 
-    /** 이미 있으면 PK 중복을 무시한다 (멱등, 동시 요청에도 행 1개). */
-    void insertIgnore(
+    /** 이미 있으면 PK 중복을 무시한다 (멱등, 동시 요청에도 행 1개). 새로 넣었으면 1, 이미 있었으면 0. */
+    int insertIgnore(
             @Param("followerId") long followerId,
             @Param("followingId") long followingId,
             @Param("createdAt") LocalDateTime createdAt);

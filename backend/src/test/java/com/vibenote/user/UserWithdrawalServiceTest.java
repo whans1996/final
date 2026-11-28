@@ -8,6 +8,7 @@ import com.vibenote.analysis.AnalysisService;
 import com.vibenote.auth.AuthService;
 import com.vibenote.common.Level;
 import com.vibenote.follow.FollowService;
+import com.vibenote.notification.NotificationService;
 import com.vibenote.team.TeamService;
 import com.vibenote.user.domain.User;
 import org.junit.jupiter.api.Test;
@@ -32,6 +33,7 @@ class UserWithdrawalServiceTest {
         FollowService followService = mock(FollowService.class);
         TeamService teamService = mock(TeamService.class);
         AnalysisService analysisService = mock(AnalysisService.class);
+        NotificationService notificationService = mock(NotificationService.class);
 
         new UserWithdrawalService(
                         userService,
@@ -39,11 +41,18 @@ class UserWithdrawalServiceTest {
                         authService,
                         followService,
                         teamService,
-                        analysisService)
+                        analysisService,
+                        notificationService)
                 .withdraw(1L, "vibe1234");
 
         InOrder order =
-                inOrder(userService, authService, followService, teamService, analysisService);
+                inOrder(
+                        userService,
+                        authService,
+                        followService,
+                        teamService,
+                        analysisService,
+                        notificationService);
         order.verify(userService).markWithdrawn(1L);
         order.verify(authService).revokeAll(1L);
         order.verify(followService).removeAllOf(1L);
@@ -51,5 +60,7 @@ class UserWithdrawalServiceTest {
         order.verify(teamService).removeAllOf(1L);
         // #91: 분석 삭제도 users 행을 잠근 뒤에 한다
         order.verify(analysisService).deleteAllOf(1L);
+        // NT-1 AC9: 받은 알림 삭제도 users 행을 잠근 뒤에 한다
+        order.verify(notificationService).removeAllOf(1L);
     }
 }

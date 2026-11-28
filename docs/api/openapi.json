@@ -2611,6 +2611,69 @@
         "required" : [ "id", "joinedAt", "memberCount", "myRole", "name", "ownerNickname" ],
         "type" : "object"
       },
+      "NotificationActorResponse" : {
+        "description" : "알림을 일으킨 회원",
+        "properties" : {
+          "id" : {
+            "description" : "회원 ID",
+            "example" : 7,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "nickname" : {
+            "description" : "지금 닉네임 (탈퇴했으면 마스킹 값 #탈퇴{id})",
+            "example" : "java러버",
+            "type" : "string"
+          }
+        },
+        "required" : [ "id", "nickname" ],
+        "type" : "object"
+      },
+      "NotificationResponse" : {
+        "description" : "알림 항목",
+        "properties" : {
+          "actor" : {
+            "$ref" : "#/components/schemas/NotificationActorResponse",
+            "description" : "일으킨 회원. 없는 알림(챌린지 달성 등)은 null",
+            "type" : "null"
+          },
+          "createdAt" : {
+            "description" : "알림 시각",
+            "example" : "2026-11-29T14:02:11+09:00",
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "id" : {
+            "description" : "알림 ID",
+            "example" : 41,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "link" : {
+            "description" : "누르면 이동할 FE 경로",
+            "example" : "/community/12",
+            "type" : "string"
+          },
+          "message" : {
+            "description" : "문장 (주어 없음. actor가 있으면 FE가 \"{닉네임}님이 \"를 앞에 붙인다)",
+            "example" : "회원님의 글에 댓글을 남겼어요 · Spring 질문",
+            "type" : "string"
+          },
+          "read" : {
+            "description" : "읽음 여부",
+            "example" : false,
+            "type" : "boolean"
+          },
+          "type" : {
+            "description" : "알림 종류 (FE는 모르는 종류도 기본 아이콘으로 그린다)",
+            "enum" : [ "COMMENT", "FOLLOW", "CHALLENGE_COMPLETE" ],
+            "example" : "COMMENT",
+            "type" : "string"
+          }
+        },
+        "required" : [ "actor", "createdAt", "id", "link", "message", "read", "type" ],
+        "type" : "object"
+      },
       "PageResponseAdminChallengeSummaryResponse" : {
         "description" : "페이지 응답",
         "properties" : {
@@ -2866,6 +2929,37 @@
             "description" : "현재 페이지 항목",
             "items" : {
               "$ref" : "#/components/schemas/MyChallengeResponse"
+            },
+            "type" : "array"
+          },
+          "page" : {
+            "description" : "페이지 번호 (1부터)",
+            "example" : 1,
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "size" : {
+            "description" : "페이지 크기",
+            "example" : 20,
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "total" : {
+            "description" : "전체 항목 수",
+            "example" : 134,
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "PageResponseNotificationResponse" : {
+        "description" : "페이지 응답",
+        "properties" : {
+          "items" : {
+            "description" : "현재 페이지 항목",
+            "items" : {
+              "$ref" : "#/components/schemas/NotificationResponse"
             },
             "type" : "array"
           },
@@ -4412,6 +4506,19 @@
           }
         },
         "required" : [ "analysisId", "memberCount", "members", "modules", "projectName", "questionCount", "sharedBy", "solvedMemberCount" ],
+        "type" : "object"
+      },
+      "UnreadCountResponse" : {
+        "description" : "안 읽은 알림 수",
+        "properties" : {
+          "count" : {
+            "description" : "안 읽은 알림 수",
+            "example" : 3,
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "count" ],
         "type" : "object"
       },
       "UnresolvedLink" : {
@@ -6761,7 +6868,7 @@
     "/api/challenges" : {
       "get" : {
         "description" : "상태(오늘 기준, 기본 진행 중)로 거른다. 진행 중은 종료일 오름차순, 예정은 시작일 오름차순, 종료는 종료일 내림차순이고 모두 다음 기준 id 역순이다. 비로그인도 쓸 수 있고, 로그인했으면 항목마다 참여 여부(joined)를 채운다.",
-        "operationId" : "list_9",
+        "operationId" : "list_10",
         "parameters" : [ {
           "description" : "상태 (없으면 ONGOING). 오늘(Asia/Seoul)과 기간으로 계산한다",
           "example" : "ONGOING",
@@ -6998,7 +7105,7 @@
     "/api/concepts" : {
       "get" : {
         "description" : "공개(PUBLISHED) 카드를 키워드(이름·요약 부분 일치)·카테고리·난이도로 거르고 인기순(찜 수→평점) 또는 최신순으로 페이지 조회한다. 비로그인도 쓸 수 있다.",
-        "operationId" : "list_8",
+        "operationId" : "list_9",
         "parameters" : [ {
           "description" : "이름·요약 부분 일치 검색어 (trim 후 50자 이하, 대소문자 무시)",
           "example" : "jwt",
@@ -7651,6 +7758,173 @@
         },
         "summary" : "내 피드",
         "tags" : [ "피드" ]
+      }
+    },
+    "/api/notifications" : {
+      "get" : {
+        "description" : "내가 받은 알림을 최신순(같으면 id 내림차순)으로 페이지 조회한다. actor는 일으킨 회원의 지금 닉네임이다.",
+        "operationId" : "list_8",
+        "parameters" : [ {
+          "description" : "페이지 번호 (1부터)",
+          "example" : 1,
+          "in" : "query",
+          "name" : "page",
+          "required" : false,
+          "schema" : {
+            "default" : 1,
+            "description" : "페이지 번호 (1부터)",
+            "example" : 1,
+            "format" : "int32",
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        }, {
+          "description" : "페이지 크기 (최대 100)",
+          "example" : 20,
+          "in" : "query",
+          "name" : "size",
+          "required" : false,
+          "schema" : {
+            "default" : 20,
+            "description" : "페이지 크기 (최대 100)",
+            "example" : 20,
+            "format" : "int32",
+            "maximum" : 100,
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PageResponseNotificationResponse"
+                }
+              }
+            },
+            "description" : "조회 성공"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "페이지 값 오류 (COMMON_400)"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "로그인 필요, 탈퇴한 회원의 남은 토큰 (AUTH_401)"
+          }
+        },
+        "summary" : "내 알림 목록",
+        "tags" : [ "알림" ]
+      }
+    },
+    "/api/notifications/read-all" : {
+      "patch" : {
+        "description" : "내 안 읽은 알림을 모두 읽음으로 바꾼다. 없어도 204다.",
+        "operationId" : "markAllRead",
+        "responses" : {
+          "204" : {
+            "description" : "읽음 처리"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "로그인 필요, 탈퇴한 회원의 남은 토큰 (AUTH_401)"
+          }
+        },
+        "summary" : "모두 읽음",
+        "tags" : [ "알림" ]
+      }
+    },
+    "/api/notifications/unread-count" : {
+      "get" : {
+        "description" : "헤더 종 배지에 쓰는 안 읽은 알림 수.",
+        "operationId" : "unreadCount",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/UnreadCountResponse"
+                }
+              }
+            },
+            "description" : "조회 성공"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "로그인 필요, 탈퇴한 회원의 남은 토큰 (AUTH_401)"
+          }
+        },
+        "summary" : "안 읽은 알림 수",
+        "tags" : [ "알림" ]
+      }
+    },
+    "/api/notifications/{id}/read" : {
+      "patch" : {
+        "description" : "알림 하나를 읽음으로 바꾼다. 이미 읽었으면 그대로 204(멱등)다.",
+        "operationId" : "markRead",
+        "parameters" : [ {
+          "description" : "알림 ID",
+          "example" : 41,
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "읽음 처리"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "로그인 필요, 탈퇴한 회원의 남은 토큰 (AUTH_401)"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "없거나 남의 알림 (NOTIFICATION_404)"
+          }
+        },
+        "summary" : "알림 읽음",
+        "tags" : [ "알림" ]
       }
     },
     "/api/posts" : {
@@ -10671,6 +10945,9 @@
   }, {
     "description" : "게시판(코드 이해 Q&A·학습 후기·자유) 글 목록·검색·상세·작성·수정·삭제와 댓글",
     "name" : "커뮤니티"
+  }, {
+    "description" : "헤더 알림 목록·안 읽은 수·읽음 처리 (NT-1)",
+    "name" : "알림"
   }, {
     "description" : "회원가입, 로그인, 토큰 재발급, 로그아웃",
     "name" : "인증"
