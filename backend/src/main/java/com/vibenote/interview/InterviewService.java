@@ -28,6 +28,10 @@ public class InterviewService {
     /** 서버 재시작·큐 거부·예기치 못한 오류를 구분해 저장하지 않으므로 공통 문구를 쓴다 (AC10, F-07 AC11과 같음). */
     static final String INTERRUPTED_MESSAGE = "면접 질문 생성이 중단되었습니다. 다시 요청해 주세요.";
 
+    /** 공통 LLM_502 문구("설명을 만들지 못했습니다") 대신 면접 탭에 보이는 문구 (AC4, 결정로그 11-28). */
+    static final String INVALID_RESPONSE_MESSAGE =
+            "AI 응답 형식이 올바르지 않아 면접 질문을 만들지 못했습니다. 다시 요청해 주세요.";
+
     private final InterviewMapper mapper;
     private final AnalysisService analysisService;
     private final AnalysisConceptService conceptService;
@@ -57,7 +61,8 @@ public class InterviewService {
     @Transactional
     public InterviewResponse request(long userId, long analysisId) {
         AnalysisDetail analysis =
-                mapper.lockOwnedAnalysis(analysisId, userId)
+                analysisService
+                        .lockOwnedDetail(userId, analysisId)
                         .orElseThrow(() -> new BusinessException(ErrorCode.ANALYSIS_404));
         if (analysis.getStatus() != AnalysisStatus.DONE) {
             throw new BusinessException(ErrorCode.INTERVIEW_409);
@@ -163,6 +168,9 @@ public class InterviewService {
         }
         if (errorCode.equals(ErrorCode.ANALYSIS_500.name())) {
             return INTERRUPTED_MESSAGE;
+        }
+        if (errorCode.equals(ErrorCode.LLM_502.name())) {
+            return INVALID_RESPONSE_MESSAGE;
         }
         try {
             return ErrorCode.valueOf(errorCode).message();

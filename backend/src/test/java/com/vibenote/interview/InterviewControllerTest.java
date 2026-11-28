@@ -180,4 +180,19 @@ class InterviewControllerTest extends InterviewTestSupport {
                 .andExpect(jsonPath("$.errorMessage").value("AI 응답을 받지 못했습니다. 잠시 후 다시 시도해 주세요."))
                 .andExpect(jsonPath("$.questions").value(nullValue()));
     }
+
+    @Test
+    void AC4_LLM_502로_FAILED면_면접_질문_전용_문구를_준다() throws Exception {
+        // 공통 LLM_502 문구는 "설명을 만들지 못했습니다"라 면접 탭에 맞지 않는다 (reviewer 권장, 결정로그 11-28)
+        long userId = createUser("ctl7");
+        long analysisId = analysis(userId, "DONE", "JUNIOR");
+        insertInterview(analysisId, "FAILED", 0, "LLM_502");
+
+        mockMvc.perform(get(url(analysisId)).header("Authorization", bearer(userId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.errorCode").value("LLM_502"))
+                .andExpect(
+                        jsonPath("$.errorMessage")
+                                .value("AI 응답 형식이 올바르지 않아 면접 질문을 만들지 못했습니다. 다시 요청해 주세요."));
+    }
 }
