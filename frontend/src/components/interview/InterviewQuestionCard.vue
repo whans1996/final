@@ -37,10 +37,10 @@ function evidenceTo(evidence) {
         v-for="(evidence, index) in question.evidence"
         :key="index"
         :to="evidenceTo(evidence)"
-        class="inline-flex max-w-full min-w-0 items-baseline rounded-sm border border-border bg-code-bg px-2 py-0.5 font-mono text-xs text-code-text no-underline hover:border-primary"
+        class="inline max-w-full rounded-sm border border-border bg-code-bg px-2 py-0.5 font-mono text-xs text-code-text no-underline box-decoration-clone hover:border-primary"
         data-evidence
       >
-        <FilePath class="min-w-0" :path="evidence.path" /><span class="shrink-0"
+        <FilePath :path="evidence.path" /><span class="whitespace-nowrap"
           >:{{ lineLabel(evidence) }}</span
         >
       </RouterLink>

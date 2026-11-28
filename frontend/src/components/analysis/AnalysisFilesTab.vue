@@ -140,6 +140,7 @@ watch(() => [props.analysisId, props.selectedFileId], loadFile, { immediate: tru
           :content="file.content ?? ''"
           :label="`${file.path} 코드`"
           :highlight="highlight"
+          :scroll-ready="!listLoading"
         />
       </template>
     </article>

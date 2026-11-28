@@ -56,6 +56,25 @@ describe('CodeViewer (F-06 6절, I-1a AC15)', () => {
     }
   })
 
+  it('AC15 scrollReady가 false면 강조만 하고 스크롤은 true가 될 때 한다 (모바일에서 위 목록이 늦게 그려지는 경우)', async () => {
+    const scroll = vi.fn()
+    Element.prototype.scrollIntoView = scroll
+
+    const wrapper = mount(CodeViewer, {
+      props: { content: CONTENT, highlight: { start: 12, end: 14 }, scrollReady: false },
+    })
+    await flushPromises()
+
+    expect(marked(wrapper)).toEqual(['12', '13', '14'])
+    expect(scroll).not.toHaveBeenCalled()
+
+    await wrapper.setProps({ scrollReady: true })
+    await flushPromises()
+
+    expect(scroll).toHaveBeenCalledTimes(1)
+    expect(scroll.mock.contexts[0].getAttribute('data-line')).toBe('12')
+  })
+
   it('AC15 범위가 바뀌면 새 범위를 강조한다', async () => {
     const wrapper = mount(CodeViewer, {
       props: { content: CONTENT, highlight: { start: 1, end: 2 } },
