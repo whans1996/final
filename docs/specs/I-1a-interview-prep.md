@@ -2,8 +2,8 @@
 
 | 항목 | 값 |
 |---|---|
-| 상태 | APPROVED <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
-| 기능 ID | I-1a (로드맵 트랙 2 학습·팀·면접, 11/28~12/02) |
+| 상태 | DONE (PR #262) <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
+| 기능 ID | I-1a (로드맵 트랙 2 학습·팀·면접, 계획 11/28~12/02, 머지 11/28) |
 | 우선순위 | T0 (기획서 7.4b, 시연 줄거리 "면접에서 근거 들어 답하기") |
 | 영역 오너 | A 김동환 |
 | 관련 필수 요구사항 | ⑬ AI 활용 알고리즘. 명세서 "심화 · AI"(생성형 AI 기능). 문제 7 (기획서 1절) |
@@ -293,7 +293,7 @@ LLM은 테스트에서 실제로 부르지 않는다. `@MockitoBean LlmClient`�
 - [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
 - [x] contract-checker 통과
 - [x] ui-verifier 통과 (데스크톱·모바일, 라이트·다크)
-- [ ] reviewer 지적 사항 반영
+- [x] reviewer 지적 사항 반영 (반드시 수정 0건, 권장 5 + 무시 가능 1 반영: Error→FAILED, AC8 팀 공유 테스트, AC2 줄 수 테스트, 분석 SQL을 AnalysisService로, LLM_502 면접 전용 문구) + Codex P1 1건(폴링 중 조회 실패 다시 시도) → Codex ✅ 7937968
 - [x] 산출물 반영: `03-ERD.md`, `06-화면설계서.md` SC-07 면접 준비 탭·파일 탭 줄 강조, `01` 요구사항 정의서(I-1), `conventions.md` 3절 `INTERVIEW`, `.github/CODEOWNERS`(`interview/` 패키지·FE 폴더·`api/interviews`·`utils/interviewFormat`), `09-데이터셋.md`·`datasets.json` DS-06, 로드맵·WBS·간트 I-1a, 로드맵 T-1 행에 "면접 `NOT_MINE` 질문" 추가
-- [ ] PR CI 초록
-- [ ] 상태 DONE (PR 머지 전 마지막 커밋)
+- [x] PR CI 초록
+- [x] 상태 DONE (PR 머지 전 마지막 커밋)
