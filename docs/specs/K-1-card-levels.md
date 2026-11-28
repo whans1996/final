@@ -3,7 +3,7 @@
 | 항목 | 값 |
 |---|---|
 | 상태 | DONE (PR #261) <!-- DRAFT → APPROVED(사람 승인) → DONE(PR 머지) --> |
-| 기능 ID | K-1 (로드맵 트랙 3 카드, 11/28~12/02) |
+| 기능 ID | K-1 (로드맵 트랙 3 카드, 계획 11/28~12/02, 머지 11/28) |
 | 우선순위 | T0 (기획서 7.4b) |
 | 영역 오너 | A 김동환. `concept` 패키지·FE 카드 화면·`R__seed_concepts.sql`은 공통·B 파일이라 PR에서 @JoonseobKim 멘션 (기획서 7.5절 ⑤) |
 | 관련 필수 요구사항 | ⑤ 개념 카드, ⑬ AI |
@@ -39,7 +39,7 @@ K-1은 ① 카테고리를 12종으로 늘리고 ② 카드에 **수준별 한 �
 
 ## 3. API 계약
 
-> Swagger Tag: `개념 카드`, `관리자` (기존). `docs/api/openapi.json`을 함께 커밋한다. 12/02 넘겨주기 대상은 이 절과 openapi.json이다.
+> Swagger Tag: `개념 카드`, `관리자` (기존). `docs/api/openapi.json`을 함께 커밋한다. 넘겨주기(계획 12/02, 머지로 11/28) 대상은 이 절과 openapi.json이다.
 
 ### `GET /api/concepts/{id}` (F-10 확장)
 
@@ -185,7 +185,7 @@ ALTER TABLE concepts
 | tooling | git, docker, gradle, maven, npm, vite, build, tool, tools, devops |
 | java | jvm |
 
-머지 순서: 프롬프트를 바꾸므로 **EV-1 기준선(12/01) 측정 뒤 머지**한다(점검 문서 엉킴 방지 규칙 4). 12/02 넘겨주기에 맞춘다.
+머지 순서: 프롬프트를 바꾸므로 **EV-1 기준선 측정 뒤 머지**한다(점검 문서 엉킴 방지 규칙 4). 기준선은 11/27 측정·점수 머지(PR #240, 산출물 08 1.3절)로 끝났다. 처음 적은 12/01은 점수 공유 예정일을 측정일로 잘못 옮긴 것이다.
 
 ### 5.4절 이름 비교 개정 (F-08 spec 5.4절을 이 PR에서 고친다)
 
@@ -236,6 +236,6 @@ ALTER TABLE concepts
 - [x] reviewer 지적 사항 반영
 - [x] 산출물·문서 반영: 03 ERD, 07 API(생성), 09 데이터셋 DS-05 카테고리, 01 요구사항 정의서 K-1 행, 기획서 ERD, F-08 spec AC5·5.4절, F-09·F-13·K-3a spec의 6종 문구
 - [x] PR 본문 `Roadmap: K-1`, `Closes #163`, `Closes #204`, 공통 코드 변경 @JoonseobKim
-- [ ] EV-1 기준선(12/01) 뒤 머지
+- [x] EV-1 기준선(11/27, PR #240) 뒤 머지
 - [x] PR CI 초록
 - [x] 상태 DONE (PR 머지 후)
