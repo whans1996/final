@@ -1,6 +1,6 @@
 <script setup>
 // SC-07 퀴즈 탭의 "풀이 기록" (L-1b AC10). 내 풀이 회차를 최신순으로 보여 주고, 회차를 누르면 그 아래에 문항별 정오·내 답·
-// 정답·해설·관련 카드를 펼친다(다시 누르면 접힘, 한 번에 하나). 상세는 처음 펼칠 때 한 번만 부르고 다시 펼치면 받아 둔 것을 쓴다.
+// 정답·해설·관련 카드를 펼친다(다시 누르면 접힘, 한 번에 하나). 상세는 처음 펼칠 때 한 번만 부르고 다시 펼치면 받아 둔 것(받는 중이면 그 요청)을 쓴다.
 // 풀이가 없으면 아무것도 그리지 않는다. 선택지는 저장된 순서로 보인다.
 import { ref, watch } from 'vue'
 import { fetchQuizAttempt, fetchQuizAttempts } from '@/api/quizzes'
@@ -23,7 +23,10 @@ const listRequest = useLatestRequest()
 const openId = ref(null)
 /** attemptId → { loading, error, data } */
 const details = ref({})
+// 상세 응답은 attemptId 자리에 저장하므로 다른 회차를 펼쳐도 버리지 않는다. 퀴즈가 바뀌거나 화면을 떠날 때만 무효다
+// (퀴즈마다 begin()을 한 번 해 그 퀴즈의 상세 요청이 모두 같은 토큰을 쓴다, reviewer)
 const detailRequest = useLatestRequest()
+let detailScope = null
 
 async function load() {
   const req = listRequest.begin()
@@ -42,7 +45,7 @@ async function load() {
 }
 
 async function loadDetail(attemptId) {
-  const req = detailRequest.begin()
+  const req = detailScope
   details.value = { ...details.value, [attemptId]: { loading: true, error: '', data: null } }
   try {
     const data = await fetchQuizAttempt(props.quizId, attemptId)
@@ -53,13 +56,6 @@ async function loadDetail(attemptId) {
     details.value = {
       ...details.value,
       [attemptId]: { loading: false, error: errorMessage(error), data: null },
-    }
-  } finally {
-    // 다른 회차를 펼쳐 버려진 요청은 다음에 펼칠 때 다시 부르게 비운다
-    if (!req.isCurrent() && details.value[attemptId]?.loading) {
-      const rest = { ...details.value }
-      delete rest[attemptId]
-      details.value = rest
     }
   }
 }
@@ -76,7 +72,7 @@ function toggle(attemptId) {
 watch(
   () => props.quizId,
   () => {
-    detailRequest.invalidate()
+    detailScope = detailRequest.begin()
     openId.value = null
     details.value = {}
     attempts.value = []

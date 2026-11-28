@@ -95,6 +95,7 @@ class QuizAttemptHistoryTest extends QuizTestSupport {
         share(team, analysis);
         long wAttempt = insertAttempt(quiz, w, T, q, 0);
         long xAttempt = insertAttempt(quiz, x, T, q, 0);
+        long uAttempt = insertAttempt(quiz, u, T, q, 0);
 
         // 팀원은 자기 풀이 상세를 본다
         attempt(w, quiz, wAttempt).andExpect(status().isOk());
@@ -113,6 +114,9 @@ class QuizAttemptHistoryTest extends QuizTestSupport {
         // 삭제한 분석 (주인도)
         jdbc.update("UPDATE analyses SET deleted_at = NOW() WHERE id = ?", analysis);
         attempts(u, quiz).andExpect(jsonPath("$.code").value("QUIZ_404"));
+        attempt(u, quiz, uAttempt)
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("QUIZ_404"));
 
         // 없는 quizId
         attempts(u, 999_999_999L)

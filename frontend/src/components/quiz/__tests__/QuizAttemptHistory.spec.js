@@ -183,4 +183,52 @@ describe('QuizAttemptHistory (L-1b SC-07)', () => {
     expect(quizzesApi.fetchQuizAttempts).toHaveBeenLastCalledWith(4)
     expect(rows(wrapper).map((r) => r.attributes('data-attempt'))).toEqual(['16'])
   })
+  it('AC10 A 응답이 오기 전에 B를 펼쳤다가 다시 A를 펼쳐도 A의 결과가 보인다 (reviewer)', async () => {
+    quizzesApi.fetchQuizAttempts.mockResolvedValue(ATTEMPTS)
+    const a = deferred()
+    quizzesApi.fetchQuizAttempt.mockReturnValueOnce(a.promise).mockResolvedValueOnce(detail(16))
+    const wrapper = await mountHistory()
+
+    await toggle(wrapper, 0)
+    await toggle(wrapper, 1)
+    await flushPromises()
+    await toggle(wrapper, 0)
+    a.resolve(detail(31))
+    await flushPromises()
+
+    expect(rows(wrapper)[0].findAll('[data-question]')).toHaveLength(2)
+    expect(rows(wrapper)[0].find('[role="status"]').exists()).toBe(false)
+    expect(quizzesApi.fetchQuizAttempt).toHaveBeenCalledTimes(2)
+  })
+
+  it('AC14 화면을 떠난 뒤 온 상세 응답은 반영하지 않는다', async () => {
+    quizzesApi.fetchQuizAttempts.mockResolvedValue(ATTEMPTS)
+    const pending = deferred()
+    quizzesApi.fetchQuizAttempt.mockReturnValueOnce(pending.promise)
+    const wrapper = await mountHistory()
+    await toggle(wrapper, 0)
+    const setup = wrapper.vm.$.setupState
+
+    wrapper.unmount()
+    pending.resolve(detail(31))
+    await flushPromises()
+
+    expect(setup.details[31].data).toBeNull()
+  })
+
+  it('AC14 상세 조회 중에 퀴즈가 바뀌면 늦게 온 이전 퀴즈의 상세를 버린다', async () => {
+    const pending = deferred()
+    quizzesApi.fetchQuizAttempts.mockResolvedValue(ATTEMPTS)
+    quizzesApi.fetchQuizAttempt.mockReturnValueOnce(pending.promise)
+    const wrapper = await mountHistory()
+    await toggle(wrapper, 0)
+
+    await wrapper.setProps({ quizId: 4 })
+    await flushPromises()
+    pending.resolve(detail(31))
+    await flushPromises()
+
+    expect(wrapper.vm.$.setupState.details).toEqual({})
+    expect(rows(wrapper)[0].find('[data-part="detail"]').exists()).toBe(false)
+  })
 })
