@@ -287,9 +287,9 @@ LLM은 테스트에서 실제로 부르지 않는다. `@MockitoBean LlmClient`�
 
 - [x] 브랜치 `feature/I-1a-interview-prep`
 - [x] Flyway `V17__interview_questions.sql`
-- [ ] AC별 실패 테스트 작성 (red 확인) — BE AC1~AC11 ✅ (AC2·AC3만 red 먼저 확인, 나머지는 구현과 함께 작성), FE 남음
+- [ ] AC별 실패 테스트 작성 (red 확인) — BE AC1~AC11·FE AC12~AC15 ✅ (AC2·AC3만 red 먼저 확인, 나머지는 구현과 함께 작성)
 - [x] BE 구현 (green) — 프롬프트 3개, fixture 1개, `LlmStage.INTERVIEW`, ErrorCode `INTERVIEW` 블록, 줄 번호 공통 메서드
-- [ ] FE 구현 (green) — 면접 준비 탭, 파일 탭 줄 강조, CodeViewer·AnalysisFilesTab Tailwind 이전(#250 칸)
+- [x] FE 구현 (green) — 면접 준비 탭, 파일 탭 줄 강조, CodeViewer·AnalysisFilesTab Tailwind 이전(#250 칸)
 - [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
 - [ ] contract-checker 통과
 - [ ] ui-verifier 통과 (데스크톱·모바일, 라이트·다크)

@@ -1,12 +1,17 @@
 <script setup>
 // 줄 번호가 붙은 코드 상자 (F-06 6절). 하이라이트 라이브러리는 쓰지 않는다.
 // 긴 줄은 이 상자 안에서만 가로 스크롤한다 (375px에서 페이지 가로 스크롤 없음, NF-02).
-import { computed } from 'vue'
+// highlight({ start, end })가 파일 줄 수 안이면 그 줄들을 형광펜 색으로 칠하고 첫 줄을 화면 가운데로 스크롤한다.
+// 범위가 줄 수를 넘으면 강조하지 않는다 (I-1a AC15).
+import { computed, nextTick, ref, watch } from 'vue'
 
 const props = defineProps({
   content: { type: String, default: '' },
   label: { type: String, default: '코드' },
+  highlight: { type: Object, default: null },
 })
+
+const root = ref(null)
 
 const lines = computed(() => {
   const all = props.content.split('\n')
@@ -14,52 +19,48 @@ const lines = computed(() => {
   if (all.length > 1 && all[all.length - 1] === '') all.pop()
   return all
 })
+
+const range = computed(() => {
+  const h = props.highlight
+  if (!h || !Number.isInteger(h.start) || !Number.isInteger(h.end)) return null
+  return h.start >= 1 && h.start <= h.end && h.end <= lines.value.length ? h : null
+})
+
+function highlighted(lineNo) {
+  return range.value !== null && lineNo >= range.value.start && lineNo <= range.value.end
+}
+
+watch(
+  [range, lines],
+  async () => {
+    if (!range.value) return
+    await nextTick()
+    root.value
+      ?.querySelector(`[data-line="${range.value.start}"]`)
+      ?.scrollIntoView?.({ block: 'center' })
+  },
+  { immediate: true, flush: 'post' },
+)
 </script>
 
 <template>
-  <div class="code" role="region" :aria-label="label" tabindex="0">
-    <pre><code><span
+  <div
+    ref="root"
+    class="max-w-full overflow-x-auto rounded-md border border-border bg-code-bg text-code-text"
+    role="region"
+    :aria-label="label"
+    tabindex="0"
+  >
+    <pre class="m-0 py-3 font-mono text-sm leading-relaxed break-normal whitespace-pre"><code><span
       v-for="(text, index) in lines"
       :key="index"
-      class="line"
+      class="block pr-4"
+      :class="{ 'bg-highlight': highlighted(index + 1) }"
       :data-line="index + 1"
-    ><span class="ln" aria-hidden="true">{{ index + 1 }}</span>{{ text || ' ' }}</span></code></pre>
+      :data-highlighted="highlighted(index + 1) ? 'true' : undefined"
+    ><span
+      class="mr-3 inline-block min-w-[3.5em] border-r border-border pr-2 text-right text-text-muted select-none"
+      aria-hidden="true"
+    >{{ index + 1 }}</span>{{ text || ' ' }}</span></code></pre>
   </div>
 </template>
-
-<style scoped>
-.code {
-  max-width: 100%;
-  overflow-x: auto;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  background: #f8fafc;
-}
-
-pre {
-  margin: 0;
-  padding: var(--space-3) 0;
-  font-family: ui-monospace, SFMono-Regular, Consolas, 'D2Coding', monospace;
-  font-size: 0.85em;
-  line-height: 1.55;
-  white-space: pre;
-  word-break: normal;
-  overflow-wrap: normal;
-}
-
-.line {
-  display: block;
-  padding-right: var(--space-4);
-}
-
-.ln {
-  display: inline-block;
-  min-width: 3.5em;
-  margin-right: var(--space-3);
-  padding-right: var(--space-2);
-  border-right: 1px solid var(--color-border);
-  color: var(--color-text-muted);
-  text-align: right;
-  user-select: none;
-}
-</style>

@@ -4,6 +4,7 @@ import AnalysisDetailView from '@/views/AnalysisDetailView.vue'
 import * as analysesApi from '@/api/analyses'
 import * as quizzesApi from '@/api/quizzes'
 import * as challengesApi from '@/api/challenges'
+import * as interviewsApi from '@/api/interviews'
 import { myChallenge, page } from '@/components/challenge/__tests__/fixtures'
 import { useAuthStore } from '@/stores/auth'
 import { authGuard, routes } from '@/router'
@@ -12,6 +13,7 @@ import { apiError, mountAt } from './viewTestUtils'
 vi.mock('@/api/analyses')
 vi.mock('@/api/quizzes')
 vi.mock('@/api/challenges')
+vi.mock('@/api/interviews')
 const mermaid = vi.hoisted(() => ({ initialize: vi.fn(), render: vi.fn() }))
 vi.mock('mermaid', () => ({ default: mermaid }))
 
@@ -240,7 +242,15 @@ describe('AnalysisDetailView 결과 탭 (F-06 AC13~AC15)', () => {
     expect(analysesApi.fetchAnalysis).toHaveBeenCalledWith(42)
     expect(wrapper.find('h1').text()).toBe('todo-app')
     const tabs = wrapper.findAll('[role="tab"]')
-    expect(tabs.map((t) => t.text())).toEqual(['개요', '구조', '파일', '실행 흐름', '개념', '퀴즈'])
+    expect(tabs.map((t) => t.text())).toEqual([
+      '개요',
+      '구조',
+      '파일',
+      '실행 흐름',
+      '개념',
+      '퀴즈',
+      '면접 준비',
+    ])
     expect(tabs[0].attributes('aria-selected')).toBe('true')
     expect(wrapper.find('[data-section="summary"]').text()).toContain('Todo 서비스')
     expect(analysesApi.fetchAnalysisFiles).not.toHaveBeenCalled()
@@ -285,7 +295,7 @@ describe('AnalysisDetailView 결과 탭 (F-06 AC13~AC15)', () => {
 
     expect(analysesApi.fetchAnalysis).toHaveBeenCalledTimes(2)
     expect(wrapper.find('h1').text()).toBe('todo-app')
-    expect(wrapper.findAll('[role="tab"]')).toHaveLength(6)
+    expect(wrapper.findAll('[role="tab"]')).toHaveLength(7)
   })
 
   it('AC13 FAILED면 결과 탭 없이 F-05a 실패 화면 그대로다', async () => {
@@ -507,7 +517,15 @@ describe('AnalysisDetailView 결과 탭 (F-06 AC13~AC15)', () => {
     const { wrapper, router } = await mountDetail('/analyses/42?tab=concepts')
 
     const tabs = wrapper.findAll('[role="tab"]')
-    expect(tabs.map((t) => t.text())).toEqual(['개요', '구조', '파일', '실행 흐름', '개념', '퀴즈'])
+    expect(tabs.map((t) => t.text())).toEqual([
+      '개요',
+      '구조',
+      '파일',
+      '실행 흐름',
+      '개념',
+      '퀴즈',
+      '면접 준비',
+    ])
     expect(tabs[4].attributes('aria-selected')).toBe('true')
     expect(analysesApi.fetchAnalysisConcepts).toHaveBeenCalledWith(42)
     expect(wrapper.find('[data-concept-id="12"]').exists()).toBe(true)
@@ -535,7 +553,15 @@ describe('AnalysisDetailView 결과 탭 (F-06 AC13~AC15)', () => {
     const { wrapper } = await mountDetail('/analyses/42?tab=quiz')
 
     const tabs = wrapper.findAll('[role="tab"]')
-    expect(tabs.map((t) => t.text())).toEqual(['개요', '구조', '파일', '실행 흐름', '개념', '퀴즈'])
+    expect(tabs.map((t) => t.text())).toEqual([
+      '개요',
+      '구조',
+      '파일',
+      '실행 흐름',
+      '개념',
+      '퀴즈',
+      '면접 준비',
+    ])
     expect(tabs[5].attributes('aria-selected')).toBe('true')
     expect(quizzesApi.fetchAnalysisQuiz).toHaveBeenCalledWith(42)
     expect(wrapper.find('[data-message="count"]').text()).toBe('객관식 5문항')
@@ -1057,5 +1083,76 @@ describe('AnalysisDetailView ZIP 다시 올리기 (P-1a AC4·AC15)', () => {
     expect(wrapper.find('a[data-action="retry"]').attributes('href')).toBe(
       '/analyses/new?projectId=13',
     )
+  })
+})
+
+describe('AnalysisDetailView 면접 준비 탭 (I-1a AC12·AC13·AC15)', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    analysesApi.fetchAnalysisStatus.mockResolvedValue(status({ status: 'DONE', progress: 100 }))
+    analysesApi.fetchAnalysisFiles.mockResolvedValue(files)
+    analysesApi.fetchAnalysisFile.mockImplementation(async (_, fileId) => ({
+      ...files.find((f) => f.id === fileId),
+      content: 'a\nb\nc\nd',
+    }))
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('AC12 주인이면 퀴즈 뒤에 면접 준비 탭이 있고 ?tab=interview로 열면 면접 질문을 조회한다', async () => {
+    analysesApi.fetchAnalysis.mockResolvedValue(detail())
+    interviewsApi.fetchInterview.mockResolvedValue({
+      analysisId: 42,
+      status: 'NONE',
+      errorCode: null,
+      errorMessage: null,
+      regenerationsLeft: 2,
+      generatedAt: null,
+      questions: null,
+    })
+
+    const { wrapper } = await mountDetail('/analyses/42?tab=interview')
+
+    expect(wrapper.find('[role="tab"][aria-selected="true"]').text()).toBe('면접 준비')
+    expect(interviewsApi.fetchInterview).toHaveBeenCalledWith(42, expect.any(Object))
+    expect(wrapper.find('[data-action="create"]').exists()).toBe(true)
+  })
+
+  it('AC12 남의 공개 분석에는 면접 준비 탭이 없고 ?tab=interview여도 개요다', async () => {
+    analysesApi.fetchAnalysis.mockResolvedValue(
+      detail({ mine: false, isPublic: true, owner: { id: 7, nickname: 'vibecoder' } }),
+    )
+
+    const { wrapper } = await mountDetail('/analyses/42?tab=interview')
+
+    expect(wrapper.findAll('[role="tab"]').map((t) => t.text())).not.toContain('면접 준비')
+    expect(wrapper.find('[role="tab"][aria-selected="true"]').text()).toBe('개요')
+    expect(interviewsApi.fetchInterview).not.toHaveBeenCalled()
+  })
+
+  it('AC15 ?tab=files&file=101&lines=2-3이면 그 줄들을 강조하고, 다른 파일을 고르면 lines를 지운다', async () => {
+    analysesApi.fetchAnalysis.mockResolvedValue(detail())
+
+    const { wrapper, router } = await mountDetail('/analyses/42?tab=files&file=101&lines=2-3')
+
+    const marked = wrapper.findAll('[data-highlighted="true"]')
+    expect(marked.map((l) => l.attributes('data-line'))).toEqual(['2', '3'])
+
+    await wrapper.find('[data-file-id="102"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.query).toEqual({ tab: 'files', file: '102' })
+    expect(wrapper.findAll('[data-highlighted="true"]')).toHaveLength(0)
+  })
+
+  it('AC15 lines 형식이 틀리면 강조하지 않고 파일만 보인다', async () => {
+    analysesApi.fetchAnalysis.mockResolvedValue(detail())
+
+    const { wrapper } = await mountDetail('/analyses/42?tab=files&file=101&lines=30-12')
+
+    expect(wrapper.findAll('[data-line]')).toHaveLength(4)
+    expect(wrapper.findAll('[data-highlighted="true"]')).toHaveLength(0)
   })
 })

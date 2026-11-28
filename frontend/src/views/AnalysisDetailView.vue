@@ -7,6 +7,8 @@
 // 실행 흐름은 카드만 보인다 (F-19 AC13·AC14). 내 분석이 DONE이면 진행 중인 분석 챌린지 달성도를 보인다 (#211).
 // FAILED인 내 URL 분석은 같은 설정으로 다시 실행해 새 분석으로 바꾸고, ZIP 분석은 다시 올리라고 안내한다 (L-1a AC9).
 // 제목 근처에 "프로젝트 이름 · v번호"를 보이고 주인에게만 프로젝트 상세 링크로 준다 (P-1a AC16).
+// 주인에게만 "면접 준비" 탭(?tab=interview)을 보인다. 면접 질문 근거는 ?tab=files&file=..&lines=12-30으로 들어와 그 줄들을 강조하고,
+// 다른 파일을 고르면 lines를 지운다 (I-1a AC12·AC13·AC15).
 import { computed, nextTick, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { fetchAnalysis, fetchAnalysisStatus, rerunAnalysis } from '@/api/analyses'
@@ -14,6 +16,7 @@ import { errorCode, errorMessage } from '@/api/http'
 import { usePolling } from '@/composables/usePolling'
 import { useLatestRequest } from '@/composables/useLatestRequest'
 import { isInProgress } from '@/utils/analysisStatus'
+import { parseLines } from '@/utils/interviewFormat'
 import AnalysisStatusBadge from '@/components/analysis/AnalysisStatusBadge.vue'
 import AnalysisOverviewTab from '@/components/analysis/AnalysisOverviewTab.vue'
 import AnalysisStructureTab from '@/components/analysis/AnalysisStructureTab.vue'
@@ -22,6 +25,7 @@ import AnalysisFlowsTab from '@/components/analysis/AnalysisFlowsTab.vue'
 import AnalysisConceptsTab from '@/components/analysis/AnalysisConceptsTab.vue'
 import AnalysisQuizTab from '@/components/analysis/AnalysisQuizTab.vue'
 import AnalysisManagePanel from '@/components/analysis/AnalysisManagePanel.vue'
+import InterviewTab from '@/components/interview/InterviewTab.vue'
 import ChallengeProgressNotice from '@/components/challenge/ChallengeProgressNotice.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import { LEVELS } from '@/utils/authValidation'
@@ -34,7 +38,10 @@ const TABS = [
   { name: 'flows', label: '실행 흐름' },
   { name: 'concepts', label: '개념' },
   { name: 'quiz', label: '퀴즈' },
+  { name: 'interview', label: '면접 준비' },
 ]
+// 주인만 보는 탭: 퀴즈는 주인만 풀고(F-14, F-19 AC14), 면접 준비도 주인만 (I-1a AC12)
+const OWNER_TABS = ['quiz', 'interview']
 
 const route = useRoute()
 const router = useRouter()
@@ -67,8 +74,7 @@ const sourceLink = computed(() => {
   const url = status.value?.sourceUrl ?? analysis.value?.sourceUrl
   return typeof url === 'string' && url.startsWith('https://') ? url : null
 })
-// 퀴즈는 주인만 푼다 (F-14, F-19 AC14)
-const tabs = computed(() => (mine.value ? TABS : TABS.filter((t) => t.name !== 'quiz')))
+const tabs = computed(() => (mine.value ? TABS : TABS.filter((t) => !OWNER_TABS.includes(t.name))))
 const activeTab = computed(() =>
   tabs.value.some((t) => t.name === route.query.tab) ? route.query.tab : 'overview',
 )
@@ -97,6 +103,8 @@ const selectedFileId = computed(() => {
   const id = Number(route.query.file)
   return Number.isInteger(id) && id > 0 ? id : null
 })
+// 형식이 틀리면 null(강조 없음). 파일 줄 수를 넘는지는 CodeViewer가 본다 (I-1a AC15)
+const highlightLines = computed(() => (selectedFileId.value ? parseLines(route.query.lines) : null))
 
 // 상세는 첫 상태를 받으면 1회(진행 중이면 관리 영역용, F-19 AC13), 진행 중에 불러왔으면 DONE·FAILED가 된 뒤
 // 결과를 위해 1회 더 불러온다 (결과는 다시 바뀌지 않는다). 단계는 요청할 때 정해 실패해도 같은 단계에서 다시 부르지 않는다
@@ -156,7 +164,9 @@ function selectTab(name) {
 }
 
 function selectFile(fileId) {
-  router.push({ query: { ...route.query, tab: 'files', file: String(fileId) } })
+  const query = { ...route.query, tab: 'files', file: String(fileId) }
+  delete query.lines
+  router.push({ query })
 }
 
 async function poll(id, isCurrent) {
@@ -345,6 +355,7 @@ watch(
               v-else-if="activeTab === 'files'"
               :analysis-id="analysis.id"
               :selected-file-id="selectedFileId"
+              :highlight="highlightLines"
               @select="selectFile"
             />
             <AnalysisFlowsTab
@@ -358,6 +369,10 @@ watch(
               v-else-if="activeTab === 'concepts'"
               :analysis-id="analysis.id"
               @select-file="selectFile"
+            />
+            <InterviewTab
+              v-else-if="activeTab === 'interview' && mine"
+              :analysis-id="analysis.id"
             />
             <AnalysisQuizTab
               v-else-if="mine"
