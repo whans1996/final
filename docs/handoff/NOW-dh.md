@@ -3,27 +3,28 @@
 > 김동환(A 영역: AI·분석·학습 루프) 전용. 덮어쓰는 파일이다. 작업 단위(AC 통과, 파일 묶음 완성, 방향 결정, 막힘)가 끝날 때마다 갱신한다. 30줄 이내.
 > 머리 줄은 `node scripts/stamp.mjs --now` 출력으로 쓴다. "바로 다음 할 일"은 다른 PC에서 맥락 없이 바로 시작할 수 있을 만큼 구체적으로 쓴다 (파일, 메서드, 테스트 이름).
 > 상대 파일(`NOW-js.md`)은 읽기만 한다.
-갱신: 2026-11-28 22:18 · 작업자: whans1996 · PC: dh-home · 브랜치: feature/I-1a-interview-prep
+갱신: 2026-11-28 23:33 · 작업자: whans1996 · PC: dh-home · 브랜치: feature/L-1b-wrong-notes
 
 ## 현재 기능
 
-**I-1a 면접 준비 예상 질문·근거·핵심 포인트** `docs/specs/I-1a-interview-prep.md` (**DONE (PR #262)**, 머지 대기) · 브랜치 `feature/I-1a-interview-prep`
+**L-1b 풀이 기록·오답 노트·선지 다시 섞기** `docs/specs/L-1b-wrong-notes.md` (APPROVED 11-28, /pr-review 중) · 브랜치 `feature/L-1b-wrong-notes`
 
 ## 진행
 
-- ✅ AC1~AC15 green, contract-checker 0건, ui-verifier 통과, reviewer 권장 5 + 무시 가능 1 반영 (96984b5·224f46c·4c2c2f6)
-- ✅ Codex P1 1건(폴링 중 GET 실패 시 다시 시도, AC14) 반영 7937968 → **Codex ✅ 7937968** (재리뷰 2회), CI 8개 초록
-- ✅ 완료 표시: spec DONE, 로드맵·WBS·간트 I-1a 11/28~11/28. 빈 11/29~12/02는 L-1b·K-3b·P-1b가 이미 겹쳐 있어 뒤 항목은 그대로
+- ✅ BE AC1~AC9 (0c92b46), FE AC10~AC14 (bbe812e). 에러 코드는 형식 규칙대로 `QUIZ_001`(결정로그 11-28)
+- ✅ contract-checker 불일치 0, CODEOWNERS 추가. 화면 점검: 5174(FE)·8081(BE) 임시 서버, 9개 화면 라이트·다크·375px 넘침 0·콘솔 에러 0 (`.harness/l1b-final.mjs`)
+- ✅ 산출물 01·02(UC34)·06(SC-27·스크린샷)·07 재생성 (93786f9, 19fc743), #250 칸 체크
+- ⏳ /pr-review 2단계: verifier(all)·reviewer 실행 중 → PR 아직 없음
 
 ## 바로 다음 할 일
 
-1. 사람이 GitHub에서 PR #262 머지 (머지 전 develop에 새 커밋이 있으면 `git merge origin/develop` → push → CI 초록 재확인). 머지일이 11/28이 아니면 다음 `/pickup`이 로드맵·WBS·간트·spec 날짜를 고친다
-2. `/clear` → `/pickup` → 다음 A 항목 `/spec L-1b` (풀이 기록·오답 노트·선지 다시 섞기, 의존 L-1a ✅, 11/28~12/02). 그다음 K-3b → SD-1(12/03 A→B 넘겨주기) → P-1b
+1. reviewer 지적 분류 → `반드시 수정`은 `fix(L-1b): ...` 커밋, 권장은 사용자에게 묻기
+2. `.harness/pr-L-1b.md` 작성(템플릿, `Roadmap: L-1b`, AC 표, `node scripts/pr-screens.mjs SC-07-quiz-history SC-08-reshuffle SC-27-wrong-notes` 출력, 공통 파일 @JoonseobKim) → `node scripts/roadmap.mjs --check-body .harness/pr-L-1b.md` → 사용자 확인 뒤 `gh pr create --base develop`
+3. Codex 루프: `node scripts/codex-review.mjs <PR> --request --wait --status` (background)
 
 ## 막힌 점 / 결정 필요
+- 유스케이스 PNG는 PlantUML jar가 없어 `.puml`만 고침 (I-1a도 PNG 미반영)
 - 사람: 노션 초대, F-05b liveTest + #226 실제 LLM 점검(12/08 전), #251 js PC `--move-env`
 
 ## 주의
-- 점검용 회원 `i1a-check@vibenote.local`(로컬 DB만), 분석 id 18
-- `AnalysisService.lockOwnedDetail`은 `Propagation.MANDATORY` (호출자 트랜잭션 안에서만)
-- 로컬 FE 전체 검증에서 `UserMenu.spec.js`(B, F-29b)가 부하 때 5초 타임아웃 1회. 단독·재실행·CI는 통과 (되풀이되면 이슈로)
+- 공통 파일 → PR에서 @JoonseobKim: `ErrorCode.java`(QUIZ_001), `utils/navIcons.js`(NotebookPen), 테스트 `App.spec.js`·`navItems.spec.js` 메뉴 목록, `CODEOWNERS`. 8080·5173 옛 서버는 건드리지 않음, 8081·5174는 PR 뒤 끄기

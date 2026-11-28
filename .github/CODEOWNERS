@@ -99,9 +99,11 @@
 /frontend/src/utils/**/structure.*           @whans1996
 /frontend/src/utils/**/mermaid.*             @whans1996
 /frontend/src/utils/**/quizFormat.*          @whans1996
+/frontend/src/utils/**/quizShuffle.*         @whans1996
 /frontend/src/views/**/Analysis*             @whans1996
 /frontend/src/components/analysis/           @whans1996
 /frontend/src/views/**/QuizView.*            @whans1996
+/frontend/src/views/**/WrongNoteView.*       @whans1996
 /frontend/src/views/quiz/                    @whans1996
 /frontend/src/components/quiz/               @whans1996
 /frontend/src/views/reviewplan/              @whans1996

@@ -98,6 +98,83 @@ abstract class QuizTestSupport extends IntegrationTestBase {
         return ids;
     }
 
+    /** 제목 {@code title}(null 가능)인 미삭제 분석. 프로젝트 이름은 {@code projectName}. */
+    long insertAnalysis(long userId, String title, String projectName) {
+        long analysisId = insertAnalysis(userId, false);
+        jdbc.update("UPDATE analyses SET title = ? WHERE id = ?", title, analysisId);
+        jdbc.update(
+                "UPDATE projects SET name = ? WHERE id = (SELECT project_id FROM analyses WHERE id"
+                        + " = ?)",
+                projectName,
+                analysisId);
+        return analysisId;
+    }
+
+    long insertTeam(long ownerId) {
+        jdbc.update(
+                "INSERT INTO teams (name, owner_id, invite_code) VALUES ('팀', ?, ?)",
+                ownerId,
+                "T0" + ownerId % 1_000_000);
+        long teamId = jdbc.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
+        addMember(teamId, ownerId, "OWNER");
+        return teamId;
+    }
+
+    void addMember(long teamId, long userId, String role) {
+        jdbc.update(
+                "INSERT INTO team_members (team_id, user_id, role) VALUES (?, ?, ?)",
+                teamId,
+                userId,
+                role);
+    }
+
+    void share(long teamId, long analysisId) {
+        jdbc.update(
+                "INSERT INTO team_analyses (team_id, analysis_id) VALUES (?, ?)",
+                teamId,
+                analysisId);
+    }
+
+    /**
+     * 풀이 한 번을 SQL로 넣는다. {@code selected[i]}는 {@code questionIds[i]}에 고른 위치이고, 정답 여부는 문항의
+     * answer_index로 정한다. score는 맞힌 수, total은 문항 수. 풀이 id를 돌려준다.
+     */
+    long insertAttempt(
+            long quizId, long userId, LocalDateTime at, List<Long> questionIds, int... selected) {
+        int score = 0;
+        boolean[] correct = new boolean[selected.length];
+        for (int i = 0; i < selected.length; i++) {
+            Integer answer =
+                    jdbc.queryForObject(
+                            "SELECT answer_index FROM quiz_questions WHERE id = ?",
+                            Integer.class,
+                            questionIds.get(i));
+            correct[i] = answer == selected[i];
+            if (correct[i]) {
+                score++;
+            }
+        }
+        jdbc.update(
+                "INSERT INTO quiz_attempts (quiz_id, user_id, score, total, created_at) VALUES (?,"
+                        + " ?, ?, ?, ?)",
+                quizId,
+                userId,
+                score,
+                selected.length,
+                at);
+        long attemptId = jdbc.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
+        for (int i = 0; i < selected.length; i++) {
+            jdbc.update(
+                    "INSERT INTO quiz_answers (attempt_id, question_id, selected_index, is_correct)"
+                            + " VALUES (?, ?, ?, ?)",
+                    attemptId,
+                    questionIds.get(i),
+                    selected[i],
+                    correct[i]);
+        }
+        return attemptId;
+    }
+
     int count(String table, String where, Object... args) {
         return jdbc.queryForObject(
                 "SELECT COUNT(*) FROM " + table + " WHERE " + where, Integer.class, args);

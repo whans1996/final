@@ -30,6 +30,16 @@ describe('routes (F-00b AC7)', () => {
     expect(routes.at(-1).name).toBe('not-found')
   })
 
+  it('L-1b AC13 /wrong-notes는 로그인이 필요하고 학습 그룹의 복습 다음(order 35)이다', () => {
+    const wrongNotes = routes.find((r) => r.name === 'wrong-notes')
+
+    expect(wrongNotes.path).toBe('/wrong-notes')
+    expect(wrongNotes.meta).toMatchObject({
+      requiresAuth: true,
+      nav: { label: '오답 노트', order: 35, show: 'user', group: 'learn', icon: 'NotebookPen' },
+    })
+  })
+
   it('F-15 AC12 /review-plans는 로그인이 필요하다', () => {
     const reviewPlans = routes.find((r) => r.name === 'review-plans')
 

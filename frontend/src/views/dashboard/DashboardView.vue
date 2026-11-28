@@ -80,7 +80,12 @@ function analysisTitle(a) {
       <section class="panel" data-section="today">
         <div class="panel-head">
           <h2>{{ todayTitle }}</h2>
-          <RouterLink to="/review-plans" class="more-link">복습 계획 보기</RouterLink>
+          <span class="flex gap-3">
+            <RouterLink to="/wrong-notes" class="more-link" data-action="wrong-notes"
+              >오답 노트</RouterLink
+            >
+            <RouterLink to="/review-plans" class="more-link">복습 계획 보기</RouterLink>
+          </span>
         </div>
         <p v-if="today.loading.value" class="hint">불러오는 중…</p>
         <div v-else-if="today.error.value">

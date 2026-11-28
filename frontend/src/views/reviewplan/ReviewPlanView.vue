@@ -167,6 +167,11 @@ load()
 <template>
   <section class="review-plans">
     <h1>복습 계획</h1>
+    <p class="text-sm text-text-muted">
+      틀린 문항은
+      <RouterLink to="/wrong-notes" data-action="wrong-notes">오답 노트</RouterLink>에서 다시 볼 수
+      있어요.
+    </p>
 
     <div v-if="data" class="period">
       <strong data-message="period">{{ periodLabel }}</strong>

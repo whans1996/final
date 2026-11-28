@@ -2,7 +2,7 @@
 
 > **자동 생성 문서다. 손으로 고치지 않는다.** 다시 만들기: `node scripts/export-api-doc.mjs` (주간 `/progress`와 제출 전).
 > **정본은 Swagger**다. 실행 중이면 http://localhost:8080/swagger-ui/index.html, 파일은 [`docs/api/openapi.json`](../api/openapi.json) (테스트 `OpenApiExportTest`가 생성, CI가 코드와 일치 여부 검사).
-> VibeNote API v1 · 엔드포인트 89개 · 스키마 116개
+> VibeNote API v1 · 엔드포인트 98개 · 스키마 138개
 
 ## 공통 규칙
 
@@ -75,10 +75,16 @@
 | `GET` | /api/analyses/{id}/files/{fileId} | 분석 파일 하나 | 로그인 |
 | `GET` | /api/analyses/{id}/flows | 실행 흐름 목록 | 로그인 |
 | `POST` | /api/analyses/{id}/flows | 실행 흐름 요청 | 로그인 |
+| `GET` | /api/analyses/{id}/interview | 면접 예상 질문 조회 | 로그인 |
+| `POST` | /api/analyses/{id}/interview | 면접 예상 질문 요청 | 로그인 |
 | `POST` | /api/analyses/{id}/rerun | 실패한 저장소 분석 재실행 | 로그인 |
 | `GET` | /api/analyses/{id}/status | 분석 진행 상태 | 로그인 |
 | `GET` | /api/analyses/{id}/structure | 구조 그래프 | 로그인 |
 | `PATCH` | /api/analyses/{id}/visibility | 분석 공개 설정 | 로그인 |
+| `GET` | /api/projects | 내 프로젝트 목록 | 로그인 |
+| `GET` | /api/projects/{id} | 프로젝트 상세 | 로그인 |
+| `PATCH` | /api/projects/{id} | 프로젝트 이름 바꾸기 | 로그인 |
+| `GET` | /api/projects/{id}/latest-commit | 새 커밋 배지 | 로그인 |
 
 ### 복습 계획
 
@@ -120,14 +126,6 @@
 | `GET` | /api/concepts/{id} | 개념 카드 상세 | 공개 |
 | `GET` | /api/users/{userId}/wishes | 회원의 찜 목록 | 공개 |
 
-### 퀴즈
-
-| 메서드 | URL | 요약 | 권한 |
-|---|---|---|---|
-| `GET` | /api/analyses/{id}/quiz | 분석의 퀴즈 조회 | 로그인 |
-| `POST` | /api/analyses/{id}/quiz | 퀴즈 다시 만들기 | 로그인 |
-| `POST` | /api/quizzes/{quizId}/attempts | 퀴즈 풀이 제출·채점 | 로그인 |
-
 ### 챌린지
 
 | 메서드 | URL | 요약 | 권한 |
@@ -138,6 +136,17 @@
 | `DELETE` | /api/challenges/{id}/participation | 챌린지 참여 취소 | 로그인 |
 | `GET` | /api/users/me/challenges | 내 챌린지 | 로그인 |
 | `GET` | /api/users/{userId}/challenges | 회원의 참여 챌린지 | 공개 |
+
+### 퀴즈
+
+| 메서드 | URL | 요약 | 권한 |
+|---|---|---|---|
+| `GET` | /api/analyses/{id}/quiz | 분석의 퀴즈 조회 | 로그인 |
+| `POST` | /api/analyses/{id}/quiz | 퀴즈 다시 만들기 | 로그인 |
+| `GET` | /api/quizzes/{quizId}/attempts | 내 풀이 기록 목록 | 로그인 |
+| `POST` | /api/quizzes/{quizId}/attempts | 퀴즈 풀이 제출·채점 | 로그인 |
+| `GET` | /api/quizzes/{quizId}/attempts/{attemptId} | 내 풀이 상세 | 로그인 |
+| `GET` | /api/users/me/wrong-notes | 내 오답 노트 | 로그인 |
 
 ### 추천
 
@@ -791,6 +800,7 @@ ZIP 파일(file) 또는 공개 GitHub·GitLab(gitlab.com) 저장소 주소(sourc
 | `consent` | string: true | 선택 | SSAFY GMS를 거친 외부 AI 전송 고지 동의. true여야 한다 | - |
 | `file` | string(binary) | 선택 | 프로젝트 ZIP (.zip, 10MB 이하). sourceUrl과 둘 중 하나만 보낸다 | - |
 | `level` | string: BEGINNER · JUNIOR · SENIOR | 선택 | 분석 수준. 생략하면 내 프로필 수준 | - |
+| `projectId` | string | 선택 | 붙일 내 프로젝트 ID (P-1a). 없으면 저장소는 같은 주소의 내 프로젝트(없으면 새로), ZIP은 새 프로젝트에 붙는다. 저장소 프로젝트에는 같은 주소만, ZIP 프로젝트에는 ZIP만 보낼 수 있다 | `12` |
 | `sourceUrl` | string | 선택 | 공개 GitHub·GitLab(gitlab.com) 저장소 주소 (500자 이하, 브랜치·파일 경로 없이). file과 둘 중 하나만 보낸다 (길이 ~500자) | `https://github.com/octo/todo-app` |
 
 **응답**
@@ -798,8 +808,9 @@ ZIP 파일(file) 또는 공개 GitHub·GitLab(gitlab.com) 저장소 주소(sourc
 | 상태 | 설명 | 스키마 |
 |---|---|---|
 | 202 | 접수됨 | [CreateAnalysisResponse](#createanalysisresponse) |
-| 400 | 검증 실패 (COMMON_400, details.file·sourceUrl·consent·level) | [ErrorResponse](#errorresponse) |
+| 400 | 검증 실패 (COMMON_400, details.file·sourceUrl·consent·level·projectId) | [ErrorResponse](#errorresponse) |
 | 401 | 토큰 없음·만료 (AUTH_401) | [ErrorResponse](#errorresponse) |
+| 404 | projectId가 없거나 남의 프로젝트 (PROJECT_404) | [ErrorResponse](#errorresponse) |
 | 413 | 업로드 10MB 초과 (COMMON_413) | [ErrorResponse](#errorresponse) |
 | 429 | 오늘 분석 요청 횟수를 다 씀 (ANALYSIS_429) | [ErrorResponse](#errorresponse) |
 
@@ -972,6 +983,48 @@ ZIP 파일(file) 또는 공개 GitHub·GitLab(gitlab.com) 저장소 주소(sourc
 | 404 | 없는 분석, 다른 회원의 분석, 삭제된 분석 (ANALYSIS_404) | [ErrorResponse](#errorresponse) |
 | 409 | 분석이 아직 DONE이 아님 (ANALYSIS_409) | [ErrorResponse](#errorresponse) |
 
+#### `GET` /api/analyses/{id}/interview
+
+**면접 예상 질문 조회** · 권한: 로그인
+
+내 분석의 면접 질문. 요청한 적이 없으면 status NONE. DONE이 아니면 questions는 null. 관련 카드는 지금 숨김이 아닌 카드만 준다. 화면은 PENDING이면 3초마다 다시 부른다.
+
+**파라미터**
+
+| 이름 | 위치 | 필수 | 타입 | 설명 | 예 |
+|---|---|---|---|---|---|
+| `id` | path | 필수 | integer(int64) | - | - |
+
+**응답**
+
+| 상태 | 설명 | 스키마 |
+|---|---|---|
+| 200 | 조회 성공 | [InterviewResponse](#interviewresponse) |
+| 401 | 토큰 없음·만료 (AUTH_401) | [ErrorResponse](#errorresponse) |
+| 404 | 없는 분석, 다른 회원의 분석, 삭제된 분석 (ANALYSIS_404) | [ErrorResponse](#errorresponse) |
+
+#### `POST` /api/analyses/{id}/interview
+
+**면접 예상 질문 요청** · 권한: 로그인
+
+내 DONE 분석의 코드를 근거로 면접 예상 질문(5~12개) 생성을 접수하고 바로 202를 준다. 생성은 백그라운드에서 진행되며 GET으로 확인한다. 처음 만들기(NONE)·다시 시도(FAILED, 횟수 안 씀)·다시 만들기(DONE, 분석당 2회)를 상태로 고른다.
+
+**파라미터**
+
+| 이름 | 위치 | 필수 | 타입 | 설명 | 예 |
+|---|---|---|---|---|---|
+| `id` | path | 필수 | integer(int64) | - | - |
+
+**응답**
+
+| 상태 | 설명 | 스키마 |
+|---|---|---|
+| 202 | 접수됨 (status PENDING) | [InterviewResponse](#interviewresponse) |
+| 401 | 토큰 없음·만료 (AUTH_401) | [ErrorResponse](#errorresponse) |
+| 404 | 없는 분석, 다른 회원의 분석, 삭제된 분석 (ANALYSIS_404) | [ErrorResponse](#errorresponse) |
+| 409 | 분석이 DONE이 아님, 이미 만드는 중(PENDING) (INTERVIEW_409) | [ErrorResponse](#errorresponse) |
+| 429 | DONE 다시 만들기 횟수를 모두 씀 (INTERVIEW_429) | [ErrorResponse](#errorresponse) |
+
 #### `POST` /api/analyses/{id}/rerun
 
 **실패한 저장소 분석 재실행** · 권한: 로그인
@@ -1058,6 +1111,90 @@ FAILED로 끝난 내 저장소 URL 분석을 같은 주소·수준·제목·메�
 | 401 | 토큰 없음·만료 (AUTH_401) | [ErrorResponse](#errorresponse) |
 | 404 | 없는 분석, 다른 회원의 분석(공개여도), 삭제된 분석 (ANALYSIS_404) | [ErrorResponse](#errorresponse) |
 | 409 | DONE이 아닌 분석을 공개로 바꾸려 함 (ANALYSIS_006) | [ErrorResponse](#errorresponse) |
+
+#### `GET` /api/projects
+
+**내 프로젝트 목록** · 권한: 로그인
+
+삭제하지 않은 분석이 하나 이상 있는 내 프로젝트를 마지막 분석 요청 최신순으로 준다.
+
+**파라미터**
+
+| 이름 | 위치 | 필수 | 타입 | 설명 | 예 |
+|---|---|---|---|---|---|
+| `page` | query | 선택 | integer(int32) | 페이지 번호 (1부터) (기본 `1`, 범위 1~) | `1` |
+| `size` | query | 선택 | integer(int32) | 페이지 크기 (최대 100) (기본 `20`, 범위 1~100) | `20` |
+
+**응답**
+
+| 상태 | 설명 | 스키마 |
+|---|---|---|
+| 200 | 조회 성공 | [PageResponseProjectSummaryResponse](#pageresponseprojectsummaryresponse) |
+| 400 | page·size 범위 밖 (COMMON_400) | [ErrorResponse](#errorresponse) |
+| 401 | 토큰 없음·만료 (AUTH_401) | [ErrorResponse](#errorresponse) |
+
+#### `GET` /api/projects/{id}
+
+**프로젝트 상세** · 권한: 로그인
+
+프로젝트 정보, 버전(번호 내림차순), 삭제하지 않은 분석(요청 최신순). 아직 버전이 없는 분석은 versionId가 null이다.
+
+**파라미터**
+
+| 이름 | 위치 | 필수 | 타입 | 설명 | 예 |
+|---|---|---|---|---|---|
+| `id` | path | 필수 | integer(int64) | - | - |
+
+**응답**
+
+| 상태 | 설명 | 스키마 |
+|---|---|---|
+| 200 | 조회 성공 | [ProjectDetailResponse](#projectdetailresponse) |
+| 401 | 토큰 없음·만료 (AUTH_401) | [ErrorResponse](#errorresponse) |
+| 404 | 없는 프로젝트, 남의 프로젝트, 분석을 모두 삭제한 프로젝트 (PROJECT_404) | [ErrorResponse](#errorresponse) |
+
+#### `PATCH` /api/projects/{id}
+
+**프로젝트 이름 바꾸기** · 권한: 로그인
+
+분석의 제목은 바뀌지 않는다.
+
+**파라미터**
+
+| 이름 | 위치 | 필수 | 타입 | 설명 | 예 |
+|---|---|---|---|---|---|
+| `id` | path | 필수 | integer(int64) | - | - |
+
+**요청 본문** (`application/json`, 필수): [UpdateProjectRequest](#updateprojectrequest)
+
+**응답**
+
+| 상태 | 설명 | 스키마 |
+|---|---|---|
+| 200 | 바뀜 | [UpdateProjectResponse](#updateprojectresponse) |
+| 400 | 이름이 비었거나 100자 초과 (COMMON_400, details.name) | [ErrorResponse](#errorresponse) |
+| 401 | 토큰 없음·만료 (AUTH_401) | [ErrorResponse](#errorresponse) |
+| 404 | 없는 프로젝트, 남의 프로젝트, 분석을 모두 삭제한 프로젝트 (PROJECT_404) | [ErrorResponse](#errorresponse) |
+
+#### `GET` /api/projects/{id}/latest-commit
+
+**새 커밋 배지** · 권한: 로그인
+
+저장소 프로젝트의 기본 브랜치 최신 커밋을 분석한 최신 커밋과 비교한다. 조회 결과(실패 포함)는 5분 동안 다시 쓰고 외부 요청을 하지 않는다. 조회 실패·비공개로 바뀜·분석한 커밋 없음은 UNKNOWN, ZIP 프로젝트는 NOT_SUPPORTED이며 모두 200이다.
+
+**파라미터**
+
+| 이름 | 위치 | 필수 | 타입 | 설명 | 예 |
+|---|---|---|---|---|---|
+| `id` | path | 필수 | integer(int64) | - | - |
+
+**응답**
+
+| 상태 | 설명 | 스키마 |
+|---|---|---|
+| 200 | 조회 성공 | [LatestCommitResponse](#latestcommitresponse) |
+| 401 | 토큰 없음·만료 (AUTH_401) | [ErrorResponse](#errorresponse) |
+| 404 | 없는 프로젝트, 남의 프로젝트, 분석을 모두 삭제한 프로젝트 (PROJECT_404) | [ErrorResponse](#errorresponse) |
 
 ### 복습 계획
 
@@ -1285,7 +1422,7 @@ DONE이면 완료 시각을 지금으로, TODO면 완료 시각을 지운다. �
 | 이름 | 위치 | 필수 | 타입 | 설명 | 예 |
 |---|---|---|---|---|---|
 | `keyword` | query | 선택 | string | 이름·요약 부분 일치 검색어 (trim 후 50자 이하, 대소문자 무시) (길이 0~50자) | `jwt` |
-| `category` | query | 선택 | string | 카테고리 (java, spring, web, security, mybatis, vue). 없는 값이면 빈 목록 (길이 0~50자) | `security` |
+| `category` | query | 선택 | string | 카테고리 (java, spring, web, security, mybatis, vue, database, javascript, tooling, typescript, react, cs). 없는 값이면 빈 목록 (길이 0~50자) | `security` |
 | `difficulty` | query | 선택 | string: BEGINNER · JUNIOR · SENIOR | 난이도 | `JUNIOR` |
 | `sort` | query | 선택 | string: POPULAR · LATEST | 정렬 (POPULAR: 찜 수→평점, LATEST: 최신 등록) (기본 `POPULAR`) | `POPULAR` |
 | `page` | query | 선택 | integer(int32) | 페이지 번호 (1부터) (기본 `1`, 범위 1~) | `1` |
@@ -1489,73 +1626,6 @@ DONE이면 완료 시각을 지금으로, TODO면 완료 시각을 지운다. �
 | 400 | 페이지 값 오류 (COMMON_400) | [ErrorResponse](#errorresponse) |
 | 404 | 없거나 탈퇴한 회원 (USER_404) | [ErrorResponse](#errorresponse) |
 
-### 퀴즈
-
-#### `GET` /api/analyses/{id}/quiz
-
-**분석의 퀴즈 조회** · 권한: 로그인
-
-문항(정답·해설·개념 제외)과 요청자의 가장 최근 풀이 요약. 분석 주인과 그 분석을 공유받은 팀 멤버(F-20b)가 볼 수 있다. LLM을 부르지 않는다.
-
-**파라미터**
-
-| 이름 | 위치 | 필수 | 타입 | 설명 | 예 |
-|---|---|---|---|---|---|
-| `id` | path | 필수 | integer(int64) | - | - |
-
-**응답**
-
-| 상태 | 설명 | 스키마 |
-|---|---|---|
-| 200 | 조회 성공 | [QuizResponse](#quizresponse) |
-| 401 | 토큰 없음·만료 (AUTH_401) | [ErrorResponse](#errorresponse) |
-| 404 | 없는·삭제된 분석, 내 분석도 내가 멤버인 팀에 공유된 분석도 아님 (ANALYSIS_404), 퀴즈가 없음 (QUIZ_404) | [ErrorResponse](#errorresponse) |
-
-#### `POST` /api/analyses/{id}/quiz
-
-**퀴즈 다시 만들기** · 권한: 로그인
-
-생성에 실패한(quizStatus = FAILED) 내 완료 분석의 퀴즈를 같은 입력으로 다시 만든다. 바로 202를 주고 생성은 백그라운드에서 하며, 결과는 /api/analyses/{id}/status의 quizStatus(READY·FAILED)로 확인한다. 분석당 3회까지이고 실패해도 횟수는 돌아오지 않는다.
-
-**파라미터**
-
-| 이름 | 위치 | 필수 | 타입 | 설명 | 예 |
-|---|---|---|---|---|---|
-| `id` | path | 필수 | integer(int64) | - | - |
-
-**응답**
-
-| 상태 | 설명 | 스키마 |
-|---|---|---|
-| 202 | 접수됨 (quizStatus = GENERATING) | [QuizRegenerationResponse](#quizregenerationresponse) |
-| 401 | 토큰 없음·만료 (AUTH_401) | [ErrorResponse](#errorresponse) |
-| 404 | 없는·삭제된 분석, 남의 분석(팀 공유 멤버 포함) (ANALYSIS_404) | [ErrorResponse](#errorresponse) |
-| 409 | 분석이 DONE이 아니거나 퀴즈가 이미 있거나 만드는 중 (QUIZ_409) | [ErrorResponse](#errorresponse) |
-| 429 | 재생성 횟수를 다 씀 (QUIZ_429) | [ErrorResponse](#errorresponse) |
-
-#### `POST` /api/quizzes/{quizId}/attempts
-
-**퀴즈 풀이 제출·채점** · 권한: 로그인
-
-문항마다 한 번씩 답하면 채점해 저장하고, 틀린 문항의 공개 개념을 내일 복습 계획에 넣는다. 같은 퀴즈를 여러 번 풀 수 있다. 분석 주인과 그 분석을 공유받은 팀 멤버(F-20b)가 낼 수 있고, 풀이·복습 계획은 요청자의 것이다.
-
-**파라미터**
-
-| 이름 | 위치 | 필수 | 타입 | 설명 | 예 |
-|---|---|---|---|---|---|
-| `quizId` | path | 필수 | integer(int64) | - | - |
-
-**요청 본문** (`application/json`, 필수): [QuizAttemptRequest](#quizattemptrequest)
-
-**응답**
-
-| 상태 | 설명 | 스키마 |
-|---|---|---|
-| 201 | 채점 성공 | [QuizAttemptResponse](#quizattemptresponse) |
-| 400 | answers 검증 실패 (COMMON_400), 문항마다 한 번씩 답하지 않음 (QUIZ_400) | [ErrorResponse](#errorresponse) |
-| 401 | 토큰 없음·만료 (AUTH_401) | [ErrorResponse](#errorresponse) |
-| 404 | 없는 퀴즈, 삭제된 분석의 퀴즈, 내 분석도 내가 멤버인 팀에 공유된 분석도 아닌 퀴즈 (QUIZ_404) | [ErrorResponse](#errorresponse) |
-
 ### 챌린지
 
 #### `GET` /api/challenges
@@ -1684,6 +1754,127 @@ DONE이면 완료 시각을 지금으로, TODO면 완료 시각을 지운다. �
 | 200 | 조회 성공 | [PageResponseMyChallengeResponse](#pageresponsemychallengeresponse) |
 | 400 | 상태·페이지 값 오류 (COMMON_400, details에 필드별 사유) | [ErrorResponse](#errorresponse) |
 | 404 | 없거나 탈퇴한 회원 (USER_404) | [ErrorResponse](#errorresponse) |
+
+### 퀴즈
+
+#### `GET` /api/analyses/{id}/quiz
+
+**분석의 퀴즈 조회** · 권한: 로그인
+
+문항(정답·해설·개념 제외)과 요청자의 가장 최근 풀이 요약. 분석 주인과 그 분석을 공유받은 팀 멤버(F-20b)가 볼 수 있다. LLM을 부르지 않는다.
+
+**파라미터**
+
+| 이름 | 위치 | 필수 | 타입 | 설명 | 예 |
+|---|---|---|---|---|---|
+| `id` | path | 필수 | integer(int64) | - | - |
+
+**응답**
+
+| 상태 | 설명 | 스키마 |
+|---|---|---|
+| 200 | 조회 성공 | [QuizResponse](#quizresponse) |
+| 401 | 토큰 없음·만료 (AUTH_401) | [ErrorResponse](#errorresponse) |
+| 404 | 없는·삭제된 분석, 내 분석도 내가 멤버인 팀에 공유된 분석도 아님 (ANALYSIS_404), 퀴즈가 없음 (QUIZ_404) | [ErrorResponse](#errorresponse) |
+
+#### `POST` /api/analyses/{id}/quiz
+
+**퀴즈 다시 만들기** · 권한: 로그인
+
+생성에 실패한(quizStatus = FAILED) 내 완료 분석의 퀴즈를 같은 입력으로 다시 만든다. 바로 202를 주고 생성은 백그라운드에서 하며, 결과는 /api/analyses/{id}/status의 quizStatus(READY·FAILED)로 확인한다. 분석당 3회까지이고 실패해도 횟수는 돌아오지 않는다.
+
+**파라미터**
+
+| 이름 | 위치 | 필수 | 타입 | 설명 | 예 |
+|---|---|---|---|---|---|
+| `id` | path | 필수 | integer(int64) | - | - |
+
+**응답**
+
+| 상태 | 설명 | 스키마 |
+|---|---|---|
+| 202 | 접수됨 (quizStatus = GENERATING) | [QuizRegenerationResponse](#quizregenerationresponse) |
+| 401 | 토큰 없음·만료 (AUTH_401) | [ErrorResponse](#errorresponse) |
+| 404 | 없는·삭제된 분석, 남의 분석(팀 공유 멤버 포함) (ANALYSIS_404) | [ErrorResponse](#errorresponse) |
+| 409 | 분석이 DONE이 아니거나 퀴즈가 이미 있거나 만드는 중 (QUIZ_409) | [ErrorResponse](#errorresponse) |
+| 429 | 재생성 횟수를 다 씀 (QUIZ_429) | [ErrorResponse](#errorresponse) |
+
+#### `GET` /api/quizzes/{quizId}/attempts
+
+**내 풀이 기록 목록** · 권한: 로그인
+
+그 퀴즈의 요청자 풀이만 최신순(createdAt 내림차순, 같으면 id 내림차순)으로 최근 20개. 없으면 []. 분석 주인과 그 분석을 공유받은 팀 멤버가 자기 풀이를 볼 수 있다 (L-1b).
+
+**파라미터**
+
+| 이름 | 위치 | 필수 | 타입 | 설명 | 예 |
+|---|---|---|---|---|---|
+| `quizId` | path | 필수 | integer(int64) | - | - |
+
+**응답**
+
+| 상태 | 설명 | 스키마 |
+|---|---|---|
+| 200 | 조회 성공 | [QuizAttemptSummaryResponse](#quizattemptsummaryresponse)[] |
+| 401 | 토큰 없음·만료 (AUTH_401) | [ErrorResponse](#errorresponse) |
+| 404 | 없는 퀴즈, 삭제된 분석의 퀴즈, 내 분석도 내가 멤버인 팀에 공유된 분석도 아닌 퀴즈 (QUIZ_404) | [ErrorResponse](#errorresponse) |
+
+#### `POST` /api/quizzes/{quizId}/attempts
+
+**퀴즈 풀이 제출·채점** · 권한: 로그인
+
+문항마다 한 번씩 답하면 채점해 저장하고, 틀린 문항의 공개 개념을 내일 복습 계획에 넣는다. 같은 퀴즈를 여러 번 풀 수 있다. 분석 주인과 그 분석을 공유받은 팀 멤버(F-20b)가 낼 수 있고, 풀이·복습 계획은 요청자의 것이다.
+
+**파라미터**
+
+| 이름 | 위치 | 필수 | 타입 | 설명 | 예 |
+|---|---|---|---|---|---|
+| `quizId` | path | 필수 | integer(int64) | - | - |
+
+**요청 본문** (`application/json`, 필수): [QuizAttemptRequest](#quizattemptrequest)
+
+**응답**
+
+| 상태 | 설명 | 스키마 |
+|---|---|---|
+| 201 | 채점 성공 | [QuizAttemptResponse](#quizattemptresponse) |
+| 400 | answers 검증 실패 (COMMON_400), 문항마다 한 번씩 답하지 않음 (QUIZ_400) | [ErrorResponse](#errorresponse) |
+| 401 | 토큰 없음·만료 (AUTH_401) | [ErrorResponse](#errorresponse) |
+| 404 | 없는 퀴즈, 삭제된 분석의 퀴즈, 내 분석도 내가 멤버인 팀에 공유된 분석도 아닌 퀴즈 (QUIZ_404) | [ErrorResponse](#errorresponse) |
+
+#### `GET` /api/quizzes/{quizId}/attempts/{attemptId}
+
+**내 풀이 상세** · 권한: 로그인
+
+지난 풀이 하나의 문항별 내 답·정답·해설·관련 공개 카드. 선택지·위치는 저장된 순서 기준이다 (L-1b).
+
+**파라미터**
+
+| 이름 | 위치 | 필수 | 타입 | 설명 | 예 |
+|---|---|---|---|---|---|
+| `quizId` | path | 필수 | integer(int64) | - | - |
+| `attemptId` | path | 필수 | integer(int64) | - | - |
+
+**응답**
+
+| 상태 | 설명 | 스키마 |
+|---|---|---|
+| 200 | 조회 성공 | [QuizAttemptDetailResponse](#quizattemptdetailresponse) |
+| 401 | 토큰 없음·만료 (AUTH_401) | [ErrorResponse](#errorresponse) |
+| 404 | 퀴즈가 없거나 열 수 없음 (QUIZ_404), 풀이가 남의 것·다른 퀴즈의 것이거나 없음 (QUIZ_001) | [ErrorResponse](#errorresponse) |
+
+#### `GET` /api/users/me/wrong-notes
+
+**내 오답 노트** · 권한: 로그인
+
+지금 열 수 있는 분석(내 미삭제 분석·내가 멤버인 팀에 공유된 미삭제 분석)에서 내 마지막 답이 틀린 문항을 개념별로 묶는다. 최근에 답한 200개까지 담고 totalCount는 전체 수다 (L-1b).
+
+**응답**
+
+| 상태 | 설명 | 스키마 |
+|---|---|---|
+| 200 | 조회 성공 | [WrongNoteResponse](#wrongnoteresponse) |
+| 401 | 토큰 없음·만료 (AUTH_401) | [ErrorResponse](#errorresponse) |
 
 ### 추천
 
@@ -2119,11 +2310,12 @@ DONE이면 완료 시각을 지금으로, TODO면 완료 시각을 지운다. �
 |---|---|---|---|---|
 | `avgRating` | number(double) | 필수 | 평균 별점 (0.0~5.0, 리뷰가 없으면 0.0) | `0` |
 | `body` | string · null 가능 | 필수 | 본문 (Markdown 원문) | `## 핵심<br>- 엔티티에 버전 컬럼을 두고 UPDATE 조건에 넣는다.` |
-| `category` | string | 필수 | 카테고리 (java, spring, web, security, mybatis, vue) | `spring` |
+| `category` | string | 필수 | 카테고리 (java, spring, web, security, mybatis, vue, database, javascript, tooling, typescript, react, cs) | `spring` |
 | `createdAt` | string(date-time) | 필수 | 작성 시각 | `2026-11-20T14:20:00+09:00` |
 | `difficulty` | string: BEGINNER · JUNIOR · SENIOR | 필수 | 난이도 | `SENIOR` |
 | `exampleCode` | string · null 가능 | 필수 | 예제 코드 | `UPDATE orders SET status = ?, version = version + 1 WHERE id = ? AND version = ?` |
 | `id` | integer(int64) | 필수 | 카드 ID | `91` |
+| `levels` | [ConceptLevelResponse](#conceptlevelresponse)[] | 필수 | 수준별 요약·본문. 언제나 3개이고 BEGINNER·JUNIOR·SENIOR 순 (K-1) (항목 3~3개) | - |
 | `linkedAnalysisCount` | integer(int64) | 필수 | 이 카드가 연결된 분석 수 (삭제된 분석은 연결이 지워져 빠진다) | `2` |
 | `name` | string | 필수 | 개념 이름 | `낙관적 락` |
 | `referenceUrl` | string · null 가능 | 필수 | 공식 문서 출처 링크 | `https://docs.spring.io/spring-data/jpa/reference/jpa/locking.html` |
@@ -2134,6 +2326,16 @@ DONE이면 완료 시각을 지금으로, TODO면 완료 시각을 지운다. �
 | `updatedAt` | string(date-time) | 필수 | 수정 시각 | `2026-11-20T14:20:00+09:00` |
 | `wishCount` | integer(int32) | 필수 | 찜 수 | `0` |
 
+### AdminConceptLevelRequest
+
+관리자 카드 요청의 수준별 요약·본문
+
+| 이름 | 타입 | 필수 | 설명 | 예 |
+|---|---|---|---|---|
+| `body` | string · null 가능 | 선택 | 그 수준의 본문 Markdown (10,000자 이하, 비면 null) (길이 0~10000자) | `## 핵심<br>- 빈은 타입으로 찾는다.` |
+| `level` | string: BEGINNER · JUNIOR · SENIOR | 필수 | 수준 (배열 안에서 서로 달라야 함) (길이 1~자) | `JUNIOR` |
+| `summary` | string · null 가능 | 선택 | 그 수준의 한 줄 요약 (300자 이하, 비면 null) (길이 0~300자) | `생성자로 받은 빈을 컨테이너가 주입합니다.` |
+
 ### AdminConceptRequest
 
 관리자 카드 생성·수정 요청
@@ -2141,9 +2343,10 @@ DONE이면 완료 시각을 지금으로, TODO면 완료 시각을 지운다. �
 | 이름 | 타입 | 필수 | 설명 | 예 |
 |---|---|---|---|---|
 | `body` | string · null 가능 | 선택 | 본문 Markdown (10,000자 이하, 비면 null) (길이 0~10000자) | `## 핵심<br>- 엔티티에 버전 컬럼을 두고 UPDATE 조건에 넣는다.` |
-| `category` | string: java · spring · web · security · mybatis · vue | 필수 | 카테고리 (길이 1~자) | `spring` |
+| `category` | string: java · spring · web · security · mybatis · vue · database · javascript · tooling · typescript · react · cs | 필수 | 카테고리 (길이 1~자) | `spring` |
 | `difficulty` | string: BEGINNER · JUNIOR · SENIOR | 필수 | 난이도 (길이 1~자) | `SENIOR` |
 | `exampleCode` | string · null 가능 | 선택 | 예제 코드 (10,000자 이하, 비면 null) (길이 0~10000자) | `UPDATE orders SET status = ?, version = version + 1 WHERE id = ? AND version = ?` |
+| `levels` | [AdminConceptLevelRequest](#adminconceptlevelrequest)[] · null 가능 | 선택 | 수준별 요약·본문 0~3개 (level은 서로 달라야 함). 있으면 6칸을 통째로 바꾸고 배열에 없는 수준은 비운다. 없거나 null이면 PUT은 기존 값을 유지하고 POST는 모두 비운다 (K-1) (항목 0~3개) | - |
 | `name` | string | 필수 | 개념 이름 (1~100자, 시드 카드는 바꿀 수 없음) (길이 0~100자) | `낙관적 락` |
 | `referenceUrl` | string · null 가능 | 선택 | 공식 문서 출처 링크 (http·https만, 500자 이하, 비면 null) (길이 0~500자) | `https://docs.spring.io/spring-data/jpa/reference/jpa/locking.html` |
 | `status` | string: DRAFT · PUBLISHED · HIDDEN | 필수 | 상태. 생성은 DRAFT·PUBLISHED만, 공개·숨김 카드는 DRAFT로 되돌릴 수 없음 (길이 1~자) | `PUBLISHED` |
@@ -2166,7 +2369,7 @@ DONE이면 완료 시각을 지금으로, TODO면 완료 시각을 지운다. �
 | 이름 | 타입 | 필수 | 설명 | 예 |
 |---|---|---|---|---|
 | `avgRating` | number(double) | 필수 | 평균 별점 (0.0~5.0, 리뷰가 없으면 0.0) | `0` |
-| `category` | string | 필수 | 카테고리 (java, spring, web, security, mybatis, vue) | `spring` |
+| `category` | string | 필수 | 카테고리 (java, spring, web, security, mybatis, vue, database, javascript, tooling, typescript, react, cs) | `spring` |
 | `difficulty` | string: BEGINNER · JUNIOR · SENIOR | 필수 | 난이도 | `SENIOR` |
 | `id` | integer(int64) | 필수 | 카드 ID | `91` |
 | `name` | string | 필수 | 개념 이름 | `낙관적 락` |
@@ -2217,6 +2420,7 @@ DONE이면 완료 시각을 지금으로, TODO면 완료 시각을 지운다. �
 | `overview` | [AnalysisOverview](#analysisoverview) | 선택 | 프로젝트 개요. 개요 생성 전·실패 시 null | - |
 | `owner` | [AnalysisOwnerResponse](#analysisownerresponse) | 필수 | 분석 주인 | - |
 | `progress` | integer(int32) | 필수 | 진행률 (0~100) | `100` |
+| `project` | [AnalysisProjectRefResponse](#analysisprojectrefresponse) | 필수 | 붙은 프로젝트 (P-1a) | - |
 | `projectName` | string · null 가능 | 선택 | 프로젝트 이름 | `todo-app` |
 | `quizRegenerationsLeft` | integer(int32) | 필수 | 퀴즈 다시 만들기 남은 횟수 (분석당 3회 − 사용, 최소 0, L-1a) (범위 0~) | `2` |
 | `quizStatus` | string: GENERATING · READY · FAILED · null 가능 | 선택 | 퀴즈 상태. GENERATING 재생성 중, READY 퀴즈 있음, FAILED 생성 실패(다시 만들 수 있음). QUIZ 단계를 끝내기 전이면 null (L-1a) | `READY` |
@@ -2224,6 +2428,7 @@ DONE이면 완료 시각을 지금으로, TODO면 완료 시각을 지운다. �
 | `sourceUrl` | string · null 가능 | 선택 | 저장소 주소(정규화). ZIP 분석이면 null (F-05b AC12) | `https://github.com/octo/todo-app` |
 | `status` | string: FETCHING · FILTERING · SELECTING · EXPLAINING · EXTRACTING · QUIZ · DONE · FAILED | 필수 | 진행 상태 | `DONE` |
 | `title` | string · null 가능 | 선택 | 제목 | `todo-app` |
+| `version` | [AnalysisVersionRefResponse](#analysisversionrefresponse) | 선택 | 붙은 버전 (P-1a). 저장소 분석이 아직 FETCHING이거나 받기 전에 실패했으면 null | - |
 
 ### AnalysisFileResponse
 
@@ -2271,6 +2476,15 @@ DONE이면 완료 시각을 지금으로, TODO면 완료 시각을 지운다. �
 | `id` | integer(int64) | 필수 | 회원 ID | `7` |
 | `nickname` | string | 필수 | 닉네임 | `vibecoder` |
 
+### AnalysisProjectRefResponse
+
+분석이 붙은 프로젝트
+
+| 이름 | 타입 | 필수 | 설명 | 예 |
+|---|---|---|---|---|
+| `id` | integer(int64) | 필수 | 프로젝트 ID | `12` |
+| `name` | string | 필수 | 프로젝트 이름 | `todo-app` |
+
 ### AnalysisStatusResponse
 
 분석 진행 상태
@@ -2310,10 +2524,24 @@ DONE이면 완료 시각을 지금으로, TODO면 완료 시각을 지운다. �
 | `level` | string: BEGINNER · JUNIOR · SENIOR | 필수 | 분석 수준 | `JUNIOR` |
 | `memo` | string · null 가능 | 선택 | 메모 (F-19) | `JWT 필터 순서 다시 보기` |
 | `progress` | integer(int32) | 필수 | 진행률 (0~100) | `25` |
+| `projectId` | integer(int64) | 필수 | 붙은 프로젝트 ID (P-1a) | `12` |
 | `projectName` | string · null 가능 | 선택 | 프로젝트 이름 (ZIP 파일명에서 .zip을 뺀 이름) | `todo-app` |
 | `sourceType` | string: URL · ZIP | 필수 | 입력 종류 | `ZIP` |
 | `status` | string: FETCHING · FILTERING · SELECTING · EXPLAINING · EXTRACTING · QUIZ · DONE · FAILED | 필수 | 진행 상태 | `SELECTING` |
 | `title` | string · null 가능 | 선택 | 제목 (처음에는 프로젝트 이름) | `todo-app` |
+| `versionNumber` | integer(int32) · null 가능 | 선택 | 붙은 버전 번호 (P-1a). 저장소 분석이 아직 FETCHING이거나 받기 전에 실패했으면 null | `2` |
+
+### AnalysisVersionRefResponse
+
+분석이 붙은 버전
+
+| 이름 | 타입 | 필수 | 설명 | 예 |
+|---|---|---|---|---|
+| `commitMessage` | string · null 가능 | 선택 | 커밋 메시지 첫 줄 | `feat: JWT 로그인` |
+| `commitSha` | string · null 가능 | 선택 | 커밋 SHA (40자) | `9f2c4e1a7b3d5f60812c9e4a1b2c3d4e5f607182` |
+| `committedAt` | string(date-time) · null 가능 | 선택 | 커밋 시각 | `2026-11-28T14:02:11+09:00` |
+| `id` | integer(int64) | 필수 | 버전 ID | `31` |
+| `number` | integer(int32) | 필수 | 버전 번호 | `2` |
 
 ### ApiEndpoint
 
@@ -2424,16 +2652,28 @@ DONE이면 완료 시각을 지금으로, TODO면 완료 시각을 지운다. �
 | `appearances` | [ConceptAppearanceResponse](#conceptappearanceresponse)[] | 필수 | 내 분석(삭제되지 않은 DONE)에서 등장한 위치, 최신순 최대 10개. 비로그인은 빈 배열 | - |
 | `avgRating` | number(double) | 필수 | 평균 별점 (0.0~5.0, 소수 1자리. 리뷰가 없으면 0.0) | `4.5` |
 | `body` | string · null 가능 | 필수 | 쉬운 설명 본문 (Markdown 원문, 렌더링은 FE) | `## 핵심<br>- 서버는 **서명**과 만료만 검증한다.` |
-| `category` | string | 필수 | 카테고리 (java, spring, security, mybatis, web, vue) | `security` |
+| `category` | string | 필수 | 카테고리 (java, spring, web, security, mybatis, vue, database, javascript, tooling, typescript, react, cs) | `security` |
 | `difficulty` | string: BEGINNER · JUNIOR · SENIOR | 필수 | 난이도 | `SENIOR` |
 | `exampleCode` | string · null 가능 | 필수 | 예제 코드 (언어 정보 없음) | `String token = Jwts.builder().subject(email).compact();` |
 | `id` | integer(int64) | 필수 | 카드 ID | `57` |
+| `levels` | [ConceptLevelResponse](#conceptlevelresponse)[] | 필수 | 수준별 요약·본문. 언제나 3개이고 BEGINNER·JUNIOR·SENIOR 순. 화면은 viewerLevel의 body가 있으면 그것을, 없으면 공통 body + 그 수준 summary를 보인다 (K-1) (항목 3~3개) | - |
 | `name` | string | 필수 | 개념 이름 | `JWT 기반 인증` |
 | `referenceUrl` | string · null 가능 | 필수 | 공식 문서 출처 링크 | `https://docs.spring.io/spring-security/reference/servlet/oauth2/resource-server/jwt.html` |
 | `related` | [ConceptSummaryResponse](#conceptsummaryresponse)[] | 필수 | 관련 카드 최대 4개 (함께 등장한 횟수순, 모자라면 같은 카테고리 인기순) | - |
 | `summary` | string | 필수 | 한 줄 요약 | `JWT는 사용자 정보와 만료 시간을 담고 서명한 토큰이다.` |
+| `viewerLevel` | string: BEGINNER · JUNIOR · SENIOR · null 가능 | 필수 | 로그인 회원의 수준 (users.level). 비로그인·깨진 토큰이면 null (K-1) | `JUNIOR` |
 | `wishCount` | integer(int32) | 필수 | 찜 수 | `12` |
 | `wished` | boolean | 필수 | 내가 찜했는지 (F-12). 비로그인·깨진 토큰이면 false | `false` |
+
+### ConceptLevelResponse
+
+카드의 수준별 요약·본문
+
+| 이름 | 타입 | 필수 | 설명 | 예 |
+|---|---|---|---|---|
+| `body` | string · null 가능 | 필수 | 그 수준의 본문 (Markdown 원문). 없으면 null이고 화면은 공통 body + 그 수준 summary를 보인다 | `## 핵심<br>- 빈은 타입으로 찾고, 같은 타입이 둘이면 @Qualifier로 고른다.` |
+| `level` | string: BEGINNER · JUNIOR · SENIOR | 필수 | 수준 | `JUNIOR` |
+| `summary` | string · null 가능 | 필수 | 그 수준 독자에게 맞춘 한 줄 요약 (300자 이하). 없으면 null | `생성자 파라미터로 받은 빈을 컨테이너가 주입하고, @RequiredArgsConstructor가 그 생성자를 만들어 줍니다.` |
 
 ### ConceptRatingResponse
 
@@ -2483,7 +2723,7 @@ DONE이면 완료 시각을 지금으로, TODO면 완료 시각을 지운다. �
 | 이름 | 타입 | 필수 | 설명 | 예 |
 |---|---|---|---|---|
 | `avgRating` | number(double) | 필수 | 평균 별점 (0.0~5.0, 소수 1자리. 리뷰가 없으면 0.0) | `4.5` |
-| `category` | string | 필수 | 카테고리 (java, spring, security, mybatis, web, vue) | `security` |
+| `category` | string | 필수 | 카테고리 (java, spring, web, security, mybatis, vue, database, javascript, tooling, typescript, react, cs) | `security` |
 | `difficulty` | string: BEGINNER · JUNIOR · SENIOR | 필수 | 난이도 | `JUNIOR` |
 | `id` | integer(int64) | 필수 | 카드 ID | `12` |
 | `name` | string | 필수 | 개념 이름 | `JWT 인증` |
@@ -2507,6 +2747,7 @@ DONE이면 완료 시각을 지금으로, TODO면 완료 시각을 지운다. �
 | 이름 | 타입 | 필수 | 설명 | 예 |
 |---|---|---|---|---|
 | `analysisId` | integer(int64) | 필수 | 분석 ID | `42` |
+| `projectId` | integer(int64) | 필수 | 분석이 붙은 프로젝트 ID (P-1a) | `12` |
 | `status` | string: FETCHING · FILTERING · SELECTING · EXPLAINING · EXTRACTING · QUIZ · DONE · FAILED | 필수 | 현재 상태 (접수 직후 FETCHING) | `FETCHING` |
 
 ### CreateFlowsRequest
@@ -2629,6 +2870,54 @@ API 하나 (개요 apis의 method·path 그대로)
 | `level` | string: BEGINNER · JUNIOR · SENIOR | 필수 | 학습 수준 | `JUNIOR` |
 | `nickname` | string | 필수 | 닉네임 | `java러버` |
 
+### InterviewConceptRef
+
+관련 개념 카드
+
+| 이름 | 타입 | 필수 | 설명 | 예 |
+|---|---|---|---|---|
+| `id` | integer(int64) | 필수 | 카드 ID | `12` |
+| `name` | string | 필수 | 카드 이름 | `계층형 아키텍처` |
+
+### InterviewEvidence
+
+근거 코드 위치
+
+| 이름 | 타입 | 필수 | 설명 | 예 |
+|---|---|---|---|---|
+| `endLine` | integer(int32) | 필수 | 끝 줄 | `48` |
+| `fileId` | integer(int64) | 필수 | 파일 ID (analysis_files.id) | `1201` |
+| `path` | string | 필수 | 파일 경로 | `src/main/java/io/spring/api/ArticlesApi.java` |
+| `startLine` | integer(int32) | 필수 | 시작 줄 | `31` |
+
+### InterviewQuestion
+
+면접 질문 하나
+
+| 이름 | 타입 | 필수 | 설명 | 예 |
+|---|---|---|---|---|
+| `category` | string: STRUCTURE · TECH_CHOICE · FLOW · LIMITATION | 필수 | 범주: 구조·기술 선택 이유·핵심 흐름·한계와 개선 | `STRUCTURE` |
+| `concepts` | [InterviewConceptRef](#interviewconceptref)[] | 필수 | 관련 개념 카드 (0~3개, 지금 숨김이 아닌 카드만) | - |
+| `evidence` | [InterviewEvidence](#interviewevidence)[] | 필수 | 근거 코드 (1~3개) | - |
+| `id` | integer(int64) | 필수 | 질문 ID | `301` |
+| `keyPoints` | string[] | 필수 | 답의 핵심 포인트 (1~5개, 항목 200자 이내) | - |
+| `no` | integer(int32) | 필수 | 번호 (1부터) | `1` |
+| `question` | string | 필수 | 질문 (300자 이내) | `글 작성 기능을 controller·service·mapper로 나눈 이유는 무엇인가요?` |
+
+### InterviewResponse
+
+면접 예상 질문
+
+| 이름 | 타입 | 필수 | 설명 | 예 |
+|---|---|---|---|---|
+| `analysisId` | integer(int64) | 필수 | 분석 ID | `41` |
+| `errorCode` | string: ANALYSIS_500 · LLM_502 · LLM_503 · null 가능 | 선택 | 실패 사유 코드. FAILED가 아니면 null | `LLM_503` |
+| `errorMessage` | string · null 가능 | 선택 | 사용자에게 보여 줄 실패 사유. FAILED가 아니면 null | `AI 응답을 받지 못했습니다. 잠시 후 다시 시도해 주세요.` |
+| `generatedAt` | string(date-time) · null 가능 | 선택 | 마지막으로 DONE이 된 시각. DONE이 아니면 null | `2026-11-30T14:05:00+09:00` |
+| `questions` | [InterviewQuestion](#interviewquestion)[] · null 가능 | 선택 | 질문 (no 오름차순, 5~12개). DONE이 아니면 null | - |
+| `regenerationsLeft` | integer(int32) | 필수 | 남은 다시 만들기 횟수 (DONE 기준, 최소 0) | `1` |
+| `status` | string: NONE · PENDING · DONE · FAILED | 필수 | 생성 상태. NONE은 요청한 적 없음 | `DONE` |
+
 ### InviteCodeResponse
 
 초대 코드 재발급 응답
@@ -2663,6 +2952,27 @@ API 하나 (개요 apis의 method·path 그대로)
 | `createdAt` | string(date-time) | 필수 | 제출 시각 | `2026-11-19T17:30:12+09:00` |
 | `score` | integer(int32) | 필수 | 맞힌 문항 수 | `5` |
 | `total` | integer(int32) | 필수 | 문항 수 | `6` |
+
+### LatestCommit
+
+기본 브랜치 최신 커밋
+
+| 이름 | 타입 | 필수 | 설명 | 예 |
+|---|---|---|---|---|
+| `committedAt` | string(date-time) · null 가능 | 선택 | 커밋 시각 | `2026-11-29T09:12:40+09:00` |
+| `message` | string · null 가능 | 선택 | 커밋 메시지 첫 줄 (200자까지) | `feat: 비밀번호 재설정` |
+| `sha` | string | 필수 | 커밋 SHA (40자) | `a1b2c3d4e5f60718293a4b5c6d7e8f9012345678` |
+
+### LatestCommitResponse
+
+새 커밋 배지
+
+| 이름 | 타입 | 필수 | 설명 | 예 |
+|---|---|---|---|---|
+| `analyzedSha` | string · null 가능 | 선택 | 분석한 최신 커밋 SHA. 없거나 ZIP이면 null | `9f2c4e1a7b3d5f60812c9e4a1b2c3d4e5f607182` |
+| `checkedAt` | string(date-time) · null 가능 | 선택 | 외부 조회 시각 (5분 동안 다시 쓴다). ZIP이면 null | `2026-11-29T10:00:00+09:00` |
+| `latest` | [LatestCommit](#latestcommit) | 선택 | 기본 브랜치 최신 커밋. 조회하지 못했거나 ZIP이면 null | - |
+| `status` | string: NEW_COMMIT · UP_TO_DATE · UNKNOWN · NOT_SUPPORTED | 필수 | NEW_COMMIT: 최신 커밋 ≠ 분석한 최신 커밋 · UP_TO_DATE: 같음 · UNKNOWN: 조회 실패·비공개로 바뀜·분석한 커밋 없음 · NOT_SUPPORTED: ZIP 프로젝트 | `NEW_COMMIT` |
 
 ### LayerRole
 
@@ -2891,6 +3201,17 @@ API 하나 (개요 apis의 method·path 그대로)
 | `size` | integer(int32) | 선택 | 페이지 크기 | `20` |
 | `total` | integer(int64) | 선택 | 전체 항목 수 | `134` |
 
+### PageResponseProjectSummaryResponse
+
+페이지 응답
+
+| 이름 | 타입 | 필수 | 설명 | 예 |
+|---|---|---|---|---|
+| `items` | [ProjectSummaryResponse](#projectsummaryresponse)[] | 선택 | 현재 페이지 항목 | - |
+| `page` | integer(int32) | 선택 | 페이지 번호 (1부터) | `1` |
+| `size` | integer(int32) | 선택 | 페이지 크기 | `20` |
+| `total` | integer(int64) | 선택 | 전체 항목 수 | `134` |
+
 ### ParticipationResponse
 
 챌린지 참여 상태
@@ -2980,6 +3301,62 @@ API 하나 (개요 apis의 method·path 그대로)
 | `title` | string | 필수 | 제목 | `@Transactional이 안 먹는 이유가 뭔가요?` |
 | `viewCount` | integer(int32) | 필수 | 조회수 | `42` |
 
+### ProjectAnalysisResponse
+
+프로젝트에 붙은 분석
+
+| 이름 | 타입 | 필수 | 설명 | 예 |
+|---|---|---|---|---|
+| `createdAt` | string(date-time) | 필수 | 요청 시각 | `2026-11-28T17:30:00+09:00` |
+| `id` | integer(int64) | 필수 | 분석 ID | `128` |
+| `level` | string: BEGINNER · JUNIOR · SENIOR | 필수 | 분석 수준 | `BEGINNER` |
+| `quizStatus` | string: GENERATING · READY · FAILED · null 가능 | 선택 | 퀴즈 상태. QUIZ 단계 전이면 null | `READY` |
+| `status` | string: FETCHING · FILTERING · SELECTING · EXPLAINING · EXTRACTING · QUIZ · DONE · FAILED | 필수 | 진행 상태 | `DONE` |
+| `title` | string · null 가능 | 선택 | 분석 제목 | `todo-app` |
+| `versionId` | integer(int64) · null 가능 | 선택 | 붙은 버전 ID. 아직 버전이 없는 FETCHING·FAILED 분석은 null | `31` |
+
+### ProjectDetailResponse
+
+프로젝트 상세
+
+| 이름 | 타입 | 필수 | 설명 | 예 |
+|---|---|---|---|---|
+| `analyses` | [ProjectAnalysisResponse](#projectanalysisresponse)[] | 필수 | 삭제하지 않은 분석 (요청 최신순) | - |
+| `createdAt` | string(date-time) | 필수 | 만든 시각 | `2026-11-27T10:00:00+09:00` |
+| `id` | integer(int64) | 필수 | 프로젝트 ID | `12` |
+| `name` | string | 필수 | 이름 | `todo-app` |
+| `sourceType` | string: URL · ZIP | 필수 | 입력 종류 | `URL` |
+| `sourceUrl` | string · null 가능 | 선택 | 정규화한 저장소 주소. ZIP이면 null | `https://github.com/octo/todo-app` |
+| `versions` | [ProjectVersionResponse](#projectversionresponse)[] | 필수 | 버전 (번호 내림차순). 삭제하지 않은 분석이 없는 버전은 빠져 번호가 빌 수 있다 | - |
+
+### ProjectSummaryResponse
+
+프로젝트 목록 항목
+
+| 이름 | 타입 | 필수 | 설명 | 예 |
+|---|---|---|---|---|
+| `id` | integer(int64) | 필수 | 프로젝트 ID | `12` |
+| `lastAnalyzedAt` | string(date-time) | 필수 | 마지막 분석 요청 시각 | `2026-11-28T17:30:00+09:00` |
+| `latestVersion` | [ProjectVersionResponse](#projectversionresponse) | 선택 | 번호가 가장 큰 버전 (삭제하지 않은 분석이 붙은 것). 첫 분석이 아직 FETCHING이거나 실패했으면 null | - |
+| `levels` | string: BEGINNER · JUNIOR · SENIOR[] | 필수 | 삭제하지 않은 분석의 수준 (중복 없이 BEGINNER → SENIOR 순) | - |
+| `name` | string | 필수 | 이름 | `todo-app` |
+| `sourceType` | string: URL · ZIP | 필수 | 입력 종류 | `URL` |
+| `sourceUrl` | string · null 가능 | 선택 | 정규화한 저장소 주소. ZIP이면 null | `https://github.com/octo/todo-app` |
+| `versionCount` | integer(int32) | 필수 | 삭제하지 않은 분석이 붙은 버전 수 | `2` |
+
+### ProjectVersionResponse
+
+프로젝트 버전
+
+| 이름 | 타입 | 필수 | 설명 | 예 |
+|---|---|---|---|---|
+| `commitMessage` | string · null 가능 | 선택 | 커밋 메시지 첫 줄 (200자까지) | `feat: JWT 로그인` |
+| `commitSha` | string · null 가능 | 선택 | 커밋 SHA (40자) | `9f2c4e1a7b3d5f60812c9e4a1b2c3d4e5f607182` |
+| `committedAt` | string(date-time) · null 가능 | 선택 | 커밋 시각 | `2026-11-28T14:02:11+09:00` |
+| `createdAt` | string(date-time) | 필수 | 버전이 생긴 시각 | `2026-11-28T17:30:05+09:00` |
+| `id` | integer(int64) | 필수 | 버전 ID | `31` |
+| `number` | integer(int32) | 필수 | 버전 번호 (프로젝트 안에서 1부터) | `2` |
+
 ### QuizAnswerRequest
 
 문항 하나의 답
@@ -2988,6 +3365,18 @@ API 하나 (개요 apis의 method·path 그대로)
 |---|---|---|---|---|
 | `questionId` | integer(int64) | 필수 | 문항 ID | `21` |
 | `selectedIndex` | integer(int32) | 필수 | 고른 선택지 위치 (0~3) (범위 0~3) | `0` |
+
+### QuizAttemptDetailResponse
+
+지난 풀이 상세
+
+| 이름 | 타입 | 필수 | 설명 | 예 |
+|---|---|---|---|---|
+| `attemptId` | integer(int64) | 필수 | 풀이 ID | `16` |
+| `createdAt` | string(date-time) | 필수 | 제출 시각 | `2026-11-29T17:42:05+09:00` |
+| `results` | [QuizResultItem](#quizresultitem)[] | 필수 | 문항별 결과 (no 순서) | - |
+| `score` | integer(int32) | 필수 | 맞힌 문항 수 | `3` |
+| `total` | integer(int32) | 필수 | 문항 수 | `6` |
 
 ### QuizAttemptRequest
 
@@ -3009,6 +3398,17 @@ API 하나 (개요 apis의 method·path 그대로)
 | `reviewAdded` | [ReviewAddedItem](#reviewaddeditem)[] | 필수 | 틀린 문항의 공개 개념 중 새로 넣은 복습 계획 (conceptId 오름차순). 없으면 [] | - |
 | `score` | integer(int32) | 필수 | 맞힌 문항 수 | `1` |
 | `total` | integer(int32) | 필수 | 문항 수 | `2` |
+
+### QuizAttemptSummaryResponse
+
+내 풀이 한 회차 요약
+
+| 이름 | 타입 | 필수 | 설명 | 예 |
+|---|---|---|---|---|
+| `attemptId` | integer(int64) | 필수 | 풀이 ID | `31` |
+| `createdAt` | string(date-time) | 필수 | 제출 시각 | `2026-11-30T21:14:03+09:00` |
+| `score` | integer(int32) | 필수 | 맞힌 문항 수 | `5` |
+| `total` | integer(int32) | 필수 | 문항 수 | `6` |
 
 ### QuizQuestionResponse
 
@@ -3361,6 +3761,23 @@ API 하나 (개요 apis의 method·path 그대로)
 | `level` | string: BEGINNER · JUNIOR · SENIOR · null 가능 | 선택 | 학습 수준 | `JUNIOR` |
 | `nickname` | string · null 가능 | 선택 | 닉네임. 2~20자의 한글·영문·숫자·_ | `주니어개발자` |
 
+### UpdateProjectRequest
+
+프로젝트 이름 바꾸기 요청
+
+| 이름 | 타입 | 필수 | 설명 | 예 |
+|---|---|---|---|---|
+| `name` | string | 필수 | 새 이름 (앞뒤 공백을 뗀 1~100자) (길이 0~100자) | `할 일 앱` |
+
+### UpdateProjectResponse
+
+바뀐 프로젝트 이름
+
+| 이름 | 타입 | 필수 | 설명 | 예 |
+|---|---|---|---|---|
+| `id` | integer(int64) | 필수 | 프로젝트 ID | `12` |
+| `name` | string | 필수 | 바뀐 이름 | `할 일 앱` |
+
 ### UpdateVisibilityRequest
 
 분석 공개 설정 요청
@@ -3407,3 +3824,39 @@ API 하나 (개요 apis의 method·path 그대로)
 | 이름 | 타입 | 필수 | 설명 | 예 |
 |---|---|---|---|---|
 | `password` | string | 필수 | 현재 비밀번호 (길이 1~자) | `vibe1234` |
+
+### WrongNoteGroupResponse
+
+오답 노트의 개념 묶음
+
+| 이름 | 타입 | 필수 | 설명 | 예 |
+|---|---|---|---|---|
+| `concept` | [ConceptSummaryResponse](#conceptsummaryresponse) | 선택 | 관련 개념 카드. 개념이 없거나 공개되지 않은 문항 묶음이면 null | - |
+| `items` | [WrongNoteItemResponse](#wrongnoteitemresponse)[] | 필수 | 문항 (lastAnsweredAt 내림차순 → questionId 오름차순) | - |
+
+### WrongNoteItemResponse
+
+마지막 답이 틀린 문항
+
+| 이름 | 타입 | 필수 | 설명 | 예 |
+|---|---|---|---|---|
+| `analysisId` | integer(int64) | 필수 | 분석 ID | `7` |
+| `analysisTitle` | string | 필수 | 분석 제목 (없으면 프로젝트 이름, 둘 다 없으면 "제목 없는 분석") | `JWT 기반 인증` |
+| `answerIndex` | integer(int32) | 필수 | 정답 위치 | `1` |
+| `choices` | string[] | 필수 | 선택지 4개 | - |
+| `explanation` | string | 필수 | 해설 | `jwtService.getSubFromToken()으로 사용자 id를 꺼내 SecurityContextHolder에 넣습니다.` |
+| `lastAnsweredAt` | string(date-time) | 필수 | 마지막으로 답한 시각 | `2026-11-30T21:14:03+09:00` |
+| `question` | string | 필수 | 질문 | `JwtTokenFilter가 Authorization 헤더에서 토큰을 꺼낸 뒤 하는 일로 알맞은 것은?` |
+| `questionId` | integer(int64) | 필수 | 문항 ID | `22` |
+| `quizId` | integer(int64) | 필수 | 퀴즈 ID | `3` |
+| `selectedIndex` | integer(int32) | 필수 | 마지막으로 고른 위치 | `3` |
+| `wrongCount` | integer(int32) | 필수 | 내가 이 문항을 틀린 횟수 | `2` |
+
+### WrongNoteResponse
+
+오답 노트
+
+| 이름 | 타입 | 필수 | 설명 | 예 |
+|---|---|---|---|---|
+| `groups` | [WrongNoteGroupResponse](#wrongnotegroupresponse)[] | 필수 | 개념별 묶음. 공개 개념 묶음은 문항 수 내림차순 → 가장 최근 lastAnsweredAt 내림차순 → 개념 id 오름차순, 개념이 없거나 공개되지 않은 문항 묶음(concept null)은 맨 뒤. 없으면 [] | - |
+| `totalCount` | integer(int32) | 필수 | 마지막 답이 틀린 문항 전체 수 (groups에는 최근 200개까지만 담는다) | `3` |

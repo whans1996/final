@@ -53,6 +53,92 @@
         LIMIT 1
     </select>
 
+    <select id="findAttempts" resultType="com.vibenote.quiz.domain.QuizAttempt">
+        SELECT id, quiz_id, user_id, score, total, created_at
+        FROM quiz_attempts
+        WHERE quiz_id = #{quizId} AND user_id = #{userId}
+        ORDER BY created_at DESC, id DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="findAttempt" resultType="com.vibenote.quiz.domain.QuizAttempt">
+        SELECT id, quiz_id, user_id, score, total, created_at
+        FROM quiz_attempts
+        WHERE id = #{attemptId} AND quiz_id = #{quizId} AND user_id = #{userId}
+    </select>
+
+    <resultMap id="answer" type="com.vibenote.quiz.QuizMapper$AnswerRow">
+        <constructor>
+            <arg column="question_id" javaType="_long"/>
+            <arg column="selected_index" javaType="_int"/>
+            <arg column="is_correct" javaType="_boolean"/>
+        </constructor>
+    </resultMap>
+
+    <select id="findAnswers" resultMap="answer">
+        SELECT question_id, selected_index, is_correct
+        FROM quiz_answers WHERE attempt_id = #{attemptId}
+        ORDER BY question_id
+    </select>
+
+    <!--
+      오답 노트 (L-1b 4절). 내 풀이의 답을 문항별로 최신순 번호를 매겨 마지막 답(rn = 1)이 오답인 문항만 남긴다.
+      wrong_count는 그 문항의 내 오답 수. 분석은 삭제되지 않았고 내 것이거나 내가 멤버인 팀에 공유된 것만 (TeamMapper.isSharedWith와 같은 JOIN).
+    -->
+    <sql id="wrongNotes">
+        WITH my_answers AS (
+            SELECT ans.question_id, ans.selected_index, ans.is_correct, t.created_at,
+                   ROW_NUMBER() OVER (PARTITION BY ans.question_id ORDER BY t.created_at DESC, t.id DESC) AS rn,
+                   SUM(CASE WHEN ans.is_correct THEN 0 ELSE 1 END) OVER (PARTITION BY ans.question_id) AS wrong_count
+            FROM quiz_attempts t
+            JOIN quiz_answers ans ON ans.attempt_id = t.id
+            WHERE t.user_id = #{userId}
+        )
+        SELECT m.question_id, q.quiz_id, z.analysis_id,
+               COALESCE(NULLIF(TRIM(a.title), ''), NULLIF(TRIM(p.name), '')) AS analysis_title,
+               q.concept_id, q.question, q.choices, q.answer_index, q.explanation,
+               m.selected_index, m.wrong_count, m.created_at AS last_answered_at
+        FROM my_answers m
+        JOIN quiz_questions q ON q.id = m.question_id
+        JOIN quizzes z ON z.id = q.quiz_id
+        JOIN analyses a ON a.id = z.analysis_id AND a.deleted_at IS NULL
+        LEFT JOIN projects p ON p.id = a.project_id
+        WHERE m.rn = 1 AND NOT m.is_correct
+          AND (a.user_id = #{userId}
+               OR EXISTS (SELECT 1
+                          FROM team_analyses ta
+                          JOIN team_members tm ON tm.team_id = ta.team_id AND tm.user_id = #{userId}
+                          WHERE ta.analysis_id = a.id))
+    </sql>
+
+    <select id="countWrongNotes" resultType="int">
+        SELECT COUNT(*) FROM (<include refid="wrongNotes"/>) w
+    </select>
+
+    <resultMap id="wrongNote" type="com.vibenote.quiz.domain.WrongNoteRow">
+        <constructor>
+            <arg column="question_id" javaType="_long"/>
+            <arg column="quiz_id" javaType="_long"/>
+            <arg column="analysis_id" javaType="_long"/>
+            <arg column="analysis_title" javaType="java.lang.String"/>
+            <arg column="concept_id" javaType="java.lang.Long"/>
+            <arg column="question" javaType="java.lang.String"/>
+            <arg column="choices" javaType="[Ljava.lang.String;"
+                 typeHandler="com.vibenote.common.mybatis.JsonTypeHandler"/>
+            <arg column="answer_index" javaType="_int"/>
+            <arg column="explanation" javaType="java.lang.String"/>
+            <arg column="selected_index" javaType="_int"/>
+            <arg column="wrong_count" javaType="_int"/>
+            <arg column="last_answered_at" javaType="java.time.LocalDateTime"/>
+        </constructor>
+    </resultMap>
+
+    <select id="findWrongNotes" resultMap="wrongNote">
+        <include refid="wrongNotes"/>
+        ORDER BY last_answered_at DESC, m.question_id
+        LIMIT #{limit}
+    </select>
+
     <insert id="insertAttempt" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO quiz_attempts (quiz_id, user_id, score, total, created_at)
         VALUES (#{quizId}, #{userId}, #{score}, #{total}, #{createdAt})

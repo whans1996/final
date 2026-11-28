@@ -3,6 +3,7 @@ package com.vibenote.quiz;
 import com.vibenote.quiz.domain.Quiz;
 import com.vibenote.quiz.domain.QuizAttempt;
 import com.vibenote.quiz.domain.QuizQuestion;
+import com.vibenote.quiz.domain.WrongNoteRow;
 import java.util.List;
 import java.util.Optional;
 import org.apache.ibatis.annotations.Mapper;
@@ -32,6 +33,25 @@ public interface QuizMapper {
     /** 내 가장 최근 풀이 ({@code created_at}, 같으면 id가 큰 것). */
     Optional<QuizAttempt> findLastAttempt(
             @Param("quizId") long quizId, @Param("userId") long userId);
+
+    /** 그 퀴즈의 내 풀이 최신순({@code created_at} 내림차순, 같으면 id 내림차순) {@code limit}개 (L-1b AC1). */
+    List<QuizAttempt> findAttempts(
+            @Param("quizId") long quizId, @Param("userId") long userId, @Param("limit") int limit);
+
+    /** 그 퀴즈의 내 풀이 하나. 남의 풀이·다른 퀴즈의 풀이·없는 id면 empty (L-1b AC4). */
+    Optional<QuizAttempt> findAttempt(
+            @Param("quizId") long quizId,
+            @Param("userId") long userId,
+            @Param("attemptId") long attemptId);
+
+    /** 풀이의 답 (문항 id 오름차순). */
+    List<AnswerRow> findAnswers(@Param("attemptId") long attemptId);
+
+    /** 지금 열 수 있는 분석에서 내 마지막 답이 틀린 문항 수 (L-1b AC5·AC7·AC8). */
+    int countWrongNotes(@Param("userId") long userId);
+
+    /** 위 문항을 마지막으로 답한 시각 내림차순 → 문항 id 오름차순으로 {@code limit}개. */
+    List<WrongNoteRow> findWrongNotes(@Param("userId") long userId, @Param("limit") int limit);
 
     void insertAttempt(QuizAttempt attempt);
 
