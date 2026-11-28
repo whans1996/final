@@ -4,6 +4,7 @@
 import { computed, ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { LogOut, Settings, Shield, User } from 'lucide-vue-next'
+import NotificationBell from '@/components/notification/NotificationBell.vue'
 import AppBottomTabs from '@/components/shell/AppBottomTabs.vue'
 import AppHeader from '@/components/shell/AppHeader.vue'
 import AppSidebar from '@/components/shell/AppSidebar.vue'
@@ -31,6 +32,9 @@ const drawerOpen = ref(false)
 <template>
   <SkipLink />
   <AppHeader>
+    <template #notifications>
+      <NotificationBell />
+    </template>
     <template #account>
       <div class="hidden sm:block"><UserMenu /></div>
     </template>

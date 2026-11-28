@@ -1,6 +1,6 @@
 <script setup>
 // 얇은 헤더 (F-29b AC2·AC6·AC9·AC12). 회원·비회원 셸이 같이 쓰고, 셸마다 다른 부분은 슬롯으로 받는다.
-//   #nav: 로고 옆 메뉴(비회원 윗쪽 메뉴), #notifications: 알림 자리(T1이 채운다, 지금은 비어 있음),
+//   #nav: 로고 옆 메뉴(비회원 윗쪽 메뉴), #notifications: 회원 셸의 알림 종(NT-1 NotificationBell),
 //   #account: 닉네임 메뉴·로그인 버튼, #menu-button: 640 미만 햄버거(비회원)
 // 좁은 폭에서는 검색 줄이 숨고 🔍 버튼을 누르면 헤더 아래로 펼쳐진다. 기본은 640 미만,
 // 메뉴 링크·로그인 버튼까지 한 줄에 넣는 비회원 헤더는 1024 미만(inlineSearchFrom="lg").
