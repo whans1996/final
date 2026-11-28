@@ -210,7 +210,7 @@
 - [x] BE 구현 (green): `QuizController` GET 2개, `WrongNoteController`(또는 `QuizController`) `/api/users/me/wrong-notes`, `ErrorCode.QUIZ_001`
 - [x] FE 구현 (green)
 - [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
-- [ ] contract-checker 통과
+- [x] contract-checker 통과
 - [ ] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일)
 - [ ] reviewer 지적 사항 반영
 - [ ] 산출물 반영: 화면 설계서 06(SC-07·SC-08 바뀐 부분, SC-27 새 행·흐름도·스크린샷), 요구사항 정의서 01(오답 노트 행), 유스케이스 02(퀴즈 다시 풀기·오답 노트), 07 API 명세 재생성
