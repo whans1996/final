@@ -31,4 +31,14 @@ export default [
     component: () => import('@/views/QuizView.vue'),
     meta: { requiresAuth: true },
   },
+  {
+    // SC-27 오답 노트 (L-1b)
+    path: '/wrong-notes',
+    name: 'wrong-notes',
+    component: () => import('@/views/WrongNoteView.vue'),
+    meta: {
+      requiresAuth: true,
+      nav: { label: '오답 노트', order: 35, show: 'user', group: 'learn', icon: 'NotebookPen' },
+    },
+  },
 ]

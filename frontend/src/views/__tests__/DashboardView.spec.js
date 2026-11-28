@@ -109,6 +109,14 @@ describe('DashboardView (F-16 SC-04)', () => {
     expect(today.find('a[href="/review-plans"]').text()).toBe('복습 계획 보기')
   })
 
+  it('AC13(L-1b) 오늘 복습 절에 오답 노트 링크가 있다', async () => {
+    const { wrapper } = await mountView()
+
+    const link = section(wrapper, 'today').find('[data-action="wrong-notes"]')
+    expect(link.text()).toBe('오답 노트')
+    expect(link.attributes('href')).toBe('/wrong-notes')
+  })
+
   it('AC8 오늘 복습이 5개를 넘으면 5개만 보이고 외 k개를 알린다', async () => {
     reviewPlansApi.fetchReviewPlans.mockResolvedValue(
       plans({

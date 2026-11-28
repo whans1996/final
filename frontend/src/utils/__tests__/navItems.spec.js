@@ -19,7 +19,7 @@ describe('navItems (F-00b AC8)', () => {
     ])
   })
 
-  it('AC8 로그인하면 대시보드(F-16 AC9)·개념 카드·커뮤니티(F-17 AC13)·피드(F-04 AC11)·팀(F-20a AC12)·챌린지(F-25 AC12)·분석 요청·내 분석·프로젝트(P-1a)·복습(F-15 AC12)을 본다', () => {
+  it('AC8 로그인하면 대시보드(F-16 AC9)·개념 카드·커뮤니티(F-17 AC13)·피드(F-04 AC11)·팀(F-20a AC12)·챌린지(F-25 AC12)·분석 요청·내 분석·프로젝트(P-1a)·복습(F-15 AC12)·오답 노트(L-1b AC13)를 본다', () => {
     expect(navItems(routes, user)).toEqual([
       { label: '대시보드', to: '/dashboard' },
       { label: '개념 카드', to: '/concepts' },
@@ -31,6 +31,7 @@ describe('navItems (F-00b AC8)', () => {
       { label: '내 분석', to: '/analyses' },
       { label: '프로젝트', to: '/projects' },
       { label: '복습', to: '/review-plans' },
+      { label: '오답 노트', to: '/wrong-notes' },
     ])
   })
 
@@ -46,6 +47,7 @@ describe('navItems (F-00b AC8)', () => {
       { label: '내 분석', to: '/analyses' },
       { label: '프로젝트', to: '/projects' },
       { label: '복습', to: '/review-plans' },
+      { label: '오답 노트', to: '/wrong-notes' },
       { label: '관리자', to: '/admin' },
     ])
   })
@@ -120,7 +122,7 @@ describe('navGroups (F-29b AC1)', () => {
 
     expect(shape(groups)).toEqual([
       ['dashboard', ['대시보드']],
-      ['learn', ['개념 카드', '분석 요청', '내 분석', '프로젝트', '복습']],
+      ['learn', ['개념 카드', '분석 요청', '내 분석', '프로젝트', '복습', '오답 노트']],
       ['together', ['커뮤니티', '피드', '팀', '챌린지']],
     ])
     expect(groups[0].items[0]).toEqual({
@@ -134,6 +136,7 @@ describe('navGroups (F-29b AC1)', () => {
       'FileSearch',
       'FolderGit2',
       'RotateCcw',
+      'NotebookPen',
     ])
     expect(groups[2].items.map((i) => i.icon)).toEqual(['MessagesSquare', 'Rss', 'Users', 'Trophy'])
   })

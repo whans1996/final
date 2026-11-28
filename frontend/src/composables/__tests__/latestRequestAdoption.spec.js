@@ -32,6 +32,11 @@ const ADOPTED = [
   // A 영역 (I-1a, #250)
   'components/analysis/AnalysisFilesTab.vue',
   'components/interview/InterviewTab.vue',
+  // A 영역 (L-1b, #250)
+  'components/analysis/AnalysisQuizTab.vue',
+  'views/QuizView.vue',
+  'views/WrongNoteView.vue',
+  'components/quiz/QuizAttemptHistory.vue',
 ]
 
 // 직접 쓴 순번 가드: `let lastRequest = 0` / `++lastHead` / `request !== lastSearch`, 주소 id 비교

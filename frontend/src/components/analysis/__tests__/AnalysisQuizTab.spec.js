@@ -35,6 +35,27 @@ async function mountTab() {
 describe('AnalysisQuizTab (F-14)', () => {
   beforeEach(() => {
     vi.resetAllMocks()
+    quizzesApi.fetchQuizAttempts.mockResolvedValue([])
+  })
+
+  it('AC10(L-1b) 지난 풀이가 있으면 그 퀴즈의 풀이 기록을 보이고, 없으면 부르지 않는다', async () => {
+    quizzesApi.fetchQuizAttempts.mockResolvedValue([
+      { attemptId: 15, score: 5, total: 6, createdAt: '2026-11-09T07:05:12+09:00' },
+    ])
+    quizzesApi.fetchAnalysisQuiz.mockResolvedValueOnce(quiz())
+    const none = await mountTab()
+    expect(none.find('[data-section="attempt-history"]').exists()).toBe(false)
+    expect(quizzesApi.fetchQuizAttempts).not.toHaveBeenCalled()
+
+    quizzesApi.fetchAnalysisQuiz.mockResolvedValueOnce(
+      quiz({
+        lastAttempt: { attemptId: 15, score: 5, total: 6, createdAt: '2026-11-09T07:05:12+09:00' },
+      }),
+    )
+    const wrapper = await mountTab()
+    expect(quizzesApi.fetchQuizAttempts).toHaveBeenCalledWith(3)
+    const history = wrapper.find('[data-section="attempt-history"]')
+    expect(history.find('[data-attempt="15"] [data-part="score"]').text()).toBe('5/6')
   })
 
   it('AC9 퀴즈를 1회 불러와 문항 수와 "퀴즈 풀기" 버튼을 보여 준다', async () => {

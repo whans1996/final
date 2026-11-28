@@ -78,6 +78,8 @@ describe('ReviewPlanView (F-15 SC-11)', () => {
     expect(wrapper.find('[data-message="period"]').text()).toBe('11월 20일 ~ 11월 26일')
     expect(wrapper.find('[data-action="prev"]').text()).toBe('◀ 이전 7일')
     expect(wrapper.find('[data-action="today"]').text()).toBe('오늘')
+    // L-1b AC13: 오답 노트 링크
+    expect(wrapper.find('[data-action="wrong-notes"]').attributes('href')).toBe('/wrong-notes')
     expect(wrapper.find('[data-action="next"]').text()).toBe('다음 7일 ▶')
 
     const overdue = wrapper.find('[data-section="overdue"]')

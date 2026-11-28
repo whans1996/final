@@ -4,7 +4,7 @@ import QuizView from '@/views/QuizView.vue'
 import * as quizzesApi from '@/api/quizzes'
 import * as challengesApi from '@/api/challenges'
 import { myChallenge, page } from '@/components/challenge/__tests__/fixtures'
-import { apiError, mountAt } from './viewTestUtils'
+import { apiError, deferred, mountAt } from './viewTestUtils'
 
 vi.mock('@/api/quizzes')
 vi.mock('@/api/challenges')
@@ -91,7 +91,7 @@ describe('QuizView (F-14 SC-08)', () => {
     const items = wrapper.findAll('[data-question]')
     expect(items).toHaveLength(2)
     expect(items[0].text()).toContain('1.')
-    expect(items[0].find('.question').text()).toBe('첫 질문\n둘째 줄')
+    expect(items[0].find('[data-part="question"]').text()).toBe('첫 질문\n둘째 줄')
     expect(items[0].findAll('input[type="radio"]')).toHaveLength(4)
     expect(items[1].text()).toContain('b2')
     expect(wrapper.find('[data-message="progress"]').text()).toBe('0/2 답함')
@@ -128,9 +128,9 @@ describe('QuizView (F-14 SC-08)', () => {
     const results = wrapper.findAll('[data-question]')
     expect(results[0].find('[data-result]').text()).toBe('정답')
     expect(results[1].find('[data-result]').text()).toBe('오답')
-    expect(results[1].find('.choice.selected').text()).toContain('d2')
-    expect(results[1].find('.choice.answer').text()).toContain('b2')
-    expect(results[1].find('.explanation').text()).toBe('해설 2')
+    expect(results[1].find('[data-selected]').text()).toContain('d2')
+    expect(results[1].find('[data-answer]').text()).toContain('b2')
+    expect(results[1].find('[data-part="explanation"]').text()).toBe('해설 2')
     expect(results[0].find('[data-concept-id]').exists()).toBe(false)
     expect(results[1].find('[data-concept-id]').attributes('href')).toBe('/concepts/57')
     expect(wrapper.find('[data-message="review-added"]').text()).toBe(
@@ -237,10 +237,10 @@ describe('QuizView (F-14 SC-08)', () => {
       apiError(500, { code: 'COMMON_500', message: '잠시 후 다시 시도해 주세요.' }),
     )
     const { wrapper } = await mountQuiz()
-    expect(wrapper.find('[role="alert"]').text()).toBe('잠시 후 다시 시도해 주세요.')
+    expect(wrapper.find('[role="alert"]').text()).toContain('잠시 후 다시 시도해 주세요.')
 
     quizzesApi.fetchAnalysisQuiz.mockResolvedValueOnce(quiz())
-    await wrapper.find('[data-action="retry-load"]').trigger('click')
+    await wrapper.find('[role="alert"] button').trigger('click')
     await flushPromises()
     expect(wrapper.findAll('[data-question]')).toHaveLength(2)
   })
@@ -285,5 +285,108 @@ describe('QuizView (F-14 SC-08)', () => {
     const back = wrapper.find('[data-action="back"]')
     expect(back.text()).toBe('← 분석으로 돌아가기')
     expect(back.attributes('href')).toBe('/analyses/42?tab=quiz')
+  })
+
+  describe('L-1b', () => {
+    const labels = (wrapper, questionId) =>
+      wrapper.findAll(`[data-question="${questionId}"] [data-choice]`).map((c) => c.text())
+
+    async function solve(wrapper, first, second) {
+      await choose(wrapper, 21, first)
+      await choose(wrapper, 22, second)
+      await submitButton(wrapper).trigger('click')
+      await flushPromises()
+    }
+
+    it('AC11 처음은 저장된 순서이고, 다시 풀면 문항마다 선지 순서가 직전과 다르게 섞인다', async () => {
+      quizzesApi.fetchAnalysisQuiz.mockResolvedValue(quiz())
+      quizzesApi.submitQuizAttempt.mockResolvedValue(attempt())
+      vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+      const { wrapper } = await mountQuiz()
+      expect(labels(wrapper, 21)).toEqual(['a1', 'b1', 'c1', 'd1'])
+      expect(labels(wrapper, 22)).toEqual(['a2', 'b2', 'c2', 'd2'])
+      await solve(wrapper, 0, 3)
+      // 결과 화면도 직전 화면과 같은 순서다
+      expect(labels(wrapper, 22)[3]).toContain('d2')
+
+      const random = vi.spyOn(Math, 'random').mockReturnValue(0)
+      await wrapper.find('[data-action="retry-quiz"]').trigger('click')
+      // random 0 → Fisher–Yates가 [1, 2, 3, 0]을 만든다
+      expect(labels(wrapper, 21)).toEqual(['b1', 'c1', 'd1', 'a1'])
+      expect(labels(wrapper, 22)).toEqual(['b2', 'c2', 'd2', 'a2'])
+      // 문항 순서는 그대로다
+      expect(wrapper.findAll('[data-question]').map((q) => q.attributes('data-question'))).toEqual([
+        '21',
+        '22',
+      ])
+      expect(wrapper.findAll('input[type="radio"]:checked')).toHaveLength(0)
+
+      await solve(wrapper, 0, 3)
+      await wrapper.find('[data-action="retry-quiz"]').trigger('click')
+      expect(labels(wrapper, 21)).not.toEqual(['b1', 'c1', 'd1', 'a1'])
+      random.mockRestore()
+    })
+
+    it('AC11 섞인 화면에서 고른 선지는 저장된 위치로 제출하고, 결과 강조는 섞인 순서의 맞는 선지에 붙는다', async () => {
+      quizzesApi.fetchAnalysisQuiz.mockResolvedValue(quiz())
+      quizzesApi.submitQuizAttempt.mockResolvedValue(attempt())
+      vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+      const { wrapper } = await mountQuiz()
+      await solve(wrapper, 0, 3)
+      vi.spyOn(Math, 'random').mockReturnValue(0)
+      await wrapper.find('[data-action="retry-quiz"]').trigger('click')
+      vi.mocked(Math.random).mockRestore()
+
+      // 섞인 화면 [b, c, d, a]에서 22번은 셋째 자리(d2), 21번은 넷째 자리(a1)를 고른다
+      const q22 = wrapper.findAll('[data-question="22"] input[type="radio"]')
+      await q22[2].setValue(true)
+      const q21 = wrapper.findAll('[data-question="21"] input[type="radio"]')
+      await q21[3].setValue(true)
+      await submitButton(wrapper).trigger('click')
+      await flushPromises()
+
+      expect(quizzesApi.submitQuizAttempt).toHaveBeenLastCalledWith(3, [
+        { questionId: 21, selectedIndex: 0 },
+        { questionId: 22, selectedIndex: 3 },
+      ])
+      const result = wrapper.find('[data-question="22"]')
+      const shown = result.findAll('[data-choice]')
+      expect(shown.map((c) => c.attributes('data-choice'))).toEqual(['1', '2', '3', '0'])
+      // 정답(저장 위치 1 = b2)은 화면 첫 자리, 내 답(저장 위치 3 = d2)은 셋째 자리
+      expect(shown[0].attributes('data-answer')).toBeDefined()
+      expect(shown[0].text()).toContain('b2')
+      expect(shown[2].attributes('data-selected')).toBeDefined()
+      expect(shown[2].text()).toContain('d2')
+    })
+
+    it('AC12 ?from=wrong-notes로 들어오면 "오답 노트로 돌아가기"를 보여 준다', async () => {
+      quizzesApi.fetchAnalysisQuiz.mockResolvedValue(quiz())
+      const { wrapper } = await mountAt(QuizView, '/analyses/42/quiz?from=wrong-notes')
+      await flushPromises()
+
+      const back = wrapper.find('[data-action="back"]')
+      expect(back.text()).toBe('← 오답 노트로 돌아가기')
+      expect(back.attributes('href')).toBe('/wrong-notes')
+    })
+
+    it('AC14 조회 중에 분석이 바뀌면 늦게 온 이전 분석의 응답을 버린다', async () => {
+      const first = deferred()
+      const second = deferred()
+      quizzesApi.fetchAnalysisQuiz
+        .mockReturnValueOnce(first.promise)
+        .mockReturnValueOnce(second.promise)
+      const { wrapper, router } = await mountAt(QuizView, '/analyses/42/quiz')
+
+      await router.push('/analyses/43/quiz')
+      second.resolve({ ...quiz(), quizId: 4, analysisId: 43, questions: [QUESTIONS[1]] })
+      await flushPromises()
+      first.resolve(quiz())
+      await flushPromises()
+
+      expect(quizzesApi.fetchAnalysisQuiz).toHaveBeenLastCalledWith(43)
+      expect(wrapper.findAll('[data-question]').map((q) => q.attributes('data-question'))).toEqual([
+        '22',
+      ])
+    })
   })
 })
