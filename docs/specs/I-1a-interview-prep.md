@@ -291,9 +291,9 @@ LLM은 테스트에서 실제로 부르지 않는다. `@MockitoBean LlmClient`�
 - [x] BE 구현 (green) — 프롬프트 3개, fixture 1개, `LlmStage.INTERVIEW`, ErrorCode `INTERVIEW` 블록, 줄 번호 공통 메서드
 - [x] FE 구현 (green) — 면접 준비 탭, 파일 탭 줄 강조, CodeViewer·AnalysisFilesTab Tailwind 이전(#250 칸)
 - [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
-- [ ] contract-checker 통과
-- [ ] ui-verifier 통과 (데스크톱·모바일, 라이트·다크)
+- [x] contract-checker 통과
+- [x] ui-verifier 통과 (데스크톱·모바일, 라이트·다크)
 - [ ] reviewer 지적 사항 반영
-- [ ] 산출물 반영: `03-ERD.md`, `06-화면설계서.md` SC-07 면접 준비 탭·파일 탭 줄 강조, `01` 요구사항 정의서(I-1), `conventions.md` 3절 `INTERVIEW`, `.github/CODEOWNERS`(`interview/` 패키지·FE 폴더·`api/interviews`·`utils/interviewFormat`), `09-데이터셋.md`·`datasets.json` DS-06, 로드맵·WBS·간트 I-1a, 로드맵 T-1 행에 "면접 `NOT_MINE` 질문" 추가
+- [x] 산출물 반영: `03-ERD.md`, `06-화면설계서.md` SC-07 면접 준비 탭·파일 탭 줄 강조, `01` 요구사항 정의서(I-1), `conventions.md` 3절 `INTERVIEW`, `.github/CODEOWNERS`(`interview/` 패키지·FE 폴더·`api/interviews`·`utils/interviewFormat`), `09-데이터셋.md`·`datasets.json` DS-06, 로드맵·WBS·간트 I-1a, 로드맵 T-1 행에 "면접 `NOT_MINE` 질문" 추가
 - [ ] PR CI 초록
 - [ ] 상태 DONE (PR 머지 전 마지막 커밋)
