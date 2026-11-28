@@ -1,6 +1,6 @@
 // 관리자 개념 카드 화면(F-13)의 상태·출처 표시 이름. 목록·편집 화면이 함께 쓴다.
 import { LEVELS } from '@/utils/authValidation'
-import { CONCEPT_CATEGORIES } from '@/utils/conceptCategories'
+import { categoryLabel } from '@/utils/conceptCategories'
 
 export const CONCEPT_STATUSES = [
   { value: 'DRAFT', label: '검수 대기' },
@@ -18,5 +18,5 @@ const labelOf = (list) => (value) => list.find((item) => item.value === value)?.
 
 export const statusLabel = labelOf(CONCEPT_STATUSES)
 export const sourceLabel = labelOf(CONCEPT_SOURCES)
-export const categoryLabel = labelOf(CONCEPT_CATEGORIES)
+export { categoryLabel }
 export const difficultyLabel = labelOf(LEVELS)

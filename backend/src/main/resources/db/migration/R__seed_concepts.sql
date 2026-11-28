@@ -17,13 +17,15 @@
 --   - 카드 이름을 바꾸면 새 카드가 생긴다. 이름은 바꾸지 말고 필요하면 새 카드를 추가한다.
 --   - 작은따옴표와 역슬래시는 생성기가 이스케이프한다 (MySQL 기본 모드에서 역슬래시는 이스케이프 문자).
 
-INSERT INTO concepts (name, category, difficulty, summary, body, example_code, status, source, reference_url) VALUES
+INSERT INTO concepts (name, category, difficulty, summary, summary_beginner, summary_junior, summary_senior,
+                      body, body_beginner, body_junior, body_senior, example_code, status, source, reference_url) VALUES
 
 -- ───────────── java ─────────────
 
 -- data/seed/concepts/java/completable-future.md
 ('CompletableFuture (비동기 조합)', 'java', 'SENIOR',
  'CompletableFuture는 나중에 끝나는 작업의 결과를 나타내고, thenApply·thenCombine·allOf로 여러 비동기 작업을 이어 붙이거나 함께 기다린다.',
+ NULL, NULL, NULL,
  '## 핵심
 - `supplyAsync(작업, executor)`: 다른 스레드에서 작업을 시작한다.
 - `thenApply`(결과 변환), `thenCompose`(이어지는 비동기 작업), `thenCombine`(두 결과 합치기), `allOf`(모두 기다리기).
@@ -34,6 +36,7 @@ INSERT INTO concepts (name, category, difficulty, summary, body, example_code, s
 - executor를 지정하지 않으면 공용 ForkJoinPool을 쓴다. 블로킹 I/O(HTTP, DB)는 전용 스레드 풀을 넘긴다.
 - `join()`·`get()`을 바로 부르면 결국 기다리게 되어 비동기 이점이 없다. 모아서 마지막에 기다린다.
 - 비동기 스레드에서는 요청 스레드의 `SecurityContext`와 트랜잭션이 이어지지 않는다.',
+ NULL, NULL, NULL,
  'ExecutorService io = Executors.newFixedThreadPool(8);
 
 CompletableFuture<Profile> profile =
@@ -50,6 +53,7 @@ Dashboard dashboard = profile
 -- data/seed/concepts/java/enum.md
 ('enum 활용', 'java', 'JUNIOR',
  'enum은 정해진 상수 집합을 타입으로 만든다. 단순 상수를 넘어 필드·생성자·메서드를 가질 수 있어, 상태별 값과 동작을 한곳에 모은다.',
+ NULL, NULL, NULL,
  '## 핵심
 - 문자열 상수 대신 enum을 쓰면 오타를 컴파일 시점에 잡는다.
 - 상수마다 값(HTTP 상태, 메시지, 점수)을 생성자로 넣어 둔다.
@@ -62,6 +66,7 @@ Dashboard dashboard = profile
 ## 주의
 - `ordinal()`(선언 순서 번호)을 DB에 저장하면 상수 순서를 바꿀 때 데이터가 어긋난다. 이름으로 저장한다.
 - 잘못된 문자열을 `valueOf`하면 `IllegalArgumentException`이 난다. 요청 파라미터 변환 실패는 400으로 처리한다.',
+ NULL, NULL, NULL,
  'public enum ErrorCode {
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "회원을 찾을 수 없습니다"),
     DUPLICATE_EMAIL(HttpStatus.CONFLICT, "이미 가입된 이메일입니다");
@@ -84,6 +89,7 @@ throw new BusinessException(ErrorCode.DUPLICATE_EMAIL);',
 -- data/seed/concepts/java/exception-custom.md
 ('예외 처리와 커스텀 예외', 'java', 'BEGINNER',
  '예외는 정상 흐름을 벗어난 상황을 호출한 쪽에 알리는 방법이다. try-catch로 처리하거나 위로 던지고, 의미가 분명한 커스텀 예외로 원인을 드러낸다.',
+ NULL, NULL, NULL,
  '## 핵심
 - checked 예외(`Exception` 계열)는 컴파일러가 처리를 강제하고, unchecked 예외(`RuntimeException` 계열)는 강제하지 않는다.
 - 스프링 애플리케이션은 보통 `RuntimeException`을 상속한 비즈니스 예외를 만들고, 전역 핸들러가 응답으로 바꾼다.
@@ -91,6 +97,7 @@ throw new BusinessException(ErrorCode.DUPLICATE_EMAIL);',
 ## 주의
 - `catch (Exception e) {}`처럼 예외를 삼키면 문제가 조용히 사라진다. 최소한 로그를 남기거나 다시 던진다.
 - 다시 던질 때는 원래 예외를 cause로 넘겨야 스택 트레이스가 이어진다.',
+ NULL, NULL, NULL,
  'public class NotFoundException extends RuntimeException {
     public NotFoundException(String message) {
         super(message);
@@ -109,6 +116,7 @@ public User findUser(long id) {
 -- data/seed/concepts/java/generics.md
 ('제네릭', 'java', 'JUNIOR',
  '제네릭은 클래스나 메서드가 다룰 타입을 파라미터로 받는 문법이다(List<String>). 잘못된 타입을 컴파일 시점에 막고 형변환을 없앤다.',
+ NULL, NULL, NULL,
  '## 핵심
 - `class Box<T>`, `<T> T first(List<T> list)`처럼 타입 파라미터를 선언한다.
 - `List<String>`에는 String만 들어가므로 꺼낼 때 형변환이 필요 없다.
@@ -121,6 +129,7 @@ public User findUser(long id) {
 ## 주의
 - 로 타입(`List list`)을 쓰면 타입 검사가 꺼져 실행 중 `ClassCastException`이 날 수 있다.
 - 제네릭 타입 정보는 실행 시점에 지워진다(타입 소거). `new T()`나 `instanceof List<String>`은 할 수 없다.',
+ NULL, NULL, NULL,
  'public record PageResponse<T>(List<T> items, long total, int page, int size) {
 
     public <R> PageResponse<R> map(Function<T, R> mapper) {
@@ -135,6 +144,7 @@ PageResponse<UserResponse> body = users.map(UserResponse::from);',
 -- data/seed/concepts/java/immutable-collections.md
 ('컬렉션과 불변 컬렉션 (List·Set·Map)', 'java', 'BEGINNER',
  'List는 순서가 있는 목록, Set은 중복 없는 집합, Map은 키-값 쌍이다. Java 9부터 List.of·Set.of·Map.of로 수정할 수 없는 컬렉션을 간단히 만든다.',
+ NULL, NULL, NULL,
  '## 핵심
 - 구현체 선택: 대부분 `ArrayList`, `HashSet`, `HashMap`. 넣은 순서가 필요하면 `LinkedHashMap`, 정렬이 필요하면 `TreeMap`.
 - 변수 타입은 인터페이스(`List`, `Map`)로 선언한다.
@@ -145,6 +155,7 @@ PageResponse<UserResponse> body = users.map(UserResponse::from);',
 - `List.of`·`Map.of`는 null을 넣을 수 없다.
 - `Map.of`는 순서를 보장하지 않는다. 화면 출력 순서가 중요하면 `LinkedHashMap`을 쓴다.
 - 반복문으로 순회하면서 같은 컬렉션에서 삭제하면 `ConcurrentModificationException`이 난다. `removeIf`를 쓴다.',
+ NULL, NULL, NULL,
  'List<String> levels = List.of("BEGINNER", "JUNIOR", "SENIOR");   // 불변
 
 Map<String, List<Concept>> byCategory = new HashMap<>();
@@ -161,6 +172,7 @@ concepts.removeIf(c -> c.status() == Status.HIDDEN);',
 -- data/seed/concepts/java/interface-polymorphism.md
 ('인터페이스와 다형성', 'java', 'BEGINNER',
  '인터페이스는 "무엇을 할 수 있는가"만 약속하고, 실제 동작은 구현 클래스가 정한다. 같은 타입으로 여러 구현을 바꿔 끼울 수 있는 성질이 다형성이다.',
+ NULL, NULL, NULL,
  '## 핵심
 - 인터페이스는 메서드 시그니처(약속)만 정의하고, 클래스가 `implements`로 그 약속을 지킨다.
 - 호출하는 쪽은 인터페이스 타입만 알면 되므로 구현을 바꿔도 코드를 고치지 않는다.
@@ -172,6 +184,7 @@ concepts.removeIf(c -> c.status() == Status.HIDDEN);',
 
 ## 주의
 인터페이스를 만들었다고 다형성이 생기는 것은 아니다. 호출하는 쪽이 구현 클래스 타입을 직접 쓰면 이점이 사라진다.',
+ NULL, NULL, NULL,
  'public interface Notifier {
     void send(String to, String message);
 
@@ -209,6 +222,7 @@ public class NotificationService {
 -- data/seed/concepts/java/java-time.md
 ('날짜와 시간 API (java.time)', 'java', 'BEGINNER',
  'java.time(Java 8+)은 LocalDate·LocalDateTime·Instant·Duration 같은 불변 타입으로 날짜와 시간을 다룬다. 예전 Date·Calendar의 문제(가변, 0부터 시작하는 월)를 해결했다.',
+ NULL, NULL, NULL,
  '## 핵심
 - `LocalDate`(날짜), `LocalDateTime`(날짜+시간, 시간대 없음), `ZonedDateTime`(시간대 포함), `Instant`(UTC 기준 시점).
 - `Duration`(초·나노초 간격), `Period`(년·월·일 간격).
@@ -219,6 +233,7 @@ public class NotificationService {
 - `LocalDateTime.now()`는 서버 시간대를 따른다. 서버·DB·JVM 시간대(예: Asia/Seoul)를 맞춰 두지 않으면 9시간 차이 버그가 난다.
 - 테스트에서 현재 시각에 의존하면 결과가 날마다 달라진다. `Clock`을 주입받아 고정한다.
 - `plusDays` 결과를 변수에 다시 담지 않으면 아무 일도 일어나지 않는다.',
+ NULL, NULL, NULL,
  'LocalDate today = LocalDate.now(clock);
 LocalDate nextReview = today.plusDays(3);              // 새 객체
 
@@ -234,6 +249,7 @@ String label = createdAt.format(DateTimeFormatter.ofPattern("yyyy.MM.dd HH:mm"))
 -- data/seed/concepts/java/lambda-functional-interface.md
 ('람다와 함수형 인터페이스', 'java', 'JUNIOR',
  '람다는 메서드 하나짜리 인터페이스(함수형 인터페이스)의 구현을 짧게 쓰는 문법이다. 동작 자체를 값처럼 넘길 수 있게 해 준다.',
+ NULL, NULL, NULL,
  '## 핵심
 - 추상 메서드가 하나인 인터페이스면 람다로 구현할 수 있다. `Function`, `Predicate`, `Supplier`, `Consumer`가 대표적이다.
 - `(파라미터) -> 식` 형태이며, 메서드 참조(`String::length`)로 더 줄일 수 있다.
@@ -243,6 +259,7 @@ String label = createdAt.format(DateTimeFormatter.ofPattern("yyyy.MM.dd HH:mm"))
 
 ## 주의
 람다 안에서 바깥 지역 변수는 읽기만 할 수 있다(사실상 final). 람다가 길어지면 이름 있는 메서드로 빼는 편이 읽기 쉽다.',
+ NULL, NULL, NULL,
  'List<String> names = List.of("kim", "lee", "park");
 
 // 길이가 3보다 큰 이름만, 대문자로
@@ -258,6 +275,7 @@ List<String> result = names.stream()
 -- data/seed/concepts/java/optional.md
 ('Optional', 'java', 'JUNIOR',
  'Optional은 값이 있을 수도 없을 수도 있음을 타입으로 드러내는 컨테이너다. null 확인을 잊어 생기는 NullPointerException을 줄인다.',
+ NULL, NULL, NULL,
  '## 핵심
 - 반환 타입으로 쓰는 것이 원래 목적이다. "없을 수 있는 조회 결과"에 어울린다.
 - `orElse`, `orElseThrow`, `map`, `ifPresent`로 값을 꺼내거나 변환한다.
@@ -266,6 +284,7 @@ List<String> result = names.stream()
 - `get()`을 바로 부르면 null 확인을 안 한 것과 같다. `orElseThrow()`를 쓴다.
 - 필드나 메서드 파라미터 타입으로는 권장되지 않는다.
 - `orElse(무거운호출())`은 값이 있어도 호출된다. 지연이 필요하면 `orElseGet`을 쓴다.',
+ NULL, NULL, NULL,
  'public Optional<User> findByEmail(String email) {
     return Optional.ofNullable(userMapper.findByEmail(email));
 }
@@ -277,6 +296,7 @@ User user = findByEmail(email)
 -- data/seed/concepts/java/pattern-matching-switch.md
 ('패턴 매칭 switch와 record 패턴 (Java 21)', 'java', 'SENIOR',
  'Java 21부터 switch에서 값뿐 아니라 타입으로 분기하고(case Circle c), record를 분해(case Point(int x, int y))할 수 있다. sealed 인터페이스와 함께 쓰면 모든 경우를 처리했는지 컴파일러가 확인한다.',
+ NULL, NULL, NULL,
  '## 핵심
 - **Java 21부터** 쓸 수 있다. 바이브노트 백엔드는 Java 17이라 이 문법이 컴파일되지 않지만, 분석하는 저장소에서는 만날 수 있다.
 - `case 타입 변수 ->`: 타입별 분기와 형변환을 한 번에 한다.
@@ -290,6 +310,7 @@ User user = findByEmail(email)
 
 ## 주의
 - 위쪽 case가 아래 case를 항상 가리면(더 넓은 타입이 먼저) 컴파일 오류가 난다. 좁은 타입부터 쓴다.',
+ NULL, NULL, NULL,
  'sealed interface Result permits Success, Failure { }
 record Success(String data) implements Result { }
 record Failure(String code, String message) implements Result { }
@@ -306,6 +327,7 @@ String render(Result result) {
 -- data/seed/concepts/java/record.md
 ('record', 'java', 'JUNIOR',
  'record는 값을 담기만 하는 불변 클래스를 한 줄로 선언하는 문법(Java 16+)이다. 생성자, getter, equals·hashCode·toString을 자동으로 만든다.',
+ NULL, NULL, NULL,
  '## 핵심
 - `record Point(int x, int y) {}`만으로 필드, 생성자, 접근자 `x()`, `y()`가 생긴다. 접근자 이름에 `get`이 붙지 않는다.
 - 필드는 final이라 만든 뒤 바꿀 수 없다.
@@ -320,6 +342,7 @@ String render(Result result) {
 - setter가 없으므로 값을 바꾸려면 새 객체를 만든다.
 - 필드가 final이어도 안에 담긴 `List`는 바뀔 수 있다. 완전히 불변으로 만들려면 compact 생성자에서 `List.copyOf`로 복사한다.
 - Lombok `@Data`·`@Getter` DTO와 섞여 있으면 접근자 이름(`name()`과 `getName()`)이 달라 매퍼·템플릿에서 헷갈린다.',
+ NULL, NULL, NULL,
  'public record SignupRequest(
         @NotBlank @Email String email,
         @NotBlank @Size(max = 20) String nickname) { }
@@ -341,6 +364,7 @@ res.nickname();   // get 없이 필드 이름으로 읽는다',
 -- data/seed/concepts/java/sealed-class.md
 ('sealed 클래스와 인터페이스', 'java', 'JUNIOR',
  'sealed(Java 17)는 어떤 클래스가 이 타입을 상속·구현할 수 있는지 permits로 정해 두는 문법이다. 하위 타입이 닫혀 있으므로 "가능한 경우가 이것뿐"임을 컴파일러가 안다.',
+ NULL, NULL, NULL,
  '## 핵심
 - `sealed interface Shape permits Circle, Square { }`: Circle과 Square만 Shape를 구현할 수 있다.
 - 허용된 하위 타입은 `final`, `sealed`, `non-sealed` 중 하나를 선언해야 한다. record는 자동으로 final이라 잘 어울린다.
@@ -350,6 +374,7 @@ res.nickname();   // get 없이 필드 이름으로 읽는다',
 ## 주의
 - 같은 패키지(모듈을 쓰면 같은 모듈)에 있어야 permits로 묶을 수 있다.
 - 나중에 하위 타입을 자주 추가해야 하는 확장 지점에는 맞지 않는다.',
+ NULL, NULL, NULL,
  'public sealed interface PaymentMethod permits Card, BankTransfer, Point { }
 
 public record Card(String number) implements PaymentMethod { }
@@ -368,6 +393,7 @@ String describe(PaymentMethod m) {
 -- data/seed/concepts/java/stream-api.md
 ('스트림 API', 'java', 'JUNIOR',
  '스트림은 컬렉션 데이터를 filter·map·collect 같은 연산의 연결로 처리하는 방법이다. 반복문 대신 "무엇을 할지"를 선언적으로 쓴다.',
+ NULL, NULL, NULL,
  '## 핵심
 - 생성(`list.stream()`) → 중간 연산(`filter`, `map`, `sorted`) → 최종 연산(`toList`, `collect`, `count`) 순서로 쓴다.
 - 중간 연산은 최종 연산이 호출될 때 실행된다(지연 실행).
@@ -380,6 +406,7 @@ String describe(PaymentMethod m) {
 ## 주의
 - 스트림 안에서 외부 리스트에 `add`하는 식의 부수 효과는 피한다. 결과는 `toList`·`collect`로 만든다.
 - 단순한 반복은 for문이 더 읽기 쉬울 때도 있다.',
+ NULL, NULL, NULL,
  'List<String> names = concepts.stream()
         .filter(c -> c.status() == Status.PUBLISHED)
         .map(Concept::name)
@@ -392,6 +419,7 @@ Map<String, Long> countByCategory = concepts.stream()
 -- data/seed/concepts/java/switch-expression-instanceof.md
 ('switch 식과 instanceof 패턴 매칭', 'java', 'JUNIOR',
  'Java 14의 switch 식은 화살표(->)로 값을 바로 돌려주고 break 누락 실수를 없앤다. Java 16의 instanceof 패턴 매칭은 타입 확인과 형변환을 한 번에 한다.',
+ NULL, NULL, NULL,
  '## 핵심
 - switch 식: `case A, B -> 값;` 형태로 쓰고, switch 전체가 값이 된다. 위에서 아래로 떨어지는(fall-through) 동작이 없다.
 - enum을 switch 식으로 다룰 때 모든 상수를 처리하면 `default`가 없어도 된다. 상수가 새로 추가되면 컴파일 오류로 알려 준다.
@@ -404,6 +432,7 @@ Map<String, Long> countByCategory = concepts.stream()
 ## 주의
 - 화살표(`->`)와 콜론(`:`) 스타일을 한 switch 안에서 섞을 수 없다.
 - `default`를 습관처럼 넣으면 enum 상수가 추가돼도 컴파일러가 알려 주지 못한다.',
+ NULL, NULL, NULL,
  'enum Status { FETCHING, EXPLAINING, QUIZ, DONE, FAILED }
 
 int progress = switch (status) {
@@ -425,6 +454,7 @@ if (ex instanceof BusinessException be) {
 -- data/seed/concepts/java/text-block-var.md
 ('텍스트 블록과 var', 'java', 'BEGINNER',
  '텍스트 블록(Java 15)은 큰따옴표 세 개로 여러 줄 문자열을 그대로 쓰는 문법이고, var(Java 10)는 지역 변수 타입을 컴파일러가 추론하게 하는 키워드다.',
+ NULL, NULL, NULL,
  '## 핵심
 - 텍스트 블록: `"""` 다음 줄부터 내용을 쓴다. 줄바꿈과 따옴표를 이스케이프하지 않아도 되어 JSON·SQL·프롬프트 문자열이 읽기 쉬워진다. 공통 들여쓰기는 자동으로 제거된다.
 - `formatted(...)`로 값을 채운다.
@@ -436,6 +466,7 @@ if (ex instanceof BusinessException be) {
 ## 주의
 - var는 타입이 사라지는 것이 아니라 컴파일 시점에 정해진다. 오른쪽만 봐서 타입이 안 보이면(`var result = service.process();`) 읽는 사람이 헷갈리므로 쓰지 않는다.
 - 필드, 메서드 파라미터, 반환 타입에는 var를 쓸 수 없다.',
+ NULL, NULL, NULL,
  'String body = """
         {
           "email": "%s",
@@ -456,6 +487,7 @@ for (var entry : countByCategory.entrySet()) {
 -- data/seed/concepts/java/virtual-thread.md
 ('가상 스레드 (Java 21)', 'java', 'SENIOR',
  '가상 스레드는 Java 21에 정식 도입된 가벼운 스레드다. 운영체제 스레드 하나 위에서 수많은 가상 스레드가 번갈아 실행되어, I/O 대기가 많은 서버에서 요청마다 스레드를 써도 자원이 부족해지지 않는다.',
+ NULL, NULL, NULL,
  '## 핵심
 - **Java 21부터** 쓸 수 있다. 바이브노트 백엔드는 Java 17이라 쓰지 않는다.
 - DB·HTTP 응답을 기다리는 동안 가상 스레드가 운영체제 스레드를 내려놓으므로, 블로킹 코드를 그대로 두고도 동시 처리량이 늘어난다.
@@ -467,6 +499,7 @@ for (var entry : countByCategory.entrySet()) {
 - 가상 스레드는 싸게 만드는 것이 전제라 풀링하지 않는다.
 - 동시 요청이 늘어나는 만큼 DB 커넥션 풀이나 외부 API 한도가 먼저 병목이 된다. 동시성 제한은 세마포어 등으로 따로 건다.
 - 가상 스레드에서 ThreadLocal에 큰 객체를 담으면 수가 많아 메모리를 크게 쓴다.',
+ NULL, NULL, NULL,
  '# application.yml (Spring Boot 3.2+, Java 21)
 spring:
   threads:
@@ -489,6 +522,7 @@ try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
 -- data/seed/concepts/spring/actuator.md
 ('Actuator (헬스 체크·메트릭)', 'spring', 'BEGINNER',
  'Spring Boot Actuator는 애플리케이션 상태 확인(health), 메트릭, 설정 정보 같은 운영용 엔드포인트를 /actuator 아래에 제공한다.',
+ NULL, NULL, NULL,
  '## 핵심
 - `spring-boot-starter-actuator` 의존성을 추가하면 `/actuator/health`가 열린다. DB 연결 같은 하위 상태도 함께 점검한다.
 - 웹에는 기본적으로 health만 노출된다. 나머지는 `management.endpoints.web.exposure.include`로 고른다.
@@ -499,6 +533,7 @@ try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
 - `env`, `heapdump`, `configprops`는 비밀 값이나 메모리 내용이 드러날 수 있다. 공개 포트에 열지 않는다.
 - `include: "*"` 설정은 개발용으로만 쓴다.
 - Spring Security를 쓰면 actuator 경로의 접근 규칙도 따로 정한다.',
+ NULL, NULL, NULL,
  '# application.yml
 management:
   endpoints:
@@ -516,6 +551,7 @@ GET /actuator/health   ->  {"status":"UP"}',
 -- data/seed/concepts/spring/aop.md
 ('AOP (관점 지향 프로그래밍)', 'spring', 'SENIOR',
  'AOP는 로깅·트랜잭션·권한 확인처럼 여러 곳에 반복되는 부가 기능을 핵심 로직과 분리해 한곳에서 적용하는 기법이다. 스프링은 프록시 객체로 이를 구현한다.',
+ NULL, NULL, NULL,
  '## 핵심
 - Aspect(부가 기능 모듈), Advice(언제 무엇을 할지: `@Before`, `@Around` 등), Pointcut(어디에 적용할지)으로 구성된다.
 - 스프링 AOP는 빈을 프록시로 감싸 메서드 호출 앞뒤에 끼어든다. `@Transactional`도 이 방식이다.
@@ -524,6 +560,7 @@ GET /actuator/health   ->  {"status":"UP"}',
 - 같은 클래스 안에서 자기 메서드를 호출(self-invocation)하면 프록시를 거치지 않아 AOP가 적용되지 않는다.
 - private 메서드에는 적용되지 않는다.
 - 너무 넓은 Pointcut은 어디서 무엇이 실행되는지 추적하기 어렵게 만든다.',
+ NULL, NULL, NULL,
  '@Aspect
 @Component
 public class TimingAspect {
@@ -544,6 +581,7 @@ public class TimingAspect {
 -- data/seed/concepts/spring/async.md
 ('@Async 비동기 실행', 'spring', 'JUNIOR',
  '@Async를 붙인 메서드는 호출한 스레드가 아니라 별도 스레드 풀에서 실행된다. 오래 걸리는 작업(분석, 메일 발송)을 요청 처리와 분리해 응답을 먼저 돌려줄 때 쓴다.',
+ NULL, NULL, NULL,
  '## 핵심
 - 설정 클래스에 `@EnableAsync`를 붙인다.
 - 반환 타입은 `void` 또는 `CompletableFuture<T>`.
@@ -555,6 +593,7 @@ public class TimingAspect {
 - `void` 메서드의 예외는 호출자에게 전달되지 않는다. 메서드 안에서 잡아 실패 상태를 기록하거나 `AsyncUncaughtExceptionHandler`를 둔다.
 - 호출한 스레드의 트랜잭션과 `SecurityContext`는 이어지지 않는다. 필요한 값(사용자 ID 등)은 파라미터로 넘긴다.
 - 커밋 전에 비동기 작업이 시작되면 아직 저장되지 않은 데이터를 읽을 수 있다. 커밋 후에 시작하려면 이벤트(`@TransactionalEventListener`)와 함께 쓴다.',
+ NULL, NULL, NULL,
  '@Configuration
 @EnableAsync
 public class AsyncConfig { }
@@ -580,6 +619,7 @@ public class AnalysisWorker {
 -- data/seed/concepts/spring/auto-configuration.md
 ('스프링 부트 자동 구성', 'spring', 'JUNIOR',
  '자동 구성(Auto-configuration)은 클래스패스에 있는 라이브러리와 설정값을 보고 필요한 빈을 스프링 부트가 알아서 등록해 주는 기능이다.',
+ NULL, NULL, NULL,
  '## 핵심
 - 예: MySQL 드라이버와 `spring.datasource.*` 설정이 있으면 `DataSource` 빈이 자동으로 생긴다.
 - 자동 구성은 "내가 같은 빈을 직접 정의하지 않았을 때만" 동작한다(조건부 등록). 직접 정의하면 그쪽이 우선한다.
@@ -592,6 +632,7 @@ public class AnalysisWorker {
 
 ## 주의
 무엇이 자동으로 등록됐는지 모르면 디버깅이 어렵다. `--debug`로 실행하면 조건 평가 보고서를 볼 수 있다.',
+ NULL, NULL, NULL,
  '# application.yml 만으로 DataSource와 MyBatis SqlSessionFactory가 자동 구성된다
 spring:
   datasource:
@@ -605,6 +646,7 @@ mybatis:
 -- data/seed/concepts/spring/bean-scope.md
 ('빈 스코프', 'spring', 'JUNIOR',
  '빈 스코프는 빈 인스턴스가 얼마나 오래, 몇 개 존재하는지를 정한다. 기본은 싱글톤이고, 필요하면 prototype·request·session 스코프를 쓴다.',
+ NULL, NULL, NULL,
  '## 핵심
 - singleton: 컨테이너당 하나. 대부분의 서비스·매퍼가 여기에 해당한다.
 - prototype: 요청할 때마다 새로 만든다. 컨테이너는 만든 뒤 소멸을 관리하지 않는다.
@@ -617,6 +659,7 @@ mybatis:
 ## 주의
 - 싱글톤 빈이 prototype 빈을 생성자로 주입받으면 처음 한 번만 만들어진다.
 - 싱글톤 빈에 변경 가능한 필드를 두면 요청끼리 값이 섞인다(동시성 문제).',
+ NULL, NULL, NULL,
  '@Component
 @RequestScope                        // 요청마다 새 인스턴스, 싱글톤에는 프록시가 주입된다
 public class RequestContext {
@@ -641,6 +684,7 @@ public class AnalysisService {
 -- data/seed/concepts/spring/cacheable.md
 ('캐시 추상화 (@Cacheable)', 'spring', 'JUNIOR',
  '@Cacheable을 붙인 메서드는 같은 인자로 다시 호출되면 메서드를 실행하지 않고 저장해 둔 결과를 돌려준다. 자주 읽고 드물게 바뀌는 데이터의 조회 부담을 줄인다.',
+ NULL, NULL, NULL,
  '## 핵심
 - `@EnableCaching`으로 켠다. Boot는 캐시 라이브러리가 없으면 메모리 맵(`ConcurrentMapCache`)을 쓴다.
 - `@Cacheable(cacheNames = "concepts", key = "#id")`: 결과를 저장하고 재사용한다.
@@ -652,6 +696,7 @@ public class AnalysisService {
 - 수정·삭제 경로에서 `@CacheEvict`를 빠뜨리면 오래된 데이터가 계속 보인다.
 - 프록시 방식이라 같은 클래스 내부 호출에는 캐시가 적용되지 않는다.
 - 사용자별로 다른 결과(권한, 찜 여부)를 키 없이 캐시하면 다른 사람의 데이터가 보인다.',
+ NULL, NULL, NULL,
  '@Configuration
 @EnableCaching
 public class CacheConfig { }
@@ -675,6 +720,7 @@ public class ConceptService {
 -- data/seed/concepts/spring/component-scan.md
 ('컴포넌트 스캔과 스테레오타입', 'spring', 'BEGINNER',
  '컴포넌트 스캔은 지정한 패키지 아래에서 @Component 계열 어노테이션이 붙은 클래스를 찾아 자동으로 빈으로 등록하는 기능이다.',
+ NULL, NULL, NULL,
  '## 핵심
 - `@Component`와 그 특수화인 `@Service`, `@Repository`, `@Controller`(`@RestController`)를 스테레오타입 어노테이션이라 한다.
 - 스프링 부트는 `@SpringBootApplication`이 붙은 클래스의 패키지와 하위 패키지를 스캔한다.
@@ -682,6 +728,7 @@ public class ConceptService {
 
 ## 주의
 메인 클래스보다 바깥 패키지에 둔 클래스는 스캔되지 않아 "빈을 찾을 수 없음" 오류가 난다.',
+ NULL, NULL, NULL,
  'package com.example.app;
 
 @SpringBootApplication   // com.example.app 이하를 스캔
@@ -696,6 +743,7 @@ public class UserService { }',
 -- data/seed/concepts/spring/configuration-bean.md
 ('@Configuration과 @Bean', 'spring', 'JUNIOR',
  '@Configuration 클래스 안의 @Bean 메서드는 반환한 객체를 빈으로 등록한다. 직접 만든 클래스가 아니라 라이브러리 객체를 빈으로 쓰거나 생성 과정을 코드로 제어할 때 쓴다.',
+ NULL, NULL, NULL,
  '## 핵심
 - 컴포넌트 스캔은 내가 만든 클래스에, `@Bean`은 외부 라이브러리 객체(예: `PasswordEncoder`, `RestClient`)에 주로 쓴다.
 - 메서드 이름이 기본 빈 이름이 된다.
@@ -703,6 +751,7 @@ public class UserService { }',
 
 ## 주의
 같은 타입 빈이 둘 이상이면 주입할 때 모호해진다. `@Primary`나 `@Qualifier`로 고른다.',
+ NULL, NULL, NULL,
  '@Configuration
 public class SecurityBeans {
 
@@ -716,6 +765,7 @@ public class SecurityBeans {
 -- data/seed/concepts/spring/configuration-properties.md
 ('외부 설정과 @ConfigurationProperties', 'spring', 'JUNIOR',
  '스프링 부트는 application.yml, 환경변수, 실행 인자에서 설정값을 읽는다. @ConfigurationProperties는 관련 설정을 타입이 있는 객체 하나로 묶어 준다.',
+ NULL, NULL, NULL,
  '## 핵심
 - 우선순위가 있다. 실행 인자와 환경변수가 설정 파일보다 우선하므로, 운영 값은 환경변수로 덮어쓴다.
 - `@Value("${...}")`는 값 하나, `@ConfigurationProperties(prefix = "...")`는 묶음에 적합하다.
@@ -723,6 +773,7 @@ public class SecurityBeans {
 
 ## 주의
 비밀 값(API 키, DB 비밀번호)은 설정 파일에 쓰지 말고 환경변수로 받는다. 저장소에 커밋되면 되돌리기 어렵다.',
+ NULL, NULL, NULL,
  '@ConfigurationProperties(prefix = "app.upload")
 public record UploadProperties(String dir, long maxBytes) { }
 
@@ -740,6 +791,7 @@ app:
 -- data/seed/concepts/spring/dependency-injection.md
 ('의존성 주입 (DI)', 'spring', 'BEGINNER',
  '의존성 주입은 객체가 필요한 다른 객체를 스스로 만들지 않고 외부(스프링 컨테이너)로부터 받는 방식이다. 생성자 주입이 권장된다.',
+ NULL, NULL, NULL,
  '## 핵심
 - 생성자 주입: 필드를 `final`로 둘 수 있고, 필요한 의존성이 빠지면 객체가 만들어지지 않는다.
 - 생성자가 하나면 `@Autowired`를 생략해도 된다.
@@ -750,6 +802,7 @@ Lombok `@RequiredArgsConstructor`와 `private final` 필드 조합이 자주 보
 
 ## 주의
 필드에 `@Autowired`를 붙이는 필드 주입은 테스트와 불변성에 불리하다.',
+ NULL, NULL, NULL,
  '@Service
 public class OrderService {
     private final OrderMapper orderMapper;
@@ -765,6 +818,7 @@ public class OrderService {
 -- data/seed/concepts/spring/flyway.md
 ('Flyway DB 마이그레이션', 'spring', 'BEGINNER',
  'Flyway는 DB 스키마 변경을 버전이 붙은 SQL 파일로 관리하고, 애플리케이션 시작 시 아직 적용되지 않은 파일만 순서대로 실행한다. 모든 PC와 서버의 DB 구조를 같게 맞춘다.',
+ NULL, NULL, NULL,
  '## 핵심
 - `V1__init.sql`, `V2__add_column.sql`: 버전 마이그레이션. 한 번만 실행된다.
 - `R__seed.sql`: 반복 마이그레이션. 내용(체크섬)이 바뀔 때마다 다시 실행된다. 시드 데이터·뷰에 쓴다.
@@ -775,6 +829,7 @@ public class OrderService {
 - **이미 적용된 V 파일을 고치면 체크섬이 달라 애플리케이션이 시작되지 않는다.** 수정할 내용은 새 버전 파일로 추가한다.
 - 두 사람이 같은 버전 번호를 동시에 만들면 충돌한다. 새 파일을 만들기 전에 최신 번호를 확인한다.
 - 운영 DB에서 `flyway clean`(전체 삭제)을 실행하지 않게 막는다(`spring.flyway.clean-disabled`, Boot 기본값 true).',
+ NULL, NULL, NULL,
  'src/main/resources/db/migration/
 ├─ V1__init.sql
 ├─ V2__analysis_soft_delete.sql
@@ -794,6 +849,7 @@ spring:
 -- data/seed/concepts/spring/ioc-container-bean.md
 ('IoC 컨테이너와 빈', 'spring', 'BEGINNER',
  '스프링은 객체를 직접 new 하지 않고 컨테이너가 만들어 관리한다. 컨테이너가 관리하는 객체를 빈(Bean)이라 부르고, 객체 생성의 제어권이 개발자에서 프레임워크로 넘어간 것을 제어의 역전(IoC)이라 한다.',
+ NULL, NULL, NULL,
  '## 핵심
 - `ApplicationContext`가 빈을 만들고, 의존 관계를 연결하고, 생명주기를 관리한다.
 - 기본적으로 빈은 애플리케이션에 하나만 만들어지는 싱글톤이다.
@@ -803,6 +859,7 @@ spring:
 
 ## 주의
 싱글톤 빈은 여러 요청이 동시에 쓴다. 빈 필드에 요청별 상태(현재 사용자 등)를 저장하면 요청끼리 섞인다.',
+ NULL, NULL, NULL,
  '@Service
 public class GreetingService {
     public String greet(String name) {
@@ -824,6 +881,7 @@ public class GreetingController {
 -- data/seed/concepts/spring/layered-architecture.md
 ('계층형 구조 (Controller·Service·Mapper)', 'spring', 'BEGINNER',
  '웹 애플리케이션을 요청 처리(Controller), 비즈니스 로직(Service), 데이터 접근(Mapper·Repository) 계층으로 나누는 구조다. 각 계층은 아래 계층만 호출한다.',
+ NULL, NULL, NULL,
  '## 핵심
 - Controller: 요청을 받고 검증한 뒤 Service를 호출하고 응답을 돌려준다. 로직을 두지 않는다.
 - Service: 규칙과 트랜잭션을 담당한다.
@@ -834,6 +892,7 @@ AI가 만든 코드는 Controller에서 바로 Mapper를 부르거나, Service�
 
 ## 주의
 DB 행 객체를 그대로 응답으로 내보내면 비밀번호 같은 필드가 노출될 수 있다. 응답 DTO로 바꿔서 보낸다.',
+ NULL, NULL, NULL,
  '@RestController
 @RequestMapping("/api/users")
 public class UserController {
@@ -867,6 +926,7 @@ public class UserService {
 -- data/seed/concepts/spring/logging.md
 ('로깅 (SLF4J·Logback)', 'spring', 'BEGINNER',
  '스프링 부트는 SLF4J 인터페이스와 Logback 구현으로 로그를 남긴다. 로그 레벨(ERROR·WARN·INFO·DEBUG·TRACE)과 패키지별 설정으로 필요한 만큼만 출력한다.',
+ NULL, NULL, NULL,
  '## 핵심
 - `LoggerFactory.getLogger(클래스)`로 로거를 만든다. Lombok `@Slf4j`도 같은 일을 한다.
 - 문자열 더하기 대신 `{}` 자리 표시자를 쓴다. 레벨이 꺼져 있으면 문자열을 만들지 않는다.
@@ -880,6 +940,7 @@ public class UserService {
 - `System.out.println`은 레벨·시간·스레드 정보가 없고 끌 수 없다. 서버 코드에서는 로거를 쓴다.
 - 비밀번호, 토큰, API 키, 개인정보를 로그에 남기지 않는다.
 - 반복문 안 INFO 로그는 로그 양을 폭발시킨다.',
+ NULL, NULL, NULL,
  '@Service
 public class LoginService {
     private static final Logger log = LoggerFactory.getLogger(LoginService.class);
@@ -906,6 +967,7 @@ logging:
 -- data/seed/concepts/spring/profile.md
 ('프로파일 (@Profile)', 'spring', 'JUNIOR',
  '프로파일은 실행 환경(local, test, prod 등)에 따라 다른 빈과 설정을 활성화하는 기능이다.',
+ NULL, NULL, NULL,
  '## 핵심
 - `@Profile("local")`이 붙은 빈은 그 프로파일이 활성일 때만 등록된다.
 - 스프링 부트는 `application-{프로파일}.yml`을 함께 읽는다.
@@ -916,6 +978,7 @@ logging:
 
 ## 주의
 운영 설정 파일에 비밀번호나 API 키를 직접 쓰지 말고 환경변수로 받는다.',
+ NULL, NULL, NULL,
  '@Configuration
 public class MailConfig {
 
@@ -936,6 +999,7 @@ public class MailConfig {
 -- data/seed/concepts/spring/rest-client.md
 ('RestClient (외부 API 호출)', 'spring', 'JUNIOR',
  'RestClient는 Spring 6.1(Boot 3.2)에 추가된 동기 HTTP 클라이언트다. 메서드를 이어 붙이는 방식으로 외부 API를 호출하고 응답을 객체로 받는다. 인터페이스만 선언하는 HTTP 인터페이스(@HttpExchange)와 함께 쓸 수 있다.',
+ NULL, NULL, NULL,
  '## 핵심
 - `restClient.get().uri(...).retrieve().body(타입)` 순서로 쓴다.
 - 4xx·5xx 응답은 기본적으로 예외(`RestClientResponseException`)가 된다. `onStatus`로 상태별 처리를 바꾼다.
@@ -949,6 +1013,7 @@ public class MailConfig {
 - **타임아웃을 꼭 설정한다.** 외부 서버가 응답하지 않으면 요청 스레드가 계속 묶인다.
 - 외부 호출을 `@Transactional` 안에서 하면 응답을 기다리는 동안 DB 커넥션을 잡는다. 호출과 저장을 나눈다.
 - API 키는 환경변수로 받고 로그에 찍지 않는다.',
+ NULL, NULL, NULL,
  '@Configuration
 public class GithubClientConfig {
 
@@ -988,6 +1053,7 @@ GithubApi api = HttpServiceProxyFactory
 -- data/seed/concepts/spring/scheduled.md
 ('@Scheduled 스케줄링', 'spring', 'JUNIOR',
  '@Scheduled를 붙인 메서드는 정해진 주기나 cron 표현식에 따라 자동으로 실행된다. 만료 데이터 정리, 집계, 알림 같은 배치 작업에 쓴다.',
+ NULL, NULL, NULL,
  '## 핵심
 - 설정 클래스에 `@EnableScheduling`을 붙인다.
 - `fixedRate`: 시작 시점 기준 주기. `fixedDelay`: 이전 실행이 끝난 뒤 기다리는 시간. `cron`: 달력 기준.
@@ -998,6 +1064,7 @@ GithubApi api = HttpServiceProxyFactory
 - Boot 기본 스케줄러 스레드는 1개다. 작업 하나가 오래 걸리면 다른 작업이 밀린다. `spring.task.scheduling.pool.size`로 늘린다.
 - 서버를 여러 대 띄우면 **모든 서버에서 실행된다.** 한 번만 실행해야 하면 DB 락 같은 분산 락이 필요하다.
 - 예외가 나도 다음 주기에 다시 실행되지만 로그를 남기지 않으면 실패를 모른다.',
+ NULL, NULL, NULL,
  '@Configuration
 @EnableScheduling
 public class SchedulingConfig { }
@@ -1020,6 +1087,7 @@ public class CleanupJob {
 -- data/seed/concepts/spring/spring-boot-test.md
 ('스프링 부트 테스트 (@SpringBootTest·@WebMvcTest)', 'spring', 'JUNIOR',
  '@SpringBootTest는 애플리케이션 전체를 띄우는 통합 테스트이고, @WebMvcTest는 컨트롤러 계층만 띄우는 슬라이스 테스트다. MockMvc로 실제 서버 없이 HTTP 요청을 보내 검증한다.',
+ NULL, NULL, NULL,
  '## 핵심
 - `@SpringBootTest` + `@AutoConfigureMockMvc`: 컨트롤러부터 DB까지 실제 빈으로 검증한다. 느리지만 믿을 만하다.
 - `@WebMvcTest(XxxController.class)`: MVC 관련 빈만 올리고 Service는 가짜로 바꾼다. 빠르다.
@@ -1032,6 +1100,7 @@ public class CleanupJob {
 ## 주의
 - 테스트마다 다른 설정(`@MockitoBean` 조합, 프로퍼티)을 쓰면 스프링 컨텍스트를 재사용하지 못해 전체 테스트가 느려진다.
 - 테스트끼리 DB 데이터가 섞이지 않게 `@Transactional` 롤백이나 정리 스크립트를 쓴다.',
+ NULL, NULL, NULL,
  '@WebMvcTest(ConceptController.class)
 class ConceptControllerTest {
 
@@ -1053,6 +1122,7 @@ class ConceptControllerTest {
 -- data/seed/concepts/spring/testcontainers.md
 ('Testcontainers 통합 테스트', 'spring', 'JUNIOR',
  'Testcontainers는 테스트를 실행할 때 Docker로 실제 DB(MySQL 등)를 띄워 준다. H2 같은 대체 DB가 아니라 운영과 같은 DB로 SQL을 검증한다.',
+ NULL, NULL, NULL,
  '## 핵심
 - Docker가 실행 중이어야 한다.
 - Boot 3.1부터 `@ServiceConnection`을 붙이면 컨테이너 주소·계정이 데이터소스 설정에 자동으로 연결된다. 예전에는 `@DynamicPropertySource`로 직접 넣었다.
@@ -1063,6 +1133,7 @@ class ConceptControllerTest {
 - H2로 테스트하면 MySQL 전용 문법(ENUM, JSON, ON DUPLICATE KEY)에서 운영과 다르게 동작할 수 있다.
 - 컨테이너 이미지는 운영 DB 버전과 맞춘다(`mysql:8.4`).
 - 처음 실행할 때 이미지를 내려받아 오래 걸린다. CI에서는 캐시를 고려한다.',
+ NULL, NULL, NULL,
  '@SpringBootTest
 @Testcontainers
 class ConceptMapperTest {
@@ -1084,6 +1155,7 @@ class ConceptMapperTest {
 -- data/seed/concepts/spring/transaction-propagation.md
 ('트랜잭션 전파와 롤백 규칙', 'spring', 'SENIOR',
  '트랜잭션 전파(propagation)는 이미 트랜잭션이 진행 중일 때 새 @Transactional 메서드가 그 트랜잭션에 참여할지, 새로 시작할지를 정한다.',
+ NULL, NULL, NULL,
  '## 핵심
 - REQUIRED(기본): 있으면 참여하고 없으면 새로 만든다. 안쪽에서 롤백이 표시되면 바깥 전체가 롤백된다.
 - REQUIRES_NEW: 바깥 트랜잭션을 잠시 멈추고 독립 트랜잭션을 연다. 실패 로그처럼 바깥이 롤백돼도 남겨야 하는 기록에 쓴다.
@@ -1092,6 +1164,7 @@ class ConceptMapperTest {
 ## 주의
 - 안쪽 REQUIRED 메서드에서 예외를 잡아 삼켜도 이미 rollback-only로 표시되어 바깥 커밋 시 `UnexpectedRollbackException`이 난다.
 - REQUIRES_NEW는 커넥션을 하나 더 쓰므로 남용하면 커넥션 풀이 고갈될 수 있다.',
+ NULL, NULL, NULL,
  '@Service
 public class AuditService {
 
@@ -1108,6 +1181,7 @@ public void importFile(Path path) throws IOException { }',
 -- data/seed/concepts/spring/transactional-event-listener.md
 ('애플리케이션 이벤트 (@TransactionalEventListener)', 'spring', 'SENIOR',
  '스프링 이벤트는 "어떤 일이 일어났다"를 발행하고 관심 있는 리스너가 받아 처리하게 해 서비스 간 직접 호출을 줄인다. @TransactionalEventListener는 트랜잭션이 커밋된 뒤에만 리스너를 실행한다.',
+ NULL, NULL, NULL,
  '## 핵심
 - `ApplicationEventPublisher.publishEvent(이벤트)`로 발행한다. 이벤트는 보통 record로 만든다.
 - `@EventListener`: 발행 즉시 같은 스레드·같은 트랜잭션 안에서 실행된다.
@@ -1121,6 +1195,7 @@ public void importFile(Path path) throws IOException { }',
 - 트랜잭션 없이 발행하면 `@TransactionalEventListener`는 실행되지 않는다(`fallbackExecution = true`로 바꿀 수 있다).
 - `AFTER_COMMIT` 리스너 안에서 DB에 쓰려면 이미 끝난 트랜잭션에 참여할 수 없으므로 `REQUIRES_NEW` 트랜잭션을 연다.
 - 이벤트 흐름이 많아지면 코드만 보고 실행 순서를 추적하기 어렵다. 꼭 필요한 곳에만 쓴다.',
+ NULL, NULL, NULL,
  'public record AnalysisRequested(long analysisId) { }
 
 @Service
@@ -1149,6 +1224,7 @@ public class AnalysisStarter {
 -- data/seed/concepts/spring/transactional.md
 ('@Transactional 선언적 트랜잭션', 'spring', 'JUNIOR',
  '@Transactional을 메서드나 클래스에 붙이면 스프링이 메서드 시작 시 트랜잭션을 열고, 정상 종료 시 커밋, 예외 시 롤백한다.',
+ NULL, NULL, NULL,
  '## 핵심
 - 여러 SQL이 "모두 성공하거나 모두 실패"해야 할 때 쓴다. 예: 주문 저장 + 재고 차감.
 - 보통 Service 계층 메서드에 붙인다.
@@ -1158,6 +1234,7 @@ public class AnalysisStarter {
 - 기본 설정은 unchecked 예외(`RuntimeException`)에서만 롤백한다. checked 예외는 커밋된다.
 - 프록시 방식이라 같은 클래스 내부 호출에는 적용되지 않는다.
 - 트랜잭션 안에서 외부 API처럼 오래 걸리는 호출을 하면 그동안 DB 커넥션을 잡고 있게 된다.',
+ NULL, NULL, NULL,
  '@Service
 public class OrderService {
 
@@ -1175,6 +1252,7 @@ public class OrderService {
 -- data/seed/concepts/web/async-await-promise.md
 ('async/await와 Promise', 'web', 'BEGINNER',
  'Promise는 나중에 끝나는 작업(서버 요청 등)의 결과를 나타내는 객체이고, async/await는 그 결과를 동기 코드처럼 순서대로 기다리게 해 주는 문법이다.',
+ NULL, NULL, NULL,
  '## 핵심
 - `async` 함수는 항상 Promise를 반환한다.
 - `await`는 Promise가 끝날 때까지 그 함수의 실행을 멈추고 결과값을 꺼낸다.
@@ -1186,6 +1264,7 @@ Vue 컴포넌트와 Pinia 액션에서 API를 호출할 때 거의 항상 쓰인
 ## 주의
 - `await`를 빼먹으면 값 대신 Promise 객체를 쓰게 된다.
 - 서로 독립된 요청을 하나씩 await하면 느리다. `Promise.all`로 동시에 보낸다.',
+ NULL, NULL, NULL,
  'async function loadDashboard(userId) {
   try {
     const [profile, stats] = await Promise.all([
@@ -1203,6 +1282,7 @@ Vue 컴포넌트와 Pinia 액션에서 API를 호출할 때 거의 항상 쓰인
 -- data/seed/concepts/web/bean-validation.md
 ('Bean Validation (@Valid)', 'web', 'JUNIOR',
  'Bean Validation은 DTO 필드에 @NotBlank·@Size·@Email 같은 제약 어노테이션을 달고, 컨트롤러 파라미터에 @Valid를 붙여 요청을 자동 검증하는 표준이다.',
+ NULL, NULL, NULL,
  '## 핵심
 - 검증에 실패하면 컨트롤러 메서드가 실행되지 않고 `MethodArgumentNotValidException`이 난다.
 - 전역 예외 처리에서 필드별 오류 메시지를 모아 400 응답으로 바꾼다.
@@ -1216,6 +1296,7 @@ Vue 컴포넌트와 Pinia 액션에서 API를 호출할 때 거의 항상 쓰인
 - `@Valid`를 빼먹으면 어노테이션이 있어도 검증되지 않는다. AI 코드에서 자주 빠진다.
 - 중첩 객체·리스트 안의 요소를 검증하려면 그 필드에도 `@Valid`를 붙인다.
 - 입력 형식 검증은 DTO에서, "이미 가입된 이메일" 같은 비즈니스 규칙 검증은 Service에서 한다.',
+ NULL, NULL, NULL,
  'import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -1233,6 +1314,7 @@ public ResponseEntity<Void> signup(@Valid @RequestBody SignupRequest req) { ... 
 -- data/seed/concepts/web/cookie-session.md
 ('쿠키와 세션', 'web', 'BEGINNER',
  'HTTP는 요청끼리 기억이 없으므로, 서버는 쿠키로 브라우저에 작은 값을 저장하게 하고 다음 요청마다 돌려받는다. 세션은 서버가 사용자 상태를 저장하고 그 식별자만 쿠키로 주고받는 방식이다.',
+ NULL, NULL, NULL,
  '## 핵심
 - 서버가 `Set-Cookie` 헤더로 쿠키를 주면, 브라우저는 조건이 맞는 요청마다 `Cookie` 헤더로 자동 전송한다.
 - 보안 속성:
@@ -1246,6 +1328,7 @@ public ResponseEntity<Void> signup(@Valid @RequestBody SignupRequest req) { ... 
 - 토큰을 `localStorage`에 두면 XSS 한 번에 탈취된다. 민감한 토큰은 HttpOnly 쿠키가 낫다.
 - 쿠키로 인증하면 CSRF 대책(SameSite, CSRF 토큰)이 필요하다.
 - 프론트와 백엔드 출처가 다르면 `credentials: "include"`와 CORS `allowCredentials`가 함께 필요하다.',
+ NULL, NULL, NULL,
  '// Spring: Refresh 토큰을 HttpOnly 쿠키로 내려주기
 ResponseCookie cookie = ResponseCookie.from("refresh_token", refreshToken)
         .httpOnly(true)
@@ -1265,6 +1348,7 @@ return ResponseEntity.ok()
 -- data/seed/concepts/web/cors.md
 ('CORS', 'web', 'JUNIOR',
  'CORS는 브라우저가 다른 출처(도메인·포트)로 보내는 요청을 서버가 허용하는지 확인하는 규칙이다. 프론트(5173)와 백엔드(8080)를 따로 띄우면 바로 만난다.',
+ NULL, NULL, NULL,
  '## 핵심
 - 출처는 프로토콜 + 호스트 + 포트다. 포트만 달라도 다른 출처다.
 - 브라우저는 응답의 `Access-Control-Allow-Origin` 등 헤더를 보고 허용 여부를 판단한다. 서버가 아니라 브라우저가 막는 것이다.
@@ -1275,6 +1359,7 @@ return ResponseEntity.ok()
 - `allowedOrigins("*")`와 자격 증명 허용을 같이 쓸 수 없다. 허용할 출처를 명시한다.
 
 더 읽기: MDN 교차 출처 리소스 공유 https://developer.mozilla.org/ko/docs/Web/HTTP/Guides/CORS',
+ NULL, NULL, NULL,
  '@Configuration
 public class CorsConfig implements WebMvcConfigurer {
     @Override
@@ -1290,6 +1375,7 @@ public class CorsConfig implements WebMvcConfigurer {
 -- data/seed/concepts/web/fetch-api.md
 ('Fetch API', 'web', 'BEGINNER',
  'Fetch API는 브라우저에서 HTTP 요청을 보내는 표준 함수 fetch()다. Promise를 반환하므로 async/await와 함께 쓴다. axios 같은 라이브러리도 내부 개념은 같다.',
+ NULL, NULL, NULL,
  '## 핵심
 - `fetch(url, { method, headers, body })` → `Response`. 본문은 `await res.json()`으로 꺼낸다.
 - JSON을 보낼 때는 `Content-Type: application/json`과 `JSON.stringify(body)`.
@@ -1300,6 +1386,7 @@ public class CorsConfig implements WebMvcConfigurer {
 - **fetch는 404·500에서도 예외를 던지지 않는다.** 네트워크 실패일 때만 reject된다. `res.ok`를 직접 확인한다. axios는 2xx가 아니면 예외를 던지므로 둘의 동작이 다르다.
 - 응답 본문은 한 번만 읽을 수 있다.
 - 204 응답에 `res.json()`을 부르면 오류가 난다.',
+ NULL, NULL, NULL,
  'async function createPost(post) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 10_000);
@@ -1325,6 +1412,7 @@ public class CorsConfig implements WebMvcConfigurer {
 -- data/seed/concepts/web/filter-interceptor.md
 ('필터와 인터셉터', 'web', 'SENIOR',
  '필터는 서블릿 컨테이너 단계에서, 인터셉터는 스프링 MVC 단계에서 요청 앞뒤에 공통 처리를 끼워 넣는다. 둘 다 여러 요청에 공통으로 필요한 일을 한곳에 모은다.',
+ NULL, NULL, NULL,
  '## 핵심
 - 요청 흐름: 필터 → DispatcherServlet → 인터셉터 → 컨트롤러.
 - 필터: 인코딩, 보안(스프링 시큐리티 필터 체인), 요청 로깅처럼 스프링 MVC 바깥에서도 필요한 일.
@@ -1333,6 +1421,7 @@ public class CorsConfig implements WebMvcConfigurer {
 ## 주의
 - 필터에서 던진 예외는 `@RestControllerAdvice`가 잡지 못한다. 필터 안에서 직접 응답을 써야 한다.
 - 인터셉터 `preHandle`이 false를 반환하면 컨트롤러가 실행되지 않는다.',
+ NULL, NULL, NULL,
  'public class RequestTimeInterceptor implements HandlerInterceptor {
 
     @Override
@@ -1361,6 +1450,7 @@ public class WebConfig implements WebMvcConfigurer {
 -- data/seed/concepts/web/jackson-json.md
 ('JSON 직렬화 (Jackson)', 'web', 'JUNIOR',
  '스프링 부트는 Jackson 라이브러리로 자바 객체와 JSON을 서로 변환한다. 요청 본문은 객체로(역직렬화), 반환값은 JSON으로(직렬화) 바뀐다.',
+ NULL, NULL, NULL,
  '## 핵심
 - 기본적으로 getter(record는 접근자) 이름이 JSON 필드 이름이 된다.
 - 날짜(`LocalDateTime`)는 ISO-8601 문자열로 나간다.
@@ -1369,6 +1459,7 @@ public class WebConfig implements WebMvcConfigurer {
 ## 주의
 - 엔티티를 그대로 반환하면 원치 않는 필드(비밀번호 해시 등)까지 직렬화된다. 응답 DTO를 쓴다.
 - 서로를 참조하는 객체는 무한 재귀로 직렬화가 실패할 수 있다.',
+ NULL, NULL, NULL,
  'public record UserResponse(
         long id,
         String nickname,
@@ -1380,6 +1471,7 @@ public class WebConfig implements WebMvcConfigurer {
 -- data/seed/concepts/web/multipart-upload.md
 ('파일 업로드 (MultipartFile)', 'web', 'JUNIOR',
  '브라우저가 multipart/form-data로 보낸 파일은 스프링에서 MultipartFile로 받는다. 크기·형식 검증과 저장 경로 처리가 보안의 핵심이다.',
+ NULL, NULL, NULL,
  '## 핵심
 - 컨트롤러 파라미터 `@RequestParam("file") MultipartFile file` 또는 `@RequestPart`로 받는다. 파일과 JSON을 함께 받을 때는 `@RequestPart`를 쓴다.
 - 크기 제한: `spring.servlet.multipart.max-file-size`, `max-request-size`. 넘으면 `MaxUploadSizeExceededException`이 난다.
@@ -1390,6 +1482,7 @@ public class WebConfig implements WebMvcConfigurer {
 - 확장자와 `Content-Type`은 클라이언트가 바꿀 수 있다. 허용 목록(jpg·png·webp)과 파일 앞부분의 매직 바이트로 함께 확인한다.
 - ZIP을 풀 때는 엔트리 경로가 대상 폴더 밖으로 나가는지 검사한다(Zip Slip).
 - 업로드 폴더는 실행 권한이 없는 곳에 두고, 웹 루트에 바로 노출하지 않는다.',
+ NULL, NULL, NULL,
  '@PostMapping(value = "/api/challenges/{id}/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
 public ImageResponse upload(@PathVariable long id, @RequestParam("file") MultipartFile file)
         throws IOException {
@@ -1417,6 +1510,7 @@ spring:
 -- data/seed/concepts/web/request-binding.md
 ('요청 파라미터 바인딩 (@PathVariable·@RequestParam·@RequestBody)', 'web', 'BEGINNER',
  '컨트롤러 메서드 파라미터에 어노테이션을 붙여 URL 경로, 쿼리 문자열, 요청 본문(JSON)의 값을 자바 객체로 받는다.',
+ NULL, NULL, NULL,
  '## 핵심
 - `@PathVariable`: `/users/{id}`의 `id`처럼 경로의 일부.
 - `@RequestParam`: `?page=2&keyword=spring` 같은 쿼리 문자열. `required = false`, `defaultValue`로 선택값을 지정한다.
@@ -1425,6 +1519,7 @@ spring:
 ## 주의
 - 식별자는 경로, 검색·필터·정렬 조건은 쿼리, 생성·수정 데이터는 본문에 두는 것이 일반적이다.
 - 본문 JSON 형식이 틀리면 400 응답이 난다. 전역 예외 처리에서 일관된 에러 형식으로 바꿔 준다.',
+ NULL, NULL, NULL,
  '@GetMapping("/api/concepts")
 public PageResponse<ConceptResponse> search(
         @RequestParam(required = false) String keyword,
@@ -1437,6 +1532,7 @@ public PostResponse update(@PathVariable long id, @RequestBody PostUpdateRequest
 -- data/seed/concepts/web/response-entity.md
 ('ResponseEntity와 HTTP 상태 코드', 'web', 'BEGINNER',
  'ResponseEntity는 응답 본문과 함께 HTTP 상태 코드와 헤더를 직접 정할 수 있는 반환 타입이다. 상태 코드는 요청 결과를 클라이언트에게 알리는 약속이다.',
+ NULL, NULL, NULL,
  '## 핵심
 - 2xx 성공(200 OK, 201 Created, 202 Accepted, 204 No Content), 4xx 클라이언트 오류(400, 401, 403, 404, 409), 5xx 서버 오류.
 - 생성은 201과 `Location` 헤더, 비동기 접수는 202, 본문 없는 삭제는 204가 자주 쓰인다.
@@ -1444,6 +1540,7 @@ public PostResponse update(@PathVariable long id, @RequestBody PostUpdateRequest
 
 ## 주의
 에러인데 200과 `{"success": false}`를 보내면 클라이언트와 모니터링이 실패를 알아채기 어렵다. 상태 코드로 표현한다.',
+ NULL, NULL, NULL,
  '@PostMapping("/api/posts")
 public ResponseEntity<PostResponse> create(@RequestBody PostRequest req) {
     PostResponse created = postService.create(req);
@@ -1462,6 +1559,7 @@ public ResponseEntity<Void> delete(@PathVariable long id) {
 -- data/seed/concepts/web/rest-controller-advice.md
 ('전역 예외 처리 (@RestControllerAdvice)', 'web', 'JUNIOR',
  '@RestControllerAdvice 클래스의 @ExceptionHandler 메서드는 모든 컨트롤러에서 던진 예외를 한곳에서 잡아 일관된 에러 응답으로 바꾼다.',
+ NULL, NULL, NULL,
  '## 핵심
 - 컨트롤러마다 try-catch를 쓰지 않아도 된다.
 - 비즈니스 예외는 에러 코드·HTTP 상태·메시지로, 검증 예외는 필드 오류 목록으로, 예상 못한 예외는 500으로 변환한다.
@@ -1474,6 +1572,7 @@ public ResponseEntity<Void> delete(@PathVariable long id) {
 
 ## 주의
 500 응답에 예외 메시지나 스택 트레이스를 그대로 담으면 내부 정보가 노출된다. 로그에만 남기고 응답은 일반 메시지로 보낸다.',
+ NULL, NULL, NULL,
  '@RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -1507,6 +1606,7 @@ public ProblemDetail handle(BusinessException e) {
 -- data/seed/concepts/web/rest-controller.md
 ('@RestController와 요청 매핑', 'web', 'BEGINNER',
  '@RestController는 메서드 반환값을 JSON 같은 응답 본문으로 바로 쓰는 컨트롤러다. @GetMapping·@PostMapping 등으로 URL과 HTTP 메서드를 메서드에 연결한다.',
+ NULL, NULL, NULL,
  '## 핵심
 - `@RestController` = `@Controller` + `@ResponseBody`.
 - 클래스의 `@RequestMapping("/api/posts")`가 공통 경로, 메서드의 `@GetMapping("/{id}")`가 세부 경로다.
@@ -1514,6 +1614,7 @@ public ProblemDetail handle(BusinessException e) {
 
 ## 주의
 같은 URL과 메서드 조합이 두 군데 매핑되면 애플리케이션이 시작되지 않는다.',
+ NULL, NULL, NULL,
  '@RestController
 @RequestMapping("/api/posts")
 public class PostController {
@@ -1532,6 +1633,7 @@ public class PostController {
 -- data/seed/concepts/web/rest-http-methods.md
 ('REST API와 HTTP 메서드', 'web', 'BEGINNER',
  'REST API는 자원을 URL로 표현하고, 그 자원에 대한 행동을 HTTP 메서드(GET·POST·PUT·PATCH·DELETE)로 나타내는 설계 방식이다.',
+ NULL, NULL, NULL,
  '## 핵심
 - URL은 명사(자원), 행동은 메서드로 표현한다. `POST /api/posts`(생성), `GET /api/posts/3`(조회), `DELETE /api/posts/3`(삭제).
 - GET은 데이터를 바꾸지 않아야 한다.
@@ -1540,6 +1642,7 @@ public class PostController {
 
 ## 주의
 `GET /api/deletePost?id=3`처럼 동사를 URL에 넣는 설계는 캐시·크롤러가 데이터를 지우는 사고로 이어질 수 있다.',
+ NULL, NULL, NULL,
  'GET    /api/posts?page=1        목록
 GET    /api/posts/42            상세
 POST   /api/posts               생성 (201 + Location)
@@ -1551,6 +1654,7 @@ POST   /api/posts/42/likes      하위 자원 생성 (좋아요)',
 -- data/seed/concepts/web/springdoc-openapi.md
 ('OpenAPI 문서화 (springdoc)', 'web', 'BEGINNER',
  'springdoc-openapi는 스프링 컨트롤러를 분석해 OpenAPI 명세(JSON)와 Swagger UI 화면을 자동으로 만들어 준다. 어노테이션으로 설명과 예시를 보강한다.',
+ NULL, NULL, NULL,
  '## 핵심
 - 의존성만 추가하면 `/v3/api-docs`(명세)와 `/swagger-ui/index.html`(화면)이 생긴다.
 - `@Tag`(그룹), `@Operation`(요약), `@ApiResponse`(응답 코드별 설명), `@Schema`(필드 설명·예시)를 단다.
@@ -1558,6 +1662,7 @@ POST   /api/posts/42/likes      하위 자원 생성 (좋아요)',
 
 ## 주의
 운영 환경에서 Swagger UI를 공개할지 결정해야 한다. 내부 API 구조가 그대로 노출된다.',
+ NULL, NULL, NULL,
  '@Tag(name = "게시판", description = "게시글 CRUD")
 @RestController
 @RequestMapping("/api/posts")
@@ -1577,6 +1682,7 @@ public record PostResponse(
 -- data/seed/concepts/web/sse.md
 ('SSE (서버 전송 이벤트)', 'web', 'JUNIOR',
  'SSE(Server-Sent Events)는 서버가 하나의 HTTP 연결을 열어 둔 채 클라이언트에게 이벤트를 계속 밀어주는 방식이다. 진행률, 알림처럼 서버 → 클라이언트 단방향 실시간 갱신에 쓴다.',
+ NULL, NULL, NULL,
  '## 핵심
 - 스프링 MVC는 `SseEmitter`를 반환해 SSE를 보낸다. 응답 타입은 `text/event-stream`.
 - 브라우저는 `new EventSource(url)`로 받고, 연결이 끊기면 자동으로 다시 연결한다.
@@ -1591,6 +1697,7 @@ public record PostResponse(
 - 연결마다 서버 자원을 잡는다. 타임아웃을 정하고, 완료·오류 시 `complete()`로 닫는다.
 - 브라우저 `EventSource`는 커스텀 헤더(Authorization)를 넣을 수 없다. 쿠키 인증을 쓰거나 다른 방식을 고른다.
 - 프록시(Nginx)가 응답을 버퍼링하면 이벤트가 늦게 도착한다.',
+ NULL, NULL, NULL,
  '@GetMapping(value = "/api/analyses/{id}/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
 public SseEmitter subscribe(@PathVariable long id) {
     SseEmitter emitter = new SseEmitter(Duration.ofMinutes(5).toMillis());
@@ -1615,6 +1722,7 @@ source.addEventListener("progress", (e) => {
 -- data/seed/concepts/security/authentication-authorization.md
 ('인증과 인가', 'security', 'BEGINNER',
  '인증(Authentication)은 "누구인가"를 확인하는 것이고, 인가(Authorization)는 "그 사람이 이 일을 해도 되는가"를 판단하는 것이다.',
+ NULL, NULL, NULL,
  '## 핵심
 - 인증 실패는 401 Unauthorized, 인증은 됐지만 권한이 없으면 403 Forbidden이다.
 - 스프링 시큐리티는 인증 결과를 `SecurityContext`에 담고, URL 규칙이나 `@PreAuthorize`로 인가를 판단한다.
@@ -1622,6 +1730,7 @@ source.addEventListener("progress", (e) => {
 ## 주의
 - "로그인했는가"만 확인하고 "내 글인가"를 확인하지 않으면 남의 글을 수정·삭제할 수 있다. 소유자 확인은 Service에서 한다.
 - 관리자 API는 URL 규칙으로 역할을 강제한다.',
+ NULL, NULL, NULL,
  'http.authorizeHttpRequests(auth -> auth
         .requestMatchers("/api/auth/**").permitAll()      // 인증 불필요
         .requestMatchers("/api/admin/**").hasRole("ADMIN") // 인가: 관리자만
@@ -1636,6 +1745,7 @@ if (post.userId() != loginUserId) {
 -- data/seed/concepts/security/csrf.md
 ('CSRF (사이트 간 요청 위조)', 'security', 'JUNIOR',
  'CSRF는 사용자가 로그인한 상태에서 공격자 사이트가 사용자 브라우저를 이용해 우리 서버로 원치 않는 요청(송금, 탈퇴)을 보내게 하는 공격이다. 브라우저가 쿠키를 자동으로 붙이기 때문에 생긴다.',
+ NULL, NULL, NULL,
  '## 핵심
 - 공격 조건: 인증 정보가 **쿠키로 자동 전송**되고, 서버가 요청 출처를 확인하지 않을 때.
 - 방어:
@@ -1650,6 +1760,7 @@ if (post.userId() != loginUserId) {
 ## 주의
 - AI 예제는 습관처럼 `csrf.disable()`을 넣는다. 세션·쿠키 인증을 쓰는 서버에서 끄면 바로 취약해진다.
 - 시큐리티 6부터 CSRF 토큰은 요청마다 값을 가려서(XOR) 내보내고, 실제로 쓰일 때까지 만들지 않는다(지연 로딩). 그래서 Boot 2 시절 예제처럼 `CookieCsrfTokenRepository.withHttpOnlyFalse()` 한 줄만 넣으면 SPA에서 403이 난다. 공식 문서의 "Single-Page Applications" 절 구성을 따른다.',
+ NULL, NULL, NULL,
  '// JWT를 헤더로만 받는 API 서버
 http.csrf(csrf -> csrf.disable())
     .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
@@ -1667,6 +1778,7 @@ http.csrf(csrf -> csrf
 -- data/seed/concepts/security/jwt.md
 ('JWT 기반 인증', 'security', 'SENIOR',
  'JWT는 사용자 정보와 만료 시간을 담고 서명한 토큰이다. 서버는 세션을 저장하지 않고, 요청마다 Authorization 헤더의 토큰 서명과 만료를 검증해 사용자를 식별한다.',
+ NULL, NULL, NULL,
  '## 핵심
 - 구조: header.payload.signature (Base64URL). payload는 암호화가 아니라 인코딩이라 누구나 읽을 수 있다.
 - Access 토큰은 짧게(예: 30분), Refresh 토큰은 길게 두고 Refresh로 Access를 재발급한다.
@@ -1677,6 +1789,7 @@ http.csrf(csrf -> csrf
 - 서명 키는 충분히 길고 환경변수로 관리한다.
 - 발급한 JWT는 만료 전에 서버가 취소하기 어렵다. 로그아웃·탈취 대응은 Refresh 토큰 저장·폐기로 보완한다.
 - 서명 알고리즘을 고정하고 `alg: none` 토큰을 받지 않는다.',
+ NULL, NULL, NULL,
  '// 요청
 GET /api/users/me
 Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIiwicm9sZSI6IlVTRVIiLCJleHAiOjE3OTk5OTk5OTl9.서명
@@ -1694,6 +1807,7 @@ if (token != null && jwtTokenProvider.isValid(token)) {
 -- data/seed/concepts/security/method-security.md
 ('메서드 보안 (@PreAuthorize)', 'security', 'JUNIOR',
  '메서드 보안은 URL 규칙 대신 서비스·컨트롤러 메서드에 @PreAuthorize를 붙여 호출 직전에 권한을 검사한다. SpEL 식으로 역할뿐 아니라 파라미터 값까지 조건으로 쓸 수 있다.',
+ NULL, NULL, NULL,
  '## 핵심
 - `@EnableMethodSecurity`로 켠다. (예전 `@EnableGlobalMethodSecurity`는 사용 중단되었다.)
 - `@PreAuthorize("hasRole(''ADMIN'')")`: 관리자만 호출할 수 있다.
@@ -1708,6 +1822,7 @@ if (token != null && jwtTokenProvider.isValid(token)) {
 ## 주의
 - 프록시 방식이라 같은 클래스 내부 호출에는 적용되지 않는다.
 - SpEL 문자열 오타는 실행 시점에야 드러난다. 테스트로 확인한다.',
+ NULL, NULL, NULL,
  '@Configuration
 @EnableMethodSecurity
 public class MethodSecurityConfig { }
@@ -1728,6 +1843,7 @@ public ProfileResponse getMyProfile(long userId) { ... }',
 -- data/seed/concepts/security/oauth2-login.md
 ('OAuth2 소셜 로그인', 'security', 'SENIOR',
  'OAuth2 로그인은 구글·깃허브·카카오 같은 외부 서비스가 사용자를 인증하고, 우리 서버는 그 결과(사용자 정보)를 받아 로그인 처리하는 방식이다. 비밀번호를 우리 서버가 저장하지 않는다.',
+ NULL, NULL, NULL,
  '## 핵심
 - 흐름(Authorization Code): 로그인 버튼 → 제공자 로그인·동의 화면 → 우리 서버 콜백으로 인가 코드 전달 → 서버가 코드를 토큰으로 교환 → 사용자 정보 조회 → 우리 회원과 연결.
 - 스프링 시큐리티는 `spring-boot-starter-oauth2-client` + `spring.security.oauth2.client.registration.*` 설정 + `oauth2Login()`으로 이 흐름을 처리한다.
@@ -1739,6 +1855,7 @@ public ProfileResponse getMyProfile(long userId) { ... }',
 - 제공자 콘솔에 등록한 Redirect URI와 서버 설정이 정확히 같아야 한다.
 - SPA + JWT 구조라면 로그인 성공 핸들러에서 우리 토큰을 발급해 프론트로 넘기는 단계가 추가로 필요하다. 토큰을 URL 쿼리로 넘기면 기록에 남으므로 쿠키 등 다른 방법을 고려한다.
 - 이메일이 같다는 이유만으로 기존 계정과 자동 연결하면 계정 탈취로 이어질 수 있다. 제공자의 이메일 검증 여부를 확인한다.',
+ NULL, NULL, NULL,
  '# application.yml
 spring:
   security:
@@ -1765,6 +1882,7 @@ SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 -- data/seed/concepts/security/password-encoder.md
 ('비밀번호 해싱 (PasswordEncoder)', 'security', 'BEGINNER',
  '비밀번호는 원문이나 되돌릴 수 있는 암호문으로 저장하지 않고, BCrypt 같은 느린 단방향 해시로 저장한다. 로그인 시에는 입력값을 같은 방식으로 비교한다.',
+ NULL, NULL, NULL,
  '## 핵심
 - `PasswordEncoder.encode()`로 저장하고 `matches(원문, 해시)`로 비교한다. 해시를 다시 원문으로 바꾸지 않는다.
 - BCrypt는 매번 다른 salt를 섞으므로 같은 비밀번호도 해시값이 다르다. 그래서 문자열 `equals`로 비교하면 안 된다.
@@ -1773,6 +1891,7 @@ SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 ## 주의
 - MD5·SHA-256 한 번 적용은 너무 빨라서 비밀번호 저장에 부적합하다.
 - 로그·응답·예외 메시지에 비밀번호가 찍히지 않게 한다.',
+ NULL, NULL, NULL,
  '@Service
 public class AuthService {
     private final PasswordEncoder passwordEncoder;
@@ -1795,6 +1914,7 @@ public class AuthService {
 -- data/seed/concepts/security/security-filter-chain.md
 ('SecurityFilterChain', 'security', 'JUNIOR',
  '스프링 시큐리티는 요청이 컨트롤러에 닿기 전에 여러 보안 필터를 순서대로 통과시킨다. SecurityFilterChain 빈으로 어떤 필터를 어떤 규칙으로 쓸지 설정한다.',
+ NULL, NULL, NULL,
  '## 핵심
 - `HttpSecurity`로 CSRF, 세션 정책, URL별 권한, 커스텀 필터 위치를 정한다.
 - JWT 방식 API 서버는 보통 세션을 쓰지 않고(STATELESS), CSRF를 끄고, JWT 검증 필터를 `UsernamePasswordAuthenticationFilter` 앞에 둔다.
@@ -1810,6 +1930,7 @@ public class AuthService {
 - `permitAll` 경로 목록이 넓으면 보호해야 할 API가 열린다. 기본은 `authenticated()`로 두고 공개 경로만 연다.
 - 규칙은 위에서부터 처음 맞는 것이 적용된다. `anyRequest()`는 마지막에 둔다.
 - 세션 쿠키 기반 인증이라면 CSRF를 끄면 안 된다.',
+ NULL, NULL, NULL,
  '@Bean
 public SecurityFilterChain filterChain(HttpSecurity http, JwtAuthenticationFilter jwtFilter)
         throws Exception {
@@ -1826,6 +1947,7 @@ public SecurityFilterChain filterChain(HttpSecurity http, JwtAuthenticationFilte
 -- data/seed/concepts/security/xss.md
 ('XSS (교차 사이트 스크립팅) 방어', 'security', 'JUNIOR',
  'XSS는 공격자가 게시글·댓글 같은 입력에 스크립트를 넣어, 다른 사용자의 브라우저에서 실행되게 하는 공격이다. 토큰·쿠키 탈취나 사용자 대신 요청 보내기로 이어진다.',
+ NULL, NULL, NULL,
  '## 핵심
 - 저장형(DB에 저장된 글), 반사형(URL 파라미터가 그대로 출력), DOM 기반(프론트 코드가 위험하게 삽입)이 있다.
 - 기본 방어는 **출력할 때 이스케이프**다. Vue의 `{{ }}`는 자동으로 이스케이프한다.
@@ -1839,6 +1961,7 @@ public SecurityFilterChain filterChain(HttpSecurity http, JwtAuthenticationFilte
 ## 주의
 - 입력 시점에 태그를 지우는 것만으로는 부족하다. 출력 위치(HTML 본문, 속성, URL, 스크립트)마다 필요한 처리가 다르다.
 - `href`에 사용자 입력을 넣으면 `javascript:` 주소가 실행될 수 있다.',
+ NULL, NULL, NULL,
  '<!-- 안전: 자동 이스케이프 -->
 <p>{{ comment.content }}</p>
 
@@ -1865,6 +1988,7 @@ const safeHtml = computed(() => DOMPurify.sanitize(marked.parse(props.markdown ?
 -- data/seed/concepts/mybatis/annotation-mapper.md
 ('어노테이션 매퍼 (@Select·@Insert)', 'mybatis', 'BEGINNER',
  'MyBatis는 XML 대신 Mapper 인터페이스 메서드에 @Select·@Insert·@Update·@Delete로 SQL을 직접 적을 수도 있다. 짧은 쿼리는 파일 이동 없이 한눈에 보인다.',
+ NULL, NULL, NULL,
  '## 핵심
 - `@Select("SELECT ... WHERE id = #{id}")`처럼 쓴다. 파라미터 규칙(`#{}`)은 XML과 같다.
 - `@Options(useGeneratedKeys = true, keyProperty = "id")`로 생성 키를 받는다.
@@ -1877,6 +2001,7 @@ const safeHtml = computed(() => DOMPurify.sanitize(marked.parse(props.markdown ?
 
 ## 주의
 문자열 안 SQL은 IDE 검사가 약해 오타가 실행 시점에 드러난다. 매퍼 테스트로 확인한다.',
+ NULL, NULL, NULL,
  '@Mapper
 public interface FollowMapper {
 
@@ -1899,6 +2024,7 @@ public interface FollowMapper {
 -- data/seed/concepts/mybatis/dynamic-sql.md
 ('동적 SQL', 'mybatis', 'JUNIOR',
  '동적 SQL은 조건에 따라 SQL 일부를 넣거나 빼는 MyBatis 기능이다. <if>, <where>, <choose>, <foreach>, <set> 태그를 쓴다.',
+ NULL, NULL, NULL,
  '## 핵심
 - `<where>`는 안쪽 조건이 하나라도 있으면 WHERE를 붙이고, 맨 앞의 AND·OR를 정리한다.
 - `<foreach>`는 `IN (...)` 목록이나 여러 행 INSERT에 쓴다.
@@ -1907,6 +2033,7 @@ public interface FollowMapper {
 ## 주의
 - `<foreach>`에 빈 목록이 들어오면 `IN ()`이 되어 SQL 오류가 난다. 호출 전에 빈 목록을 처리한다.
 - 조건이 모두 빠지면 전체 조회·전체 수정이 될 수 있다. 특히 UPDATE·DELETE에서 조심한다.',
+ NULL, NULL, NULL,
  '<select id="search" resultType="Concept">
   SELECT id, name, category, difficulty FROM concepts
   <where>
@@ -1926,6 +2053,7 @@ public interface FollowMapper {
 -- data/seed/concepts/mybatis/generated-keys.md
 ('생성 키 받기 (useGeneratedKeys)', 'mybatis', 'BEGINNER',
  'AUTO_INCREMENT로 만든 새 행의 id는 INSERT 후에야 정해진다. MyBatis의 useGeneratedKeys와 keyProperty를 쓰면 INSERT 직후 파라미터 객체에 그 id가 채워진다.',
+ NULL, NULL, NULL,
  '## 핵심
 - `<insert useGeneratedKeys="true" keyProperty="id">`: DB가 만든 키를 파라미터 객체의 `id` 필드에 넣는다.
 - Mapper 메서드의 반환값(int)은 **영향받은 행 수**이지 id가 아니다. id는 파라미터 객체에서 꺼낸다.
@@ -1935,6 +2063,7 @@ public interface FollowMapper {
 - record는 불변이라 keyProperty로 값을 채울 수 없다. INSERT용 파라미터는 가변 클래스로 두거나 `SELECT LAST_INSERT_ID()`를 따로 조회한다.
 - 반환값을 id로 착각해 쓰는 실수가 AI 코드에서 흔하다(항상 1이 나온다).
 - 여러 행 INSERT에서도 키를 받을 수 있지만 DB·드라이버에 따라 동작이 다르므로 확인한다.',
+ NULL, NULL, NULL,
  'public class PostInsert {            // 키를 받으려면 가변 객체
     private Long id;
     private final long userId;
@@ -1954,6 +2083,7 @@ long newId = param.getId();            // 생성된 id',
 -- data/seed/concepts/mybatis/hash-vs-dollar.md
 ('#{}와 ${}의 차이 (SQL 인젝션)', 'mybatis', 'JUNIOR',
  'MyBatis에서 #{}는 PreparedStatement의 파라미터(?)로 안전하게 바인딩되고, ${}는 값을 SQL 문자열에 그대로 끼워 넣는다. 사용자 입력을 ${}로 넣으면 SQL 인젝션이 생긴다.',
+ NULL, NULL, NULL,
  '## 핵심
 - `#{keyword}` → `WHERE title LIKE ?` 로 바뀌고 값은 따로 전달된다. 입력에 따옴표가 있어도 SQL 구조가 바뀌지 않는다.
 - `${column}` → 값이 SQL 텍스트 자체가 된다.
@@ -1964,6 +2094,7 @@ long newId = param.getId();            // 생성된 id',
 
 ## 주의
 `${}`를 써야 한다면 enum이나 화이트리스트로 검증된 값만 넘긴다. LIKE 검색은 `CONCAT(''%'', #{keyword}, ''%'')`로 쓴다.',
+ NULL, NULL, NULL,
  '<!-- 위험: keyword에 따옴표와 OR 1=1을 넣으면 전체 조회 -->
 <select id="searchUnsafe" resultType="Post">
   SELECT * FROM posts WHERE title LIKE ''%${keyword}%''
@@ -1984,6 +2115,7 @@ long newId = param.getId();            // 생성된 id',
 -- data/seed/concepts/mybatis/mapper-xml.md
 ('Mapper 인터페이스와 XML 매퍼', 'mybatis', 'BEGINNER',
  'MyBatis는 자바 인터페이스(Mapper)의 메서드와 XML에 적은 SQL을 연결한다. 메서드를 호출하면 연결된 SQL이 실행되고 결과가 객체로 매핑된다.',
+ NULL, NULL, NULL,
  '## 핵심
 - XML의 `namespace`는 Mapper 인터페이스의 전체 이름, 각 SQL의 `id`는 메서드 이름과 같아야 한다.
 - 파라미터는 `#{이름}`으로 받는다. 파라미터가 여러 개면 `@Param`으로 이름을 붙인다.
@@ -1991,6 +2123,7 @@ long newId = param.getId();            // 생성된 id',
 
 ## 주의
 namespace나 id 오타는 실행 시점에 `Invalid bound statement` 오류로 드러난다.',
+ NULL, NULL, NULL,
  '@Mapper
 public interface PostMapper {
     Post findById(long id);
@@ -2008,6 +2141,7 @@ public interface PostMapper {
 -- data/seed/concepts/mybatis/n-plus-one.md
 ('N+1 쿼리 문제', 'mybatis', 'SENIOR',
  'N+1 문제는 목록 1번 조회 후 각 항목의 연관 데이터를 항목마다 따로 조회해 쿼리가 N+1번 실행되는 성능 문제다. 데이터가 적을 땐 안 보이다가 늘어나면 급격히 느려진다.',
+ NULL, NULL, NULL,
  '## 핵심
 - MyBatis에서는 `<association select="...">`·`<collection select="...">`(중첩 select)나, 반복문 안에서 Mapper를 호출할 때 생긴다.
 - 해결: 조인 한 번 + resultMap 중첩 매핑, 또는 ID 목록을 모아 `IN (...)`으로 한 번에 조회한 뒤 메모리에서 합친다.
@@ -2018,6 +2152,7 @@ public interface PostMapper {
 
 ## 주의
 조인으로 1:N을 가져오면 행이 부모 × 자식 수만큼 늘어나고 페이지네이션(LIMIT)이 자식 행 기준으로 잘린다. 목록 페이지에서는 IN 조회 방식이 안전하다.',
+ NULL, NULL, NULL,
  '// 문제: 게시글 20개면 쿼리 21번
 List<Post> posts = postMapper.findPage(page);
 for (Post post : posts) {
@@ -2035,6 +2170,7 @@ posts.forEach(p -> p.setAuthor(users.get(p.getUserId())));',
 -- data/seed/concepts/mybatis/paging.md
 ('페이징 쿼리 (LIMIT·OFFSET과 COUNT)', 'mybatis', 'JUNIOR',
  '목록 API는 한 번에 일부만 돌려준다. MySQL에서는 LIMIT·OFFSET으로 한 페이지를 가져오고, 같은 조건의 COUNT(*)로 전체 개수를 구해 페이지 정보를 만든다.',
+ NULL, NULL, NULL,
  '## 핵심
 - `OFFSET = (page - 1) * size`. 페이지 번호 계산은 Java(DTO)에서 하고 SQL에는 값만 넘긴다.
 - 목록 쿼리와 COUNT 쿼리는 **같은 WHERE 조건**을 써야 한다. `<sql>` 조각으로 공유하면 어긋나지 않는다.
@@ -2044,6 +2180,7 @@ posts.forEach(p -> p.setAuthor(users.get(p.getUserId())));',
 ## 주의
 - OFFSET이 크면(뒤쪽 페이지) DB가 앞의 행을 모두 읽고 버리므로 느려진다. 무한 스크롤처럼 끝없이 넘기는 화면은 "마지막으로 본 id 다음부터"(커서 방식)를 쓴다.
 - 정렬 컬럼을 사용자 입력으로 받을 때 `${}`를 쓰지 말고 `<choose>`나 enum 화이트리스트로 고른다.',
+ NULL, NULL, NULL,
  '<sql id="searchWhere">
   <where>
     status = ''PUBLISHED''
@@ -2072,6 +2209,7 @@ return new PageResponse<>(items, total, query.page(), query.size());',
 -- data/seed/concepts/mybatis/result-map.md
 ('resultMap과 연관 매핑', 'mybatis', 'JUNIOR',
  'resultMap은 조회 결과 컬럼을 객체 필드에 어떻게 넣을지 직접 정의하는 MyBatis 설정이다. 조인 결과를 객체 안의 객체(association)나 목록(collection)으로 묶을 때 쓴다.',
+ NULL, NULL, NULL,
  '## 핵심
 - `<id>`는 행을 구분하는 키다. collection 매핑에서 같은 부모 행을 하나로 묶는 기준이 된다.
 - `<association>`: 1:1 (게시글 → 작성자), `<collection>`: 1:N (게시글 → 댓글 목록).
@@ -2080,6 +2218,7 @@ return new PageResponse<>(items, total, query.page(), query.size());',
 ## 주의
 - 조인한 테이블 컬럼 이름이 겹치면(`id`) 별칭으로 구분해야 값이 섞이지 않는다.
 - `<id>`를 빠뜨리면 collection이 부모 행마다 따로 만들어질 수 있다.',
+ NULL, NULL, NULL,
  '<resultMap id="postWithComments" type="PostDetail">
   <id property="id" column="post_id"/>
   <result property="title" column="title"/>
@@ -2107,6 +2246,7 @@ return new PageResponse<>(items, total, query.page(), query.size());',
 -- data/seed/concepts/mybatis/spring-boot-starter.md
 ('MyBatis 스프링 부트 설정', 'mybatis', 'BEGINNER',
  'mybatis-spring-boot-starter는 DataSource를 보고 SqlSessionFactory를 자동으로 만들고, @Mapper 인터페이스를 빈으로 등록해 준다. 설정은 application.yml의 mybatis.* 항목으로 한다.',
+ NULL, NULL, NULL,
  '## 핵심
 - `mybatis.mapper-locations`: XML 매퍼 파일 위치.
 - `mybatis.configuration.map-underscore-to-camel-case: true`: `user_id` → `userId` 자동 매핑.
@@ -2119,6 +2259,7 @@ return new PageResponse<>(items, total, query.page(), query.size());',
 
 ## 주의
 XML 위치 설정이 틀리면 앱은 뜨지만 호출 시점에 `Invalid bound statement (not found)` 오류가 난다.',
+ NULL, NULL, NULL,
  '# application.yml
 mybatis:
   mapper-locations: classpath:mapper/**/*.xml
@@ -2131,6 +2272,7 @@ mybatis:
 -- data/seed/concepts/mybatis/type-handler.md
 ('TypeHandler (JSON·커스텀 타입 매핑)', 'mybatis', 'SENIOR',
  'TypeHandler는 자바 타입과 DB 컬럼 값을 서로 어떻게 바꿀지 정하는 MyBatis 확장 지점이다. JSON 컬럼을 객체로 읽거나, 값 객체를 문자열로 저장할 때 쓴다.',
+ NULL, NULL, NULL,
  '## 핵심
 - `BaseTypeHandler<T>`를 상속해 저장(`setNonNullParameter`)과 조회(`getNullableResult` 3종)를 구현한다.
 - enum, java.time, 기본 타입은 MyBatis가 이미 처리한다. 직접 만들 일은 JSON·값 객체·암호화 컬럼 정도다.
@@ -2140,6 +2282,7 @@ mybatis:
 - 전역 등록하면 같은 자바 타입을 쓰는 모든 매핑에 적용된다. 범위가 넓으면 의도하지 않은 컬럼까지 바뀐다. 필요한 매핑에만 지정하는 편이 안전하다.
 - 제네릭 타입(`List<FlowStep>`)은 실행 시점에 타입 정보가 지워지므로 배열 타입(`FlowStep[]`)이나 타입 정보를 넘기는 방식으로 처리한다.
 - JSON 파싱 실패 처리를 빠뜨리면 조회 전체가 실패한다.',
+ NULL, NULL, NULL,
  'public class JsonTypeHandler<T> extends BaseTypeHandler<T> {
     private static final ObjectMapper MAPPER = new ObjectMapper();
     private final Class<T> type;
@@ -2172,6 +2315,7 @@ mybatis:
 -- data/seed/concepts/vue/composables.md
 ('컴포저블', 'vue', 'JUNIOR',
  '컴포저블은 상태와 로직을 묶어 여러 컴포넌트에서 재사용하는 함수다. 이름은 보통 use로 시작한다(useFetch, useAuth).',
+ NULL, NULL, NULL,
  '## 핵심
 - 안에서 `ref`, `computed`, `watch`, 생명주기 훅을 써서 상태 로직을 캡슐화하고 필요한 값을 반환한다.
 - 호출할 때마다 새 상태가 만들어진다. 전역으로 공유할 상태는 Pinia 스토어가 더 적합하다.
@@ -2179,6 +2323,7 @@ mybatis:
 
 ## 주의
 - `<script setup>` 안이나 setup 시점에 동기적으로 호출해야 생명주기 훅이 올바르게 연결된다.',
+ NULL, NULL, NULL,
  '// composables/useFetch.js
 import { ref } from "vue";
 
@@ -2206,6 +2351,7 @@ export function useFetch(loader) {
 -- data/seed/concepts/vue/computed-watch.md
 ('computed와 watch', 'vue', 'JUNIOR',
  'computed는 다른 상태로부터 계산되는 값을 캐시해 두는 반응형 값이고, watch는 상태가 바뀔 때 API 호출 같은 부수 효과를 실행한다.',
+ NULL, NULL, NULL,
  '## 핵심
 - computed: 의존하는 값이 바뀔 때만 다시 계산한다. 템플릿의 복잡한 식을 옮기기 좋다. 계산만 하고 상태를 바꾸지 않는다.
 - watch: 특정 값을 지켜보다가 바뀌면 콜백을 실행한다. 검색어 변경 → 목록 재조회 같은 경우.
@@ -2214,6 +2360,7 @@ export function useFetch(loader) {
 ## 주의
 - computed 안에서 API를 부르거나 다른 상태를 바꾸지 않는다.
 - 계산으로 충분한 것을 watch + 별도 상태로 만들면 동기화 버그가 생긴다.',
+ NULL, NULL, NULL,
  '<script setup>
 import { ref, computed, watch } from "vue";
 
@@ -2231,6 +2378,7 @@ watch(keyword, async (value) => {
 -- data/seed/concepts/vue/dynamic-route-matching.md
 ('라우트와 동적 매칭 (Vue Router)', 'vue', 'BEGINNER',
  'Vue Router는 URL 경로와 화면 컴포넌트를 연결한다. /users/:id처럼 경로 일부를 파라미터로 받아 같은 화면에서 다른 데이터를 보여 주고, 화면 코드를 필요할 때 불러오도록(lazy loading) 나눈다.',
+ NULL, NULL, NULL,
  '## 핵심
 - 라우트 정의: `{ path: "/concepts/:id", name: "concept-detail", component: ... }`.
 - 컴포넌트에서 `useRoute().params.id`로 값을 읽는다. **값은 문자열**이다.
@@ -2241,6 +2389,7 @@ watch(keyword, async (value) => {
 ## 주의
 - `/concepts/1`에서 `/concepts/2`로 이동하면 **같은 컴포넌트가 재사용**되어 `onMounted`가 다시 실행되지 않는다. `watch(() => route.params.id, load)`로 다시 불러온다.
 - 숫자로 쓸 때는 `Number(route.params.id)`로 바꾸고, 잘못된 값이면 404 화면으로 보낸다.',
+ NULL, NULL, NULL,
  '// router/index.js
 const routes = [
   { path: "/", name: "home", component: HomeView },
@@ -2271,6 +2420,7 @@ watch(
 -- data/seed/concepts/vue/lifecycle-hooks.md
 ('생명주기 훅 (onMounted·onUnmounted)', 'vue', 'JUNIOR',
  '생명주기 훅은 컴포넌트가 화면에 붙을 때, 갱신될 때, 사라질 때 실행할 코드를 등록하는 함수다. 첫 데이터 로딩과 정리(cleanup)에 쓴다.',
+ NULL, NULL, NULL,
  '## 핵심
 - `onMounted`: DOM이 그려진 뒤 실행된다. 첫 API 호출, DOM 측정, 외부 라이브러리 초기화.
 - `onUnmounted`(`onBeforeUnmount`): 컴포넌트가 사라질 때 실행된다. 타이머, 이벤트 리스너, `EventSource`, 구독을 정리한다.
@@ -2280,6 +2430,7 @@ watch(
 ## 주의
 - `setInterval`, `window.addEventListener`를 등록하고 정리하지 않으면 페이지를 떠난 뒤에도 계속 실행된다(메모리 누수, 중복 요청).
 - 훅은 setup 시점에 동기적으로 등록해야 한다. `await` 뒤에서 등록하면 연결되지 않는다.',
+ NULL, NULL, NULL,
  '<script setup>
 import { ref, onMounted, onUnmounted } from "vue";
 
@@ -2306,6 +2457,7 @@ onUnmounted(() => clearInterval(timer)); // 화면을 떠나면 멈춘다
 -- data/seed/concepts/vue/navigation-guards.md
 ('네비게이션 가드 (Vue Router)', 'vue', 'JUNIOR',
  '네비게이션 가드는 라우트 이동 직전에 실행되는 함수다. 로그인하지 않은 사용자를 로그인 화면으로 보내는 등 이동을 허용·취소·변경할 수 있다.',
+ NULL, NULL, NULL,
  '## 핵심
 - 전역 가드 `router.beforeEach((to, from) => ...)`에서 `false`를 반환하면 이동을 취소하고, 경로를 반환하면 그곳으로 보낸다.
 - 라우트에 `meta: { requiresAuth: true }`를 달아 가드에서 확인하는 방식이 일반적이다.
@@ -2313,6 +2465,7 @@ onUnmounted(() => clearInterval(timer)); // 화면을 떠나면 멈춘다
 
 ## 주의
 프론트엔드 가드는 화면 이동만 막는다. 보안은 반드시 백엔드 API가 인증·인가로 지켜야 한다.',
+ NULL, NULL, NULL,
  '// router/index.js
 router.beforeEach((to) => {
   const auth = useAuthStore();
@@ -2328,6 +2481,7 @@ const routes = [{ path: "/analyses", component: AnalysisList, meta: { requiresAu
 -- data/seed/concepts/vue/pinia-store.md
 ('Pinia 스토어', 'vue', 'BEGINNER',
  'Pinia는 Vue의 공식 상태 관리 라이브러리다. 로그인 사용자처럼 여러 화면이 함께 쓰는 상태를 스토어 하나에 모아 두고 어디서나 읽고 바꾼다.',
+ NULL, NULL, NULL,
  '## 핵심
 - `defineStore("이름", ...)`로 정의한다. state(상태), getters(계산 값), actions(상태를 바꾸는 함수, API 호출)로 구성된다.
 - setup 문법을 쓰면 `ref`가 state, `computed`가 getter, 함수가 action이 된다.
@@ -2336,6 +2490,7 @@ const routes = [{ path: "/analyses", component: AnalysisList, meta: { requiresAu
 ## 주의
 - 한 화면에서만 쓰는 상태까지 스토어에 넣으면 흐름이 복잡해진다.
 - 새로고침하면 스토어 상태는 사라진다. 유지가 필요한 값(토큰 등)은 저장 위치와 보안을 따로 결정한다.',
+ NULL, NULL, NULL,
  '// stores/auth.js
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
@@ -2360,6 +2515,7 @@ export const useAuthStore = defineStore("auth", () => {
 -- data/seed/concepts/vue/props-emit.md
 ('props와 emit', 'vue', 'BEGINNER',
  '부모 컴포넌트는 props로 자식에게 데이터를 내려주고, 자식은 emit으로 이벤트를 올려 부모에게 알린다. 데이터는 아래로, 이벤트는 위로 흐른다.',
+ NULL, NULL, NULL,
  '## 핵심
 - `defineProps`로 받을 값과 타입을 선언한다.
 - `defineEmits`로 올릴 이벤트 이름을 선언하고, `emit("이름", 값)`으로 보낸다.
@@ -2373,6 +2529,7 @@ export const useAuthStore = defineStore("auth", () => {
 ## 주의
 - 자식이 props를 직접 바꾸면 안 된다(읽기 전용). 바꾸고 싶으면 이벤트를 올려 부모가 바꾸게 한다.
 - 여러 단계 아래로 계속 전달해야 하면 provide/inject나 Pinia 스토어를 고려한다.',
+ NULL, NULL, NULL,
  '<!-- ConceptItem.vue -->
 <script setup>
 const props = defineProps({ concept: { type: Object, required: true } });
@@ -2393,6 +2550,7 @@ const emit = defineEmits(["wish"]);
 -- data/seed/concepts/vue/provide-inject.md
 ('provide/inject', 'vue', 'JUNIOR',
  'provide/inject는 상위 컴포넌트가 제공한 값을 중간 컴포넌트를 거치지 않고 하위 컴포넌트가 바로 꺼내 쓰는 방법이다. props를 여러 단계로 계속 넘기는 문제(prop drilling)를 줄인다.',
+ NULL, NULL, NULL,
  '## 핵심
 - 상위: `provide(키, 값)`. 하위: `inject(키, 기본값)`.
 - ref를 provide하면 하위에서도 반응형으로 갱신된다.
@@ -2407,6 +2565,7 @@ const emit = defineEmits(["wish"]);
 ## 주의
 - 하위에서 값을 마음대로 바꾸면 흐름을 추적하기 어렵다. `readonly`로 제공하고, 바꾸는 함수를 함께 provide한다.
 - 어디서 제공된 값인지 코드만 보고 찾기 어렵다. 남용하지 않는다.',
+ NULL, NULL, NULL,
  '// keys.js
 export const FormKey = Symbol("form");
 
@@ -2438,6 +2597,7 @@ const { errors } = inject(FormKey);
 -- data/seed/concepts/vue/reactivity.md
 ('반응성 (ref·reactive)', 'vue', 'BEGINNER',
  'Vue의 반응성은 상태가 바뀌면 그 상태를 쓰는 화면이 자동으로 다시 그려지는 성질이다. Composition API에서는 ref와 reactive로 반응형 상태를 만든다.',
+ NULL, NULL, NULL,
  '## 핵심
 - `ref(값)`: 어떤 타입이든 감싼다. 스크립트에서는 `.value`로 읽고 쓰고, 템플릿에서는 `.value` 없이 쓴다.
 - `reactive(객체)`: 객체 자체를 반응형으로 만든다. 객체·배열에만 쓸 수 있다.
@@ -2451,6 +2611,7 @@ const { errors } = inject(FormKey);
 ## 주의
 - `reactive` 객체를 구조 분해하거나 통째로 새 객체를 대입하면 반응성이 끊긴다.
 - 스크립트에서 `.value`를 빼먹는 실수가 흔하다.',
+ NULL, NULL, NULL,
  '<script setup>
 import { ref } from "vue";
 
@@ -2472,6 +2633,7 @@ function add(text) {
 -- data/seed/concepts/vue/slots.md
 ('슬롯 (slot)', 'vue', 'JUNIOR',
  '슬롯은 부모가 자식 컴포넌트 안의 정해진 자리에 원하는 템플릿을 끼워 넣게 하는 기능이다. 모달, 카드, 레이아웃처럼 틀은 같고 내용만 다른 컴포넌트를 만들 때 쓴다.',
+ NULL, NULL, NULL,
  '## 핵심
 - 기본 슬롯: 자식의 `<slot />` 자리에 부모가 태그 사이에 넣은 내용이 들어간다. `<slot>기본 내용</slot>`으로 대체 내용을 둘 수 있다.
 - 이름 있는 슬롯: 자식 `<slot name="footer" />`, 부모 `<template #footer>...</template>`.
@@ -2480,6 +2642,7 @@ function add(text) {
 ## 주의
 - props로 충분한 단순 텍스트까지 슬롯으로 받으면 사용법이 복잡해진다.
 - 슬롯 내용은 부모의 범위에서 컴파일된다. 슬롯 안에서는 부모의 변수만 쓸 수 있고, 자식 데이터는 범위 슬롯으로 받아야 한다.',
+ NULL, NULL, NULL,
  '<!-- BaseCard.vue -->
 <template>
   <section class="card">
@@ -2511,6 +2674,7 @@ function add(text) {
 -- data/seed/concepts/vue/store-to-refs.md
 ('storeToRefs', 'vue', 'JUNIOR',
  'Pinia 스토어를 구조 분해하면 반응성이 끊긴다. storeToRefs로 state와 getter를 ref로 꺼내면 반응성을 유지한 채 구조 분해할 수 있다.',
+ NULL, NULL, NULL,
  '## 핵심
 - `const { user } = useAuthStore()`는 그 순간의 값만 복사한다. 이후 변경이 화면에 반영되지 않는다.
 - `const { user } = storeToRefs(store)`는 ref를 돌려주므로 반응성이 유지된다.
@@ -2518,6 +2682,7 @@ function add(text) {
 
 ## 주의
 "로그인했는데 헤더가 안 바뀐다" 같은 버그의 흔한 원인이다.',
+ NULL, NULL, NULL,
  '<script setup>
 import { storeToRefs } from "pinia";
 import { useAuthStore } from "@/stores/auth";
@@ -2536,6 +2701,7 @@ const { logout } = store;                         // 액션은 그대로
 -- data/seed/concepts/vue/template-ref.md
 ('템플릿 ref (useTemplateRef)', 'vue', 'JUNIOR',
  '템플릿 ref는 렌더링된 DOM 요소나 자식 컴포넌트 인스턴스에 직접 접근하는 방법이다. 포커스 주기, 스크롤, 차트 라이브러리 연결처럼 DOM을 직접 다뤄야 할 때 쓴다.',
+ NULL, NULL, NULL,
  '## 핵심
 - 템플릿에 `ref="이름"`을 붙이고, 스크립트에서 `useTemplateRef("이름")`(Vue 3.5+)으로 가져온다.
 - DOM은 마운트 뒤에 생기므로 `onMounted` 이후에 `.value`를 쓴다.
@@ -2547,6 +2713,7 @@ const { logout } = store;                         // 액션은 그대로
 ## 주의
 - 상태로 해결할 수 있는 일(보이기·숨기기, 값 바꾸기)을 DOM 직접 조작으로 하지 않는다. 반응성과 어긋난다.
 - `v-if`로 사라진 요소의 ref는 `null`이다.',
+ NULL, NULL, NULL,
  '<script setup>
 import { useTemplateRef, onMounted } from "vue";
 
@@ -2565,6 +2732,7 @@ onMounted(() => {
 -- data/seed/concepts/vue/v-if-v-for-key.md
 ('v-if·v-for와 key', 'vue', 'BEGINNER',
  'v-if는 조건에 따라 요소를 만들거나 없애고, v-for는 배열을 반복해 요소를 그린다. v-for에는 항목을 구분하는 고유한 :key를 붙여야 Vue가 바뀐 부분만 정확히 갱신한다.',
+ NULL, NULL, NULL,
  '## 핵심
 - `v-if` / `v-else-if` / `v-else`: 조건이 거짓이면 DOM에서 제거된다.
 - `v-show`: CSS `display`만 바꾼다. 자주 토글하는 요소에 유리하다.
@@ -2574,6 +2742,7 @@ onMounted(() => {
 - **배열 인덱스를 key로 쓰지 않는다.** 항목을 추가·삭제·정렬하면 인덱스가 바뀌어 입력 값이나 상태가 엉뚱한 항목에 붙는다.
 - **같은 요소에 v-if와 v-for를 함께 쓰지 않는다.** Vue 3에서는 v-if가 먼저 평가되어 반복 변수를 쓸 수 없다(Vue 2와 반대). 걸러진 목록은 computed로 만들거나 `<template v-for>`로 감싼다.
 - 목록이 비었을 때의 화면(빈 상태)을 `v-if`로 따로 보여 준다.',
+ NULL, NULL, NULL,
  '<script setup>
 import { computed } from "vue";
 const props = defineProps({ concepts: Array });
@@ -2594,6 +2763,7 @@ const published = computed(() => props.concepts.filter((c) => c.status === "PUBL
 -- data/seed/concepts/vue/v-model.md
 ('v-model과 defineModel', 'vue', 'BEGINNER',
  'v-model은 입력 값과 상태를 양방향으로 묶는다. Vue 3.4부터 자식 컴포넌트는 defineModel() 한 줄로 부모의 v-model을 받을 수 있다.',
+ NULL, NULL, NULL,
  '## 핵심
 - 기본 요소: `<input v-model="keyword">`는 값 표시(`:value`)와 입력 이벤트(`@input`)를 한 번에 처리한다.
 - 수식어: `v-model.trim`(앞뒤 공백 제거), `v-model.number`(숫자 변환), `v-model.lazy`(change 시점에 반영).
@@ -2605,6 +2775,7 @@ const published = computed(() => props.concepts.filter((c) => c.status === "PUBL
 
 ## 주의
 - 같은 상태를 여러 컴포넌트가 v-model로 고치면 흐름을 추적하기 어렵다. 공유 상태는 스토어로 옮긴다.',
+ NULL, NULL, NULL,
  '<!-- SearchInput.vue -->
 <script setup>
 const keyword = defineModel({ type: String, default: "" });
@@ -2632,7 +2803,13 @@ ON DUPLICATE KEY UPDATE
     category      = seed.category,
     difficulty    = seed.difficulty,
     summary       = seed.summary,
+    summary_beginner = seed.summary_beginner,
+    summary_junior   = seed.summary_junior,
+    summary_senior   = seed.summary_senior,
     body          = seed.body,
+    body_beginner = seed.body_beginner,
+    body_junior   = seed.body_junior,
+    body_senior   = seed.body_senior,
     example_code  = seed.example_code,
     source        = seed.source,
     reference_url = seed.reference_url;

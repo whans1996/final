@@ -29,7 +29,7 @@ LLM은 분석 1건당 **1회**(형식 오류 시 1회 재시도) 부른다. 추�
 | AC2 | 선별 파일 n개(F-06 설명 후)가 있는 분석이 | EXTRACTING이 실행되면 | `LlmStage.CONCEPT` 호출이 **1회**이고, `level`은 분석의 level, 프롬프트는 `prompts/concept/<level 소문자>.md`다. `llm_usage_logs`에 stage `concept`, user_id·analysis_id가 기록된다. 입력은 5.2절 순서·상한(카드 목록 6,000자, 파일 목록 6,000자, 코드 파일당 3,000자, 합계 24,000자)을 지키고, 코드 줄에는 1부터 줄 번호가 붙는다 |
 | AC3 | (#23) 파일 `content`나 `path`에 `<<<END FILE>>>`·`<<<FILE ...>>>`가 들어 있을 때 | 개요·파일·흐름·개념 프롬프트를 만들면 | `ExplainPrompts.fileBlock`과 개념 파일 목록이 값 안의 `<<<`를 모두 `‹‹‹`로 바꿔 넣는다. 프롬프트에서 `<<<FILE`·`<<<END FILE>>>`은 우리가 만든 구분자 수만큼만 나온다. DB의 `content`는 바꾸지 않는다 |
 | AC4 | 응답 항목이 기존 카드를 가리킬 때(`conceptId`) | 저장하면 | `conceptId`가 **이번 프롬프트의 카드 목록**에 없으면 그 항목을 버린다. `fileNo`가 1..n이 아니면 `file_id` NULL. `lineHint`는 `^L\d+(-L\d+)?$`이고 그 파일의 코드가 프롬프트에 들어갔을 때만 저장(아니면 NULL). `contextNote`는 앞뒤 공백 제거 후 500자에서 잘라 저장하고 비면 NULL. 같은 카드가 여러 번 나오면 첫 항목만 쓴다. 분석당 연결은 최대 15개(`analysis.concept.max-links`)이고 초과분은 버린다 |
-| AC5 | 응답 항목이 새 개념일 때(`new`) | 저장하면 | `name`(공백 제거 후 1~100자)·`summary`(필수, 500자에서 자름)가 없거나 `category`가 `java·spring·web·security·mybatis·vue` 밖이면 버린다. `difficulty`가 `BEGINNER·JUNIOR·SENIOR`가 아니면 분석의 level, `body`는 2,000자에서 자르고 비면 NULL. 5.4절 이름 비교로 **HIDDEN을 포함한 기존 카드**와 같으면 새로 만들지 않고 그 카드에 연결한다(AC4 규칙·상한 적용). 아니면 `status=DRAFT, source=AI, example_code=NULL, reference_url=NULL`로 INSERT해 연결한다. 분석당 새 초안은 최대 5개(`analysis.concept.max-drafts`). 같은 이름이 동시에 INSERT되어 UNIQUE가 충돌하면 이미 있는 카드에 연결한다 |
+| AC5 | 응답 항목이 새 개념일 때(`new`) | 저장하면 | `name`(공백 제거 후 1~100자)·`summary`(필수, 500자에서 자름)가 없거나 `category`가 `java·spring·web·security·mybatis·vue` 밖이면 버린다(**K-1 개정**: 12종 `java·spring·web·security·mybatis·vue·database·javascript·tooling·typescript·react·cs`, 밖이면 별칭 정규화 후 그래도 밖일 때 WARN 로그와 함께 버린다. K-1 AC8). `difficulty`가 `BEGINNER·JUNIOR·SENIOR`가 아니면 분석의 level, `body`는 2,000자에서 자르고 비면 NULL. 5.4절 이름 비교로 **HIDDEN을 포함한 기존 카드**와 같으면 새로 만들지 않고 그 카드에 연결한다(AC4 규칙·상한 적용. **K-1 개정**: 같은 카드가 HIDDEN이면 연결도 새 초안도 만들지 않고 버린다, K-1 AC10). 아니면 `status=DRAFT, source=AI, example_code=NULL, reference_url=NULL`로 INSERT해 연결한다. 분석당 새 초안은 최대 5개(`analysis.concept.max-drafts`). 같은 이름이 동시에 INSERT되어 UNIQUE가 충돌하면 이미 있는 카드에 연결한다 |
 | AC6 | CONCEPT 응답이 JSON이 아니거나 `concepts`가 배열이 아닐 때 / LLM이 폴백까지 실패(`BusinessException(LLM_503)`)할 때 | EXTRACTING이 실행되면 | 형식 오류: **같은 요청을 1회만** 다시 보내고, 두 번째도 틀리면 연결 없이 계속해 분석은 `DONE`(error_code NULL). LLM_503: 재시도 없이 연결 없이 `DONE`. 두 경우 모두 경고 로그를 남긴다. `concepts: []`는 정상(연결 0개 DONE). 저장 중 DB 오류 같은 예기치 못한 예외만 기존대로 `FAILED` `ANALYSIS_500` |
 | AC7 | 내 분석에 연결이 저장되어 있을 때 | `GET /api/analyses/{id}/concepts` 하면 | 200과 3절 응답. `items`는 연결된 카드 중 `PUBLISHED`만, `file_id`가 있는 것 먼저 `file_id ASC`, 그다음 `concept_id ASC`. `pendingCount`는 연결된 `DRAFT` 카드 수. `HIDDEN`은 둘 다에서 빠진다. 추출 전·연결 0개면 `{"items": [], "pendingCount": 0}`. 토큰 없으면 401 `AUTH_401`, 없는 id·다른 회원·soft delete면 404 `ANALYSIS_404` |
 | AC8 | 로그인한 회원이 `DONE` 분석의 | SC-07에서 "개념" 탭(`?tab=concepts`, 실행 흐름 탭 다음)을 열면 | 개념 목록을 1회 불러와 항목마다 `ConceptCard`(누르면 `/concepts/{id}`)와 그 아래 위치("파일 경로 · L12-L30", 빈 값은 건너뜀)·맥락 문장을 보여 준다. 위치를 누르면 `?tab=files&file={fileId}`로 간다(`fileId`가 없으면 위치 줄을 그리지 않는다). `pendingCount > 0`이면 "새 개념 {n}개는 관리자 검수 후 카드로 공개됩니다." 안내를, `items`가 비면 "이 분석에서 연결된 개념 카드가 없습니다."를 보여 준다 |
@@ -146,10 +146,11 @@ LLM은 분석 1건당 **1회**(형식 오류 시 1회 재시도) 부른다. 추�
     {
       "new": {
         "name": "string (≤100자)",
-        "category": "java|spring|web|security|mybatis|vue",
+        "category": "java|spring|web|security|mybatis|vue|database|javascript|tooling|typescript|react|cs (K-1)",
         "difficulty": "BEGINNER|JUNIOR|SENIOR",
         "summary": "string (≤500자)",
-        "body": "## 핵심\n...\n## 주의\n... (≤2000자)"
+        "body": "## 핵심\n...\n## 주의\n... (≤2000자)",
+        "levelSummaries": { "beginner": "string (≤300자)", "junior": "string", "senior": "string" }
       },
       "fileNo": 5, "lineHint": "L20", "contextNote": "string"
     }
@@ -159,8 +160,10 @@ LLM은 분석 1건당 **1회**(형식 오류 시 1회 재시도) 부른다. 추�
 
 ### 5.4 새 개념 이름 비교
 
-정규화 = 소문자로 바꾸고 모든 공백 제거. 기존 카드마다 키 두 개를 만든다: 전체 이름, 끝의 괄호 부분(` (…)`)을 뗀 앞부분. 새 개념도 같은 두 키를 만들어 하나라도 겹치면 같은 카드로 본다.
-예: 새 이름 `의존성 주입` → 기존 `의존성 주입 (DI)`의 앞부분 키와 같아 연결. 새 이름 `DI`는 겹치지 않아 새 초안이 된다(카드 목록을 주므로 LLM이 `conceptId`로 가리키는 것이 기본 경로다).
+> **K-1 개정 (2026-11-27, `docs/specs/K-1-card-levels.md` 6절 "5.4절 이름 비교 개정")**: 괄호 **안** 키를 더한다. 아래 문단은 개정 전 규칙이다.
+
+정규화 = 소문자로 바꾸고 모든 공백 제거. 카드·초안마다 ① 전체 이름 ② 끝 괄호 `(…)`를 뗀 앞부분 ③ 끝 괄호 **안**(정규화 후 2~30자, `·`·`,`·`/`가 없을 때만)을 만든다. 기존 카드의 ③ 키는 다른 카드의 ③ 키와 겹치면 둘 다 쓰지 않는다. 찾을 때 우선순위는 전체 이름 → 앞부분 → 괄호 안이고, **괄호 안 키끼리는 비교하지 않는다**(초안 ③은 카드 ①·②와만, 카드 ③은 초안 ①·②와만. `파일 크기 제한 (MultipartFile)`이 `파일 업로드 (MultipartFile)`에 붙지 않게, 리뷰 반영 11-28). 같은 키에 숨긴 카드와 숨기지 않은 카드가 함께 맞으면 숨기지 않은 카드에 연결하고, 맞는 카드가 숨긴 카드뿐일 때만 버린다. 같은 응답의 초안끼리는 ①·②만 비교한다(괄호 안만 같은 서로 다른 개념을 합치지 않게).
+예: 새 이름 `의존성 주입` → 기존 `의존성 주입 (DI)`의 앞부분 키와 같아 연결. 새 이름 `DI`도 괄호 안 키로 연결된다(개정 전에는 새 초안). `Java 21`은 `가상 스레드 (Java 21)`·`패턴 매칭 … (Java 21)` 두 카드가 같은 안 키를 가져 쓰지 않으므로 새 초안이 된다. 카드 목록을 주므로 LLM이 `conceptId`로 가리키는 것이 기본 경로다.
 
 ## 6. 프론트엔드
 

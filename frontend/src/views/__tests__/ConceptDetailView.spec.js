@@ -84,7 +84,7 @@ describe('ConceptDetailView (F-10 AC9~AC13)', () => {
     expect(conceptsApi.fetchConcept).toHaveBeenCalledWith(57)
     expect(wrapper.find('h1').text()).toBe('JWT 기반 인증')
     const header = wrapper.find('header')
-    expect(header.text()).toContain('security')
+    expect(header.text()).toContain('Security') // K-1 AC12: 원문 대신 라벨
     expect(header.text()).toContain('숙련')
     expect(header.text()).toContain('♡ 12') // F-12 AC12: 찜하지 않은 카드는 빈 하트
     expect(header.text()).toContain('★ 4.3')

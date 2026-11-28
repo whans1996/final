@@ -2,6 +2,7 @@
 // SC-15 상세의 첨부 상자 (F-17 AC15). 분석·카드 중 하나만 온다. viewable이 아니면 안내만 보여 준다.
 import { computed } from 'vue'
 import { LEVELS } from '@/utils/authValidation'
+import { categoryLabel } from '@/utils/conceptCategories'
 import { ATTACHMENT_ICONS } from './boardTypes'
 
 const props = defineProps({
@@ -33,7 +34,7 @@ const difficultyLabel = computed(
       <span class="kind">{{ ATTACHMENT_ICONS.CONCEPT }} 개념 카드</span>
       <strong>{{ concept.name }}</strong>
       <span class="tags">
-        <span class="tag">{{ concept.category }}</span>
+        <span class="tag">{{ categoryLabel(concept.category) }}</span>
         <span class="tag">{{ difficultyLabel }}</span>
       </span>
       <span class="summary">{{ concept.summary }}</span>

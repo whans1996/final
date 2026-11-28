@@ -45,7 +45,7 @@ describe('PostAttachment (F-17 AC15)', () => {
     const link = wrapper.findComponent(RouterLinkStub)
     expect(link.props('to')).toBe('/concepts/12')
     expect(link.text()).toContain('JWT')
-    expect(link.text()).toContain('security')
+    expect(link.text()).toContain('Security') // K-1 AC12: 원문 대신 라벨
     expect(link.text()).toContain('주니어')
     expect(link.text()).toContain('서버가 서명한 토큰')
   })

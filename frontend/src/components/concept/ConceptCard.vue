@@ -4,6 +4,7 @@
 import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import { LEVELS } from '@/utils/authValidation'
+import { categoryLabel } from '@/utils/conceptCategories'
 
 const props = defineProps({
   /** { id, name, category, difficulty, summary, avgRating, wishCount } */
@@ -19,7 +20,7 @@ const rating = computed(() => Number(props.concept.avgRating ?? 0).toFixed(1))
 <template>
   <RouterLink :to="`/concepts/${concept.id}`" class="card" :data-concept-id="concept.id">
     <span class="tags">
-      <span class="category">{{ concept.category }}</span>
+      <span class="category">{{ categoryLabel(concept.category) }}</span>
       <span class="difficulty">{{ difficultyLabel }}</span>
     </span>
     <strong class="name">{{ concept.name }}</strong>

@@ -14,11 +14,18 @@
 - **카드 목록에 있는 개념은 반드시 `conceptId`(목록 맨 앞의 숫자)로 가리키고 새로 만들지 않는다.** 이름이 조금 달라도(예: "DI"와 "의존성 주입 (DI)") 같은 개념이면 목록의 카드를 쓴다.
 - 카드 목록에 없는 개념만 `new`로 새 카드 초안을 만든다.
   - `name`: 개념 이름, 100자 이내. 영문 약어가 있으면 "한글 이름 (약어)" 형태로 쓴다.
-  - `category`: `java`, `spring`, `web`, `security`, `mybatis`, `vue` 중 하나.
+  - `category`: 아래 12개 중 하나. 이 목록 밖의 값을 쓰지 않는다.
+    - `java`(언어·JVM), `spring`(Spring Boot·Spring 프레임워크), `web`(HTTP API 설계·REST·CORS 같은 웹 동작), `security`(인증·인가·Spring Security·JWT), `mybatis`(MyBatis 매퍼·동적 SQL), `vue`(Vue·Pinia·Vue Router)
+    - `database`(SQL·MySQL·스키마·JPA·JDBC), `javascript`(JS 문법·Node.js·브라우저 API), `typescript`(타입 시스템), `react`(React·훅)
+    - `tooling`(Git·Gradle·npm·Vite·Docker·환경변수 같은 개발 도구), `cs`(HTTP·DNS·트랜잭션 격리·인덱스처럼 특정 도구와 상관없는 원리)
   - `difficulty`: `BEGINNER`, `JUNIOR`, `SENIOR` 중 그 개념 자체의 난이도.
   - `summary`: 개념을 한두 문장으로, 500자 이내.
   - `body`: `## 핵심`과 `## 주의` 두 절로 된 마크다운, 2,000자 이내. 이 프로젝트가 아니라 개념 자체를 설명한다.
   - 새 카드의 내용은 독자 수준이 아니라 `difficulty`에 맞춰 쓴다.
+  - `levelSummaries`: 개념 자체를 세 수준의 독자에게 각각 한 문장(300자 이내)으로 설명한다. 이 프로젝트 코드 얘기는 `contextNote`에만 쓴다.
+    - `beginner`: 비유와 쉬운 말로, 처음 나오는 용어는 풀어 쓴다.
+    - `junior`: 실제 클래스·메서드·어노테이션 이름과 동작 순서로 쓴다.
+    - `senior`: 기본 동작 설명은 생략하고, 왜 이렇게 설계됐는지와 그 대가(포기한 것)를 쓴다.
 - `fileNo`: 그 개념이 가장 잘 드러나는 파일의 번호(파일 목록의 번호). 특정할 수 없으면 생략한다.
 - `lineHint`: 그 파일 코드 앞의 줄 번호로 `L12` 또는 `L12-L30` 형태. 코드를 보지 못한 파일이면 생략한다.
 - `contextNote`: 이 프로젝트 코드에서 그 개념이 어떻게 쓰였는지, 500자 이내.
@@ -35,7 +42,12 @@
         "category": "spring",
         "difficulty": "JUNIOR",
         "summary": "한두 문장 요약",
-        "body": "## 핵심\n...\n## 주의\n..."
+        "body": "## 핵심\n...\n## 주의\n...",
+        "levelSummaries": {
+          "beginner": "입문자에게 한 문장",
+          "junior": "주니어에게 한 문장",
+          "senior": "숙련 개발자에게 한 문장"
+        }
       },
       "fileNo": 5, "lineHint": "L20", "contextNote": "이 코드에서 개념이 쓰인 방식"
     }

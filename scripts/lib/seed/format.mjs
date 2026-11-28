@@ -2,7 +2,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { ROOT } from '../common.mjs';
-import { CHECKED_LANGS, DIFFICULTIES, FRONT_KEYS, SECTIONS, UNCHECKED_LANGS, toRow } from './card.mjs';
+import { CHECKED_LANGS, DIFFICULTIES, FRONT_KEYS, LEVEL_SECTIONS, SECTIONS, UNCHECKED_LANGS, toRow } from './card.mjs';
 
 export const SEED_SRC = 'data/seed/concepts';
 const SLUG_RE = /^[a-z0-9]+(-[a-z0-9]+)*\.md$/;
@@ -14,6 +14,8 @@ export const LIMITS = {
   nameWarn: 60,
   summaryMax: 500,
   summaryWarn: [40, 200],
+  levelSummaryMax: 300,
+  levelBodyMax: 10000,
   referenceMax: 500,
   textMaxBytes: 65535,
   bodyWarn: [150, 2000],
@@ -21,11 +23,11 @@ export const LIMITS = {
   similarSummary: 0.5,
 };
 
-/** 형식 규칙: 카테고리는 BE ConceptCategories.ALL, 출처 호스트는 datasets.json DS-01 */
+/** 형식 규칙: 카테고리는 BE ConceptCategories.ORDERED(12종, K-1), 출처 호스트는 datasets.json DS-01 */
 export function loadRules(root = ROOT) {
   const java = readFileSync(join(root, 'backend/src/main/java/com/vibenote/analysis/concept/ConceptCategories.java'), 'utf8');
-  const set = /ALL\s*=\s*Set\.of\(([^)]*)\)/.exec(java);
-  if (!set) throw new Error('ConceptCategories.ALL을 읽을 수 없음');
+  const set = /ORDERED\s*=\s*List\.of\(([^)]*)\)/.exec(java);
+  if (!set) throw new Error('ConceptCategories.ORDERED를 읽을 수 없음');
   const categories = new Set([...set[1].matchAll(/"([^"]+)"/g)].map((m) => m[1]));
   const datasets = JSON.parse(readFileSync(join(root, 'data/datasets.json'), 'utf8')).datasets;
   const ds01 = datasets.find((d) => d.id === 'DS-01');
@@ -72,7 +74,8 @@ function checkCard(card, rules, add) {
   for (const k of FRONT_KEYS) if (!Object.hasOwn(f, k)) err(k, `frontmatter에 ${k}가 없음`);
   for (const k of Object.keys(f)) if (!FRONT_KEYS.includes(k)) err(k, `모르는 frontmatter 키 (허용: ${FRONT_KEYS.join('·')})`);
   for (const s of SECTIONS) if (!Object.hasOwn(card.sections, s)) err(s, `## ${s} 섹션이 없음`);
-  for (const s of Object.keys(card.sections)) if (!SECTIONS.includes(s)) err(s, `모르는 섹션 ## ${s} (허용: ${SECTIONS.join('·')})`);
+  const allowed = [...SECTIONS, ...Object.keys(LEVEL_SECTIONS)];
+  for (const s of Object.keys(card.sections)) if (!allowed.includes(s)) err(s, `모르는 섹션 ## ${s} (허용: ${allowed.join('·')})`);
 
   const r = toRow(card);
   if (Object.hasOwn(f, 'category')) {
@@ -99,6 +102,14 @@ function checkCard(card, rules, add) {
     if (!r.body.trim()) err('body', 'body가 비어 있음');
     else if (bytes(r.body) > LIMITS.textMaxBytes) err('body', `body ${bytes(r.body)}바이트 > ${LIMITS.textMaxBytes}바이트 (DB 한도 TEXT)`);
     else if (n < lo || n > hi) warn('body', `body ${n}자, 권장 ${lo}~${hi}자 밖`);
+  }
+  // 수준별 선택 절 (K-1 AC13): 쓰면 비어 있지 않아야 하고 DB 한도(요약 VARCHAR(300), 본문은 관리자 API와 같은 10,000자) 안이어야 한다
+  for (const [section, column] of Object.entries(LEVEL_SECTIONS)) {
+    if (!Object.hasOwn(card.sections, section)) continue;
+    const v = r[column];
+    const max = column.startsWith('summary') ? LIMITS.levelSummaryMax : LIMITS.levelBodyMax;
+    if (v == null || !v.trim()) err(section, `## ${section} 절이 비어 있음 (쓰지 않을 거면 절을 지운다)`);
+    else if (len(v) > max) err(section, `${section} ${len(v)}자 > ${max}자`);
   }
   if (Object.hasOwn(card.sections, 'example')) {
     if (!card.blocks.length || !r.example_code.trim()) err('example', '예제 코드 블록이 없거나 비어 있음');

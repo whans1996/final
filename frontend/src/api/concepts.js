@@ -25,8 +25,10 @@ export function fetchConcepts(
 /**
  * 공개 카드 상세 (F-10). 로그인 상태면 인터셉터가 토큰을 붙여 appearances가 채워진다.
  * 없거나 비공개 카드면 404 CONCEPT_404.
+ * K-1: viewerLevel은 로그인 회원의 수준(비로그인이면 null), levels는 언제나 BEGINNER·JUNIOR·SENIOR 순 3개이고
+ * 없는 summary·body는 null이다. 화면은 viewerLevel의 body가 있으면 그것을, 없으면 공통 body + 그 수준 summary를 보인다.
  * @param {number} id
- * @returns {Promise<{ id: number, name: string, category: string, difficulty: string, summary: string, body: string|null, exampleCode: string|null, referenceUrl: string|null, wishCount: number, wished: boolean, avgRating: number, appearances: { analysisId: number, analysisTitle: string, fileId: number|null, filePath: string|null, lineHint: string|null, contextNote: string|null }[], related: { id: number, name: string, category: string, difficulty: string, summary: string, wishCount: number, avgRating: number }[] }>}
+ * @returns {Promise<{ id: number, name: string, category: string, difficulty: string, summary: string, body: string|null, exampleCode: string|null, referenceUrl: string|null, wishCount: number, wished: boolean, avgRating: number, appearances: { analysisId: number, analysisTitle: string, fileId: number|null, filePath: string|null, lineHint: string|null, contextNote: string|null }[], related: { id: number, name: string, category: string, difficulty: string, summary: string, wishCount: number, avgRating: number }[], viewerLevel: 'BEGINNER'|'JUNIOR'|'SENIOR'|null, levels: { level: 'BEGINNER'|'JUNIOR'|'SENIOR', summary: string|null, body: string|null }[] }>}
  */
 export function fetchConcept(id) {
   return http.get(`/concepts/${id}`).then((res) => res.data)

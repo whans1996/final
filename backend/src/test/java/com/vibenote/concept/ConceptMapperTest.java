@@ -49,4 +49,34 @@ class ConceptMapperTest extends IntegrationTestBase {
     void AC1_없는_id면_빈_Optional() {
         assertThat(conceptMapper.findById(Long.MAX_VALUE)).isEmpty();
     }
+
+    /** K-1 AC1: 수준별 요약·본문 6칸을 읽고 관리자 저장으로 쓴다. */
+    @Test
+    @org.springframework.transaction.annotation.Transactional
+    void K1_AC1_수준별_요약_본문_6칸을_읽고_쓴다() {
+        jdbc.update(
+                "INSERT INTO concepts (name, category, difficulty, summary, summary_junior,"
+                        + " body_senior, status, source) VALUES ('k1-mapper', 'cs', 'JUNIOR', '요약',"
+                        + " '주니어 요약', '시니어 본문', 'DRAFT', 'AI')");
+        long id = jdbc.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
+
+        Concept concept = conceptMapper.findById(id).orElseThrow();
+        assertThat(concept.summaryFor(Level.JUNIOR)).isEqualTo("주니어 요약");
+        assertThat(concept.bodyFor(Level.SENIOR)).isEqualTo("시니어 본문");
+        assertThat(concept.summaryFor(Level.BEGINNER)).isNull();
+
+        concept.setLevelText(Level.BEGINNER, "입문 요약", "입문 본문");
+        concept.setLevelText(Level.SENIOR, null, null);
+        conceptMapper.updateByAdmin(concept);
+
+        assertThat(
+                        jdbc.queryForMap(
+                                "SELECT summary_beginner, body_beginner, summary_junior,"
+                                        + " body_senior FROM concepts WHERE id = ?",
+                                id))
+                .containsEntry("summary_beginner", "입문 요약")
+                .containsEntry("body_beginner", "입문 본문")
+                .containsEntry("summary_junior", "주니어 요약")
+                .containsEntry("body_senior", null);
+    }
 }

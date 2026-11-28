@@ -5,8 +5,11 @@ import com.vibenote.common.config.ClockConfig;
 import com.vibenote.concept.ConceptSource;
 import com.vibenote.concept.ConceptStatus;
 import com.vibenote.concept.domain.Concept;
+import com.vibenote.concept.dto.ConceptLevelResponse;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.OffsetDateTime;
+import java.util.List;
 
 /** 관리자 카드 상세 (F-13 AC3). 상태와 상관없이 모든 컬럼과 연결된 분석 수·리뷰 수를 준다. */
 @Schema(description = "관리자 카드 상세")
@@ -20,7 +23,9 @@ public record AdminConceptDetailResponse(
                 String name,
         @Schema(
                         requiredMode = Schema.RequiredMode.REQUIRED,
-                        description = "카테고리 (java, spring, web, security, mybatis, vue)",
+                        description =
+                                "카테고리 (java, spring, web, security, mybatis, vue, database,"
+                                        + " javascript, tooling, typescript, react, cs)",
                         example = "spring")
                 String category,
         @Schema(
@@ -87,7 +92,17 @@ public record AdminConceptDetailResponse(
                         requiredMode = Schema.RequiredMode.REQUIRED,
                         description = "수정 시각",
                         example = "2026-11-20T14:20:00+09:00")
-                OffsetDateTime updatedAt) {
+                OffsetDateTime updatedAt,
+        @ArraySchema(
+                        minItems = 3,
+                        maxItems = 3,
+                        arraySchema =
+                                @Schema(
+                                        requiredMode = Schema.RequiredMode.REQUIRED,
+                                        description =
+                                                "수준별 요약·본문. 언제나 3개이고 BEGINNER·JUNIOR·SENIOR 순"
+                                                        + " (K-1)"))
+                List<ConceptLevelResponse> levels) {
 
     public static AdminConceptDetailResponse of(
             Concept concept, long reviewCount, long linkedAnalysisCount) {
@@ -107,6 +122,7 @@ public record AdminConceptDetailResponse(
                 reviewCount,
                 linkedAnalysisCount,
                 concept.getCreatedAt().atZone(ClockConfig.ZONE).toOffsetDateTime(),
-                concept.getUpdatedAt().atZone(ClockConfig.ZONE).toOffsetDateTime());
+                concept.getUpdatedAt().atZone(ClockConfig.ZONE).toOffsetDateTime(),
+                ConceptLevelResponse.listOf(concept));
     }
 }

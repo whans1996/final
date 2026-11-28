@@ -32,7 +32,8 @@ class AdminConceptServiceTest {
             new AdminConceptService(mapper, mock(ConceptReviewMapper.class));
 
     private static AdminConceptRequest request(String status) {
-        return new AdminConceptRequest("낙관적 락", "spring", "SENIOR", "요약", null, null, null, status);
+        return new AdminConceptRequest(
+                "낙관적 락", "spring", "SENIOR", "요약", null, null, null, status, null);
     }
 
     @Test

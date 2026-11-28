@@ -27,7 +27,7 @@ AI가 분석 중에 만든 초안 카드(F-08, `DRAFT`)는 검수 전까지 아�
 | AC2 | AC1 데이터에서 | `GET /api/admin/concepts/status-counts`를 요청하면 | 200 `{"DRAFT": 2, "PUBLISHED": 4, "HIDDEN": 1}` (카드가 없는 상태도 0으로 세 키 모두) |
 | AC3 | `DRAFT·AI` 카드 D가 서로 다른 분석 2개에 연결되어 있을 때 | `GET /api/admin/concepts/{D}`를 요청하면 | 200과 3절 `AdminConceptDetailResponse`: 모든 컬럼(`body`·`exampleCode`·`referenceUrl`은 NULL이면 null) + `linkedAnalysisCount: 2`(`analysis_concepts`의 그 카드 행 수. PK가 `(analysis_id, concept_id)`라 분석 수와 같고, soft delete된 분석은 연결이 이미 지워져 있다) + `reviewCount`. 상태와 상관없이 조회된다. 없는 id(`999999`)는 404 `CONCEPT_404` |
 | AC4 | 유효한 값으로 | `POST /api/admin/concepts`를 보내면 | 201 `{"id": n}`. `source=ADMIN`, `wish_count=0`, `avg_rating=0.0`으로 저장된다. 문자열 필드는 앞뒤 공백을 지우고, 빈 `body`·`exampleCode`·`referenceUrl`은 NULL로 저장한다. `status`는 `DRAFT`·`PUBLISHED`만 받는다(`HIDDEN`이면 400 `details.status`). `PUBLISHED`로 만든 카드는 바로 `GET /api/concepts/{id}`(F-10)로 보인다 |
-| AC5 | 생성·수정 요청에서 | 다음 값을 보내면: `name` 없음·공백·101자, `category`가 `java·spring·web·security·mybatis·vue` 밖, `difficulty`가 `BEGINNER·JUNIOR·SENIOR` 밖, `summary` 없음·501자, `body`·`exampleCode` 10,001자, `referenceUrl` 501자 또는 `javascript:alert(1)`·`ftp://x`·`//evil.com` (#51) | 400 `COMMON_400`, `details`에 해당 필드별 사유. 카드는 생기거나 바뀌지 않는다. `referenceUrl`은 `^https?://`로 시작해야 한다(대소문자 무시) |
+| AC5 | 생성·수정 요청에서 | 다음 값을 보내면: `name` 없음·공백·101자, `category`가 `java·spring·web·security·mybatis·vue` 밖(K-1부터 12종 `java·spring·web·security·mybatis·vue·database·javascript·tooling·typescript·react·cs` 밖), `difficulty`가 `BEGINNER·JUNIOR·SENIOR` 밖, `summary` 없음·501자, `body`·`exampleCode` 10,001자, `referenceUrl` 501자 또는 `javascript:alert(1)`·`ftp://x`·`//evil.com` (#51) | 400 `COMMON_400`, `details`에 해당 필드별 사유. 카드는 생기거나 바뀌지 않는다. `referenceUrl`은 `^https?://`로 시작해야 한다(대소문자 무시) |
 | AC6 | 이름이 `JWT 인증`인 카드가 있을 때 | 다른 카드를 같은 이름(앞뒤 공백 제거 후 같음)으로 생성·수정하면 | 409 `CONCEPT_002` "같은 이름의 개념 카드가 이미 있습니다.", `details.name`. 동시 요청이 UNIQUE에 걸려도 같은 응답(500 아님). 자기 이름을 그대로 둔 수정은 409가 아니다 |
 | AC7 | `DRAFT·AI` 카드 D가 있을 때 | `PUT /api/admin/concepts/{D}`로 내용을 고치고 `status: PUBLISHED`를 보내면 | 200과 수정된 `AdminConceptDetailResponse`. `source`는 `AI` 그대로이고 `wish_count`·`avg_rating`은 바뀌지 않는다(요청에 있어도 무시, DTO에 필드 없음). 이후 F-09 목록·F-10 상세·F-08 분석 개념 탭(`items`)에 D가 나오고 `pendingCount`가 1 줄어든다. 같은 방법으로 `DRAFT→HIDDEN`, `PUBLISHED↔HIDDEN`, `DRAFT→DRAFT`(내용만 저장)가 된다 |
 | AC8 | `PUBLISHED`·`HIDDEN` 카드가 있을 때 | `status: DRAFT`로 `PUT` 하면 | 409 `CONCEPT_003` "공개되었거나 숨긴 카드는 검수 대기로 되돌리거나 삭제할 수 없습니다."이고 카드는 바뀌지 않는다 (DRAFT로 되돌린 뒤 지우는 우회로 찜·리뷰가 CASCADE로 사라지는 것을 막는다) |
@@ -119,7 +119,7 @@ AI가 분석 중에 만든 초안 카드(F-08, `DRAFT`)는 검수 전까지 아�
 | 필드 | 규칙 (trim 후) |
 |---|---|
 | name | 필수, 1~100자. SEED 카드는 바꿀 수 없음(AC9) |
-| category | 필수, `java·spring·web·security·mybatis·vue` (`ConceptCategories` 재사용) |
+| category | 필수, `java·spring·web·security·mybatis·vue·database·javascript·tooling·typescript·react·cs` 12종 (K-1, `ConceptCategories` 재사용) |
 | difficulty | 필수, `BEGINNER·JUNIOR·SENIOR` |
 | summary | 필수, 1~500자 |
 | body · exampleCode | 선택, 10,000자 이하, 비면 NULL |

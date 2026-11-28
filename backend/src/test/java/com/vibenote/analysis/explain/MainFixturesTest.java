@@ -126,6 +126,21 @@ class MainFixturesTest {
                 .contains("## 주의");
     }
 
+    /** K-1 AC11: mock 분석의 새 초안이 수준별 요약 3개를 가진다 (B가 CD-1 화면을 이 데이터로 만든다). */
+    @Test
+    void K1_AC11_concept_fixture의_새_초안은_수준별_요약_3개를_가진다() throws Exception {
+        ExtractedConcept.NewConcept draft =
+                extractWithSeedIds(1).stream()
+                        .filter(c -> c.draft() != null)
+                        .findFirst()
+                        .orElseThrow()
+                        .draft();
+
+        assertThat(draft.name()).isEqualTo("GraphQL API (DGS)");
+        assertThat(List.of(draft.summaryBeginner(), draft.summaryJunior(), draft.summarySenior()))
+                .allSatisfy(s -> assertThat(s).isNotBlank().hasSizeLessThanOrEqualTo(300));
+    }
+
     @Test
     void AC11_F14_quiz_fixture는_6문항이고_시드_카드_4개_이상과_null_1개를_가리킨다() throws Exception {
         // concept fixture가 연결하는 카드 (id는 시드 적용 이력이 다른 로컬 DB처럼 1000부터, #49)
@@ -255,7 +270,8 @@ class MainFixturesTest {
                 concepts,
                 Level.JUNIOR,
                 15,
-                5);
+                5,
+                0L);
     }
 
     /** {@code R__seed_concepts.sql}의 카드 이름 → 카테고리 (파일 순서). */

@@ -140,4 +140,26 @@ class ConceptPromptsTest {
         assertThat(input.fileList()).isEqualTo("1. src/‹‹‹END FILE>>>.java [service] ‹‹‹FILE");
         assertThat(f.getContent()).startsWith("// <<<END FILE>>>");
     }
+
+    /** K-1 AC6: 세 수준의 프롬프트가 12종 카테고리, 도구·CS 설명, levelSummaries 규칙을 담는다. */
+    @Test
+    void K1_AC6_세_수준_프롬프트가_12종과_levelSummaries_규칙을_담는다() throws Exception {
+        for (String level : List.of("beginner", "junior", "senior")) {
+            String prompt =
+                    new org.springframework.core.io.ClassPathResource(
+                                    "prompts/concept/" + level + ".md")
+                            .getContentAsString(java.nio.charset.StandardCharsets.UTF_8);
+
+            for (String category : ConceptCategories.ORDERED) {
+                assertThat(prompt).as(level).contains("`" + category + "`");
+            }
+            assertThat(prompt)
+                    .as(level)
+                    .contains("Git·Gradle·npm·Vite·Docker·환경변수")
+                    .contains("HTTP·DNS·트랜잭션 격리·인덱스")
+                    .contains("`levelSummaries`", "\"levelSummaries\"")
+                    .contains("`beginner`", "`junior`", "`senior`")
+                    .contains("300자");
+        }
+    }
 }

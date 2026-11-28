@@ -6,7 +6,8 @@
     <!-- ── 공통 조회 ── -->
 
     <sql id="columns">
-        id, name, category, difficulty, summary, body, example_code, status, source, reference_url,
+        id, name, category, difficulty, summary, summary_beginner, summary_junior, summary_senior,
+        body, body_beginner, body_junior, body_senior, example_code, status, source, reference_url,
         wish_count, avg_rating, created_at, updated_at
     </sql>
 
@@ -32,11 +33,20 @@
 
     <!-- 이름이 겹치면 행을 바꾸지 않고 LAST_INSERT_ID를 기존 id로 맞춘다 -->
     <insert id="insertDraft">
-        INSERT INTO concepts (name, category, difficulty, summary, body, status, source)
-        VALUES (#{name}, #{category}, #{difficulty}, #{summary}, #{body}, 'DRAFT', 'AI')
+        INSERT INTO concepts (name, category, difficulty, summary, summary_beginner, summary_junior,
+                              summary_senior, body, status, source)
+        VALUES (#{name}, #{category}, #{difficulty}, #{summary}, #{summaryBeginner}, #{summaryJunior},
+                #{summarySenior}, #{body}, 'DRAFT', 'AI')
         ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)
         <selectKey keyProperty="id" resultType="long" order="AFTER">SELECT LAST_INSERT_ID()</selectKey>
     </insert>
+
+    <select id="findHiddenIds" resultType="long">
+        SELECT id FROM concepts
+        WHERE status = 'HIDDEN'
+          AND id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
+    </select>
 
     <!-- ── F-16 추천 (A) ── -->
 
@@ -172,17 +182,21 @@
     </select>
 
     <insert id="insertByAdmin" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO concepts (name, category, difficulty, summary, body, example_code, status, source,
-                              reference_url)
-        VALUES (#{name}, #{category}, #{difficulty}, #{summary}, #{body}, #{exampleCode}, #{status},
-                'ADMIN', #{referenceUrl})
+        INSERT INTO concepts (name, category, difficulty, summary, summary_beginner, summary_junior,
+                              summary_senior, body, body_beginner, body_junior, body_senior,
+                              example_code, status, source, reference_url)
+        VALUES (#{name}, #{category}, #{difficulty}, #{summary}, #{summaryBeginner}, #{summaryJunior},
+                #{summarySenior}, #{body}, #{bodyBeginner}, #{bodyJunior}, #{bodySenior},
+                #{exampleCode}, #{status}, 'ADMIN', #{referenceUrl})
     </insert>
 
     <update id="updateByAdmin">
         UPDATE concepts
         SET name = #{name}, category = #{category}, difficulty = #{difficulty}, summary = #{summary},
-            body = #{body}, example_code = #{exampleCode}, reference_url = #{referenceUrl},
-            status = #{status}
+            summary_beginner = #{summaryBeginner}, summary_junior = #{summaryJunior},
+            summary_senior = #{summarySenior}, body = #{body}, body_beginner = #{bodyBeginner},
+            body_junior = #{bodyJunior}, body_senior = #{bodySenior}, example_code = #{exampleCode},
+            reference_url = #{referenceUrl}, status = #{status}
         WHERE id = #{id}
     </update>
 

@@ -1,6 +1,6 @@
 # ER Diagram — 바이브노트
 
-> 작성 상태: 🟡 초안 (Flyway **V1~V15** 반영, 2026-11-27). **DDL 정본은 `backend/src/main/resources/db/migration/`**(`V1__init.sql` 이후 V2+)이고, 이 문서는 그 DDL을 읽어 그린 것이다. `docs/기획서.md` 3절 "ERD 초안"은 기획 단계의 설계 기록이라 V7 이후(카드 출처 ADMIN, 팀·팀 챌린지)를 담고 있지 않다.
+> 작성 상태: 🟡 초안 (Flyway **V1~V16** 반영, 2026-11-28). **DDL 정본은 `backend/src/main/resources/db/migration/`**(`V1__init.sql` 이후 V2+)이고, 이 문서는 그 DDL을 읽어 그린 것이다. `docs/기획서.md` 3절 "ERD 초안"은 기획 단계의 설계 기록이라 V7 이후(카드 출처 ADMIN, 팀·팀 챌린지)를 담고 있지 않다.
 > **최종본**은 구현이 끝난 뒤 실제 DB(Flyway 적용 후)에서 MySQL Workbench Reverse Engineer로 만든 이미지(`diagrams/erd.png`)를 아래 도메인별 다이어그램 앞에 붙인다 (W5).
 
 <!-- 최종: ![ERD](diagrams/erd.png) -->
@@ -183,10 +183,16 @@ erDiagram
     concepts {
         bigint id PK
         varchar name UK
-        varchar category
+        varchar category "12종 (K-1, 애플리케이션 검사)"
         enum difficulty
         varchar summary
+        varchar summary_beginner "수준별 요약 (V16)"
+        varchar summary_junior "V16"
+        varchar summary_senior "V16"
         text body
+        text body_beginner "수준별 본문 (V16)"
+        text body_junior "V16"
+        text body_senior "V16"
         text example_code
         enum status "DRAFT|PUBLISHED|HIDDEN"
         enum source "SEED|AI|ADMIN (V7)"
@@ -337,7 +343,7 @@ erDiagram
 | project_versions | 프로젝트 버전. 번호는 프로젝트 안에서 최대 + 1(UNIQUE `(project_id, number)`), 저장소 분석은 FETCHING에서 기본 브랜치 최신 커밋으로 찾거나 만들고(UNIQUE `(project_id, commit_sha)`, 같은 커밋을 다른 수준으로 분석하면 같은 버전), 커밋 정보가 없는 버전(ZIP·커밋 조회 실패·V15 백필)은 `commit_sha` NULL로 여럿 있을 수 있다 | projects 1:N | P-1a |
 | analysis_files | 저장소 인덱스 전체(코드·test·migration·doc, 최대 2,000개, 키 마스킹된 content). 그중 설명 대상으로 고른 최대 30개만 `selected = TRUE`(중요도 `importance`, V12)이고 설명·개념·퀴즈·흐름·구조·파일 API는 이 행만 본다. 한 줄 역할(role, V4)과 설명(summary) | analyses 1:N | F-05a, F-06, F-26a |
 | analysis_flows | API 실행 흐름(endpoint `"{METHOD} {path}"`, 분석 안에서 UNIQUE, 상태 PENDING·DONE·FAILED, 요약·단계 JSON 캐시·실패 코드, V5) | analyses 1:N | F-07 |
-| concepts | 개념 카드 (상태 DRAFT/PUBLISHED/HIDDEN, 출처 SEED/AI/ADMIN — ADMIN은 관리자가 직접 만든 카드, V7). AI 초안은 분석의 EXTRACTING 단계가 `DRAFT·AI`로 만들고 예제 코드·출처는 비워 둔다(관리자 검수 F-13에서 채움). `name` UNIQUE라 같은 이름이면 기존 카드를 쓴다. 관리자는 DRAFT만 삭제할 수 있고(연결은 FK CASCADE), 시드 재적용(`R__seed_concepts.sql`)은 내용만 덮어쓰고 상태·`wish_count`·`avg_rating`은 유지한다 | - | F-08~13 |
+| concepts | 개념 카드 (상태 DRAFT/PUBLISHED/HIDDEN, 출처 SEED/AI/ADMIN — ADMIN은 관리자가 직접 만든 카드, V7). AI 초안은 분석의 EXTRACTING 단계가 `DRAFT·AI`로 만들고 예제 코드·출처는 비워 둔다(관리자 검수 F-13에서 채움). `name` UNIQUE라 같은 이름이면 기존 카드를 쓴다. 관리자는 DRAFT만 삭제할 수 있고(연결은 FK CASCADE), 시드 재적용(`R__seed_concepts.sql`)은 내용만 덮어쓰고 상태·`wish_count`·`avg_rating`은 유지한다. 카테고리는 12종(`java·spring·web·security·mybatis·vue·database·javascript·tooling·typescript·react·cs`, K-1. 컬럼은 VARCHAR(50) 그대로이고 애플리케이션이 검사). 수준별 한 줄 요약 `summary_beginner/junior/senior`(VARCHAR(300))와 수준별 본문 `body_beginner/junior/senior`(TEXT)는 모두 NULL 가능(V16): AI 초안은 요약 3개만, 시드·관리자는 둘 다 채울 수 있다. 상세 API는 언제나 3개 `levels`로 준다 | - | F-08~13, K-1 |
 | analysis_concepts | 분석 ↔ 개념 연결과 코드 위치(파일 `file_id`, 줄 `line_hint` 예: L12-L30, 맥락 `context_note`). EXTRACTING 단계(F-08)가 채우고, PK `(analysis_id, concept_id)`라 한 분석에서 개념 하나는 위치 하나다. 분석당 최대 15개 | analyses N:M concepts | F-08, F-10 |
 | concept_reviews | 카드 리뷰(별점 1~5 CHECK, 내용). 회원당 카드 하나에 리뷰 1개(UNIQUE `(concept_id, user_id)`, V2). 쓰고 고치고 지울 때마다 같은 트랜잭션에서 카드 행을 잠그고 `concepts.avg_rating`을 다시 계산한다. 작성자 FK는 RESTRICT(V2)라 탈퇴해도 리뷰가 남는다 | concepts 1:N, users 1:N | F-11 |
 | concept_wishes | 카드 찜 PK `(user_id, concept_id)`. 찜·해제 때 카드 행을 잠그고 `concepts.wish_count`를 행 수로 다시 센다(탈퇴 회원의 찜도 센다). 찜하면 내일 복습 계획(`WISH`)과 `WISH` 활동이 한 번 생긴다 | concepts N:M users | F-12 |
@@ -374,6 +380,7 @@ erDiagram
 | V13 | `llm_usage_logs.provider`, 인덱스 `idx_llm_usage_logs_analysis(analysis_id)` (V13 이전 행은 `provider` NULL) | F-27 |
 | V14 | `analyses.quiz_status`·`quiz_regenerations` (기존 행: 퀴즈가 있으면 READY, 없고 DONE이면 FAILED, 나머지 NULL) | L-1a |
 | V15 | `projects`, `project_versions`, `analyses.project_id`·`project_version_id`. 백필: 저장소 분석은 (회원, 주소)마다 프로젝트 하나, ZIP 분석은 분석마다 프로젝트 하나, 삭제하지 않은 분석마다 커밋 정보 없는 버전(요청 순 번호), 삭제한 분석은 프로젝트에만 붙음 | P-1a |
+| V16 | `concepts.summary_beginner`·`summary_junior`·`summary_senior`(VARCHAR(300) NULL), `body_beginner`·`body_junior`·`body_senior`(TEXT NULL). 기존 카드는 모두 NULL | K-1 |
 | R | `R__seed_concepts.sql` 시드 카드 (반복 적용, 내용만 덮어씀, DS-05) | F-09 |
 
 ## 정규화 메모

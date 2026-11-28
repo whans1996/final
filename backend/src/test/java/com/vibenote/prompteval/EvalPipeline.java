@@ -286,7 +286,8 @@ final class EvalPipeline {
                                                     catalog,
                                                     level,
                                                     settings.concept().maxLinks(),
-                                                    settings.concept().maxDrafts()),
+                                                    settings.concept().maxDrafts(),
+                                                    0L),
                                     errors)
                             .orElse(null);
             result.put("concepts", extracted == null ? List.of() : conceptRows(extracted, files));

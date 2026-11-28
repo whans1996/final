@@ -18,7 +18,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** 검증한 개념 항목을 저장한다 (F-08 AC1·AC5). 새 초안 INSERT와 analysis_concepts INSERT를 한 트랜잭션으로 한다. */
+/**
+ * 검증한 개념 항목을 저장한다 (F-08 AC1·AC5, K-1 AC7·AC10). 새 초안 INSERT와 analysis_concepts INSERT를 한 트랜잭션으로 한다.
+ */
 @Service
 public class ConceptLinkService {
 
@@ -54,8 +56,10 @@ public class ConceptLinkService {
                 .sorted(Comparator.comparing(d -> d.name().toLowerCase(Locale.ROOT)))
                 .forEach(d -> created.put(d, create(d)));
 
+        // 이름이 콜레이션으로만 같거나(악센트 등) 카탈로그를 읽은 뒤 숨겨진 카드에 UNIQUE 충돌로 닿으면 연결하지 않는다 (K-1 AC10)
+        Set<Long> hidden = draftService.findHiddenIds(created.values());
         List<LinkRow> links = new ArrayList<>();
-        Set<Long> seen = new HashSet<>();
+        Set<Long> seen = new HashSet<>(hidden);
         for (ExtractedConcept item : items) {
             long conceptId =
                     item.conceptId() != null ? item.conceptId() : created.get(item.draft());
@@ -81,6 +85,13 @@ public class ConceptLinkService {
 
     private long create(NewConcept draft) {
         return draftService.createDraft(
-                draft.name(), draft.category(), draft.difficulty(), draft.summary(), draft.body());
+                draft.name(),
+                draft.category(),
+                draft.difficulty(),
+                draft.summary(),
+                draft.body(),
+                draft.summaryBeginner(),
+                draft.summaryJunior(),
+                draft.summarySenior());
     }
 }

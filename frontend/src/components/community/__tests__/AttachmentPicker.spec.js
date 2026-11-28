@@ -138,6 +138,8 @@ describe('AttachmentPicker (F-17 AC17)', () => {
     )
     const options = wrapper.findAll('[data-concept-option]')
     expect(options).toHaveLength(2)
+    expect(options[0].text()).toContain('Security') // K-1 AC12: 원문 대신 라벨
+    expect(options[0].text()).not.toContain('security')
     await options[1].trigger('click')
     expect(emitted(wrapper)).toEqual({ type: 'CONCEPT', id: 13, label: 'JWT 서명' })
   })

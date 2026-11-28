@@ -661,4 +661,167 @@ class AdminConceptApiTest extends IntegrationTestBase {
                 .andExpect(jsonPath("$.code").value("AUTH_403"));
         assertThat(conceptCount()).isEqualTo(before);
     }
+
+    // ── K-1 AC3~AC5 ──
+
+    static Map<String, Object> level(String level, String summary, String body) {
+        Map<String, Object> item = new HashMap<>();
+        item.put("level", level);
+        item.put("summary", summary);
+        item.put("body", body);
+        return item;
+    }
+
+    long insertWithLevels() {
+        long id = insertConcept("수준 카드", "PUBLISHED", "AI");
+        jdbc.update(
+                "UPDATE concepts SET summary_beginner = '입문', summary_junior = '주니어',"
+                        + " summary_senior = '시니어', body_senior = '시니어 본문' WHERE id = ?",
+                id);
+        return id;
+    }
+
+    String levelColumns(long id) {
+        Map<String, Object> r = row(id);
+        return java.util.stream.Stream.of(
+                        "summary_beginner",
+                        "body_beginner",
+                        "summary_junior",
+                        "body_junior",
+                        "summary_senior",
+                        "body_senior")
+                .map(c -> String.valueOf(r.get(c)))
+                .collect(java.util.stream.Collectors.joining(" | "));
+    }
+
+    @Test
+    void K1_AC3_levels를_보내면_6칸을_통째로_바꾸고_공백은_trim_빈_값은_NULL() throws Exception {
+        long id = insertWithLevels();
+        Map<String, Object> body = with("name", "수준 카드");
+        body.put(
+                "levels",
+                java.util.List.of(
+                        level("BEGINNER", "  새 입문  ", "   "), level(" JUNIOR ", null, " ## 주니어 ")));
+
+        asAdmin(json(put(ONE, id), body))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.levels[*].level", contains("BEGINNER", "JUNIOR", "SENIOR")))
+                .andExpect(jsonPath("$.levels[0].summary").value("새 입문"))
+                .andExpect(jsonPath("$.levels[1].body").value("## 주니어"))
+                .andExpect(
+                        jsonPath("$.levels[2].summary").value(org.hamcrest.Matchers.nullValue()));
+
+        assertThat(levelColumns(id)).isEqualTo("새 입문 | null | null | ## 주니어 | null | null");
+    }
+
+    @Test
+    void K1_AC3_PUT에_levels가_없거나_null이면_기존_6칸을_그대로_둔다() throws Exception {
+        long id = insertWithLevels();
+        String before = levelColumns(id);
+
+        asAdmin(json(put(ONE, id), with("name", "수준 카드"))).andExpect(status().isOk());
+        assertThat(levelColumns(id)).isEqualTo(before);
+
+        asAdmin(json(put(ONE, id), with("name", "수준 카드", "levels", null)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.levels[2].body").value("시니어 본문"));
+        assertThat(levelColumns(id)).isEqualTo(before);
+
+        // 빈 배열은 "모두 비우기"다
+        asAdmin(json(put(ONE, id), with("name", "수준 카드", "levels", java.util.List.of())))
+                .andExpect(status().isOk());
+        assertThat(levelColumns(id)).isEqualTo("null | null | null | null | null | null");
+    }
+
+    @Test
+    void K1_AC3_POST는_levels가_있으면_넣고_없으면_모두_NULL() throws Exception {
+        Map<String, Object> body = with("name", "수준 생성");
+        body.put("levels", java.util.List.of(level("SENIOR", "시니어", "## 시니어")));
+        String res =
+                asAdmin(json(post(LIST), body))
+                        .andExpect(status().isCreated())
+                        .andReturn()
+                        .getResponse()
+                        .getContentAsString();
+        long id = objectMapper.readTree(res).get("id").asLong();
+        assertThat(levelColumns(id)).isEqualTo("null | null | null | null | 시니어 | ## 시니어");
+
+        String res2 =
+                asAdmin(json(post(LIST), with("name", "수준 없음")))
+                        .andExpect(status().isCreated())
+                        .andReturn()
+                        .getResponse()
+                        .getContentAsString();
+        long id2 = objectMapper.readTree(res2).get("id").asLong();
+        assertThat(levelColumns(id2)).isEqualTo("null | null | null | null | null | null");
+        asAdmin(get(ONE, id2))
+                .andExpect(jsonPath("$.levels", hasSize(3)))
+                .andExpect(
+                        jsonPath("$.levels[0].summary").value(org.hamcrest.Matchers.nullValue()));
+    }
+
+    static Stream<Arguments> invalidLevels() {
+        return Stream.of(
+                Arguments.of(
+                        java.util.List.of(level("JUNIOR", "가".repeat(301), null)),
+                        "levels[0].summary",
+                        "수준별 요약은 300자 이하로 입력하세요."),
+                Arguments.of(
+                        java.util.List.of(
+                                level("BEGINNER", null, null),
+                                level("JUNIOR", null, "a".repeat(10_001))),
+                        "levels[1].body",
+                        "수준별 본문은 10,000자 이하로 입력하세요."),
+                Arguments.of(
+                        java.util.List.of(level("JUNIOR", "a", null), level("JUNIOR", "b", null)),
+                        "levels",
+                        AdminConceptService.LEVELS_DUPLICATE),
+                Arguments.of(
+                        java.util.List.of(level("EXPERT", "a", null)),
+                        "levels[0].level",
+                        "수준은 BEGINNER, JUNIOR, SENIOR 중 하나여야 합니다."),
+                Arguments.of(
+                        java.util.List.of(level(null, "a", null)), "levels[0].level", "수준을 고르세요."),
+                Arguments.of(
+                        java.util.List.of(
+                                level("BEGINNER", "a", null),
+                                level("JUNIOR", "b", null),
+                                level("SENIOR", "c", null),
+                                level("SENIOR", "d", null)),
+                        "levels",
+                        "수준별 요약·본문은 3개까지입니다."));
+    }
+
+    @ParameterizedTest(name = "{1} {2}")
+    @MethodSource("invalidLevels")
+    void K1_AC4_levels가_잘못되면_400과_해당_칸_사유이고_카드는_그대로(Object levels, String field, String message)
+            throws Exception {
+        long id = insertWithLevels();
+        Map<String, Object> before = row(id);
+        long count = conceptCount();
+
+        asAdmin(json(put(ONE, id), with("name", "수준 카드", "levels", levels)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON_400"))
+                .andExpect(jsonPath("$.details['" + field + "']").value(message));
+        assertThat(row(id)).isEqualTo(before);
+
+        asAdmin(json(post(LIST), with("name", "새 카드", "levels", levels)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.details['" + field + "']").exists());
+        assertThat(conceptCount()).isEqualTo(count);
+    }
+
+    @Test
+    void K1_AC5_새_카테고리로_만들_수_있고_12종_밖이면_400과_12종_안내() throws Exception {
+        asAdmin(json(post(LIST), with("name", "타입 좁히기", "category", "typescript")))
+                .andExpect(status().isCreated());
+
+        asAdmin(json(post(LIST), with("name", "코루틴", "category", "kotlin")))
+                .andExpect(status().isBadRequest())
+                .andExpect(
+                        jsonPath(
+                                "$.details.category",
+                                org.hamcrest.Matchers.containsString("react, cs")));
+    }
 }

@@ -243,7 +243,7 @@
             "type" : [ "string", "null" ]
           },
           "category" : {
-            "description" : "카테고리 (java, spring, web, security, mybatis, vue)",
+            "description" : "카테고리 (java, spring, web, security, mybatis, vue, database, javascript, tooling, typescript, react, cs)",
             "example" : "spring",
             "type" : "string"
           },
@@ -269,6 +269,15 @@
             "example" : 91,
             "format" : "int64",
             "type" : "integer"
+          },
+          "levels" : {
+            "description" : "수준별 요약·본문. 언제나 3개이고 BEGINNER·JUNIOR·SENIOR 순 (K-1)",
+            "items" : {
+              "$ref" : "#/components/schemas/ConceptLevelResponse"
+            },
+            "maxItems" : 3,
+            "minItems" : 3,
+            "type" : "array"
           },
           "linkedAnalysisCount" : {
             "description" : "이 카드가 연결된 분석 수 (삭제된 분석은 연결이 지워져 빠진다)",
@@ -322,7 +331,36 @@
             "type" : "integer"
           }
         },
-        "required" : [ "avgRating", "body", "category", "createdAt", "difficulty", "exampleCode", "id", "linkedAnalysisCount", "name", "referenceUrl", "reviewCount", "source", "status", "summary", "updatedAt", "wishCount" ],
+        "required" : [ "avgRating", "body", "category", "createdAt", "difficulty", "exampleCode", "id", "levels", "linkedAnalysisCount", "name", "referenceUrl", "reviewCount", "source", "status", "summary", "updatedAt", "wishCount" ],
+        "type" : "object"
+      },
+      "AdminConceptLevelRequest" : {
+        "description" : "관리자 카드 요청의 수준별 요약·본문",
+        "properties" : {
+          "body" : {
+            "description" : "그 수준의 본문 Markdown (10,000자 이하, 비면 null)",
+            "example" : "## 핵심\n- 빈은 타입으로 찾는다.",
+            "maxLength" : 10000,
+            "minLength" : 0,
+            "type" : [ "string", "null" ]
+          },
+          "level" : {
+            "description" : "수준 (배열 안에서 서로 달라야 함)",
+            "enum" : [ "BEGINNER", "JUNIOR", "SENIOR" ],
+            "example" : "JUNIOR",
+            "minLength" : 1,
+            "pattern" : "BEGINNER|JUNIOR|SENIOR",
+            "type" : "string"
+          },
+          "summary" : {
+            "description" : "그 수준의 한 줄 요약 (300자 이하, 비면 null)",
+            "example" : "생성자로 받은 빈을 컨테이너가 주입합니다.",
+            "maxLength" : 300,
+            "minLength" : 0,
+            "type" : [ "string", "null" ]
+          }
+        },
+        "required" : [ "level" ],
         "type" : "object"
       },
       "AdminConceptRequest" : {
@@ -337,10 +375,10 @@
           },
           "category" : {
             "description" : "카테고리",
-            "enum" : [ "java", "spring", "web", "security", "mybatis", "vue" ],
+            "enum" : [ "java", "spring", "web", "security", "mybatis", "vue", "database", "javascript", "tooling", "typescript", "react", "cs" ],
             "example" : "spring",
             "minLength" : 1,
-            "pattern" : "java|spring|web|security|mybatis|vue",
+            "pattern" : "java|spring|web|security|mybatis|vue|database|javascript|tooling|typescript|react|cs",
             "type" : "string"
           },
           "difficulty" : {
@@ -357,6 +395,15 @@
             "maxLength" : 10000,
             "minLength" : 0,
             "type" : [ "string", "null" ]
+          },
+          "levels" : {
+            "description" : "수준별 요약·본문 0~3개 (level은 서로 달라야 함). 있으면 6칸을 통째로 바꾸고 배열에 없는 수준은 비운다. 없거나 null이면 PUT은 기존 값을 유지하고 POST는 모두 비운다 (K-1)",
+            "items" : {
+              "$ref" : "#/components/schemas/AdminConceptLevelRequest"
+            },
+            "maxItems" : 3,
+            "minItems" : 0,
+            "type" : [ "array", "null" ]
           },
           "name" : {
             "description" : "개념 이름 (1~100자, 시드 카드는 바꿀 수 없음)",
@@ -427,7 +474,7 @@
             "type" : "number"
           },
           "category" : {
-            "description" : "카테고리 (java, spring, web, security, mybatis, vue)",
+            "description" : "카테고리 (java, spring, web, security, mybatis, vue, database, javascript, tooling, typescript, react, cs)",
             "example" : "spring",
             "type" : "string"
           },
@@ -1338,7 +1385,7 @@
             "type" : [ "string", "null" ]
           },
           "category" : {
-            "description" : "카테고리 (java, spring, security, mybatis, web, vue)",
+            "description" : "카테고리 (java, spring, web, security, mybatis, vue, database, javascript, tooling, typescript, react, cs)",
             "example" : "security",
             "type" : "string"
           },
@@ -1358,6 +1405,15 @@
             "example" : 57,
             "format" : "int64",
             "type" : "integer"
+          },
+          "levels" : {
+            "description" : "수준별 요약·본문. 언제나 3개이고 BEGINNER·JUNIOR·SENIOR 순. 화면은 viewerLevel의 body가 있으면 그것을, 없으면 공통 body + 그 수준 summary를 보인다 (K-1)",
+            "items" : {
+              "$ref" : "#/components/schemas/ConceptLevelResponse"
+            },
+            "maxItems" : 3,
+            "minItems" : 3,
+            "type" : "array"
           },
           "name" : {
             "description" : "개념 이름",
@@ -1381,6 +1437,12 @@
             "example" : "JWT는 사용자 정보와 만료 시간을 담고 서명한 토큰이다.",
             "type" : "string"
           },
+          "viewerLevel" : {
+            "description" : "로그인 회원의 수준 (users.level). 비로그인·깨진 토큰이면 null (K-1)",
+            "enum" : [ "BEGINNER", "JUNIOR", "SENIOR" ],
+            "example" : "JUNIOR",
+            "type" : [ "string", "null" ]
+          },
           "wishCount" : {
             "description" : "찜 수",
             "example" : 12,
@@ -1393,7 +1455,30 @@
             "type" : "boolean"
           }
         },
-        "required" : [ "appearances", "avgRating", "body", "category", "difficulty", "exampleCode", "id", "name", "referenceUrl", "related", "summary", "wishCount", "wished" ],
+        "required" : [ "appearances", "avgRating", "body", "category", "difficulty", "exampleCode", "id", "levels", "name", "referenceUrl", "related", "summary", "viewerLevel", "wishCount", "wished" ],
+        "type" : "object"
+      },
+      "ConceptLevelResponse" : {
+        "description" : "카드의 수준별 요약·본문",
+        "properties" : {
+          "body" : {
+            "description" : "그 수준의 본문 (Markdown 원문). 없으면 null이고 화면은 공통 body + 그 수준 summary를 보인다",
+            "example" : "## 핵심\n- 빈은 타입으로 찾고, 같은 타입이 둘이면 @Qualifier로 고른다.",
+            "type" : [ "string", "null" ]
+          },
+          "level" : {
+            "description" : "수준",
+            "enum" : [ "BEGINNER", "JUNIOR", "SENIOR" ],
+            "example" : "JUNIOR",
+            "type" : "string"
+          },
+          "summary" : {
+            "description" : "그 수준 독자에게 맞춘 한 줄 요약 (300자 이하). 없으면 null",
+            "example" : "생성자 파라미터로 받은 빈을 컨테이너가 주입하고, @RequiredArgsConstructor가 그 생성자를 만들어 줍니다.",
+            "type" : [ "string", "null" ]
+          }
+        },
+        "required" : [ "body", "level", "summary" ],
         "type" : "object"
       },
       "ConceptRatingResponse" : {
@@ -1511,7 +1596,7 @@
             "type" : "number"
           },
           "category" : {
-            "description" : "카테고리 (java, spring, security, mybatis, web, vue)",
+            "description" : "카테고리 (java, spring, web, security, mybatis, vue, database, javascript, tooling, typescript, react, cs)",
             "example" : "security",
             "type" : "string"
           },
@@ -6663,13 +6748,13 @@
             "type" : "string"
           }
         }, {
-          "description" : "카테고리 (java, spring, web, security, mybatis, vue). 없는 값이면 빈 목록",
+          "description" : "카테고리 (java, spring, web, security, mybatis, vue, database, javascript, tooling, typescript, react, cs). 없는 값이면 빈 목록",
           "example" : "security",
           "in" : "query",
           "name" : "category",
           "required" : false,
           "schema" : {
-            "description" : "카테고리 (java, spring, web, security, mybatis, vue). 없는 값이면 빈 목록",
+            "description" : "카테고리 (java, spring, web, security, mybatis, vue, database, javascript, tooling, typescript, react, cs). 없는 값이면 빈 목록",
             "example" : "security",
             "maxLength" : 50,
             "minLength" : 0,

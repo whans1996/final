@@ -38,6 +38,9 @@ public interface ConceptMapper {
      */
     void insertDraft(Concept concept);
 
+    /** ids 중 HIDDEN 카드의 id (K-1 AC10). ids가 비면 IN ()이 SQL 오류이므로 호출하지 않는다. */
+    List<Long> findHiddenIds(@Param("ids") List<Long> ids);
+
     // ── F-16 추천 (A) ──
 
     /** PUBLISHED 카드 전체의 요약 컬럼, id 오름차순. 카드 수백 개 규모라 한 번에 읽는다. */

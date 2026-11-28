@@ -27,7 +27,7 @@ describe('ConceptCard (F-00b AC10)', () => {
     const wrapper = mountCard({ concept })
 
     expect(wrapper.find('.name').text()).toBe('JWT 인증')
-    expect(wrapper.find('.category').text()).toBe('security')
+    expect(wrapper.find('.category').text()).toBe('Security') // K-1 AC12: 원문 대신 라벨
     expect(wrapper.find('.difficulty').text()).toBe('주니어')
     expect(wrapper.find('.summary').text()).toBe(concept.summary)
     expect(wrapper.find('.rating').text()).toContain('4.0')

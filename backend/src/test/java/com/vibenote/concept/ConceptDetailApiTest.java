@@ -432,4 +432,100 @@ class ConceptDetailApiTest extends IntegrationTestBase {
 
         assertThat(elapsedMs).isLessThan(500);
     }
+
+    // ── K-1 AC2·AC11 ──
+
+    @Autowired com.vibenote.analysis.concept.ConceptLinkService conceptLinkService;
+
+    @Test
+    void K1_AC2_로그인_회원의_수준과_수준별_요약_본문_3개를_순서대로_준다() throws Exception {
+        long id = published("k1-ac2 카드", "spring");
+        jdbc.update(
+                "UPDATE concepts SET summary_junior = '주니어 요약', body_junior = '## 주니어' WHERE id ="
+                        + " ?",
+                id);
+        long userId = insertUser("k1ac2");
+        jdbc.update("UPDATE users SET level = 'JUNIOR' WHERE id = ?", userId);
+
+        detail(id, bearer(userId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.viewerLevel").value("JUNIOR"))
+                .andExpect(jsonPath("$.levels", hasSize(3)))
+                .andExpect(jsonPath("$.levels[*].level", contains("BEGINNER", "JUNIOR", "SENIOR")))
+                .andExpect(jsonPath("$.levels[0].summary").value(nullValue()))
+                .andExpect(jsonPath("$.levels[0].body").value(nullValue()))
+                .andExpect(jsonPath("$.levels[1].summary").value("주니어 요약"))
+                .andExpect(jsonPath("$.levels[1].body").value("## 주니어"))
+                .andExpect(jsonPath("$.levels[2].summary").value(nullValue()));
+    }
+
+    @Test
+    void K1_AC2_비로그인_깨진_토큰_탈퇴_회원이면_viewerLevel은_null이고_levels는_같다() throws Exception {
+        long id = published("k1-ac2 공개", "cs");
+        jdbc.update("UPDATE concepts SET summary_senior = '시니어 요약' WHERE id = ?", id);
+        long withdrawn = insertUser("k1ac2w");
+        jdbc.update("UPDATE users SET status = 'WITHDRAWN' WHERE id = ?", withdrawn);
+
+        for (ResultActions res :
+                List.of(
+                        detail(id),
+                        detail(id, "Bearer not-a-jwt"),
+                        detail(id, bearer(withdrawn)))) {
+            res.andExpect(status().isOk())
+                    .andExpect(jsonPath("$.viewerLevel").value(nullValue()))
+                    .andExpect(
+                            jsonPath("$.levels[*].level", contains("BEGINNER", "JUNIOR", "SENIOR")))
+                    .andExpect(jsonPath("$.levels[2].summary").value("시니어 요약"));
+        }
+    }
+
+    /** K-1 AC11: mock fixture의 새 초안(GraphQL API (DGS))을 저장하고 공개하면 상세에 수준별 요약 3개가 보인다. */
+    @Test
+    void K1_AC11_mock_초안을_공개하면_상세_levels에_요약_3개가_보인다() throws Exception {
+        long userId = insertUser("k1ac11");
+        jdbc.update(
+                "INSERT INTO analyses (user_id, project_id, source_type, project_name, title,"
+                        + " level, status) VALUES (?, ?, 'ZIP', 'p', 'p', 'JUNIOR', 'EXTRACTING')",
+                userId,
+                TestProjects.zip(jdbc, userId));
+        long analysisId = lastId();
+        jdbc.update("DELETE FROM concepts WHERE name = 'GraphQL API (DGS)'");
+        // 테스트 리소스의 같은 이름 fixture(빈 목록)가 클래스패스에서 앞서므로 main 파일을 직접 읽는다 (작업 폴더는 backend)
+        String fixture =
+                java.nio.file.Files.readString(
+                        java.nio.file.Path.of("src/main/resources/llm-fixtures/concept.json"),
+                        StandardCharsets.UTF_8);
+        String response =
+                com.vibenote.llm.MockLlmClient.linkConceptNames(fixture, "1 | 없는 카드 | java\n");
+        var input =
+                new com.vibenote.analysis.concept.ConceptPrompts.Input(
+                        "", "", "", java.util.Set.of(), List.of(), java.util.Set.of());
+        var items =
+                com.vibenote.analysis.concept.ConceptResponseParser.parse(
+                        objectMapper.readTree(response),
+                        input,
+                        List.of(),
+                        com.vibenote.common.Level.JUNIOR,
+                        15,
+                        5,
+                        analysisId);
+
+        conceptLinkService.save(analysisId, items);
+        long id =
+                jdbc.queryForObject(
+                        "SELECT id FROM concepts WHERE name = 'GraphQL API (DGS)' AND status ="
+                                + " 'DRAFT'",
+                        Long.class);
+        jdbc.update("UPDATE concepts SET status = 'PUBLISHED' WHERE id = ?", id);
+
+        detail(id)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.levels[0].summary").isString())
+                .andExpect(jsonPath("$.levels[1].summary").isString())
+                .andExpect(jsonPath("$.levels[2].summary").isString())
+                .andExpect(
+                        jsonPath(
+                                "$.levels[*].body",
+                                contains(nullValue(), nullValue(), nullValue())));
+    }
 }

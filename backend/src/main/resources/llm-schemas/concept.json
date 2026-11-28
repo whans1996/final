@@ -16,13 +16,26 @@
               {
                 "type": "object",
                 "additionalProperties": false,
-                "required": ["name", "category", "difficulty", "summary", "body"],
+                "required": ["name", "category", "difficulty", "summary", "body", "levelSummaries"],
                 "properties": {
                   "name": { "type": "string" },
-                  "category": { "type": "string" },
-                  "difficulty": { "type": "string" },
+                  "category": {
+                    "type": "string",
+                    "enum": ["java", "spring", "web", "security", "mybatis", "vue", "database", "javascript", "tooling", "typescript", "react", "cs"]
+                  },
+                  "difficulty": { "type": "string", "enum": ["BEGINNER", "JUNIOR", "SENIOR"] },
                   "summary": { "type": "string" },
-                  "body": { "type": "string" }
+                  "body": { "type": "string" },
+                  "levelSummaries": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["beginner", "junior", "senior"],
+                    "properties": {
+                      "beginner": { "type": "string" },
+                      "junior": { "type": "string" },
+                      "senior": { "type": "string" }
+                    }
+                  }
                 }
               },
               { "type": "null" }

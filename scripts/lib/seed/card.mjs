@@ -5,12 +5,21 @@ import { join, relative } from 'node:path';
 
 export const FRONT_KEYS = ['name', 'category', 'difficulty', 'reference'];
 export const SECTIONS = ['summary', 'body', 'example'];
+/** 선택 절 (K-1 AC13): 수준별 한 줄 요약·본문. 없으면 DB 값이 NULL이다. 절 이름 → DB 컬럼 */
+export const LEVEL_SECTIONS = {
+  'summary-beginner': 'summary_beginner',
+  'summary-junior': 'summary_junior',
+  'summary-senior': 'summary_senior',
+  'body-beginner': 'body_beginner',
+  'body-junior': 'body_junior',
+  'body-senior': 'body_senior',
+};
 export const DIFFICULTIES = ['BEGINNER', 'JUNIOR', 'SENIOR'];
 /** 예제 실행(②) 대상 언어. 아래 UNCHECKED_LANGS는 허용하되 "검사 안 함"으로 보고한다 */
 export const CHECKED_LANGS = ['java', 'sql', 'xml', 'yaml', 'js', 'jsx', 'ts', 'tsx', 'vue', 'json'];
 export const UNCHECKED_LANGS = ['http', 'text', 'bash', 'properties', 'gradle', 'kotlin'];
-/** 생성 순서. 여기 없는 카테고리는 이 뒤에 이름순 */
-export const CATEGORY_ORDER = ['java', 'spring', 'web', 'security', 'mybatis', 'vue'];
+/** 생성 순서 = BE ConceptCategories.ORDERED 12종 (K-1, seed-format.test.mjs가 같은지 본다). 여기 없는 카테고리는 이 뒤에 이름순 */
+export const CATEGORY_ORDER = ['java', 'spring', 'web', 'security', 'mybatis', 'vue', 'database', 'javascript', 'tooling', 'typescript', 'react', 'cs'];
 
 const SECTION_RE = /^## ([a-z][a-z0-9-]*)\s*$/;
 const FENCE_RE = /^ {0,3}(`{3,}|~{3,})(.*)$/;
@@ -134,10 +143,13 @@ function parseExample(rows, card) {
   }
 }
 
-/** DB에 들어갈 값. example_code는 블록 내용을 빈 줄 하나로 이어 붙인다 (언어 태그는 저장하지 않음) */
+/**
+ * DB에 들어갈 값. example_code는 블록 내용을 빈 줄 하나로 이어 붙인다 (언어 태그는 저장하지 않음).
+ * 수준별 선택 절은 없거나 비면 null (K-1 AC13)
+ */
 export function toRow(card) {
   const f = card.front;
-  return {
+  const row = {
     name: f.name ?? '',
     category: f.category ?? '',
     difficulty: f.difficulty ?? '',
@@ -146,6 +158,11 @@ export function toRow(card) {
     example_code: card.blocks.map((b) => b.code).join('\n\n'),
     reference_url: f.reference ?? '',
   };
+  for (const [section, column] of Object.entries(LEVEL_SECTIONS)) {
+    const v = card.sections[section];
+    row[column] = v === undefined || v === '' ? null : v;
+  }
+  return row;
 }
 
 const needsQuote = (v) => v !== v.trim() || v.startsWith('"') || v === '';
@@ -164,7 +181,11 @@ export function renderCard(row, blocks) {
   out.push(`category: ${frontValue(row.category)}`);
   out.push(`difficulty: ${frontValue(row.difficulty)}`);
   out.push(`reference: ${frontValue(row.reference_url)}`);
-  out.push('---', '', '## summary', '', row.summary, '', '## body', '', row.body, '', '## example', '');
+  out.push('---', '', '## summary', '', row.summary, '', '## body', '', row.body, '');
+  for (const [section, column] of Object.entries(LEVEL_SECTIONS)) {
+    if (row[column] != null) out.push(`## ${section}`, '', row[column], '');
+  }
+  out.push('## example', '');
   blocks.forEach((b, idx) => {
     const fence = fenceFor(b.code);
     if (idx) out.push('');
@@ -178,6 +199,9 @@ export function renderCard(row, blocks) {
 export function sqlString(value) {
   return `'${String(value).replace(/\\/g, '\\\\').replace(/'/g, "''")}'`;
 }
+
+/** null이면 NULL, 아니면 문자열 리터럴 */
+const sqlNullable = (value) => (value == null ? 'NULL' : sqlString(value));
 
 export function categoryRank(category) {
   const i = CATEGORY_ORDER.indexOf(category);
@@ -219,7 +243,13 @@ ON DUPLICATE KEY UPDATE
     category      = seed.category,
     difficulty    = seed.difficulty,
     summary       = seed.summary,
+    summary_beginner = seed.summary_beginner,
+    summary_junior   = seed.summary_junior,
+    summary_senior   = seed.summary_senior,
     body          = seed.body,
+    body_beginner = seed.body_beginner,
+    body_junior   = seed.body_junior,
+    body_senior   = seed.body_senior,
     example_code  = seed.example_code,
     source        = seed.source,
     reference_url = seed.reference_url;
@@ -227,7 +257,11 @@ ON DUPLICATE KEY UPDATE
 
 /** 카드들로 R__seed_concepts.sql 전체를 만든다. 입력 순서와 관계없이 같은 카드면 같은 출력이다 */
 export function buildSql(cards) {
-  const out = [HEADER, 'INSERT INTO concepts (name, category, difficulty, summary, body, example_code, status, source, reference_url) VALUES'];
+  const out = [
+    HEADER,
+    'INSERT INTO concepts (name, category, difficulty, summary, summary_beginner, summary_junior, summary_senior,',
+    '                      body, body_beginner, body_junior, body_senior, example_code, status, source, reference_url) VALUES',
+  ];
   const sorted = sortCards(cards);
   let lastCategory = null;
   sorted.forEach((card, idx) => {
@@ -241,7 +275,9 @@ export function buildSql(cards) {
       `-- ${card.file}`,
       `(${sqlString(r.name)}, ${sqlString(r.category)}, ${sqlString(r.difficulty)},`,
       ` ${sqlString(r.summary)},`,
+      ` ${sqlNullable(r.summary_beginner)}, ${sqlNullable(r.summary_junior)}, ${sqlNullable(r.summary_senior)},`,
       ` ${sqlString(r.body)},`,
+      ` ${sqlNullable(r.body_beginner)}, ${sqlNullable(r.body_junior)}, ${sqlNullable(r.body_senior)},`,
       ` ${sqlString(r.example_code)},`,
       ` 'PUBLISHED', 'SEED', ${sqlString(r.reference_url)})${idx < sorted.length - 1 ? ',' : ''}`,
     );

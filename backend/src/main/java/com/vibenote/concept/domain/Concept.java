@@ -14,7 +14,13 @@ public class Concept {
     private String category;
     private Level difficulty;
     private String summary;
+    private String summaryBeginner;
+    private String summaryJunior;
+    private String summarySenior;
     private String body;
+    private String bodyBeginner;
+    private String bodyJunior;
+    private String bodySenior;
     private String exampleCode;
     private ConceptStatus status;
     private ConceptSource source;
@@ -26,6 +32,42 @@ public class Concept {
 
     public boolean isPublished() {
         return status == ConceptStatus.PUBLISHED;
+    }
+
+    /** 그 수준의 한 줄 요약 (K-1). 없으면 null. */
+    public String summaryFor(Level level) {
+        return switch (level) {
+            case BEGINNER -> summaryBeginner;
+            case JUNIOR -> summaryJunior;
+            case SENIOR -> summarySenior;
+        };
+    }
+
+    /** 그 수준의 본문 (K-1). 없으면 null. */
+    public String bodyFor(Level level) {
+        return switch (level) {
+            case BEGINNER -> bodyBeginner;
+            case JUNIOR -> bodyJunior;
+            case SENIOR -> bodySenior;
+        };
+    }
+
+    /** 그 수준의 요약·본문을 바꾼다 (K-1). */
+    public void setLevelText(Level level, String summary, String body) {
+        switch (level) {
+            case BEGINNER -> {
+                summaryBeginner = summary;
+                bodyBeginner = body;
+            }
+            case JUNIOR -> {
+                summaryJunior = summary;
+                bodyJunior = body;
+            }
+            case SENIOR -> {
+                summarySenior = summary;
+                bodySenior = body;
+            }
+        }
     }
 
     public Long getId() {
@@ -74,6 +116,54 @@ public class Concept {
 
     public void setBody(String body) {
         this.body = body;
+    }
+
+    public String getSummaryBeginner() {
+        return summaryBeginner;
+    }
+
+    public void setSummaryBeginner(String summaryBeginner) {
+        this.summaryBeginner = summaryBeginner;
+    }
+
+    public String getSummaryJunior() {
+        return summaryJunior;
+    }
+
+    public void setSummaryJunior(String summaryJunior) {
+        this.summaryJunior = summaryJunior;
+    }
+
+    public String getSummarySenior() {
+        return summarySenior;
+    }
+
+    public void setSummarySenior(String summarySenior) {
+        this.summarySenior = summarySenior;
+    }
+
+    public String getBodyBeginner() {
+        return bodyBeginner;
+    }
+
+    public void setBodyBeginner(String bodyBeginner) {
+        this.bodyBeginner = bodyBeginner;
+    }
+
+    public String getBodyJunior() {
+        return bodyJunior;
+    }
+
+    public void setBodyJunior(String bodyJunior) {
+        this.bodyJunior = bodyJunior;
+    }
+
+    public String getBodySenior() {
+        return bodySenior;
+    }
+
+    public void setBodySenior(String bodySenior) {
+        this.bodySenior = bodySenior;
     }
 
     public String getExampleCode() {

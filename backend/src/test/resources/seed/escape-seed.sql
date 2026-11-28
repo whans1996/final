@@ -17,15 +17,18 @@
 --   - 카드 이름을 바꾸면 새 카드가 생긴다. 이름은 바꾸지 말고 필요하면 새 카드를 추가한다.
 --   - 작은따옴표와 역슬래시는 생성기가 이스케이프한다 (MySQL 기본 모드에서 역슬래시는 이스케이프 문자).
 
-INSERT INTO concepts (name, category, difficulty, summary, body, example_code, status, source, reference_url) VALUES
+INSERT INTO concepts (name, category, difficulty, summary, summary_beginner, summary_junior, summary_senior,
+                      body, body_beginner, body_junior, body_senior, example_code, status, source, reference_url) VALUES
 
 -- ───────────── java ─────────────
 
 -- backend/src/test/resources/seed/cards/java/escape-fixture.md
 ('이스케이프 검사 카드 (테스트 전용)', 'java', 'BEGINNER',
  'It''s 테스트 전용 카드다. 정규식 ''\\d+''와 경로 C:\\temp가 그대로 들어가야 한다.',
+ NULL, NULL, NULL,
  '- 작은따옴표: It''s, ''quoted''
 - 역슬래시: \\d+ \\\\ \\n \\'' 끝\\',
+ NULL, NULL, NULL,
  'Pattern digits = Pattern.compile("\\\\d+");
 String path = "C:\\\\temp\\\\It''s";',
  'PUBLISHED', 'SEED', 'https://docs.oracle.com/javase/tutorial/essential/regex/')
@@ -36,7 +39,13 @@ ON DUPLICATE KEY UPDATE
     category      = seed.category,
     difficulty    = seed.difficulty,
     summary       = seed.summary,
+    summary_beginner = seed.summary_beginner,
+    summary_junior   = seed.summary_junior,
+    summary_senior   = seed.summary_senior,
     body          = seed.body,
+    body_beginner = seed.body_beginner,
+    body_junior   = seed.body_junior,
+    body_senior   = seed.body_senior,
     example_code  = seed.example_code,
     source        = seed.source,
     reference_url = seed.reference_url;

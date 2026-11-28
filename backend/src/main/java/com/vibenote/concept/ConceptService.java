@@ -8,6 +8,7 @@ import com.vibenote.concept.dto.ConceptDetailResponse;
 import com.vibenote.concept.dto.ConceptSearchRequest;
 import com.vibenote.concept.dto.ConceptSummaryResponse;
 import com.vibenote.concept.wish.ConceptWishService;
+import com.vibenote.user.UserService;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.stereotype.Service;
@@ -23,14 +24,17 @@ public class ConceptService {
     private final ConceptMapper conceptMapper;
     private final ConceptQueryService conceptQueryService;
     private final ConceptWishService conceptWishService;
+    private final UserService userService;
 
     public ConceptService(
             ConceptMapper conceptMapper,
             ConceptQueryService conceptQueryService,
-            ConceptWishService conceptWishService) {
+            ConceptWishService conceptWishService,
+            UserService userService) {
         this.conceptMapper = conceptMapper;
         this.conceptQueryService = conceptQueryService;
         this.conceptWishService = conceptWishService;
+        this.userService = userService;
     }
 
     public PageResponse<ConceptSummaryResponse> search(
@@ -56,8 +60,8 @@ public class ConceptService {
     }
 
     /**
-     * 공개 카드 상세 (F-10). userId가 null(비로그인·깨진 토큰)이면 등장 위치는 빈 배열이고 찜 여부는 false다 (F-12 AC7). 없거나 비공개
-     * 카드면 CONCEPT_404 (AC2).
+     * 공개 카드 상세 (F-10). userId가 null(비로그인·깨진 토큰)이면 등장 위치는 빈 배열이고 찜 여부는 false, 내 수준은 null이다 (F-12
+     * AC7, K-1 AC2). 없거나 비공개 카드면 CONCEPT_404 (AC2).
      */
     public ConceptDetailResponse getDetail(long id, Long userId) {
         Concept concept = conceptQueryService.getPublished(id);
@@ -68,7 +72,11 @@ public class ConceptService {
                                 .map(ConceptAppearanceResponse::from)
                                 .toList();
         return ConceptDetailResponse.of(
-                concept, conceptWishService.isWished(id, userId), appearances, related(concept));
+                concept,
+                conceptWishService.isWished(id, userId),
+                appearances,
+                related(concept),
+                userService.findActiveLevel(userId));
     }
 
     /** 함께 등장한 카드를 먼저 담고, 모자란 자리를 같은 카테고리 인기순으로 채운다 (AC6·AC7). */

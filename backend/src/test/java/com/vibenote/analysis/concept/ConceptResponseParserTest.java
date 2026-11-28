@@ -16,7 +16,10 @@ import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
-/** F-08 AC4(기존 카드 연결)·AC5(새 개념 검증·이름 비교)·AC6(형식 오류) — 5.3절·5.4절. */
+/**
+ * F-08 AC4(기존 카드 연결)·AC5(새 개념 검증·이름 비교)·AC6(형식 오류) — 5.3절·5.4절. K-1 AC7(수준 요약)·AC8(카테고리 별칭)·AC9(괄호
+ * 안 키)·AC10(숨긴 카드).
+ */
 class ConceptResponseParserTest {
 
     private static final JsonMapper JSON = JsonMapper.builder().build();
@@ -40,7 +43,7 @@ class ConceptResponseParserTest {
     private static List<ExtractedConcept> parse(String json, int maxLinks, int maxDrafts) {
         JsonNode root = JSON.readTree(json);
         return ConceptResponseParser.parse(
-                root, INPUT, EXISTING, Level.JUNIOR, maxLinks, maxDrafts);
+                root, INPUT, EXISTING, Level.JUNIOR, maxLinks, maxDrafts, 42L);
     }
 
     private static String newItem(String name) {
@@ -269,6 +272,7 @@ class ConceptResponseParserTest {
         assertThat(result.get(1).draft().difficulty()).isEqualTo(Level.JUNIOR);
     }
 
+    /** K-1에서 바뀜: 숨긴 카드와 같은 이름은 연결하지 않고 버린다 (AC10). "DI"는 괄호 안 키로 카드 1에 연결된다 (AC9 테스트). */
     @Test
     void AC5_이름이_기존_카드와_같으면_새로_만들지_않고_그_카드에_연결한다() {
         List<ExtractedConcept> result =
@@ -279,12 +283,12 @@ class ConceptResponseParserTest {
                                         newItem("의존성  주입"),
                                         newItem("트랜잭션 (Transaction)"),
                                         newItem("숨긴개념"),
-                                        newItem("DI"))
+                                        newItem("새 개념"))
                                 + "]}");
 
         assertThat(result)
                 .extracting(c -> c.conceptId() + " " + (c.draft() == null ? "-" : c.draft().name()))
-                .containsExactly("1 -", "2 -", "9 -", "null DI");
+                .containsExactly("1 -", "2 -", "null 새 개념");
         assertThat(result.get(0).fileId()).isEqualTo(101L);
         assertThat(result.get(0).lineHint()).isEqualTo("L3");
     }
@@ -324,5 +328,233 @@ class ConceptResponseParserTest {
 
         assertThat(result).extracting(ExtractedConcept::conceptId).containsExactly(2L);
         assertThat(result.get(0).draft()).isNull();
+    }
+
+    // ── K-1 ──
+
+    private static String levelItem(String name, String levelSummaries) {
+        return """
+        {"new": {"name": "%s", "category": "spring", "difficulty": "JUNIOR",
+         "summary": "요약", "body": null, "levelSummaries": %s}}
+        """
+                .formatted(name, levelSummaries);
+    }
+
+    @Test
+    void AC7_levelSummaries_세_값을_정리해_초안에_담는다() {
+        List<ExtractedConcept> result =
+                parse(
+                        "{\"concepts\": ["
+                                + levelItem(
+                                        "빈 등록",
+                                        """
+                                        {"beginner": "  비유  ", "junior": "%s", "senior": " "}
+                                        """
+                                                .formatted("가".repeat(301)))
+                                + "]}");
+
+        NewConcept draft = result.get(0).draft();
+        assertThat(draft.summaryBeginner()).isEqualTo("비유");
+        assertThat(draft.summaryJunior()).hasSize(300);
+        assertThat(draft.summarySenior()).isNull();
+    }
+
+    @Test
+    void AC7_levelSummaries가_없거나_객체가_아니면_초안은_남고_세_칸은_NULL() {
+        List<ExtractedConcept> result =
+                parse(
+                        "{\"concepts\": ["
+                                + String.join(
+                                        ",",
+                                        newItem("요약 없음"),
+                                        levelItem("문자열", "\"요약\""),
+                                        levelItem("널", "null"),
+                                        levelItem("숫자 값", "{\"beginner\": 1, \"junior\": null}"))
+                                + "]}");
+
+        assertThat(result)
+                .hasSize(4)
+                .allSatisfy(
+                        c -> {
+                            assertThat(c.draft().summaryBeginner()).isNull();
+                            assertThat(c.draft().summaryJunior()).isNull();
+                            assertThat(c.draft().summarySenior()).isNull();
+                        });
+    }
+
+    private static String categoryItem(String name, String category) {
+        return """
+        {"new": {"name": "%s", "category": "%s", "summary": "요약"}}
+        """
+                .formatted(name, category);
+    }
+
+    @Test
+    void AC8_12종_밖_카테고리는_별칭으로_바꾸고_그래도_밖이면_그_초안만_버린다() {
+        List<ExtractedConcept> result =
+                parse(
+                        "{\"concepts\": ["
+                                + String.join(
+                                        ",",
+                                        categoryItem("화살표 함수", "JS"),
+                                        categoryItem("자동 설정", "Spring Boot"),
+                                        categoryItem("반응형 상태", "Vue.js"),
+                                        categoryItem("인덱스", "MySQL"),
+                                        categoryItem("컨테이너", "Docker"),
+                                        categoryItem("코루틴", "kotlin"),
+                                        categoryItem("제네릭 타입", "typescript"))
+                                + "]}",
+                        15,
+                        10);
+
+        assertThat(result)
+                .extracting(c -> c.draft().name() + " " + c.draft().category())
+                .containsExactly(
+                        "화살표 함수 javascript",
+                        "자동 설정 spring",
+                        "반응형 상태 vue",
+                        "인덱스 database",
+                        "컨테이너 tooling",
+                        "제네릭 타입 typescript");
+    }
+
+    /** AC9 표의 기존 카드 다섯 장 (모두 PUBLISHED). */
+    private static final List<Concept> AC9_CARDS =
+            List.of(
+                    concept(21, "의존성 주입 (DI)", ConceptStatus.PUBLISHED),
+                    concept(22, "CSRF (사이트 간 요청 위조)", ConceptStatus.PUBLISHED),
+                    concept(
+                            23,
+                            "요청 파라미터 바인딩 (@PathVariable·@RequestParam·@RequestBody)",
+                            ConceptStatus.PUBLISHED),
+                    concept(24, "가상 스레드 (Java 21)", ConceptStatus.PUBLISHED),
+                    concept(25, "패턴 매칭 switch와 record 패턴 (Java 21)", ConceptStatus.PUBLISHED));
+
+    private static List<ExtractedConcept> parseWith(List<Concept> cards, String... names) {
+        List<String> items = new ArrayList<>();
+        for (String name : names) {
+            items.add(newItem(name));
+        }
+        return ConceptResponseParser.parse(
+                JSON.readTree("{\"concepts\": [" + String.join(",", items) + "]}"),
+                INPUT,
+                cards,
+                Level.JUNIOR,
+                15,
+                5,
+                42L);
+    }
+
+    private static List<String> linkOrDraft(List<ExtractedConcept> result) {
+        return result.stream()
+                .map(c -> c.conceptId() != null ? "id " + c.conceptId() : "new " + c.draft().name())
+                .toList();
+    }
+
+    @Test
+    void AC9_괄호_안_키로_약어와_한글_이름을_같은_카드에_연결한다() {
+        assertThat(linkOrDraft(parseWith(AC9_CARDS, "DI"))).containsExactly("id 21");
+        assertThat(linkOrDraft(parseWith(AC9_CARDS, "사이트 간 요청 위조"))).containsExactly("id 22");
+        assertThat(linkOrDraft(parseWith(AC9_CARDS, "DI (의존성 주입)"))).containsExactly("id 21");
+        assertThat(linkOrDraft(parseWith(AC9_CARDS, "@PathVariable")))
+                .containsExactly("new @PathVariable");
+        assertThat(linkOrDraft(parseWith(AC9_CARDS, "Java 21"))).containsExactly("new Java 21");
+    }
+
+    @Test
+    void AC9_정확히_같은_전체_이름이_앞부분과_괄호_안보다_이긴다() {
+        List<Concept> cards = new ArrayList<>(AC9_CARDS);
+        cards.add(concept(30, "DI", ConceptStatus.PUBLISHED));
+        assertThat(linkOrDraft(parseWith(cards, "DI"))).containsExactly("id 30");
+
+        // 앞부분 키가 괄호 안 키보다 먼저다
+        List<Concept> fronts =
+                List.of(
+                        concept(40, "스레드 (가상 스레드)", ConceptStatus.PUBLISHED),
+                        concept(41, "가상 스레드 (Loom)", ConceptStatus.PUBLISHED));
+        assertThat(linkOrDraft(parseWith(fronts, "가상 스레드"))).containsExactly("id 41");
+    }
+
+    @Test
+    void AC9_괄호_안은_2자에서_30자까지만_키가_된다() {
+        String longInner = "가".repeat(31);
+        List<Concept> cards =
+                List.of(
+                        concept(50, "제네릭 (T)", ConceptStatus.PUBLISHED),
+                        concept(51, "긴 괄호 (" + longInner + ")", ConceptStatus.PUBLISHED));
+
+        assertThat(linkOrDraft(parseWith(cards, "T", longInner)))
+                .containsExactly("new T", "new " + longInner);
+    }
+
+    @Test
+    void AC10_숨긴_카드와_같은_이름은_버리고_검수_대기_카드에는_연결한다() {
+        List<ExtractedConcept> result =
+                parse(
+                        "{\"concepts\": ["
+                                + String.join(
+                                        ",", newItem("숨긴 개념"), newItem("Hidden"), newItem("AI 초안"))
+                                + "]}");
+
+        assertThat(linkOrDraft(result)).containsExactly("id 3");
+    }
+
+    /** 리뷰 반영: 괄호 안 키끼리는 비교하지 않는다 (괄호 안만 같은 서로 다른 개념이 기존 카드에 붙지 않게). */
+    @Test
+    void AC9_괄호_안만_같은_초안은_그_카드에_연결하지_않는다() {
+        List<Concept> cards =
+                List.of(
+                        concept(60, "파일 업로드 (MultipartFile)", ConceptStatus.PUBLISHED),
+                        concept(61, "OpenAPI 문서화 (springdoc)", ConceptStatus.PUBLISHED));
+
+        assertThat(
+                        linkOrDraft(
+                                parseWith(
+                                        cards,
+                                        "파일 크기 제한 (MultipartFile)",
+                                        "Swagger UI 설정 (springdoc)",
+                                        "MultipartFile")))
+                .containsExactly(
+                        "new 파일 크기 제한 (MultipartFile)", "new Swagger UI 설정 (springdoc)", "id 60");
+    }
+
+    /** 리뷰 반영: 숨긴 카드가 더 높은 키로 맞아도 숨기지 않은 카드가 맞으면 그 카드에 연결한다. */
+    @Test
+    void AC10_숨긴_카드보다_숨기지_않은_카드에_먼저_연결한다() {
+        List<Concept> cards =
+                List.of(
+                        concept(70, "DI", ConceptStatus.HIDDEN),
+                        concept(71, "의존성 주입 (DI)", ConceptStatus.PUBLISHED),
+                        concept(72, "빈 (Bean)", ConceptStatus.HIDDEN),
+                        concept(73, "빈 (스프링 빈)", ConceptStatus.DRAFT));
+
+        assertThat(linkOrDraft(parseWith(cards, "DI", "빈"))).containsExactly("id 71", "id 73");
+    }
+
+    @Test
+    void AC8_버린_카테고리는_분석_id_이름_원래_값을_WARN으로_남기고_본문은_남기지_않는다() {
+        ch.qos.logback.classic.Logger logger =
+                (ch.qos.logback.classic.Logger)
+                        org.slf4j.LoggerFactory.getLogger(ConceptResponseParser.class);
+        ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent> appender =
+                new ch.qos.logback.core.read.ListAppender<>();
+        appender.start();
+        logger.addAppender(appender);
+        try {
+            parse(
+                    """
+                    {"concepts": [{"new": {"name": "코루틴", "category": "kotlin",
+                     "summary": "요약", "body": "비밀 본문"}}]}
+                    """);
+        } finally {
+            logger.detachAppender(appender);
+        }
+
+        assertThat(appender.list).hasSize(1);
+        ch.qos.logback.classic.spi.ILoggingEvent event = appender.list.get(0);
+        assertThat(event.getLevel()).isEqualTo(ch.qos.logback.classic.Level.WARN);
+        assertThat(event.getFormattedMessage())
+                .contains("42", "코루틴", "kotlin")
+                .doesNotContain("비밀 본문");
     }
 }
