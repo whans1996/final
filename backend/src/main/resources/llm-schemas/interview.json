@@ -1,0 +1,33 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["questions"],
+  "properties": {
+    "questions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["category", "question", "keyPoints", "evidence", "conceptIds"],
+        "properties": {
+          "category": { "type": "string" },
+          "question": { "type": "string" },
+          "keyPoints": { "type": "array", "items": { "type": "string" } },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["fileNo", "lines"],
+              "properties": {
+                "fileNo": { "type": "integer" },
+                "lines": { "type": "string" }
+              }
+            }
+          },
+          "conceptIds": { "type": ["array", "null"], "items": { "type": "integer" } }
+        }
+      }
+    }
+  }
+}

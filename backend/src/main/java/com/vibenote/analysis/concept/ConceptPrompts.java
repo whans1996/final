@@ -102,7 +102,7 @@ public final class ConceptPrompts {
                                     i + 1,
                                     f.getPath(),
                                     f.getLayer(),
-                                    numberLines(f.getContent()),
+                                    ExplainPrompts.numberLines(f.getContent()),
                                     props.maxFileChars());
             if (code.length() + block.length() > budget) {
                 break;
@@ -117,18 +117,5 @@ public final class ConceptPrompts {
                 Set.copyOf(catalogIds),
                 List.copyOf(fileIds),
                 Set.copyOf(codeFileNos));
-    }
-
-    /** 줄마다 1부터 {@code 12: } 형태의 번호를 붙인다. */
-    static String numberLines(String content) {
-        StringBuilder out = new StringBuilder(content.length() + 64);
-        int no = 1;
-        for (String line : (Iterable<String>) content.lines()::iterator) {
-            if (no > 1) {
-                out.append('\n');
-            }
-            out.append(no++).append(": ").append(line);
-        }
-        return out.toString();
     }
 }
