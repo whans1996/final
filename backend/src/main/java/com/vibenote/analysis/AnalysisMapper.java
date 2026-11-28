@@ -122,6 +122,12 @@ public interface AnalysisMapper {
     /** GENERATING인 퀴즈를 모두 FAILED로 바꾼다 (재시작 복구, L-1a AC8). */
     int failInterruptedQuizRegenerations();
 
+    /** 본인의 미삭제 분석 + overview를 {@code FOR UPDATE}로 잠근다 (I-1a AC7). 아니면 empty. */
+    Optional<AnalysisDetail> lockOwnedDetail(@Param("id") long id, @Param("userId") long userId);
+
+    /** 분석 + overview (삭제 여부와 상관없음). */
+    Optional<AnalysisDetail> findDetailById(long id);
+
     /** 진행 중이고 삭제되지 않은 분석이면 행을 잠그고 id를 돌려준다 (#91). */
     Optional<Long> lockInProgress(long id);
 

@@ -1,5 +1,6 @@
 package com.vibenote.interview;
 
+import com.vibenote.analysis.AnalysisService;
 import com.vibenote.analysis.concept.AnalysisConceptService;
 import com.vibenote.analysis.domain.AnalysisDetail;
 import com.vibenote.analysis.explain.ExplainPrompts;
@@ -31,7 +32,7 @@ public class InterviewGenerator {
     private static final Logger log = LoggerFactory.getLogger(InterviewGenerator.class);
 
     private final InterviewSaveService saveService;
-    private final InterviewMapper mapper;
+    private final AnalysisService analysisService;
     private final AnalysisConceptService conceptService;
     private final LlmClient llm;
     private final PromptTemplates templates;
@@ -39,13 +40,13 @@ public class InterviewGenerator {
 
     public InterviewGenerator(
             InterviewSaveService saveService,
-            InterviewMapper mapper,
+            AnalysisService analysisService,
             AnalysisConceptService conceptService,
             LlmClient llm,
             PromptTemplates templates,
             InterviewProperties properties) {
         this.saveService = saveService;
-        this.mapper = mapper;
+        this.analysisService = analysisService;
         this.conceptService = conceptService;
         this.llm = llm;
         this.templates = templates;
@@ -90,13 +91,11 @@ public class InterviewGenerator {
     }
 
     private Optional<List<GeneratedQuestion>> call(AnalysisInterview interview) {
-        AnalysisDetail analysis =
-                mapper.findAnalysis(interview.getAnalysisId())
-                        .orElseThrow(() -> new IllegalStateException("분석 없음"));
+        AnalysisDetail analysis = analysisService.findDetailForPipeline(interview.getAnalysisId());
         InterviewPrompts.Input input =
                 InterviewPrompts.input(
                         analysis.getOverview(),
-                        mapper.findFiles(analysis.getId()),
+                        analysisService.findFiles(analysis.getId()),
                         conceptService.findForQuiz(analysis.getId()),
                         properties);
         String prompt =

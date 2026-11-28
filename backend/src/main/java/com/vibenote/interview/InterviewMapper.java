@@ -1,7 +1,5 @@
 package com.vibenote.interview;
 
-import com.vibenote.analysis.domain.AnalysisDetail;
-import com.vibenote.analysis.domain.AnalysisFile;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -11,15 +9,6 @@ import org.apache.ibatis.annotations.Param;
 /** SQL: resources/mapper/interview/InterviewMapper.xml (I-1a). */
 @Mapper
 public interface InterviewMapper {
-
-    /** 본인의 미삭제 분석 + overview를 {@code FOR UPDATE}로 잠근다. 같은 분석의 동시 요청을 차례로 처리한다 (AC7). */
-    Optional<AnalysisDetail> lockOwnedAnalysis(@Param("id") long id, @Param("userId") long userId);
-
-    /** 분석 + overview (삭제 여부와 상관없음). 생성기 내부용. */
-    Optional<AnalysisDetail> findAnalysis(long id);
-
-    /** 선별 파일 전체 (content·importance 포함, id 오름차순). */
-    List<AnalysisFile> findFiles(long analysisId);
 
     Optional<AnalysisInterview> findByAnalysis(long analysisId);
 

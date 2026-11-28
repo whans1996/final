@@ -18,27 +18,6 @@
         id, analysis_id, status, error_code, regenerations, generated_at, created_at, updated_at
     </sql>
 
-    <!-- I-1a AC7. 같은 분석의 동시 요청을 차례로 처리하려고 analyses 행을 잠근다 -->
-    <select id="lockOwnedAnalysis" resultMap="com.vibenote.analysis.AnalysisMapper.analysisDetail">
-        SELECT id, user_id, source_type, source_url, project_name, title, level, status, progress, is_public,
-               error_code, error_message, created_at, updated_at, overview
-        FROM analyses
-        WHERE id = #{id} AND user_id = #{userId} AND deleted_at IS NULL
-        FOR UPDATE
-    </select>
-
-    <select id="findAnalysis" resultMap="com.vibenote.analysis.AnalysisMapper.analysisDetail">
-        SELECT id, user_id, source_type, source_url, project_name, title, level, status, progress, is_public,
-               error_code, error_message, created_at, updated_at, overview
-        FROM analyses
-        WHERE id = #{id}
-    </select>
-
-    <select id="findFiles" resultType="com.vibenote.analysis.domain.AnalysisFile">
-        SELECT id, analysis_id, path, layer, selected, importance, role, content
-        FROM analysis_files WHERE analysis_id = #{analysisId} AND selected = TRUE ORDER BY id
-    </select>
-
     <select id="findByAnalysis" resultType="com.vibenote.interview.AnalysisInterview">
         SELECT <include refid="interviewColumns"/> FROM analysis_interviews WHERE analysis_id = #{analysisId}
     </select>
