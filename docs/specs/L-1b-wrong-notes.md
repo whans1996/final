@@ -211,9 +211,9 @@
 - [x] FE 구현 (green)
 - [x] Swagger 어노테이션 + `docs/api/openapi.json` 갱신
 - [x] contract-checker 통과
-- [ ] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일)
+- [x] ui-verifier 통과 (FE 변경 시, 데스크톱·모바일)
 - [ ] reviewer 지적 사항 반영
-- [ ] 산출물 반영: 화면 설계서 06(SC-07·SC-08 바뀐 부분, SC-27 새 행·흐름도·스크린샷), 요구사항 정의서 01(오답 노트 행), 유스케이스 02(퀴즈 다시 풀기·오답 노트), 07 API 명세 재생성
-- [ ] #250 체크 (`AnalysisQuizTab.vue`·`QuizView.vue`)
+- [x] 산출물 반영: 화면 설계서 06(SC-07·SC-08 바뀐 부분, SC-27 새 행·흐름도·스크린샷), 요구사항 정의서 01(오답 노트 행), 유스케이스 02(퀴즈 다시 풀기·오답 노트), 07 API 명세 재생성 (07 재생성함. 유스케이스 PNG는 PlantUML jar가 없어 .puml만 고침)
+- [x] #250 체크 (`AnalysisQuizTab.vue`·`QuizView.vue`)
 - [ ] PR CI 초록
 - [ ] 상태 DONE (PR 머지 후)
