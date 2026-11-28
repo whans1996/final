@@ -12,7 +12,9 @@ public enum LlmStage {
     FLOW,
     CONCEPT,
     QUIZ,
-    RECOMMEND;
+    RECOMMEND,
+    /** 분석 파이프라인 밖, 사용자 요청 시 면접 예상 질문 (I-1a). */
+    INTERVIEW;
 
     /** 리소스 경로에 쓰는 소문자 이름 (예: {@code overview}). */
     public String key() {

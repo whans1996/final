@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import AnalysisFilesTab from '@/components/analysis/AnalysisFilesTab.vue'
 import * as analysesApi from '@/api/analyses'
-import { apiError } from '@/views/__tests__/viewTestUtils'
+import { apiError, deferred } from '@/views/__tests__/viewTestUtils'
 
 vi.mock('@/api/analyses')
 
@@ -177,5 +177,26 @@ describe('AnalysisFilesTab (F-06 AC14·AC15)', () => {
     const wrapper = await mountTab()
 
     expect(wrapper.text()).toContain('저장된 파일이 없습니다')
+  })
+  it('I-1a AC15 highlight 범위를 코드에서 강조하고, 파일 목록이 그려진 뒤에 그 줄로 스크롤한다', async () => {
+    const scroll = vi.fn()
+    Element.prototype.scrollIntoView = scroll
+    const list = deferred()
+    analysesApi.fetchAnalysisFiles.mockReturnValue(list.promise)
+    analysesApi.fetchAnalysisFile.mockResolvedValue(file())
+
+    const wrapper = await mountTab({ selectedFileId: 101, highlight: { start: 2, end: 3 } })
+
+    // 모바일에서는 목록이 코드 위에 쌓이므로 목록보다 먼저 스크롤하면 코드가 아래로 밀려난다
+    expect(
+      wrapper.findAll('[data-highlighted="true"]').map((l) => l.attributes('data-line')),
+    ).toEqual(['2', '3'])
+    expect(scroll).not.toHaveBeenCalled()
+
+    list.resolve(files)
+    await flushPromises()
+
+    expect(scroll).toHaveBeenCalledTimes(1)
+    expect(scroll.mock.contexts[0].getAttribute('data-line')).toBe('2')
   })
 })

@@ -72,12 +72,14 @@
 **/vibenote/recommendation/                  @whans1996
 **/vibenote/challenge/                       @whans1996
 **/vibenote/prompteval/                      @whans1996
+**/vibenote/interview/                       @whans1996
 /backend/src/main/resources/mapper/analysis/ @whans1996
 /backend/src/main/resources/mapper/llm/      @whans1996
 /backend/src/main/resources/mapper/quiz/     @whans1996
 /backend/src/main/resources/mapper/reviewplan/ @whans1996
 /backend/src/main/resources/mapper/recommendation/ @whans1996
 /backend/src/main/resources/mapper/challenge/ @whans1996
+/backend/src/main/resources/mapper/interview/ @whans1996
 /backend/src/main/resources/prompts/         @whans1996
 /backend/src/main/resources/llm-fixtures/    @whans1996
 /backend/src/test/resources/llm-fixtures/    @whans1996
@@ -118,6 +120,10 @@
 /frontend/src/api/**/projects.*              @whans1996
 /frontend/src/views/project/                 @whans1996
 /frontend/src/components/project/            @whans1996
+# 면접 준비 (I-1a, BE는 interview 패키지)
+/frontend/src/api/**/interviews.*            @whans1996
+/frontend/src/utils/**/interviewFormat.*     @whans1996
+/frontend/src/components/interview/          @whans1996
 /frontend/src/router/routes/project.js       @whans1996
 # 팀(F-20a~c, T-1 팀 프로젝트): 11-26 합의로 B → A (기획서 7.5절)
 **/vibenote/team/                            @whans1996

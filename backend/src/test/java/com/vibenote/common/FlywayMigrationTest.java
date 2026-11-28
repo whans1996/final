@@ -61,7 +61,10 @@ class FlywayMigrationTest extends IntegrationTestBase {
                         "llm_usage_logs",
                         // P-1a 프로젝트·버전 (V15)
                         "projects",
-                        "project_versions");
+                        "project_versions",
+                        // I-1a 면접 질문 (V17)
+                        "analysis_interviews",
+                        "interview_questions");
     }
 
     @Test

@@ -134,6 +134,17 @@ quiz:
   # 분석 하나의 퀴즈 재생성 요청 상한 (docs/specs/L-1a-rerun-quiz-regenerate.md AC7)
   max-regenerations: 3
 
+# 면접 예상 질문 (docs/specs/I-1a-interview-prep.md 5절): 프롬프트 입력 상한, 저장할 질문 수 범위, DONE 다시 만들기 횟수
+interview:
+  max-chars: 24000
+  max-file-chars: 4000
+  file-list-max-chars: 6000
+  concept-list-max-chars: 3000
+  max-apis: 20
+  min-questions: 5
+  max-questions: 12
+  max-regenerations: 2
+
 # LlmConfig가 provider별로 LlmClient 하나를 조립한다 (docs/specs/F-00-llm-client.md, F-27-gms-provider.md).
 # mock | gms | ollama | gemini. gms는 실패(4xx·5xx·타임아웃·거부·잘림·형식 오류)하면 재시도 없이 ollama(간이 모드)로 폴백한다.
 # gemini는 평가 비교용으로 폴백하지 않는다. GMS·Ollama에는 llm-schemas/<stage>.json으로 출력 형식을 강제한다.
@@ -143,7 +154,7 @@ llm:
     api-key: ${GMS_API_KEY:}
     base-url: ${GMS_BASE_URL:https://gms.ssafy.io/gmsapi/api.openai.com/v1}
     model: ${GMS_MODEL:gpt-4.1-mini}
-    # 단계별 모델 (키는 overview|file|flow|concept|quiz|recommend, 없는 키는 기동 실패). 예: quiz: gpt-4.1 (값은 F-27b)
+    # 단계별 모델 (키는 overview|file|flow|concept|quiz|recommend|interview, 없는 키는 기동 실패). 예: quiz: gpt-4.1 (값은 F-27b)
     stage-models: {}
     timeout: 60s
   gemini:

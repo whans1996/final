@@ -290,7 +290,23 @@ public class AnalysisService {
                 .orElseThrow(() -> new IllegalStateException("분석 없음: " + analysisId));
     }
 
-    /** 저장된 선별 파일 전체 (content 포함, id 오름차순). EXPLAINING 이후 단계의 입력이다. */
+    /**
+     * 본인의 미삭제 분석 + overview를 행 잠금으로 읽는다. 호출자의 트랜잭션 안에서 불러 같은 분석의 요청을 차례로 처리한다 (I-1a AC7). 없거나 남의
+     * 것(팀 공유 포함)·삭제된 것이면 empty.
+     */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public Optional<AnalysisDetail> lockOwnedDetail(long userId, long analysisId) {
+        return analysisMapper.lockOwnedDetail(analysisId, userId);
+    }
+
+    /** 요청 시 생성(I-1a 면접 질문)이 읽는 분석 + overview (삭제 여부와 상관없음). 없으면 예기치 못한 오류다. */
+    public AnalysisDetail findDetailForPipeline(long analysisId) {
+        return analysisMapper
+                .findDetailById(analysisId)
+                .orElseThrow(() -> new IllegalStateException("분석 없음: " + analysisId));
+    }
+
+    /** 저장된 선별 파일 전체 (content·importance 포함, id 오름차순). EXPLAINING 이후 단계의 입력이다. */
     public List<AnalysisFile> findFiles(long analysisId) {
         return analysisMapper.findFiles(analysisId);
     }

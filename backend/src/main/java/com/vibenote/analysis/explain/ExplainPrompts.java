@@ -70,6 +70,19 @@ public final class ExplainPrompts {
         return value.replace("<<<", "‹‹‹");
     }
 
+    /** 줄마다 1부터 {@code 12: } 형태의 번호를 붙인다 (F-08 AC2, I-1a AC2). 응답의 {@code L12-L30} 근거를 검증하는 기준이다. */
+    public static String numberLines(String content) {
+        StringBuilder out = new StringBuilder(content.length() + 64);
+        int no = 1;
+        for (String line : (Iterable<String>) content.lines()::iterator) {
+            if (no > 1) {
+                out.append('\n');
+            }
+            out.append(no++).append(": ").append(line);
+        }
+        return out.toString();
+    }
+
     public static String fileBlock(int no, AnalysisFile f, int maxChars) {
         return fileBlock(no, f.getPath(), f.getLayer(), f.getContent(), maxChars);
     }

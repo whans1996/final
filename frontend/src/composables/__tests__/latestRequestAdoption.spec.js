@@ -29,6 +29,9 @@ const ADOPTED = [
   'views/project/ProjectListView.vue',
   'views/project/ProjectDetailView.vue',
   'components/project/LatestCommitBadge.vue',
+  // A 영역 (I-1a, #250)
+  'components/analysis/AnalysisFilesTab.vue',
+  'components/interview/InterviewTab.vue',
 ]
 
 // 직접 쓴 순번 가드: `let lastRequest = 0` / `++lastHead` / `request !== lastSearch`, 주소 id 비교

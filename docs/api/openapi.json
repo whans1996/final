@@ -2006,6 +2006,155 @@
         "required" : [ "followedAt", "id", "level", "nickname" ],
         "type" : "object"
       },
+      "InterviewConceptRef" : {
+        "description" : "관련 개념 카드",
+        "properties" : {
+          "id" : {
+            "description" : "카드 ID",
+            "example" : 12,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "name" : {
+            "description" : "카드 이름",
+            "example" : "계층형 아키텍처",
+            "type" : "string"
+          }
+        },
+        "required" : [ "id", "name" ],
+        "type" : "object"
+      },
+      "InterviewEvidence" : {
+        "description" : "근거 코드 위치",
+        "properties" : {
+          "endLine" : {
+            "description" : "끝 줄",
+            "example" : 48,
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "fileId" : {
+            "description" : "파일 ID (analysis_files.id)",
+            "example" : 1201,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "path" : {
+            "description" : "파일 경로",
+            "example" : "src/main/java/io/spring/api/ArticlesApi.java",
+            "type" : "string"
+          },
+          "startLine" : {
+            "description" : "시작 줄",
+            "example" : 31,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "endLine", "fileId", "path", "startLine" ],
+        "type" : "object"
+      },
+      "InterviewQuestion" : {
+        "description" : "면접 질문 하나",
+        "properties" : {
+          "category" : {
+            "description" : "범주: 구조·기술 선택 이유·핵심 흐름·한계와 개선",
+            "enum" : [ "STRUCTURE", "TECH_CHOICE", "FLOW", "LIMITATION" ],
+            "example" : "STRUCTURE",
+            "type" : "string"
+          },
+          "concepts" : {
+            "description" : "관련 개념 카드 (0~3개, 지금 숨김이 아닌 카드만)",
+            "items" : {
+              "$ref" : "#/components/schemas/InterviewConceptRef"
+            },
+            "type" : "array"
+          },
+          "evidence" : {
+            "description" : "근거 코드 (1~3개)",
+            "items" : {
+              "$ref" : "#/components/schemas/InterviewEvidence"
+            },
+            "type" : "array"
+          },
+          "id" : {
+            "description" : "질문 ID",
+            "example" : 301,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "keyPoints" : {
+            "description" : "답의 핵심 포인트 (1~5개, 항목 200자 이내)",
+            "items" : {
+              "example" : "ArticleController는 요청 검증과 응답 변환만 한다",
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "no" : {
+            "description" : "번호 (1부터)",
+            "example" : 1,
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "question" : {
+            "description" : "질문 (300자 이내)",
+            "example" : "글 작성 기능을 controller·service·mapper로 나눈 이유는 무엇인가요?",
+            "type" : "string"
+          }
+        },
+        "required" : [ "category", "concepts", "evidence", "id", "keyPoints", "no", "question" ],
+        "type" : "object"
+      },
+      "InterviewResponse" : {
+        "description" : "면접 예상 질문",
+        "properties" : {
+          "analysisId" : {
+            "description" : "분석 ID",
+            "example" : 41,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "errorCode" : {
+            "description" : "실패 사유 코드. FAILED가 아니면 null",
+            "enum" : [ "ANALYSIS_500", "LLM_502", "LLM_503" ],
+            "example" : "LLM_503",
+            "type" : [ "string", "null" ]
+          },
+          "errorMessage" : {
+            "description" : "사용자에게 보여 줄 실패 사유. FAILED가 아니면 null",
+            "example" : "AI 응답을 받지 못했습니다. 잠시 후 다시 시도해 주세요.",
+            "type" : [ "string", "null" ]
+          },
+          "generatedAt" : {
+            "description" : "마지막으로 DONE이 된 시각. DONE이 아니면 null",
+            "example" : "2026-11-30T14:05:00+09:00",
+            "format" : "date-time",
+            "type" : [ "string", "null" ]
+          },
+          "questions" : {
+            "description" : "질문 (no 오름차순, 5~12개). DONE이 아니면 null",
+            "items" : {
+              "$ref" : "#/components/schemas/InterviewQuestion"
+            },
+            "type" : [ "array", "null" ]
+          },
+          "regenerationsLeft" : {
+            "description" : "남은 다시 만들기 횟수 (DONE 기준, 최소 0)",
+            "example" : 1,
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "status" : {
+            "description" : "생성 상태. NONE은 요청한 적 없음",
+            "enum" : [ "NONE", "PENDING", "DONE", "FAILED" ],
+            "example" : "DONE",
+            "type" : "string"
+          }
+        },
+        "required" : [ "analysisId", "regenerationsLeft", "status" ],
+        "type" : "object"
+      },
       "InviteCodeResponse" : {
         "description" : "초대 코드 재발급 응답",
         "properties" : {
@@ -5937,6 +6086,122 @@
           }
         },
         "summary" : "실행 흐름 요청",
+        "tags" : [ "분석" ]
+      }
+    },
+    "/api/analyses/{id}/interview" : {
+      "get" : {
+        "description" : "내 분석의 면접 질문. 요청한 적이 없으면 status NONE. DONE이 아니면 questions는 null. 관련 카드는 지금 숨김이 아닌 카드만 준다. 화면은 PENDING이면 3초마다 다시 부른다.",
+        "operationId" : "getInterview",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/InterviewResponse"
+                }
+              }
+            },
+            "description" : "조회 성공"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "토큰 없음·만료 (AUTH_401)"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "없는 분석, 다른 회원의 분석, 삭제된 분석 (ANALYSIS_404)"
+          }
+        },
+        "summary" : "면접 예상 질문 조회",
+        "tags" : [ "분석" ]
+      },
+      "post" : {
+        "description" : "내 DONE 분석의 코드를 근거로 면접 예상 질문(5~12개) 생성을 접수하고 바로 202를 준다. 생성은 백그라운드에서 진행되며 GET으로 확인한다. 처음 만들기(NONE)·다시 시도(FAILED, 횟수 안 씀)·다시 만들기(DONE, 분석당 2회)를 상태로 고른다.",
+        "operationId" : "requestInterview",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "202" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/InterviewResponse"
+                }
+              }
+            },
+            "description" : "접수됨 (status PENDING)"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "토큰 없음·만료 (AUTH_401)"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "없는 분석, 다른 회원의 분석, 삭제된 분석 (ANALYSIS_404)"
+          },
+          "409" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "분석이 DONE이 아님, 이미 만드는 중(PENDING) (INTERVIEW_409)"
+          },
+          "429" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description" : "DONE 다시 만들기 횟수를 모두 씀 (INTERVIEW_429)"
+          }
+        },
+        "summary" : "면접 예상 질문 요청",
         "tags" : [ "분석" ]
       }
     },
